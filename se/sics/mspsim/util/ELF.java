@@ -106,20 +106,22 @@ public class ELF {
     shnum = readElf16();
     shstrndx = readElf16();
 
-    System.out.println("-- ELF Header --");
-    System.out.println("type: " + Integer.toString(type, 16));
-    System.out.println("machine: " + Integer.toString(machine, 16));
-    System.out.println("version: " + Integer.toString(version, 16));
-    System.out.println("entry: " + Integer.toString(entry, 16));
-    System.out.println("phoff: " + Integer.toString(phoff, 16));
-    System.out.println("shoff: " + Integer.toString(shoff, 16));
-    System.out.println("flags: " + Integer.toString(flags, 16));
-    System.out.println("ehsize: " + Integer.toString(ehsize, 16));
-    System.out.println("phentsize: " + Integer.toString(phentsize, 16));
-    System.out.println("phentnum: " + Integer.toString(phnum, 16));
-    System.out.println("shentsize: " + Integer.toString(shentsize, 16));
-    System.out.println("shentnum: " + Integer.toString(shnum, 16));
-    System.out.println("shstrndx: " + Integer.toString(shstrndx, 16));
+    if (DEBUG) {
+      System.out.println("-- ELF Header --");
+      System.out.println("type: " + Integer.toString(type, 16));
+      System.out.println("machine: " + Integer.toString(machine, 16));
+      System.out.println("version: " + Integer.toString(version, 16));
+      System.out.println("entry: " + Integer.toString(entry, 16));
+      System.out.println("phoff: " + Integer.toString(phoff, 16));
+      System.out.println("shoff: " + Integer.toString(shoff, 16));
+      System.out.println("flags: " + Integer.toString(flags, 16));
+      System.out.println("ehsize: " + Integer.toString(ehsize, 16));
+      System.out.println("phentsize: " + Integer.toString(phentsize, 16));
+      System.out.println("phentnum: " + Integer.toString(phnum, 16));
+      System.out.println("shentsize: " + Integer.toString(shentsize, 16));
+      System.out.println("shentnum: " + Integer.toString(shnum, 16));
+      System.out.println("shstrndx: " + Integer.toString(shstrndx, 16));
+    }
   }
 
   public ELFSection readSectionHeader() {
@@ -220,7 +222,9 @@ public class ELF {
     programs = new ELFProgram[phnum];
     for (int i = 0, n = phnum; i < n; i++) {
       programs[i] = readProgramHeader();
-      System.out.println("-- Program header --\n" + programs[i].toString());
+      if (DEBUG) {
+	System.out.println("-- Program header --\n" + programs[i].toString());
+      }
     }
   }
 

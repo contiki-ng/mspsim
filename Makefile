@@ -95,10 +95,6 @@ cputest:	$(CPUTEST)
 $(CPUTEST):
 	(cd tests && $(MAKE))
 
-test:
-	cd tests && make
-	java se.sics.mspsim.util.Test $(CPUTEST)
-
 .PHONY: mtest
 mtest:	compile $(CPUTEST)
 	@-$(RM) mini-test_cpu.txt
