@@ -862,11 +862,12 @@ public class MSP430Core implements MSP430Constants {
       case BIT: // BIT
 	dst = src & dst;
 	sr = readRegister(SR);
+	// Clear overflow and carry!
+	sr = sr & ~(CARRY | OVERFLOW);
+	// Set carry if result is non-zero!
 	if (dst != 0) {
 	  sr |= CARRY;
 	}
-	// Clear overflow!
-	sr &= ~OVERFLOW;
 	writeRegister(SR, sr);
 	break;
       case BIC: // BIC

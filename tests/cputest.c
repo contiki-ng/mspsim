@@ -169,24 +169,16 @@ static void testFunctions() {
 /*--------------------------------------------------------------------------*/
 
 static void testModulo() {
-  int c,i;
-  c = 1;
+  int c;
   testCase("Modulo");
-  do {
-    i = 13;
 
-    i = i % 14;
-/*     printf("(%d,%d,%d)\n",i, (i % 14), i==1); */
-/*     printf("(%d,%d,%d)\n",i, (i % 14), i==1); */
-    if (i < 0) printf("%d\n",i);
-
-
-    c = c + 1;
-  } while (c < 3);
-
-/*     if((i % 5) == 0) { */
-/*       assertTrue(i != 1); */
-/*     } */
+  for(c = 2; c >= 0; c--) {
+    if((c % 5) == 0) {
+      assertTrue(c != 1);
+    }
+    printf("(%d,%d,%d)\n", c, (c % 5), c==1);
+    printf("(%d,%d,%d)\n", c, (c % 5), c==1);
+  }
 }
 
 /*--------------------------------------------------------------------------*/
