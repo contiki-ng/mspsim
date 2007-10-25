@@ -40,9 +40,10 @@
  */
 package se.sics.mspsim.util;
 import se.sics.mspsim.core.*;
+import java.io.IOException;
 
 /**
- * Test - tests a ihex file and exits when reporting "FAIL:" first
+ * Test - tests a firmware file and exits when reporting "FAIL:" first
  * on a line...
  */
 public class Test implements USARTListener {
@@ -89,24 +90,21 @@ public class Test implements USARTListener {
       index++;
     }
 
-    IHexReader reader = new IHexReader();
-    String ihexFile = args[index++];
-    int[] memory = cpu.getMemory();
-    reader.readFile(memory, ihexFile);
-    cpu.reset();
+    try {
+      int[] memory = cpu.getMemory();
+      ELF elf = ELF.readELF(args[index++]);
+      elf.loadPrograms(memory);
+      MapTable map = elf.getMap();
+      cpu.getDisAsm().setMap(map);
+      cpu.setMap(map);
+      cpu.reset();
 
-    if (index < args.length && cpu.getDisAsm() != null) {
-      try {
-	MapTable map = new MapTable(args[index++]);
-	cpu.getDisAsm().setMap(map);
-      } catch (Exception e) {
-	e.printStackTrace();
-	System.exit(1);
-      }
+      // Create the "tester"
+      new Test(cpu);
+      cpu.cpuloop();
+    } catch (IOException ioe) {
+      ioe.printStackTrace();
     }
 
-    // Create the "tester"
-    new Test(cpu);
-    cpu.cpuloop();
   }
 }

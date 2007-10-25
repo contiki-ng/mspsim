@@ -54,8 +54,7 @@ CCARGS=-deprecation -classpath .
 
 FIRMWAREFILE = blinker2.ihex
 
-CPUTEST := tests/cputest.ihex
-CPUTESTMAP := $(CPUTEST:.ihex=.map)
+CPUTEST := tests/cputest.firmware
 
 PACKAGES := ${addprefix se/sics/mspsim/,core platform/esb platform/sky util}
 
@@ -79,7 +78,7 @@ help:
 
 .PHONY: run
 run:	compile
-	java se.sics.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
+	java se.sics.mspsim.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
 	java se.sics.mspsim.platform.esb.ESBNode $(FIRMWAREFILE) $(MAPFILE)
@@ -91,19 +90,19 @@ runsky:	compile
 test:	cputest
 
 cputest:	$(CPUTEST)
-	java se.sics.util.Test $(CPUTEST) $(CPUTESTMAP)
+	java se.sics.mspsim.util.Test $(CPUTEST)
 
 $(CPUTEST):
 	(cd tests && $(MAKE))
 
 test:
 	cd tests && make
-	java se.sics.util.Test $(CPUTEST) $(CPUTESTMAP)
+	java se.sics.mspsim.util.Test $(CPUTEST)
 
 .PHONY: mtest
 mtest:	compile $(CPUTEST)
 	@-$(RM) mini-test_cpu.txt
-	java se.sics.util.Test -debug $(CPUTEST) $(CPUTESTMAP) >mini-test_cpu.txt
+	java se.sics.util.Test -debug $(CPUTEST) >mini-test_cpu.txt
 
 
 ###############################################################
