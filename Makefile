@@ -1,13 +1,11 @@
 ###############################################################
-# $Revision: 1.11 $ $Date: 2007/10/21 19:47:53 $
+# Makefile for mspsim
 #
 # Needed stuff in the PATH:
-#  java, javac (JDK 1.2 or newer)
+#  java, javac (JDK 1.5 or newer)
 #
-# Under MS-DOS/Windows 95/NT
-#  A GNU compatible Make (for example Cygnus GNU-Win 32,
-#			  http://www.cygnus.com/misc/gnu-win32/)
-# Note: might need to be called with "make --win32" under Windows!!!
+# Under MS-DOS/Windows
+#  A GNU compatible Make (for example Cygwin's)
 ###############################################################
 
 ###############################################################
@@ -37,7 +35,7 @@ ifndef WINDIR
   # Add "'" around filenames when removing them because UNIX expands "$"
   APO='#'  (last apostrophe to avoid incorrect font-lock)
 else
-  # These setting are for MS-DOS/Windows 95/Windows NT
+  # These setting are for Windows
   SEPARATOR=;
   APO=
 endif
@@ -54,7 +52,7 @@ CCARGS=-deprecation -classpath .
 # SERVER OBJECTS
 ###############################################################
 
-IHEXFILE = blinker2.ihex
+FIRMWAREFILE = blinker2.ihex
 
 CPUTEST := tests/cputest.ihex
 CPUTESTMAP := $(CPUTEST:.ihex=.map)
@@ -81,13 +79,13 @@ help:
 
 .PHONY: run
 run:	compile
-	java se.sics.util.IHexReader $(IHEXFILE) $(MAPFILE)
+	java se.sics.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
-	java se.sics.mspsim.platform.esb.ESBNode $(IHEXFILE) $(MAPFILE)
+	java se.sics.mspsim.platform.esb.ESBNode $(FIRMWAREFILE) $(MAPFILE)
 
 runsky:	compile
-	java se.sics.mspsim.platform.sky.SkyNode $(IHEXFILE) $(MAPFILE)
+	java se.sics.mspsim.platform.sky.SkyNode $(FIRMWAREFILE) $(MAPFILE)
 
 .PHONY: cputest test
 test:	cputest
