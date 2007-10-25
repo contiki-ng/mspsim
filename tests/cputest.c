@@ -176,8 +176,8 @@ static void testModulo() {
     if((c % 5) == 0) {
       assertTrue(c != 1);
     }
-    printf("(%d,%d,%d)\n", c, (c % 5), c==1);
-    printf("(%d,%d,%d)\n", c, (c % 5), c==1);
+/*     printf("(%d,%d,%d)\n", c, (c % 5), c==1); */
+/*     printf("(%d,%d,%d)\n", c, (c % 5), c==1); */
   }
 }
 
@@ -249,12 +249,12 @@ main(void)
 
   initTest();
 
-/*   testSimple(); */
-/*   testIntegers(); */
-/*   testFloats(); */
-/*   testStrings(); */
-/*   testBitFields(); */
-/*   testFunctions(); */
+  testSimple();
+  testIntegers();
+  testFloats();
+  testStrings();
+  testBitFields();
+  testFunctions();
   testModulo();
 
   printf("EXIT\n");
