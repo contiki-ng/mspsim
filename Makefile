@@ -53,6 +53,8 @@ CCARGS=-deprecation -classpath .
 ###############################################################
 
 FIRMWAREFILE = blinker2.ihex
+ESBFIRMWARE = firmware/esb/sensor-demo.firmware
+SKYFIRMWARE = firmware/sky/sensor-demo.firmware
 
 CPUTEST := tests/cputest.firmware
 
@@ -81,10 +83,10 @@ run:	compile
 	java se.sics.mspsim.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
-	java se.sics.mspsim.platform.esb.ESBNode $(FIRMWAREFILE) $(MAPFILE)
+	java se.sics.mspsim.platform.esb.ESBNode $(ESBFIRMWARE) $(MAPFILE)
 
 runsky:	compile
-	java se.sics.mspsim.platform.sky.SkyNode $(FIRMWAREFILE) $(MAPFILE)
+	java se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPFILE)
 
 .PHONY: cputest test
 test:	cputest

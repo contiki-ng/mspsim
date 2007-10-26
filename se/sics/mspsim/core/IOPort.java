@@ -136,7 +136,9 @@ public class IOPort extends IOUnit {
       //   case IFG:
       if (interrupt > 0) {
 	// IFG - writing a zero => clear the flag!
-	System.out.println(getName() + " Clearing IFlag: " + data);
+	if (DEBUG) {
+	  System.out.println(getName() + " Clearing IFlag: " + data);
+	}
 	interruptFlag &= data;
 	memory[offset + IFG] = interruptFlag;
 	cpu.flagInterrupt(interrupt, this, interruptFlag > 0);
@@ -169,14 +171,19 @@ public class IOPort extends IOUnit {
 	  // LO/HI transition
 	  if (state == PIN_HI) {
 	    interruptFlag |= bit;
-	    System.out.println(getName() + " Flagging interrupt (HI): " + bit);
+	    if (DEBUG) {
+	      System.out.println(getName() +
+				 " Flagging interrupt (HI): " + bit);
+	    }
 	  }
 	} else {
 	  // HI/LO transition
 	  if (state == PIN_LOW) {
 	    interruptFlag |= bit;
-	    System.out.println(getName() + " Flagging interrupt (LOW): " +
-			       bit);
+	    if (DEBUG) {
+	      System.out.println(getName() +
+				 " Flagging interrupt (LOW): " + bit);
+	    }
 	  }
 	}
       }

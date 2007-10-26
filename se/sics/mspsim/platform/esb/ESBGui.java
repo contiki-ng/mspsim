@@ -47,6 +47,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseListener;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -57,7 +58,8 @@ import se.sics.mspsim.util.SerialMon;
 import se.sics.mspsim.util.WindowUtils;
 
 public class ESBGui extends JComponent implements KeyListener,
-						  MouseMotionListener {
+						  MouseMotionListener,
+						  MouseListener {
 
   public static final int GREEN_X = 3;
   public static final int YELLOW_X = 10;
@@ -79,6 +81,7 @@ public class ESBGui extends JComponent implements KeyListener,
   private ImageIcon esbImage;
   private JFrame window;
   private ESBNode node;
+  private boolean buttonDown = false;
 
   public ESBGui(ESBNode node) {
     this.node = node;
@@ -103,6 +106,7 @@ public class ESBGui extends JComponent implements KeyListener,
 
     window.addKeyListener(this);
     window.addMouseMotionListener(this);
+    window.addMouseListener(this);
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();
@@ -130,8 +134,25 @@ public class ESBGui extends JComponent implements KeyListener,
     node.setVIB(x > 60 && x < 100 && y > 180 && y < 200);
   }
 
-  public void mouseDragged(MouseEvent e) {
+  public void mouseDragged(MouseEvent e) {}
+  public void mouseClicked(MouseEvent e) {}
+  public void mouseEntered(MouseEvent e) {}
+  public void mouseExited(MouseEvent e) {}
+
+  // For the button sensor on the ESB nodes.
+  public void mousePressed(MouseEvent e) {
+    int x = e.getX();
+    int y = e.getY();
+    if (x > 0 && x < 24 && y > 180 && y < 200) {
+      node.setButton(buttonDown = true);
+    }
   }
+  public void mouseReleased(MouseEvent e) {
+    if (buttonDown) {
+      node.setButton(buttonDown = false);
+    }
+  }
+
 
 
   public void paintComponent(Graphics g) {
