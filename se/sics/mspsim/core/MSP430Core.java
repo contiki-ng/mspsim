@@ -324,6 +324,12 @@ public class MSP430Core implements MSP430Constants {
   public void reset() {
     resetIOUnits();
     reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
+    for (int i = 0, n = 16; i < n; i++) {
+      interruptSource[i] = null;
+    }
+    servicedInterruptUnit = null;
+    servicedInterrupt = -1;
+    interruptMax = -1;
   }
 
   // Indicate that we have an interrupt now!
