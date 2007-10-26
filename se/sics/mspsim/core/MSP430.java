@@ -213,10 +213,6 @@ public class MSP430 extends MSP430Core {
     running = false;
   }
 
-  public void reset() {
-    reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
-  }
-
   public int getExecCount(int address) {
     if (execCounter != null) {
       return execCounter[address];

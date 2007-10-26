@@ -312,6 +312,20 @@ public class MSP430Core implements MSP430Constants {
     }
   }
 
+  private void resetIOUnits() {
+    for (int i = 0, n = lastIOUnitPos; i < n; i++) {
+      ioUnits[i].reset();
+    }
+    for (int i = 0, n = passiveIOUnits.length; i < n; i++) {
+      passiveIOUnits[i].reset();
+    }
+  }
+
+  public void reset() {
+    resetIOUnits();
+    reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
+  }
+
   // Indicate that we have an interrupt now!
   // We should only get same IOUnit for same interrupt level
   public void flagInterrupt(int interrupt, IOUnit source, boolean triggerIR) {
@@ -920,4 +934,5 @@ public class MSP430Core implements MSP430Constants {
       writeRegister(SR, sr);
     }
   }
+
 }
