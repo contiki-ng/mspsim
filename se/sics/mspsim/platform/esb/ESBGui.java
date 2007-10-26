@@ -82,6 +82,7 @@ public class ESBGui extends JComponent implements KeyListener,
   private JFrame window;
   private ESBNode node;
   private boolean buttonDown = false;
+  private boolean resetDown = false;
 
   public ESBGui(ESBNode node) {
     this.node = node;
@@ -105,8 +106,8 @@ public class ESBGui extends JComponent implements KeyListener,
     window.setVisible(true);
 
     window.addKeyListener(this);
-    window.addMouseMotionListener(this);
-    window.addMouseListener(this);
+    addMouseMotionListener(this);
+    addMouseListener(this);
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();
@@ -130,8 +131,8 @@ public class ESBGui extends JComponent implements KeyListener,
     //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
     int x = e.getX();
     int y = e.getY();
-    node.setPIR(x > 5 && x < 80 && y > 50 && y < 130);
-    node.setVIB(x > 60 && x < 100 && y > 180 && y < 200);
+    node.setPIR(x > 18 && x < 80 && y > 35 && y < 100);
+    node.setVIB(x > 62 && x < 95 && y > 160 && y < 178);
   }
 
   public void mouseDragged(MouseEvent e) {}
@@ -143,13 +144,30 @@ public class ESBGui extends JComponent implements KeyListener,
   public void mousePressed(MouseEvent e) {
     int x = e.getX();
     int y = e.getY();
-    if (x > 0 && x < 24 && y > 180 && y < 200) {
-      node.setButton(buttonDown = true);
+    if (y > 152 && y < 168) {
+      if (x > 0 && x < 19) {
+	node.setButton(buttonDown = true);
+      } else {
+	int w = esbImage.getIconWidth();
+	if (x > w - 20 && x < w) {
+	  resetDown = true;
+	}
+      }
     }
   }
   public void mouseReleased(MouseEvent e) {
     if (buttonDown) {
       node.setButton(buttonDown = false);
+    } else if (resetDown) {
+      int x = e.getX();
+      int y = e.getY();
+      if (y > 152 && y < 168) {
+	int w = esbImage.getIconWidth();
+	if (x > w - 20 && x < w) {
+	  node.getCPU().reset();
+	}
+      }
+      resetDown = false;
     }
   }
 
