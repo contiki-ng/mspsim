@@ -52,9 +52,13 @@ CCARGS=-deprecation -classpath .
 # SERVER OBJECTS
 ###############################################################
 
-FIRMWAREFILE = blinker2.ihex
+ifndef FIRMWAREFILE
 ESBFIRMWARE = firmware/esb/sensor-demo.firmware
 SKYFIRMWARE = firmware/sky/sensor-demo.firmware
+else
+ESBFIRMWARE = $FIRMWAREFILE
+SKYFIRMWARE = $FIRMWAREFILE
+endif
 
 CPUTEST := tests/cputest.firmware
 
@@ -115,11 +119,7 @@ mtest:	compile $(CPUTEST)
 # CLEAN  (untrusted, use with great care!!!)
 ###############################################################
 
-.PHONY:	clean claen clena
-
-claen:	clean
-
-clena:	clean
+.PHONY:	clean
 
 clean:
 ifdef WINDIR
