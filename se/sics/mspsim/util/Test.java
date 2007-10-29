@@ -69,6 +69,8 @@ public class Test implements USARTListener {
 	System.exit(0);
       } else if (line.startsWith("DEBUG")) {
 	cpu.setDebug(true);
+      } else if (line.startsWith("PROFILE")) {
+	cpu.printProfile();
       }
       line = "";
     } else {

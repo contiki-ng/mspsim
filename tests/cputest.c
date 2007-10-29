@@ -256,7 +256,7 @@ main(void)
   testBitFields();
   testFunctions();
   testModulo();
-
+  /*  printf("PROFILE\n"); */
   printf("EXIT\n");
   return 0;
 }
