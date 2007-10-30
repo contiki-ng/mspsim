@@ -39,8 +39,9 @@
  *           $Revision: 1.2 $
  */
 package se.sics.mspsim.util;
-import se.sics.mspsim.core.*;
 import java.io.IOException;
+
+import se.sics.mspsim.core.*;
 
 /**
  * Test - tests a firmware file and exits when reporting "FAIL:" first
@@ -48,8 +49,8 @@ import java.io.IOException;
  */
 public class Test implements USARTListener {
 
-  String line = "";
-  MSP430 cpu;
+  private StringBuilder lineBuffer = new StringBuilder();
+  private MSP430 cpu;
 
   public Test(MSP430 cpu) {
     this.cpu = cpu;
@@ -61,6 +62,8 @@ public class Test implements USARTListener {
 
   public void dataReceived(USART source, int data) {
     if (data == '\n') {
+      String line = lineBuffer.toString();
+      lineBuffer.setLength(0);
       System.out.println("#|" + line);
       if (line.startsWith("FAIL:")) {
 	System.exit(0);
@@ -71,10 +74,11 @@ public class Test implements USARTListener {
 	cpu.setDebug(true);
       } else if (line.startsWith("PROFILE")) {
 	cpu.printProfile();
+      } else if (line.startsWith("CLEARPROFILE")) {
+	cpu.clearProfile();
       }
-      line = "";
     } else {
-      line += (char) data;
+      lineBuffer.append((char) data);
     }
   }
 
