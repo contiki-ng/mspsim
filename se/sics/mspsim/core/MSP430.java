@@ -152,10 +152,9 @@ public class MSP430 extends MSP430Core {
     if (ce == null) {
       profileData.put(fkn, ce = new CallEntry());
       ce.function = fkn;
-      ce.cycles = elapsed;
-    } else {
-      ce.cycles += elapsed;
     }
+    ce.cycles += elapsed;
+    ce.calls++;
   }
 
   public void clearProfile() {
@@ -163,6 +162,7 @@ public class MSP430 extends MSP430Core {
       profileData.values().toArray(new CallEntry[0]);
     for (int i = 0, n = entries.length; i < n; i++) {
       entries[i].cycles = 0;
+      entries[i].calls = 0;
     }
   }
 
@@ -171,15 +171,25 @@ public class MSP430 extends MSP430Core {
       profileData.values().toArray(new CallEntry[0]);
     Arrays.sort(entries);
     for (int i = 0, n = entries.length; i < n; i++) {
-      printFkn(entries[i].function);
-      System.out.println(" " + entries[i].cycles);
+      String cyclesS = "" + entries[i].cycles;
+      int c = entries[i].calls;
+      String callS = "" + c;
+      String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
+      System.out.print(entries[i].function);
+      printSpace(56 - entries[i].function.length() - avgS.length());
+      System.out.print(avgS);
+      System.out.print(' ');
+      printSpace(8 - callS.length());
+      System.out.print(callS);
+      System.out.print(' ');
+      printSpace(10 - cyclesS.length());
+      System.out.println(cyclesS);
     }
   }
 
-  public void printFkn(String f) {
-    System.out.print(f);
-    for (int len = f.length(); len < 40; len++) {
-      System.out.print(" ");
+  private void printSpace(int len) {
+    for (int i = 0; i < len; i++) {
+      System.out.print(' ');
     }
   }
 
@@ -266,6 +276,7 @@ public class MSP430 extends MSP430Core {
   private static class CallEntry implements Comparable {
     String function;
     long cycles;
+    int calls;
 
     public int compareTo(Object o) {
       if (o instanceof CallEntry) {
