@@ -287,7 +287,7 @@ public class ELF {
       if (sAddr > 0 && sAddr < 0x10000) {
 	String symbolName = sn;
 	if (bind == ELFSection.SYMBIND_LOCAL) {
-	  symbolName += " (local in " + currentFile + ")";
+	  symbolName += " (" + currentFile + ')';
 	}
 	map.setFunctionName(sAddr, symbolName);
       }
