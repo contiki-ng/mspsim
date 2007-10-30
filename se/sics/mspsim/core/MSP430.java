@@ -158,6 +158,14 @@ public class MSP430 extends MSP430Core {
     }
   }
 
+  public void clearProfile() {
+    CallEntry[] entries =
+      profileData.values().toArray(new CallEntry[0]);
+    for (int i = 0, n = entries.length; i < n; i++) {
+      entries[i].cycles = 0;
+    }
+  }
+
   public void printProfile() {
     CallEntry[] entries =
       profileData.values().toArray(new CallEntry[0]);
@@ -170,12 +178,7 @@ public class MSP430 extends MSP430Core {
 
   public void printFkn(String f) {
     System.out.print(f);
-    int len = f.length();
-    if (len < 40)
-      len = 40 - len;
-    else
-      len = 0;
-    for (int i = 0, n = len; i < n; i++) {
+    for (int len = f.length(); len < 40; len++) {
       System.out.print(" ");
     }
   }
