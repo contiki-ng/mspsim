@@ -62,7 +62,7 @@ endif
 
 CPUTEST := tests/cputest.firmware
 
-PACKAGES := ${addprefix se/sics/mspsim/,core platform/esb platform/sky util}
+PACKAGES := ${addprefix se/sics/mspsim/,core platform/esb platform/sky util chip}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -81,7 +81,7 @@ compile:	$(OBJECTS)
 all:	compile
 
 jar:	compile
-	$(JAR) cf $(JARFILE) $(OBJECTS) images/*.jpg
+	$(JAR) cf $(JARFILE) ${addsuffix /*.class,$(PACKAGES)} images/*.jpg
 
 help:
 	@echo "Usage: make [all,compile,clean]"
