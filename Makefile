@@ -68,6 +68,7 @@ SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
 OBJECTS := $(SOURCES:.java=.class)
 
+JARFILE := mspsim.jar
 
 ###############################################################
 # MAKE
@@ -78,6 +79,9 @@ OBJECTS := $(SOURCES:.java=.class)
 compile:	$(OBJECTS)
 
 all:	compile
+
+jar:	compile
+	$(JAR) cf $(JARFILE) $(OBJECTS) images/*.jpg
 
 help:
 	@echo "Usage: make [all,compile,clean]"
