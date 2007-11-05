@@ -140,6 +140,7 @@ public class MSP430 extends MSP430Core {
       function = "fkn at $" + Utils.hex16(reg[PC]);
     }
     callStack[cSP].function = function;
+    callStack[cSP].calls = 0;
     callStack[cSP++].cycles = cycles;
   }
 
@@ -148,21 +149,31 @@ public class MSP430 extends MSP430Core {
 //     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
 
     long elapsed = cycles - callStack[cSP].cycles;
-    CallEntry ce = profileData.get(fkn);
-    if (ce == null) {
-      profileData.put(fkn, ce = new CallEntry());
-      ce.function = fkn;
+    if (callStack[cSP].calls >= 0) {
+      CallEntry ce = profileData.get(fkn);
+      if (ce == null) {
+	profileData.put(fkn, ce = new CallEntry());
+	ce.function = fkn;
+      }
+      ce.cycles += elapsed;
+      ce.calls++;
     }
-    ce.cycles += elapsed;
-    ce.calls++;
   }
 
   public void clearProfile() {
-    CallEntry[] entries =
-      profileData.values().toArray(new CallEntry[0]);
-    for (int i = 0, n = entries.length; i < n; i++) {
-      entries[i].cycles = 0;
-      entries[i].calls = 0;
+    if (profileData != null) {
+      CallEntry[] entries =
+	profileData.values().toArray(new CallEntry[0]);
+      for (int i = 0, n = entries.length; i < n; i++) {
+	entries[i].cycles = 0;
+	entries[i].calls = 0;
+      }
+      for (int i = 0, n = callStack.length; i < n; i++) {
+	CallEntry e = callStack[i];
+	if (e != null) {
+	  e.calls = -1;
+	}
+      }
     }
   }
 
@@ -171,19 +182,21 @@ public class MSP430 extends MSP430Core {
       profileData.values().toArray(new CallEntry[0]);
     Arrays.sort(entries);
     for (int i = 0, n = entries.length; i < n; i++) {
-      String cyclesS = "" + entries[i].cycles;
       int c = entries[i].calls;
-      String callS = "" + c;
-      String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
-      System.out.print(entries[i].function);
-      printSpace(56 - entries[i].function.length() - avgS.length());
-      System.out.print(avgS);
-      System.out.print(' ');
-      printSpace(8 - callS.length());
-      System.out.print(callS);
-      System.out.print(' ');
-      printSpace(10 - cyclesS.length());
-      System.out.println(cyclesS);
+      if (c > 0) {
+	String cyclesS = "" + entries[i].cycles;
+	String callS = "" + c;
+	String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
+	System.out.print(entries[i].function);
+	printSpace(56 - entries[i].function.length() - avgS.length());
+	System.out.print(avgS);
+	System.out.print(' ');
+	printSpace(8 - callS.length());
+	System.out.print(callS);
+	System.out.print(' ');
+	printSpace(10 - cyclesS.length());
+	System.out.println(cyclesS);
+      }
     }
   }
 
