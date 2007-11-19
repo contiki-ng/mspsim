@@ -58,16 +58,16 @@ import se.sics.mspsim.util.WindowUtils;
 public class SkyGui extends JComponent implements KeyListener,
 						  MouseMotionListener {
 
-  public static final int GREEN_Y = 39;
-  public static final int BLUE_Y = 47;
+  public static final int GREEN_Y = 40;
+  public static final int BLUE_Y = 46;
   public static final int RED_Y = 34;
   public static final int LED_X = 10;
 
-  public static final Color BLUE_TRANS = new Color(0x40,0x40,0xff,0xa0);
+  public static final Color BLUE_TRANS = new Color(0x80,0x80,0xff,0xa0);
   public static final Color GREEN_TRANS = new Color(0x40, 0xf0, 0x40, 0xa0);
   public static final Color RED_TRANS = new Color(0xf0, 0x40, 0x40, 0xa0);
 
-  public static final Color BLUE_C = new Color(0xff8080ff);
+  public static final Color BLUE_C = new Color(0xffa0a0ff);
   public static final Color GREEN_C = new Color(0xff60ff60);
   public static final Color RED_C = new Color(0xffff8000);
 
