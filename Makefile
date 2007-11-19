@@ -54,7 +54,7 @@ CCARGS=-deprecation -classpath .
 
 ifndef FIRMWAREFILE
 ESBFIRMWARE = firmware/esb/sensor-demo.firmware
-SKYFIRMWARE = firmware/sky/sensor-demo.firmware
+SKYFIRMWARE = firmware/sky/blink.firmware
 else
 ESBFIRMWARE = $FIRMWAREFILE
 SKYFIRMWARE = $FIRMWAREFILE

@@ -65,13 +65,16 @@ public class SkyNode implements PortListener, USARTListener {
   private IOPort port1;
   private IOPort port2;
   private IOPort port4;
+  private IOPort port5;
 
   private CC2420 radio;
   private ExtFlash flash;
 
-  public static final int BLUE_LED = 0x01;
-  public static final int GREEN_LED = 0x02;
+  public static final int BLUE_LED = 0x40;
+  public static final int GREEN_LED = 0x20;
+  public static final int RED_LED = 0x10;
 
+  public boolean redLed;
   public boolean blueLed;
   public boolean greenLed;
 
@@ -82,11 +85,10 @@ public class SkyNode implements PortListener, USARTListener {
    */
   public SkyNode(MSP430 cpu) {
     this.cpu = cpu;
-    IOUnit unit = cpu.getIOUnit("Port 2");
+    IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
-      port2 = (IOPort) unit;
-      System.out.println("Found port 2!!!");
-      port2.setPortListener(this);
+      port5 = (IOPort) unit;
+      port5.setPortListener(this);
     }
 
     unit = cpu.getIOUnit("Port 1");
@@ -124,7 +126,8 @@ public class SkyNode implements PortListener, USARTListener {
 
 
   public void portWrite(IOPort source, int data) {
-    if (source == port2) {
+    if (source == port5) {
+      redLed = (data & RED_LED) == 0;
       blueLed = (data & BLUE_LED) == 0;
       greenLed = (data & GREEN_LED) == 0;
       if (gui != null) {

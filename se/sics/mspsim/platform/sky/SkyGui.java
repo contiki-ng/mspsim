@@ -58,15 +58,18 @@ import se.sics.mspsim.util.WindowUtils;
 public class SkyGui extends JComponent implements KeyListener,
 						  MouseMotionListener {
 
-  public static final int GREEN_Y = 34;
+  public static final int GREEN_Y = 39;
   public static final int BLUE_Y = 47;
+  public static final int RED_Y = 34;
   public static final int LED_X = 10;
 
   public static final Color BLUE_TRANS = new Color(0x40,0x40,0xff,0xa0);
   public static final Color GREEN_TRANS = new Color(0x40, 0xf0, 0x40, 0xa0);
+  public static final Color RED_TRANS = new Color(0xf0, 0x40, 0x40, 0xa0);
 
   public static final Color BLUE_C = new Color(0xff8080ff);
   public static final Color GREEN_C = new Color(0xff60ff60);
+  public static final Color RED_C = new Color(0xffff8000);
 
   private SerialMon serial;
   private SerialMon radio;
@@ -133,6 +136,12 @@ public class SkyGui extends JComponent implements KeyListener,
     }
 
     // Display all active leds
+    if (node.redLed) {
+      g.setColor(RED_TRANS);
+      g.fillOval(LED_X - 2, RED_Y - 1, 9, 5);
+      g.setColor(RED_C);
+      g.fillOval(LED_X, RED_Y, 4, 3);
+    }
     if (node.greenLed) {
       g.setColor(GREEN_TRANS);
       g.fillOval(LED_X - 2, GREEN_Y - 1, 9, 5);
