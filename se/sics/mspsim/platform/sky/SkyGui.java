@@ -45,8 +45,8 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -55,8 +55,7 @@ import se.sics.mspsim.core.*;
 import se.sics.mspsim.util.SerialMon;
 import se.sics.mspsim.util.WindowUtils;
 
-public class SkyGui extends JComponent implements KeyListener,
-						  MouseMotionListener {
+public class SkyGui extends JComponent implements KeyListener {
 
   public static final int GREEN_Y = 40;
   public static final int BLUE_Y = 46;
@@ -100,7 +99,41 @@ public class SkyGui extends JComponent implements KeyListener,
     window.setVisible(true);
 
     window.addKeyListener(this);
-    window.addMouseMotionListener(this);
+
+    MouseAdapter mouseHandler = new MouseAdapter() {
+
+	private boolean buttonDown = false;
+	private boolean resetDown = false;
+
+	// For the button sensor and reset button on the Sky nodes.
+	public void mousePressed(MouseEvent e) {
+	  int x = e.getX();
+	  int y = e.getY();
+	  if (x > 126 && x < 138) {
+	    if (y > 65 && y < 76) {
+	      SkyGui.this.node.setButton(buttonDown = true);
+	    } else if (y > 95 && y < 107) {
+	      resetDown = true;
+	    }
+	  }
+	}
+
+	public void mouseReleased(MouseEvent e) {
+	  if (buttonDown) {
+	    SkyGui.this.node.setButton(buttonDown = false);
+
+	  } else if (resetDown) {
+	    int x = e.getX();
+	    int y = e.getY();
+	    resetDown = false;
+	    if (x > 126 && x < 138 && y > 95 && y < 107) {
+	      SkyGui.this.node.getCPU().reset();
+	    }
+	  }
+	}
+      };
+//     window.addMouseMotionListener(mouseHandler);
+    window.addMouseListener(mouseHandler);
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();
@@ -111,17 +144,7 @@ public class SkyGui extends JComponent implements KeyListener,
     }
   }
 
-  public void mouseMoved(MouseEvent e) {
-    //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
-    int x = e.getX();
-    int y = e.getY();
-  }
-
-  public void mouseDragged(MouseEvent e) {
-  }
-
-
-  public void paintComponent(Graphics g) {
+  protected void paintComponent(Graphics g) {
     Color old = g.getColor();
     int w = getWidth(), h = getHeight();
     int iw = skyImage.getIconWidth(), ih = skyImage.getIconHeight();

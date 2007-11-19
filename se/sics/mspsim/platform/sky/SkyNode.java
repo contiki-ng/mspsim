@@ -53,6 +53,9 @@ public class SkyNode implements PortListener, USARTListener {
 
   public static final boolean DEBUG = false;
 
+  // Port 2.
+  public static final int BUTTON_PIN = 7;
+
   public static final int CC2420_CHIP_SELECT = 0x04;
   /* P1.0 - Input: FIFOP from CC2420 */
   /* P1.3 - Input: FIFO from CC2420 */
@@ -96,6 +99,11 @@ public class SkyNode implements PortListener, USARTListener {
       port1 = (IOPort) unit;
     }
 
+    unit = cpu.getIOUnit("Port 2");
+    if (unit instanceof IOPort) {
+      port2 = (IOPort) unit;
+    }
+
     IOUnit usart0 = cpu.getIOUnit("USART 0");
     if (usart0 instanceof USART) {
       radio = new CC2420();
@@ -110,6 +118,10 @@ public class SkyNode implements PortListener, USARTListener {
       	((IOPort) port4).setPortListener(this);
       }
     }
+  }
+
+  public void setButton(boolean hi) {
+    port2.setPinState(BUTTON_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
   }
 
   public boolean getDebug() {
