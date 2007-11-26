@@ -62,6 +62,8 @@ endif
 
 CPUTEST := tests/cputest.firmware
 
+BINARY := README.txt images/*.jpg firmware/*/*.firmware
+
 PACKAGES := ${addprefix se/sics/mspsim/,core platform/esb platform/sky util chip}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
@@ -74,19 +76,18 @@ JARFILE := mspsim.jar
 # MAKE
 ###############################################################
 
-.PHONY: compile $(CPUTEST)
-
-compile:	$(OBJECTS)
+.PHONY: all compile jar help run runesb runsky test cputest $(CPUTEST) mtest
 
 all:	compile
+
+compile:	$(OBJECTS)
 
 jar:	compile
 	$(JAR) cf $(JARFILE) ${addsuffix /*.class,$(PACKAGES)} images/*.jpg
 
 help:
-	@echo "Usage: make [all,compile,clean]"
+	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
 
-.PHONY: run
 run:	compile
 	java se.sics.mspsim.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
 
@@ -96,7 +97,6 @@ runesb:	compile
 runsky:	compile
 	java se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPFILE)
 
-.PHONY: cputest test
 test:	cputest
 
 cputest:	$(CPUTEST)
@@ -105,10 +105,17 @@ cputest:	$(CPUTEST)
 $(CPUTEST):
 	(cd tests && $(MAKE))
 
-.PHONY: mtest
 mtest:	compile $(CPUTEST)
 	@-$(RM) mini-test_cpu.txt
 	java se.sics.util.Test -debug $(CPUTEST) >mini-test_cpu.txt
+
+
+###############################################################
+# ARCHIVE GENERATION
+###############################################################
+
+source:
+	zip -9 mspsim-source-`date '+%F'`.zip Makefile $(BINARY) *.java $(addsuffix /*.java,$(PACKAGES)) tests/Makefile tests/*.c tests/*.h
 
 
 ###############################################################
