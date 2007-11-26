@@ -8,7 +8,7 @@ some tools for monitoring stack, setting breakpoints, and profiling.
 * System requirements
 
 You need a recent Java to run MSPSim. Java SE 1.5 or newer is
-recommended. The current version of MSPSim also requires Make for
+recommended. The current version of MSPSim also requires make for
 compiling.
 
 * Building MSPSim
@@ -41,10 +41,9 @@ Run the default example on the Sky node emulator by typing:
 - Easy to add external components that emulates external HW
 - Supports monitoring of registers, adding breakpoints, etc.
 - Built-in profiling of executed code
-- Emulates external HW such as sensors and TR1001 and CC2420 radio
-  chips.
+- Emulates some external hardware such as TR1001 and CC2420.
 
-* What is emulated MSP430
+* What is emulated of the MSP430
 - CPU (instruction level simulation)
 - Timer A/B subsystem
 - USARTs
