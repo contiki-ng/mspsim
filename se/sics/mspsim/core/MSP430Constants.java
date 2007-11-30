@@ -108,6 +108,12 @@ public interface MSP430Constants {
   public static final int OVERFLOW = 1 << OVERFLOW_B;
   public static final int GIE = 1 << GIE_B;
 
+  /* For the LPM management */
+  public static final int CPUOFF = 0x0010;
+  public static final int OSCOFF = 0x0020;
+  public static final int SCG0 = 0x0040;
+  public static final int SCG1 = 0x0080;
+
 // #define C                   0x0001
 // #define Z                   0x0002
 // #define N                   0x0004

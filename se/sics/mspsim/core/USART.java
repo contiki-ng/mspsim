@@ -127,27 +127,18 @@ public class USART extends IOUnit {
   }
 
   private void setBitIFG(int bits) {
-//     if (uartID == 0) memory[IFG1] |= bits;
-//     else memory[IFG1 + 1] |= bits;
     sfr.setBitIFG(uartID, bits);
   }
 
   private void clrBitIFG(int bits) {
-//     if (uartID == 0) memory[IFG1] &= ~bits;
-//     else memory[IFG1 + 1] &= ~bits;
     sfr.clrBitIFG(uartID, bits);
   }
 
   private int getIFG() {
-//     if (uartID == 0) return memory[IFG1];
-//     return memory[IFG1 + 1];
     return sfr.getIFG(uartID);
   }
 
   private boolean isIEBitsSet(int bits) {
-//     if (uartID == 0) return (memory[IE1] & bits) == bits;
-//     // Check this!!!
-//     return (memory[IE1 + 1] & bits) == bits;
     return sfr.isIEBitsSet(uartID, bits);
   }
 
@@ -307,11 +298,11 @@ public class USART extends IOUnit {
     // Indicate interrupt also!
     setBitIFG(urxifg);
 
-    // Check if the IE flags are enabled! - same as the IFlag to indicate!
+    // Check if the IE flag is enabled! - same as the IFlag to indicate!
     if (isIEBitsSet(urxifg)) {
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
         System.out.println(getName() + " flagging receive interrupt: " +
-            receiveInterrupt);
+			   receiveInterrupt);
       }
       cpu.flagInterrupt(receiveInterrupt, this, true);
     }

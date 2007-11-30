@@ -69,6 +69,7 @@ public class MSP430Core implements MSP430Constants {
 
   public int memory[] = new int[MAX_MEM];
   public long cycles = 0;
+  public long cpuCycles = 0;
 
   // Most HW needs only notify write and clocking, others need also read...
   // For notify write...
@@ -96,6 +97,7 @@ public class MSP430Core implements MSP430Constants {
   IOUnit servicedInterruptUnit = null;
 
   boolean interruptsEnabled = false;
+  boolean cpuOff = false;
 
   // Not private since they are needed (for fast access...)
   int dcoFrq = 2500000;
@@ -239,7 +241,12 @@ public class MSP430Core implements MSP430Constants {
     }
     reg[r] = value;
     if (r == SR) {
+      boolean oldCpuOff = cpuOff;
       interruptsEnabled = ((value & GIE) == GIE);
+      cpuOff = ((value & CPUOFF) == CPUOFF);
+      if (cpuOff != oldCpuOff) {
+// 	System.out.println("LPM CPUOff: " + cpuOff + " cycles: " + cycles);
+      }
     }
   }
 
@@ -330,6 +337,7 @@ public class MSP430Core implements MSP430Constants {
     servicedInterruptUnit = null;
     servicedInterrupt = -1;
     interruptMax = -1;
+    cpuOff = false;
   }
 
   // Indicate that we have an interrupt now!
@@ -403,6 +411,8 @@ public class MSP430Core implements MSP430Constants {
     }
     nextIOTickCycles = smallestCyc;
     nextIOTickIndex = index;
+//     System.out.println("Smallest IO cycles: " + smallestCyc + " => " +
+// 		       ioUnits[index].getName());
   }
 
   // Read method that handles read from IO units!
@@ -456,6 +466,8 @@ public class MSP430Core implements MSP430Constants {
 		memory[0xffe0 + interruptMax * 2] +
 		(memory[0xffe0 + interruptMax * 2 + 1] << 8));
 
+    writeRegister(SR, sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
+
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
     // Flag off this interrupt - for now - as soon as RETI is
@@ -474,8 +486,18 @@ public class MSP430Core implements MSP430Constants {
     return pc;
   }
 
-  public void emulateOP() {
+  /* returns true if any instruction was emulated - false if CpuOff */
+  public boolean emulateOP() {
     int pc = readRegister(PC);
+    long startCycles = cycles;
+
+    // -------------------------------------------------------------------
+    // I/O processing
+    // -------------------------------------------------------------------
+    if (cycles >= nextIOTickCycles) {
+      handleIO();
+    }
+
 
     // -------------------------------------------------------------------
     // Interrupt processing [after the last instruction was executed]
@@ -484,13 +506,20 @@ public class MSP430Core implements MSP430Constants {
       pc = serviceInterrupt(pc);
     }
 
+    /* Did not execute any instructions */
+    if (cpuOff) {
+//       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
+      cycles = nextIOTickCycles;
+      return false;
+    }
+
     // This is quite costly... should probably be made more
     // efficiently (maybe in CORE where PC is read anyway?)
     if (breakPoints[pc] != null) {
       if (breakpointActive) {
 	breakPoints[pc].cpuAction(CPUMonitor.BREAK, pc, 0);
 	breakpointActive = false;
-	return;
+	return false;
       } else {
 	// Execute this instruction - this is second call...
 	breakpointActive = true;
@@ -512,13 +541,6 @@ public class MSP430Core implements MSP430Constants {
 
     boolean write = false;
     boolean updateStatus = true;
-
-    // -------------------------------------------------------------------
-    // I/O processing
-    // -------------------------------------------------------------------
-    if (cycles > nextIOTickCycles) {
-      handleIO();
-    }
 
     // When is PC increased  probably immediately (e.g. here)?
     pc += 2;
@@ -939,6 +961,8 @@ public class MSP430Core implements MSP430Constants {
 	 ((dst & 0x80) > 0 ? NEGATIVE : 0));
       writeRegister(SR, sr);
     }
-  }
 
+    cpuCycles += cycles - startCycles;
+    return true;
+  }
 }

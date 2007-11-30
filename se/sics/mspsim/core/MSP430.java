@@ -103,31 +103,32 @@ public class MSP430 extends MSP430Core {
 	}
       }
 
-      instCtr++;
-      if ((instCtr % 10000007) == 0 && !debug) {
-	printCPUSpeed(reg[PC]);
-      }
+      if (emulateOP()) {
+	instCtr++;
+	if ((instCtr % 1000007) == 0 && !debug) {
+	  printCPUSpeed(reg[PC]);
+	}
 
-      if (execCounter != null) {
-	execCounter[reg[PC]]++;
-      }
+	if (execCounter != null) {
+	  execCounter[reg[PC]]++;
+	}
 
-      emulateOP();
+	if (map != null) {
+	  if ((instruction & 0xff80) == CALL) {
+	    /* The profiling should only be made on actual cpuCycles */
+	    profileCall(map.getFunction(reg[PC]), cpuCycles);
+	    // 	  System.out.println("Call," + map.getFunction(reg[PC]) + "," +
+	    // 			     cycles);
+	  } else if (instruction == RETURN) {
+	    profileReturn(cpuCycles);
+	    //System.out.println("Return," + cycles);
+	  }
+	}
+      }
 
 //       if ((instruction & 0xff80) == CALL) {
 // 	System.out.println("Call to PC = " + reg[PC]);
 //       }
-
-      if (map != null) {
-	if ((instruction & 0xff80) == CALL) {
-	  profileCall(map.getFunction(reg[PC]), cycles);
-	  // 	  System.out.println("Call," + map.getFunction(reg[PC]) + "," +
-	  // 			     cycles);
-	} else if (instruction == RETURN) {
-	  profileReturn(cycles);
-	  //System.out.println("Return," + cycles);
-	}
-      }
     }
   }
 
