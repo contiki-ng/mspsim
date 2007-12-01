@@ -57,6 +57,8 @@ import se.sics.mspsim.core.*;
 
 public class ControlUI extends JPanel implements ActionListener {
 
+  private static final String TITLE = "MSPSim monitor";
+
   private JFrame window;
   private MSP430 cpu;
   private DebugUI dui;
@@ -76,7 +78,7 @@ public class ControlUI extends JPanel implements ActionListener {
     WindowUtils.addSaveOnShutdown("StackUI", stackWindow);
     stackWindow.setVisible(true);
 
-    window = new JFrame("MSPSim monitor");
+    window = new JFrame(TITLE);
 //     window.setSize(320,240);
     window.setLayout(new BorderLayout());
     window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -121,8 +123,13 @@ public class ControlUI extends JPanel implements ActionListener {
     return jb;
   }
 
+  private void updateCPUPercent() {
+    window.setTitle(TITLE + "  CPU On: " + cpu.getCPUPercent() + "%");
+  }
+
   public void actionPerformed(ActionEvent ae) {
     String cmd = ae.getActionCommand();
+    updateCPUPercent();
     if ("Debug On".equals(cmd)) {
       cpu.setDebug(true);
       ((JButton) ae.getSource()).setText("Debug Off");
@@ -145,9 +152,13 @@ public class ControlUI extends JPanel implements ActionListener {
       stepAction.setEnabled(true);
 
     } else if ("Profile Dump".equals(cmd)) {
-      cpu.printProfile();
- //     } else if ("Single Step".equals(cmd)) {
-//       cpu.step();
+      if (cpu.getProfiler() != null) {
+	cpu.getProfiler().printProfile();
+      } else {
+	System.out.println("*** No profiler available");
+      }
+      //     } else if ("Single Step".equals(cmd)) {
+      //       cpu.step();
 //       dui.repaint();
     }
     dui.updateRegs();

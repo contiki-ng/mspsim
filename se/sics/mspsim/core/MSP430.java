@@ -40,10 +40,7 @@
  */
 
 package se.sics.mspsim.core;
-import java.util.Arrays;
-import java.util.Hashtable;
-
-import se.sics.mspsim.util.Utils;
+import se.sics.mspsim.util.*;
 
 public class MSP430 extends MSP430Core {
 
@@ -61,14 +58,12 @@ public class MSP430 extends MSP430Core {
   private long nextSleep = 0;
   private long nextOut = 0;
 
+  private double lastCPUPercent = 0d;
+
   private long instCtr = 0;
-
   private DisAsm disAsm;
-
   private MapTable map;
-  private Hashtable<String,CallEntry> profileData;
-  private CallEntry[] callStack;
-  private int cSP = 0;
+  private Profiler profiler;
 
   /**
    * Creates a new <code>MSP430</code> instance.
@@ -77,6 +72,10 @@ public class MSP430 extends MSP430Core {
   public MSP430(int type) {
     super(type);
     disAsm = new DisAsm();
+  }
+
+  public double getCPUPercent() {
+    return lastCPUPercent;
   }
 
   public DisAsm getDisAsm() {
@@ -108,7 +107,7 @@ public class MSP430 extends MSP430Core {
 
       if (cycles > nextOut && !debug) {
 	printCPUSpeed(reg[PC]);
-	nextOut = cycles + 10000007;
+	nextOut = cycles + 20000007;
       }
 
       if (emulateOP()) {
@@ -118,15 +117,16 @@ public class MSP430 extends MSP430Core {
 	  execCounter[reg[PC]]++;
 	}
 
-	if (map != null) {
+	if (profiler != null) {
 	  if ((instruction & 0xff80) == CALL) {
 	    /* The profiling should only be made on actual cpuCycles */
-	    profileCall(map.getFunction(reg[PC]), cpuCycles);
-	    // 	  System.out.println("Call," + map.getFunction(reg[PC]) + "," +
-	    // 			     cycles);
+	    String function = map.getFunction(reg[PC]);
+	    if (function == null) {
+	      function = "fkn at $" + Utils.hex16(reg[PC]);
+	    }
+	    profiler.profileCall(function, cpuCycles);
 	  } else if (instruction == RETURN) {
-	    profileReturn(cpuCycles);
-	    //System.out.println("Return," + cycles);
+	    profiler.profileReturn(cpuCycles);
 	  }
 	}
       }
@@ -143,81 +143,6 @@ public class MSP430 extends MSP430Core {
 //       if ((instruction & 0xff80) == CALL) {
 // 	System.out.println("Call to PC = " + reg[PC]);
 //       }
-    }
-  }
-
-  private void profileCall(String function, long cycles) {
-//     System.out.println("Call at: " + Utils.hex16(reg[PC]));
-    if (callStack[cSP] == null) {
-      callStack[cSP] = new CallEntry();
-    }
-    if (function == null) {
-      function = "fkn at $" + Utils.hex16(reg[PC]);
-    }
-    callStack[cSP].function = function;
-    callStack[cSP].calls = 0;
-    callStack[cSP++].cycles = cycles;
-  }
-
-  private void profileReturn(long cycles) {
-    String fkn = callStack[--cSP].function;
-//     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
-
-    long elapsed = cycles - callStack[cSP].cycles;
-    if (callStack[cSP].calls >= 0) {
-      CallEntry ce = profileData.get(fkn);
-      if (ce == null) {
-	profileData.put(fkn, ce = new CallEntry());
-	ce.function = fkn;
-      }
-      ce.cycles += elapsed;
-      ce.calls++;
-    }
-  }
-
-  public void clearProfile() {
-    if (profileData != null) {
-      CallEntry[] entries =
-	profileData.values().toArray(new CallEntry[0]);
-      for (int i = 0, n = entries.length; i < n; i++) {
-	entries[i].cycles = 0;
-	entries[i].calls = 0;
-      }
-      for (int i = 0, n = callStack.length; i < n; i++) {
-	CallEntry e = callStack[i];
-	if (e != null) {
-	  e.calls = -1;
-	}
-      }
-    }
-  }
-
-  public void printProfile() {
-    CallEntry[] entries =
-      profileData.values().toArray(new CallEntry[0]);
-    Arrays.sort(entries);
-    for (int i = 0, n = entries.length; i < n; i++) {
-      int c = entries[i].calls;
-      if (c > 0) {
-	String cyclesS = "" + entries[i].cycles;
-	String callS = "" + c;
-	String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
-	System.out.print(entries[i].function);
-	printSpace(56 - entries[i].function.length() - avgS.length());
-	System.out.print(avgS);
-	System.out.print(' ');
-	printSpace(8 - callS.length());
-	System.out.print(callS);
-	System.out.print(' ');
-	printSpace(10 - cyclesS.length());
-	System.out.println(cyclesS);
-      }
-    }
-  }
-
-  private void printSpace(int len) {
-    for (int i = 0; i < len; i++) {
-      System.out.print(' ');
     }
   }
 
@@ -285,6 +210,7 @@ public class MSP430 extends MSP430Core {
 			 + 1000 * (cpud / td ) + " cyc/s  "
 			 + (10000 * cpud / cd)/100.0 + "%");
     }
+    lastCPUPercent = (10000 * cpud / cd)/100.0;
     time = System.currentTimeMillis();
     lastCycles = cycles;
     lastCpuCycles = cpuCycles;
@@ -299,27 +225,15 @@ public class MSP430 extends MSP430Core {
     debug = db;
   }
 
+  public Profiler getProfiler() {
+    return profiler;
+  }
+
   public void setMap(MapTable map) {
-    if (profileData == null) {
-      profileData = new Hashtable<String,CallEntry>();
-      callStack = new CallEntry[2048];
-    }
     this.map = map;
-  }
-
-  private static class CallEntry implements Comparable {
-    String function;
-    long cycles;
-    int calls;
-
-    public int compareTo(Object o) {
-      if (o instanceof CallEntry) {
-	long diff = ((CallEntry)o).cycles - cycles;
-	if (diff > 0) return 1;
-	if (diff < 0) return -1;
-      }
-      return 0;
+    /* When we got the map table we can also profile! */
+    if (profiler == null) {
+      this.profiler = new SimpleProfiler();
     }
   }
-
 }
