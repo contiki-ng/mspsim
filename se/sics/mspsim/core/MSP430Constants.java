@@ -136,5 +136,5 @@ public interface MSP430Constants {
   public static final int CLKCAPTURE_BOTH = 3;
 
 
-  public static final int DEBUGGING_LEVEL = 0;
+  public static final int DEBUGGING_LEVEL = 1;
 }

@@ -337,7 +337,7 @@ public class MSP430Core implements MSP430Constants {
     servicedInterruptUnit = null;
     servicedInterrupt = -1;
     interruptMax = -1;
-    cpuOff = false;
+    writeRegister(SR, 0);
   }
 
   // Indicate that we have an interrupt now!

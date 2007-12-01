@@ -49,7 +49,7 @@ import se.sics.mspsim.core.*;
 
 public class StackUI extends JPanel implements CPUMonitor {
 
-  private static final int STACK_FRAME = 2048;
+  private static final int STACK_FRAME = 1024;
   private int updateCyclePeriod = 2500;
 
   private MSP430 cpu;
@@ -106,8 +106,8 @@ public class StackUI extends JPanel implements CPUMonitor {
     if (this.maxData[pos] < size) {
       this.maxData[pos] = size;
     }
-    if (cpu.cycles - lastCycles > updateCyclePeriod) {
-      lastCycles = cpu.cycles;
+    if (cpu.cpuCycles - lastCycles > updateCyclePeriod) {
+      lastCycles = cpu.cpuCycles;
       //System.out.println("STACK UPDATE: " + type + "," + adr + "," + data);
       pos = (pos + 1) % this.minData.length;
       this.minData[pos] = 0;

@@ -56,7 +56,10 @@ public class MSP430 extends MSP430Core {
 
   // Debug time - measure cycles
   private long lastCycles = 0;
+  private long lastCpuCycles = 0;
   private long time;
+  private long nextSleep = 0;
+  private long nextOut = 0;
 
   private long instCtr = 0;
 
@@ -103,11 +106,13 @@ public class MSP430 extends MSP430Core {
 	}
       }
 
+      if (cycles > nextOut && !debug) {
+	printCPUSpeed(reg[PC]);
+	nextOut = cycles + 10000007;
+      }
+
       if (emulateOP()) {
 	instCtr++;
-	if ((instCtr % 1000007) == 0 && !debug) {
-	  printCPUSpeed(reg[PC]);
-	}
 
 	if (execCounter != null) {
 	  execCounter[reg[PC]]++;
@@ -124,6 +129,15 @@ public class MSP430 extends MSP430Core {
 	    //System.out.println("Return," + cycles);
 	  }
 	}
+      }
+
+      /* Just a test to see if it gets down to a reasonable speed */
+      if (cycles > nextSleep) {
+	try {
+	  Thread.sleep(10);
+	} catch (Exception e) {
+	}
+	nextSleep = cycles + 50000;
       }
 
 //       if ((instruction & 0xff80) == CALL) {
@@ -260,14 +274,20 @@ public class MSP430 extends MSP430Core {
   private void printCPUSpeed(int pc) {
     int td = (int)(System.currentTimeMillis() - time);
     int cd = (int) (cycles - lastCycles);
+    int cpud = (int) (cpuCycles - lastCpuCycles);
+
+    if (td == 0 || cd == 0) return;
 
     if (DEBUGGING_LEVEL > 0) {
-      System.out.println("Time elapsed: " + td
-          +  " cycDiff: " + cd
-          + " => " + 1000 * (cd / td ) + " cycles / s");
+      System.out.println("Elapsed: " + td
+			 +  " cycDiff: " + cd + " => " + 1000 * (cd / td )
+			 + " cyc/s  cpuDiff:" + cpud + " => "
+			 + 1000 * (cpud / td ) + " cyc/s  "
+			 + (10000 * cpud / cd)/100.0 + "%");
     }
     time = System.currentTimeMillis();
     lastCycles = cycles;
+    lastCpuCycles = cpuCycles;
     disAsm.disassemble(pc, memory, reg);
   }
 
