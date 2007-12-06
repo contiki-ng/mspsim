@@ -27,11 +27,9 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: ELF.java,v 1.3 2007/10/21 21:17:34 nfi Exp $
- *
  * -----------------------------------------------------------------
  *
- * ELF
+ * ELFDebug
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007

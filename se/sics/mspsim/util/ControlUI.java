@@ -65,9 +65,16 @@ public class ControlUI extends JPanel implements ActionListener {
   private JFrame stackWindow;
   private StackUI stackUI;
 
+  private ELF elfData;
+  private SourceViewer sourceViewer;
+
   private Action stepAction;
 
   public ControlUI(MSP430 cpu) {
+    this(cpu, null);
+  }
+
+  public ControlUI(MSP430 cpu, ELF elf) {
     super(new GridLayout(0, 1));
     this.cpu = cpu;
 
@@ -103,6 +110,9 @@ public class ControlUI extends JPanel implements ActionListener {
     JButton stepButton = new JButton(stepAction);
     add(stepButton);
 
+    if (elf != null) {
+      createButton("Show Source");
+    }
     createButton("Profile Dump");
 
     // Setup standard actions
@@ -114,7 +124,13 @@ public class ControlUI extends JPanel implements ActionListener {
     WindowUtils.restoreWindowBounds("ControlUI", window);
     WindowUtils.addSaveOnShutdown("ControlUI", window);
     window.setVisible(true);
- }
+    elfData = elf;
+  }
+
+  private void setSourceViewer(SourceViewer viewer) {
+    sourceViewer = viewer;
+  }
+
 
   private JButton createButton(String text) {
     JButton jb = new JButton(text);
@@ -160,6 +176,20 @@ public class ControlUI extends JPanel implements ActionListener {
       //     } else if ("Single Step".equals(cmd)) {
       //       cpu.step();
 //       dui.repaint();
+    } else if ("View Source".equals(cmd)) {
+      int pc = cpu.readRegister(cpu.PC);
+      if (sourceViewer != null) {
+	DebugInfo dbg = elfData.getDebugInfo(pc);
+	if (dbg != null) {
+	  if (sourceViewer != null) {
+	    sourceViewer.viewFile(dbg.getFile());
+	    sourceViewer.viewLine(dbg.getLine());
+	  } else {
+	    System.out.println("File: " + dbg.getFile());
+	    System.out.println("LineNr: " + dbg.getLine());
+	  }
+	}
+      }
     }
     dui.updateRegs();
   }

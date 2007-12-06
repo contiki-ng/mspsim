@@ -27,47 +27,23 @@
  *
  * This file is part of MSPSim.
  *
+ *
  * -----------------------------------------------------------------
  *
- * DebugInfo - contains some debug info
+ * Source Viewer
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date: 2007/10/21 21:17:34 $
- *           $Revision: 1.3 $
+ * Updated : $Date: 2007/10/21 22:02:22 $
+ *           $Revision: 1.4 $
  */
 
 package se.sics.mspsim.util;
-import se.sics.mspsim.core.*;
 
-public class DebugInfo {
 
-  private String file;
-  private String path;
-  private int lineNo;
-  private String function;
+public interface SourceViewer {
 
-  public DebugInfo(int line, String path, String file, String fun) {
-    this.lineNo = line;
-    this.file = file;
-    this.path = path;
-    this.function = fun;
-  }
+  public void viewFile(String file);
+  public void viewLine(int line);
 
-  public String getFile() {
-    return file;
-  }
-
-  public String getPath() {
-    return path;
-  }
-
-  public String getFunction() {
-    return function;
-  }
-
-  public int getLine() {
-    return lineNo;
-  }
-
-} // DebugInfo
+}
