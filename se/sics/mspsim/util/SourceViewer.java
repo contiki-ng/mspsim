@@ -43,6 +43,7 @@ package se.sics.mspsim.util;
 
 public interface SourceViewer {
 
+  public boolean isVisible();
   public void viewFile(String path, String file);
   public void viewLine(int line);
 
