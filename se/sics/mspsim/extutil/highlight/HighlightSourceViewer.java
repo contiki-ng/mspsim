@@ -39,6 +39,7 @@
  */
 
 package se.sics.mspsim.extutil.highlight;
+import java.awt.Color;
 import java.awt.Container;
 import java.io.File;
 import java.io.FileReader;
@@ -61,6 +62,7 @@ public class HighlightSourceViewer implements SourceViewer {
 
   private JFrame window;
   private SyntaxHighlighter highlighter;
+  private String currentFile;
   private ArrayList<File> path = null;
   private JFileChooser fileChooser;
 
@@ -73,15 +75,37 @@ public class HighlightSourceViewer implements SourceViewer {
       window = new JFrame("Source Viewer");
       window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
+      LineNumberedBorder border = new LineNumberedBorder(LineNumberedBorder.LEFT_SIDE, LineNumberedBorder.RIGHT_JUSTIFY);
+      border.setSeparatorColor(Color.lightGray);
+
       Scanner scanner = new CScanner();
       highlighter = new SyntaxHighlighter(24, 120, scanner);
-      highlighter.setBorder(new LineNumberedBorder(LineNumberedBorder.LEFT_SIDE, LineNumberedBorder.RIGHT_JUSTIFY));
+      highlighter.setEditable(false);
+      highlighter.setBorder(border);
       JScrollPane scroller = new JScrollPane(highlighter);
       scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
       Container pane = window.getContentPane();
       pane.add(scroller);
       WindowUtils.restoreWindowBounds("SourceViewer", window);
       WindowUtils.addSaveOnShutdown("SourceViewer", window);
+
+      String searchPath = System.getProperty("CONTIKI_PATH");
+      if (searchPath != null) {
+        addEnvPath(searchPath);
+      }
+      searchPath = System.getenv("CONTIKI_PATH");
+      if (searchPath != null) {
+        addEnvPath(searchPath);
+      }
+    }
+  }
+  
+  private void addEnvPath(String searchPath) {
+    String[] p = searchPath.split(File.pathSeparator);
+    if (p != null) {
+      for (int i = 0, n = p.length; i < n; i++) {
+        addSearchPath(new File(p[i]));
+      }
     }
   }
 
@@ -95,6 +119,12 @@ public class HighlightSourceViewer implements SourceViewer {
   }
 
   public void viewFile(final String path, final String filename) {
+    if (filename.equals(currentFile)) {
+      // Already showing this file
+      return;
+    }
+    currentFile = filename;
+
     setup();
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
@@ -107,6 +137,7 @@ public class HighlightSourceViewer implements SourceViewer {
               // Workaround for bug 4782232 in Java 1.4
               highlighter.setCaretPosition(1);
               highlighter.setCaretPosition(0);
+              window.setVisible(true);
             } finally {
               reader.close();
             }
@@ -123,20 +154,14 @@ public class HighlightSourceViewer implements SourceViewer {
     if (highlighter != null) {
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
-          if (line >= 0 && line < highlighter.getLineCount()) {
-            highlighter.setCaretPosition(highlighter.getLineStartOffset(line));
-            window.setVisible(true);
-            window.toFront();
-          }
+          highlighter.viewLine(line);
+          window.setVisible(true);
         }
       });
     }
   }
 
   public void addSearchPath(File directory) {
-    if (!directory.exists() || !directory.isDirectory()) {
-      throw new IllegalArgumentException(directory + " is not a directory");
-    }
     if (path == null) {
       path = new ArrayList<File>();
     }
