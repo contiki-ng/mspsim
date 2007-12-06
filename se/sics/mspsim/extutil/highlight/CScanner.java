@@ -643,14 +643,10 @@ public class CScanner extends Scanner {
   // Override initSymbolTable
 
   protected void initSymbolTable() {
-    lookup(KEYWORD, "abstract");
-    lookup(KEYWORD, "assert");
-    lookup(KEYWORD, "boolean");
+    lookup(KEYWORD, "auto");
+    lookup(KEYWORD, "asm");
     lookup(KEYWORD, "break");
-    lookup(KEYWORD, "byte");
     lookup(KEYWORD, "case");
-    lookup(KEYWORD, "catch");
-    lookup(KEYWORD, "class");
     lookup(KEYWORD, "const");
     lookup(KEYWORD, "continue");
     lookup(KEYWORD, "default");
@@ -660,30 +656,26 @@ public class CScanner extends Scanner {
     lookup(KEYWORD, "else");
     lookup(KEYWORD, "endif");
     lookup(KEYWORD, "enum");
-    lookup(KEYWORD, "extends");
     lookup(KEYWORD, "extern");
     lookup(KEYWORD, "for");
     lookup(KEYWORD, "goto");
     lookup(KEYWORD, "if");
     lookup(KEYWORD, "ifdef");
     lookup(KEYWORD, "ifndef");
+    lookup(KEYWORD, "inline");
     lookup(KEYWORD, "include");
-    lookup(KEYWORD, "new");
     lookup(KEYWORD, "private");
     lookup(KEYWORD, "protected");
     lookup(KEYWORD, "public");
+    lookup(KEYWORD, "register");
     lookup(KEYWORD, "return");
-    lookup(KEYWORD, "short");
+    lookup(KEYWORD, "sizeof");
     lookup(KEYWORD, "static");
     lookup(KEYWORD, "struct");
     lookup(KEYWORD, "super");
     lookup(KEYWORD, "switch");
-    lookup(KEYWORD, "synchronized");
-    lookup(KEYWORD, "this");
-    lookup(KEYWORD, "throw");
-    lookup(KEYWORD, "throws");
-    lookup(KEYWORD, "transient");
-    lookup(KEYWORD, "try");
+    lookup(KEYWORD, "typedef");
+    lookup(KEYWORD, "union");
     lookup(KEYWORD, "volatile");
     lookup(KEYWORD, "while");
 
@@ -705,9 +697,9 @@ public class CScanner extends Scanner {
     lookup(LITERAL, "double");
     lookup(LITERAL, "void");
     lookup(LITERAL, "unsigned");
+    lookup(LITERAL, "signed");
     lookup(LITERAL, "char");
     lookup(LITERAL, "short");
-
   }
 
   // *** Override lookup, but what about unicode escape translation?
