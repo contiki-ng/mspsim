@@ -127,7 +127,7 @@ public class ControlUI extends JPanel implements ActionListener {
     elfData = elf;
   }
 
-  private void setSourceViewer(SourceViewer viewer) {
+  public void setSourceViewer(SourceViewer viewer) {
     sourceViewer = viewer;
   }
 
