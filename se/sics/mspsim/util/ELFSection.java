@@ -46,15 +46,15 @@ public class ELFSection {
   public static final int TYPE_NULL       =   0;
   public static final int TYPE_PROGBITS   =   1;
   public static final int TYPE_SYMTAB     =   2;
-  public static final int TYPE_STRTAB	 =3;
-  public static final int TYPE_RELA	  =       4;
-  public static final int TYPE_HASH	   =      5;
+  public static final int TYPE_STRTAB	  =   3;
+  public static final int TYPE_RELA	  =   4;
+  public static final int TYPE_HASH	  =   5;
   public static final int TYPE_DYNAMIC    =   6;
-  public static final int TYPE_NOTE	     =    7;
-  public static final int TYPE_NOBITS	= 8;
-  public static final int TYPE_REL	 =        9;
-  public static final int TYPE_SHLIB    =     10;
-  public static final int TYPE_DYNSYM    =    11;
+  public static final int TYPE_NOTE	  =   7;
+  public static final int TYPE_NOBITS	  =   8;
+  public static final int TYPE_REL	  =   9;
+  public static final int TYPE_SHLIB      =  10;
+  public static final int TYPE_DYNSYM     =  11;
 
   public static final int SYMBIND_LOCAL = 0;
   public static final int SYMBIND_GLOBAL = 1;

@@ -77,6 +77,10 @@ public class ELF {
 
   ELFSection strTable;
   ELFSection symTable;
+  ELFSection dbgStab;
+  ELFSection dbgStabStr;
+
+  ELFDebug debug;
 
   public ELF(byte[] data) {
     elfData = data;
@@ -215,6 +219,17 @@ public class ELF {
 	strTable = sections[i];
       }
     }
+
+    /* Find sections */
+    for (int i = 0, n = shnum; i < n; i++) {
+      if (".stabstr".equals(sections[i].getSectionName())) {
+	dbgStabStr = sections[i];
+      }
+      if (".stab".equals(sections[i].getSectionName())) {
+	dbgStab = sections[i];
+      }
+    }
+
   }
 
   private void readPrograms() {
@@ -232,6 +247,9 @@ public class ELF {
     readHeader();
     readPrograms();
     readSections();
+    if (dbgStab != null) {
+      debug = new ELFDebug(this, dbgStab, dbgStabStr);
+    }
   }
 
   public void loadPrograms(int[] memory) {
@@ -254,6 +272,10 @@ public class ELF {
 	memory[addr++] = 0;
       }
     }
+  }
+
+  public DebugInfo getDebugInfo(int adr) {
+    return debug.getDebugInfo(adr);
   }
 
   public MapTable getMap() {
@@ -315,22 +337,30 @@ public class ELF {
   public static void main(String[] args) throws Exception {
     ELF elf = readELF(args[0]);
 
-    for (int i = 0, n = elf.shnum; i < n; i++) {
-      System.out.println("-- Section header " + i + " --\n" + elf.sections[i]);
-      if (".stab".equals(elf.sections[i].getSectionName()) ||
-	  ".stabstr".equals(elf.sections[i].getSectionName())) {
-	int adr = elf.sections[i].offset;
-	System.out.println(" == Section data ==");
-	for (int j = 0, m = 2000; j < m; j++) {
-	  System.out.print((char) elf.elfData[adr++]);
-	  if (i % 20 == 19) System.out.println("");
+    if (args.length < 2) {
+      for (int i = 0, n = elf.shnum; i < n; i++) {
+	System.out.println("-- Section header " + i + " --\n" + elf.sections[i]);
+	if (".stab".equals(elf.sections[i].getSectionName()) ||
+	    ".stabstr".equals(elf.sections[i].getSectionName())) {
+	  int adr = elf.sections[i].offset;
+	  System.out.println(" == Section data ==");
+	  for (int j = 0, m = 2000; j < m; j++) {
+	    System.out.print((char) elf.elfData[adr++]);
+	    if (i % 20 == 19) System.out.println("");
+	  }
 	}
+	System.out.println("");
       }
-      System.out.println("");
     }
-
     elf.getMap();
-
+    if (args.length > 1) {
+      DebugInfo dbg = elf.getDebugInfo(Integer.parseInt(args[1]));
+      if (dbg != null) {
+	System.out.println("File: " + dbg.getFile());
+	System.out.println("Function: " + dbg.getFunction());
+	System.out.println("LineNo: " + dbg.getLine());
+      }
+    }
   }
 
 
