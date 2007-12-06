@@ -1,4 +1,5 @@
 package se.sics.mspsim.extutil.highlight;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -48,6 +49,8 @@ public class LineNumberedBorder extends AbstractBorder {
    * Indicates the location of the line numbers, w.r.t. the component.
    */
   private int location = LEFT_SIDE;
+
+  private Color separatorColor = null;
 
   public LineNumberedBorder(int location, int justify) {
     setLocation(location);
@@ -99,6 +102,14 @@ public class LineNumberedBorder extends AbstractBorder {
     if (loc == RIGHT_SIDE || loc == LEFT_SIDE) {
       location = loc;
     }
+  }
+
+  public Color getSeparatorColor() {
+    return separatorColor;
+  }
+
+  public void setSeparatorColor(Color c) {
+    this.separatorColor = c;
   }
 
   /**
@@ -226,6 +237,15 @@ public class LineNumberedBorder extends AbstractBorder {
 
       ybaseline += fontHeight;
       startingLineNumber++;
+    }
+    if (separatorColor != null) {
+      g.setColor(separatorColor);
+      if (location == LEFT_SIDE) {
+        lnxstart = x + lineWidth - 1;
+      } else {
+        lnxstart = width - lineWidth;
+      }
+      g.drawLine(lnxstart, 0, lnxstart, height);
     }
   }
 
