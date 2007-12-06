@@ -106,9 +106,11 @@ public class ELFDebug {
 	  }
 	} else {
 	  /* requires sorted order of all file entries in stab section */
-	  System.out.println("FILE: Already passed address..." +
-			     currentPath + " " +
-			     currentFile + " " + currentFunction);
+	  if (DEBUG) {
+	    System.out.println("FILE: Already passed address..." +
+			       currentPath + " " +
+			       currentFile + " " + currentFunction);
+	  }
 	  return null;
 	}
 	break;
@@ -135,7 +137,9 @@ public class ELFDebug {
 	  currentFunction = stab.data;
 	  lastAddress = stab.value;
 	} else {
-	  System.out.println("FUN: Already passed address...");
+	  if (DEBUG) {
+	    System.out.println("FUN: Already passed address...");
+	  }
 	  return null;
 	}
 	break;
@@ -144,7 +148,7 @@ public class ELFDebug {
     return null;
   }
 
-  private class Stab {
+  private static class Stab {
 
     String data;
     int type;
