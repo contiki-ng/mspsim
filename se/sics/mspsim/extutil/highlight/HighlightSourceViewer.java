@@ -39,11 +39,13 @@
  */
 
 package se.sics.mspsim.extutil.highlight;
-
 import java.awt.Container;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
@@ -59,6 +61,8 @@ public class HighlightSourceViewer implements SourceViewer {
 
   private JFrame window;
   private SyntaxHighlighter highlighter;
+  private ArrayList<File> path = null;
+  private JFileChooser fileChooser;
   
   public HighlightSourceViewer() {
     //
@@ -90,26 +94,59 @@ public class HighlightSourceViewer implements SourceViewer {
     window.setVisible(isVisible);
   }
 
-  public void viewFile(final String file) {
+  public void viewFile(final String filename) {
     setup();
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
         try {
-          FileReader reader = new FileReader(file);
-          try {
-            highlighter.read(reader, null);
-            // Workaround for bug 4782232 in Java 1.4
-            highlighter.setCaretPosition(1);
-            highlighter.setCaretPosition(0);
-          } finally {
-            reader.close();
+          String file = findSourceFile(filename);
+          if (file != null) {
+            FileReader reader = new FileReader(file);
+            try {
+              highlighter.read(reader, null);
+              // Workaround for bug 4782232 in Java 1.4
+              highlighter.setCaretPosition(1);
+              highlighter.setCaretPosition(0);
+            } finally {
+              reader.close();
+            }
           }
         } catch (IOException err) {
           err.printStackTrace();
-          JOptionPane.showMessageDialog(window, "Failed to read the file '" + file + '\'', "Could not read file", JOptionPane.ERROR_MESSAGE);
+          JOptionPane.showMessageDialog(window, "Failed to read the file '" + filename + '\'', "Could not read file", JOptionPane.ERROR_MESSAGE);
         }
       }
     });
+  }
+
+  private String findSourceFile(String filename) {
+    File fp = new File(filename);
+    if (fp.exists()) {
+      return filename;
+    }
+    if (path != null) {
+      for(File p : path) {
+        File nfp = new File(p, filename);
+        if (nfp.exists()) {
+          return nfp.getAbsolutePath();
+        }
+      }
+    } else {
+      path = new ArrayList<File>();
+    }
+    // Find new path to search from
+    if (fileChooser == null) {
+      fileChooser = new JFileChooser("./");
+      fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      fileChooser.setDialogTitle("Select compilation directory");
+    }
+    fileChooser.showOpenDialog(window);
+    File d = fileChooser.getSelectedFile();
+    if (d != null) {
+      path.add(d);
+      return findSourceFile(filename);
+    }
+    return null;
   }
 
   public void viewLine(final int line) {
