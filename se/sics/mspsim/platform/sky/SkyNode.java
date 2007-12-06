@@ -44,6 +44,7 @@ import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.util.*;
 
 /**
@@ -188,6 +189,8 @@ public class SkyNode implements PortListener, USARTListener {
     SkyNode node = new SkyNode(cpu);
     node.gui = new SkyGui(node);
     ControlUI control = new ControlUI(cpu, elf);
+    HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
+    control.setSourceViewer(sourceViewer);
 
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);
