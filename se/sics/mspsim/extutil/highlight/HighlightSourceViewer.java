@@ -70,7 +70,7 @@ public class HighlightSourceViewer implements SourceViewer {
       window.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
       Scanner scanner = new CScanner();
-      highlighter = new SyntaxHighlighter(24, 80, scanner);
+      highlighter = new SyntaxHighlighter(24, 120, scanner);
       highlighter.setBorder(new LineNumberedBorder(LineNumberedBorder.LEFT_SIDE, LineNumberedBorder.RIGHT_JUSTIFY));
       JScrollPane scroller = new JScrollPane(highlighter);
       scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -118,6 +118,8 @@ public class HighlightSourceViewer implements SourceViewer {
         public void run() {
           if (line >= 0 && line < highlighter.getLineCount()) {
             highlighter.setCaretPosition(highlighter.getLineStartOffset(line));
+            window.setVisible(true);
+            window.toFront();
           }
         }
       });
