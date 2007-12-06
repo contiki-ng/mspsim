@@ -130,7 +130,7 @@ public class DebugUI extends JPanel {
 	int currentPos = pc;
 	DbgInstruction inst;
 	for (int i = 0, n = size; i < n; i++) {
-	  if (cpu.getExecCount(currentPos) != 0) {
+	  if (cpu.getExecCount(currentPos) != 0 || true) {
 	    inst = disAsm.getDbgInstruction(currentPos, cpu);
 	    inst.setPos(currentPos);
 	    currentPos += inst.getSize();

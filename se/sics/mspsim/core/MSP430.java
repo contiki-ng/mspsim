@@ -162,7 +162,12 @@ public class MSP430 extends MSP430Core {
       }
     }
 
-    instCtr++;
+
+    int ctr = 0;
+    while (!emulateOP() && ctr++ < 10000) {
+      /* Stuck in LPM - hopefully not more than 10000 times*/
+    }
+
     if ((instCtr % 10000007) == 0 && !debug) {
       printCPUSpeed(reg[PC]);
     }
@@ -171,7 +176,6 @@ public class MSP430 extends MSP430Core {
       execCounter[reg[PC]]++;
     }
 
-    emulateOP();
     return cycles;
   }
 
