@@ -129,7 +129,7 @@ public class HighlightSourceViewer implements SourceViewer {
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
         try {
-          String file = findSourceFile(path, filename);
+          File file = findSourceFile(path, filename);
           if (file != null) {
             FileReader reader = new FileReader(file);
             try {
@@ -137,6 +137,8 @@ public class HighlightSourceViewer implements SourceViewer {
               // Workaround for bug 4782232 in Java 1.4
               highlighter.setCaretPosition(1);
               highlighter.setCaretPosition(0);
+	      window.setTitle("Source Viewer (" + file.getAbsolutePath()
+			      + ')');
               if (!window.isVisible()) {
                 window.setVisible(true);
               }
@@ -156,7 +158,7 @@ public class HighlightSourceViewer implements SourceViewer {
     if (highlighter != null) {
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
-          highlighter.viewLine(line);
+          highlighter.viewLine(line - 1);
           if (!window.isVisible()) {
             window.setVisible(true);
           }
@@ -178,21 +180,21 @@ public class HighlightSourceViewer implements SourceViewer {
     }
   }
 
-  private String findSourceFile(String fPath, String filename) {
+  private File findSourceFile(String fPath, String filename) {
     File fp = new File(fPath, filename);
     if (fp.exists()) {
-      return fp.getAbsolutePath();
+      return fp;
     }
     fp = new File(filename);
     if (fp.exists()) {
-      return filename;
+      return fp;
     }
 
     if (path != null) {
       for(File p : path) {
         File nfp = new File(p, filename);
         if (nfp.exists()) {
-          return nfp.getAbsolutePath();
+          return nfp;
         }
       }
     } else {
