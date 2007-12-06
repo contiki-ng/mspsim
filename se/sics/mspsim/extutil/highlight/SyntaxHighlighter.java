@@ -227,7 +227,7 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
 
   private int smallAmount = 100;
 
-  private Color highlightColor = new Color(220, 220, 255, 155);
+  private Color highlightColor = new Color(0, 240, 0, 127);
 
   /**
    * <font style='color:gray;'>Ignore this method. Carries out a small amount of
