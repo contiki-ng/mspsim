@@ -182,7 +182,7 @@ public class ControlUI extends JPanel implements ActionListener {
 	DebugInfo dbg = elfData.getDebugInfo(pc);
 	if (dbg != null) {
 	  if (sourceViewer != null) {
-	    sourceViewer.viewFile(dbg.getFile());
+	    sourceViewer.viewFile(dbg.getPath(), dbg.getFile());
 	    sourceViewer.viewLine(dbg.getLine());
 	  } else {
 	    System.out.println("File: " + dbg.getFile());

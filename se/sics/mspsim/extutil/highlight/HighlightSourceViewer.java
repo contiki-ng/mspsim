@@ -63,7 +63,7 @@ public class HighlightSourceViewer implements SourceViewer {
   private SyntaxHighlighter highlighter;
   private ArrayList<File> path = null;
   private JFileChooser fileChooser;
-  
+
   public HighlightSourceViewer() {
     //
   }
@@ -94,7 +94,7 @@ public class HighlightSourceViewer implements SourceViewer {
     window.setVisible(isVisible);
   }
 
-  public void viewFile(final String filename) {
+  public void viewFile(final String path, final String filename) {
     setup();
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
@@ -182,6 +182,6 @@ public class HighlightSourceViewer implements SourceViewer {
   public static void main(String[] args) {
     HighlightSourceViewer sv = new HighlightSourceViewer();
     sv.setVisible(true);
-    sv.viewFile(args[0]);
+    sv.viewFile(".", args[0]);
   }
 }
