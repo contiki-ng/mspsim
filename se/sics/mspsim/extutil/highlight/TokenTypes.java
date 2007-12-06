@@ -35,7 +35,7 @@ public interface TokenTypes {
       NUMBER = 3, PUNCTUATION = 4, COMMENT = 5, START_COMMENT = 6,
       MID_COMMENT = 7, END_COMMENT = 8, TAG = 9, END_TAG = 10, KEYWORD = 11,
       KEYWORD2 = 12, IDENTIFIER = 13, LITERAL = 14, STRING = 15,
-      CHARACTER = 16, OPERATOR = 17, BRACKET = 18, SEPARATOR = 19, URL = 20;
+      CHARACTER = 16, OPERATOR = 17, BRACKET = 18, SEPARATOR = 19, URL = 20, DEFINE = 21;
 
   /**
    * The names of the token types, indexed by type, are provided for descriptive
@@ -45,6 +45,6 @@ public interface TokenTypes {
     "bad token", "whitespace", "word", "number", "punctuation", "comment",
     "start of comment", "middle of comment", "end of comment", "tag",
     "end tag", "keyword", "keyword 2", "identifier", "literal", "string",
-    "character", "operator", "bracket", "separator", "url"
+    "character", "operator", "bracket", "separator", "url", "define"
   };
 }
