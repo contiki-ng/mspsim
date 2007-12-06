@@ -164,16 +164,32 @@ public class MSP430 extends MSP430Core {
 
 
     int ctr = 0;
-    while (!emulateOP() && ctr++ < 10000) {
+    boolean emuOP = false;
+    while (!(emuOP = emulateOP()) && ctr++ < 10000) {
       /* Stuck in LPM - hopefully not more than 10000 times*/
     }
 
-    if ((instCtr % 10000007) == 0 && !debug) {
-      printCPUSpeed(reg[PC]);
-    }
+    if (emuOP) {
+      if ((instCtr % 10000007) == 0 && !debug) {
+	printCPUSpeed(reg[PC]);
+      }
 
-    if (execCounter != null) {
-      execCounter[reg[PC]]++;
+      if (execCounter != null) {
+	execCounter[reg[PC]]++;
+      }
+
+      if (profiler != null) {
+	if ((instruction & 0xff80) == CALL) {
+	  /* The profiling should only be made on actual cpuCycles */
+	  String function = map.getFunction(reg[PC]);
+	  if (function == null) {
+	    function = "fkn at $" + Utils.hex16(reg[PC]);
+	  }
+	  profiler.profileCall(function, cpuCycles);
+	} else if (instruction == RETURN) {
+	  profiler.profileReturn(cpuCycles);
+	}
+      }
     }
 
     return cycles;
