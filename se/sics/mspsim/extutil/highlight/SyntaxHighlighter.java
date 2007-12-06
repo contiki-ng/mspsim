@@ -65,6 +65,9 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
       }
 
     });
+
+    setOpaque(false);
+
   }
 
   public int getColumns() {
@@ -227,19 +230,20 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
 
   private int smallAmount = 100;
 
-  private Color highlightColor = new Color(0, 240, 0, 127);
+  private Color highlightColor = new Color(0, 240, 0, 255);
 
   /**
    * <font style='color:gray;'>Ignore this method. Carries out a small amount of
    * re-highlighting for each call to <code>repaint</code>.</font>
    */
   protected void paintComponent(Graphics g) {
-    super.paintComponent(g);
-
     if (currentHeight > 0) {
       g.setColor(highlightColor);
       g.fillRect(0, currentY, getWidth(), currentHeight);
     }
+
+    super.paintComponent(g);
+
 
     int offset = scanner.position();
     if (offset < 0)
