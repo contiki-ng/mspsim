@@ -129,7 +129,7 @@ public class HighlightSourceViewer implements SourceViewer {
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
         try {
-          String file = findSourceFile(filename);
+          String file = findSourceFile(path, filename);
           if (file != null) {
             FileReader reader = new FileReader(file);
             try {
@@ -174,11 +174,16 @@ public class HighlightSourceViewer implements SourceViewer {
     }
   }
 
-  private String findSourceFile(String filename) {
-    File fp = new File(filename);
+  private String findSourceFile(String fPath, String filename) {
+    File fp = new File(fPath, filename);
+    if (fp.exists()) {
+      return fp.getAbsolutePath();
+    }
+    fp = new File(filename);
     if (fp.exists()) {
       return filename;
     }
+
     if (path != null) {
       for(File p : path) {
         File nfp = new File(p, filename);
@@ -199,7 +204,7 @@ public class HighlightSourceViewer implements SourceViewer {
     File d = fileChooser.getSelectedFile();
     if (d != null) {
       path.add(d);
-      return findSourceFile(filename);
+      return findSourceFile(fPath, filename);
     }
     return null;
   }

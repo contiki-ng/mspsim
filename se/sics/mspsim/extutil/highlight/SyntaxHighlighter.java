@@ -15,7 +15,7 @@ import java.io.*;
  */
 public class SyntaxHighlighter extends JTextPane implements DocumentListener, TokenTypes {
 
-  
+
   private static final long serialVersionUID = -1801145479677890566L;
 
   private StyledDocument doc;
@@ -57,13 +57,13 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
             } else {
               currentHeight = -1;
             }
-            
+
           } catch (BadLocationException e1) {
             // Ignore
           }
-        }  
+        }
       }
-      
+
     });
   }
 
@@ -113,26 +113,26 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
 
   private void initStyles() {
     styles = new Style[typeNames.length];
-    changeStyle(UNRECOGNIZED, Color.red);
+    changeStyle(UNRECOGNIZED, Color.black);
     changeStyle(WHITESPACE, Color.black);
     changeStyle(WORD, Color.black);
-    changeStyle(NUMBER, Color.orange.darker());
-    changeStyle(PUNCTUATION, Color.orange.darker());
-    changeStyle(COMMENT, Color.green.darker(), Font.ITALIC);
-    changeStyle(START_COMMENT, Color.green.darker(), Font.ITALIC);
-    changeStyle(MID_COMMENT, Color.green.darker(), Font.ITALIC);
-    changeStyle(END_COMMENT, Color.green.darker(), Font.ITALIC);
+    changeStyle(NUMBER, Color.black);
+    changeStyle(PUNCTUATION, Color.blue);
+    changeStyle(COMMENT, Color.red, Font.ITALIC);
+    changeStyle(START_COMMENT, new Color(178,34,34), Font.ITALIC);
+    changeStyle(MID_COMMENT, new Color(178,34,34), Font.ITALIC);
+    changeStyle(END_COMMENT, new Color(178,34,34), Font.ITALIC);
     changeStyle(TAG, Color.blue, Font.BOLD);
     changeStyle(END_TAG, Color.blue, Font.BOLD);
-    changeStyle(KEYWORD, Color.blue);
-    changeStyle(KEYWORD2, Color.blue);
+    changeStyle(KEYWORD, new Color(160,32,240));
+    changeStyle(KEYWORD2, new Color(160,32,240));
     changeStyle(IDENTIFIER, Color.black);
-    changeStyle(LITERAL, Color.magenta);
-    changeStyle(STRING, Color.magenta);
-    changeStyle(CHARACTER, Color.magenta);
+    changeStyle(LITERAL, Color.green.darker());
+    changeStyle(STRING, new Color(188,143,143));
+    changeStyle(CHARACTER, new Color(188,143,143));
     changeStyle(OPERATOR, Color.black, Font.BOLD);
-    changeStyle(BRACKET, Color.orange.darker());
-    changeStyle(SEPARATOR, Color.orange.darker());
+    changeStyle(BRACKET, Color.black);
+    changeStyle(SEPARATOR, Color.black);
     changeStyle(URL, Color.blue.darker());
 
     for (int i = 0; i < styles.length; i++) {
