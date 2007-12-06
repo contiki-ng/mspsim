@@ -119,6 +119,36 @@ public class HighlightSourceViewer implements SourceViewer {
     });
   }
 
+  public void viewLine(final int line) {
+    if (highlighter != null) {
+      SwingUtilities.invokeLater(new Runnable() {
+        public void run() {
+          if (line >= 0 && line < highlighter.getLineCount()) {
+            highlighter.setCaretPosition(highlighter.getLineStartOffset(line));
+            window.setVisible(true);
+            window.toFront();
+          }
+        }
+      });
+    }
+  }
+
+  public void addSearchPath(File directory) {
+    if (!directory.exists() || !directory.isDirectory()) {
+      throw new IllegalArgumentException(directory + " is not a directory");
+    }
+    if (path == null) {
+      path = new ArrayList<File>();
+    }
+    path.add(directory);
+  }
+
+  public void removeSearchPath(File directory) {
+    if (path != null) {
+      path.remove(directory);
+    }
+  }
+
   private String findSourceFile(String filename) {
     File fp = new File(filename);
     if (fp.exists()) {
@@ -147,20 +177,6 @@ public class HighlightSourceViewer implements SourceViewer {
       return findSourceFile(filename);
     }
     return null;
-  }
-
-  public void viewLine(final int line) {
-    if (highlighter != null) {
-      SwingUtilities.invokeLater(new Runnable() {
-        public void run() {
-          if (line >= 0 && line < highlighter.getLineCount()) {
-            highlighter.setCaretPosition(highlighter.getLineStartOffset(line));
-            window.setVisible(true);
-            window.toFront();
-          }
-        }
-      });
-    }
   }
 
   public static void main(String[] args) {

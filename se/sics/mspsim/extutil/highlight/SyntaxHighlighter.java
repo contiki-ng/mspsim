@@ -23,7 +23,7 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
 
   /**
    * Create a graphics component which displays text with syntax highlighting.
-   * Provide a width and height, in characters, and a language scanner.
+   * Provide a rows and columns, in characters, and a language scanner.
    */
   public SyntaxHighlighter(int rows, int columns, Scanner scanner) {
     super(new DefaultStyledDocument());
