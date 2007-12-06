@@ -284,14 +284,12 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
         // Quick fix to position the line somewhere in the center
         Rectangle r = getUI().modelToView(this, pos);
         if (r != null && r.height > 0) {
-          int y = r.y;
-          r = getVisibleRect();
-          y -= r.height / 2;
-          if (y < 0) {
-            y = 0;
+          Rectangle vr = getVisibleRect();
+          vr.y = r.y - vr.height / 2;
+          if (vr.y < 0) {
+            vr.y = 0;
           }
-          scrollRectToVisible(new Rectangle(0, y + r.height, 1, 1));
-          scrollRectToVisible(new Rectangle(0, y, 1, 1));
+          scrollRectToVisible(vr);
         }
 
         setCaretPosition(pos);
