@@ -3,6 +3,7 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.text.*;
 import javax.swing.event.*;
+
 import java.io.*;
 
 // Public domain, no restrictions, Ian Holyer, University of Bristol.
@@ -21,6 +22,8 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
   private Scanner scanner;
   private int rows, columns;
 
+  private int currentY, currentHeight = -1;
+
   /**
    * Create a graphics component which displays text with syntax highlighting.
    * Provide a rows and columns, in characters, and a language scanner.
@@ -35,6 +38,33 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     Font font = new Font("Monospaced", Font.PLAIN, getFont().getSize());
     changeFont(font);
     initStyles();
+
+    // Quick fix to highlight selected line
+    addCaretListener(new CaretListener() {
+
+      public void caretUpdate(CaretEvent e) {
+        int caret = getCaretPosition();
+        if (caret >= 0) {
+          try {
+            Rectangle r = getUI().modelToView(SyntaxHighlighter.this, caret);
+            if (currentHeight > 0) {
+              repaint(0, currentY, getWidth(), currentHeight);
+            }
+            if (r != null && r.height > 0) {
+              currentY = r.y;
+              currentHeight = r.height;
+              repaint(0, r.y, getWidth(), r.height);
+            } else {
+              currentHeight = -1;
+            }
+            
+          } catch (BadLocationException e1) {
+            // Ignore
+          }
+        }  
+      }
+      
+    });
   }
 
   public int getColumns() {
@@ -88,10 +118,10 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     changeStyle(WORD, Color.black);
     changeStyle(NUMBER, Color.orange.darker());
     changeStyle(PUNCTUATION, Color.orange.darker());
-    changeStyle(COMMENT, Color.green.darker());
-    changeStyle(START_COMMENT, Color.green.darker());
-    changeStyle(MID_COMMENT, Color.green.darker());
-    changeStyle(END_COMMENT, Color.green.darker());
+    changeStyle(COMMENT, Color.green.darker(), Font.ITALIC);
+    changeStyle(START_COMMENT, Color.green.darker(), Font.ITALIC);
+    changeStyle(MID_COMMENT, Color.green.darker(), Font.ITALIC);
+    changeStyle(END_COMMENT, Color.green.darker(), Font.ITALIC);
     changeStyle(TAG, Color.blue, Font.BOLD);
     changeStyle(END_TAG, Color.blue, Font.BOLD);
     changeStyle(KEYWORD, Color.blue);
@@ -157,6 +187,7 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     return root.getElement(line).getEndOffset();
   }
 
+
   /**
    * <font style='color:gray;'>Ignore this method. Responds to the underlying
    * document changes by re-highlighting.</font>
@@ -196,12 +227,20 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
 
   private int smallAmount = 100;
 
+  private Color highlightColor = new Color(220, 220, 255, 155);
+
   /**
    * <font style='color:gray;'>Ignore this method. Carries out a small amount of
    * re-highlighting for each call to <code>repaint</code>.</font>
    */
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+
+    if (currentHeight > 0) {
+      g.setColor(highlightColor);
+      g.fillRect(0, currentY, getWidth(), currentHeight);
+    }
+
     int offset = scanner.position();
     if (offset < 0)
       return;
@@ -234,6 +273,31 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     firstRehighlightToken += tokensToRedo;
     if (offset >= 0) {
       repaint(2);
+    }
+  }
+
+  public void viewLine(int line) {
+    if (line >= 0 && line < getLineCount()) {
+      try {
+        int pos = getLineStartOffset(line);
+
+        // Quick fix to position the line somewhere in the center
+        Rectangle r = getUI().modelToView(this, pos);
+        if (r != null && r.height > 0) {
+          int y = r.y;
+          r = getVisibleRect();
+          y -= r.height / 2;
+          if (y < 0) {
+            y = 0;
+          }
+          scrollRectToVisible(new Rectangle(0, y + r.height, 1, 1));
+          scrollRectToVisible(new Rectangle(0, y, 1, 1));
+        }
+
+        setCaretPosition(pos);
+      } catch (BadLocationException e1) {
+        // Ignore
+      }
     }
   }
 }
