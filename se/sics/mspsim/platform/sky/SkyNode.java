@@ -169,7 +169,7 @@ public class SkyNode implements PortListener, USARTListener {
     // Monitor execution
     cpu.setMonitorExec(true);
     //cpu.setDebug(true);
-
+    ELF elf = null;
     int[] memory = cpu.getMemory();
 
     if (args[0].endsWith("ihex")) {
@@ -177,7 +177,7 @@ public class SkyNode implements PortListener, USARTListener {
       IHexReader reader = new IHexReader();
       reader.readFile(memory, args[0]);
     } else {
-      ELF elf = ELF.readELF(args[0]);
+      elf = ELF.readELF(args[0]);
       elf.loadPrograms(memory);
       MapTable map = elf.getMap();
       cpu.getDisAsm().setMap(map);
@@ -187,7 +187,7 @@ public class SkyNode implements PortListener, USARTListener {
     cpu.reset();
     SkyNode node = new SkyNode(cpu);
     node.gui = new SkyGui(node);
-    ControlUI control = new ControlUI(cpu);
+    ControlUI control = new ControlUI(cpu, elf);
 
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);

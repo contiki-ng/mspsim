@@ -176,9 +176,9 @@ public class ControlUI extends JPanel implements ActionListener {
       //     } else if ("Single Step".equals(cmd)) {
       //       cpu.step();
 //       dui.repaint();
-    } else if ("View Source".equals(cmd)) {
+    } else if ("Show Source".equals(cmd)) {
       int pc = cpu.readRegister(cpu.PC);
-      if (sourceViewer != null) {
+      if (elfData != null) {
 	DebugInfo dbg = elfData.getDebugInfo(pc);
 	if (dbg != null) {
 	  if (sourceViewer != null) {
