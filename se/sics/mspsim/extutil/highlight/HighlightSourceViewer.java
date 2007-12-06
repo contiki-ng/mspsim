@@ -137,7 +137,9 @@ public class HighlightSourceViewer implements SourceViewer {
               // Workaround for bug 4782232 in Java 1.4
               highlighter.setCaretPosition(1);
               highlighter.setCaretPosition(0);
-              window.setVisible(true);
+              if (!window.isVisible()) {
+                window.setVisible(true);
+              }
             } finally {
               reader.close();
             }
@@ -155,7 +157,9 @@ public class HighlightSourceViewer implements SourceViewer {
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
           highlighter.viewLine(line);
-          window.setVisible(true);
+          if (!window.isVisible()) {
+            window.setVisible(true);
+          }
         }
       });
     }
