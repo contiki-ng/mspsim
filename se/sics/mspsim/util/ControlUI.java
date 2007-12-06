@@ -98,9 +98,22 @@ public class ControlUI extends JPanel implements ActionListener {
 
     stepAction = new AbstractAction("Single Step") {
 	public void actionPerformed(ActionEvent e) {
-	  System.out.println("step");
 	  ControlUI.this.cpu.step();
 	  dui.repaint();
+	  if (elfData != null && sourceViewer != null
+	      && sourceViewer.isVisible()) {
+	    int pc = ControlUI.this.cpu.readRegister(MSP430Constants.PC);
+	    DebugInfo dbg = elfData.getDebugInfo(pc);
+	    if (dbg != null) {
+	      if (ControlUI.this.cpu.getDebug()) {
+		System.out.println("looking up $" + Integer.toString(pc, 16) +
+				   " => " + dbg.getFile() + ':' +
+				   dbg.getLine());
+	      }
+	      sourceViewer.viewFile(dbg.getPath(), dbg.getFile());
+	      sourceViewer.viewLine(dbg.getLine());
+	    }
+	  }
 	}
       };
     stepAction.putValue(Action.MNEMONIC_KEY,
@@ -181,6 +194,10 @@ public class ControlUI extends JPanel implements ActionListener {
       if (elfData != null) {
 	DebugInfo dbg = elfData.getDebugInfo(pc);
 	if (dbg != null) {
+	  if (cpu.getDebug()) {
+	    System.out.println("looking up $" + Integer.toString(pc, 16) +
+			       " => " + dbg.getFile() + ':' + dbg.getLine());
+	  }
 	  if (sourceViewer != null) {
 	    sourceViewer.viewFile(dbg.getPath(), dbg.getFile());
 	    sourceViewer.viewLine(dbg.getLine());
