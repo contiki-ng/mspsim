@@ -50,6 +50,7 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
 import se.sics.mspsim.util.SourceViewer;
+import se.sics.mspsim.util.WindowUtils;
 
 /**
  *
@@ -75,7 +76,8 @@ public class HighlightSourceViewer implements SourceViewer {
       scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
       Container pane = window.getContentPane();
       pane.add(scroller);
-      window.pack();
+      WindowUtils.restoreWindowBounds("SourceViewer", window);
+      WindowUtils.addSaveOnShutdown("SourceViewer", window);
     }
   }
 
