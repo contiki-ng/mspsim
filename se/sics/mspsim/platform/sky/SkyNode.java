@@ -46,6 +46,7 @@ import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.util.*;
+import java.io.File;
 
 /**
  * Emulation of Sky Mote
@@ -190,6 +191,7 @@ public class SkyNode implements PortListener, USARTListener {
     node.gui = new SkyGui(node);
     ControlUI control = new ControlUI(cpu, elf);
     HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
+    sourceViewer.addSearchPath(new File("e:/work/contiki-2.x/examples/sky/"));
     control.setSourceViewer(sourceViewer);
 
     if (args.length > 1) {
