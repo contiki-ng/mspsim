@@ -98,6 +98,7 @@ public class DebugUI extends JPanel {
 	regsLabel[i].setText("$" + Utils.hex16(cpu.reg[i]));
       }
     }
+    repaint();
   }
 
   private class DbgListModel extends AbstractListModel {

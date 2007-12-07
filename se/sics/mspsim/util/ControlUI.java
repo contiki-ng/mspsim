@@ -99,6 +99,7 @@ public class ControlUI extends JPanel implements ActionListener {
     stepAction = new AbstractAction("Single Step") {
 	public void actionPerformed(ActionEvent e) {
 	  ControlUI.this.cpu.step();
+	  dui.updateRegs();
 	  dui.repaint();
 	  if (elfData != null && sourceViewer != null
 	      && sourceViewer.isVisible()) {
