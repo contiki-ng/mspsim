@@ -121,7 +121,7 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     changeStyle(WORD, Color.black);
     changeStyle(NUMBER, Color.black);
     changeStyle(PUNCTUATION, Color.blue);
-    changeStyle(COMMENT, Color.red, Font.ITALIC);
+    changeStyle(COMMENT, new Color(178,34,34), Font.ITALIC);
     changeStyle(START_COMMENT, new Color(178,34,34), Font.ITALIC);
     changeStyle(MID_COMMENT, new Color(178,34,34), Font.ITALIC);
     changeStyle(END_COMMENT, new Color(178,34,34), Font.ITALIC);
