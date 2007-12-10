@@ -56,8 +56,8 @@ ifndef FIRMWAREFILE
 ESBFIRMWARE = firmware/esb/sensor-demo.firmware
 SKYFIRMWARE = firmware/sky/blink.firmware
 else
-ESBFIRMWARE = $FIRMWAREFILE
-SKYFIRMWARE = $FIRMWAREFILE
+ESBFIRMWARE = ${FIRMWAREFILE}
+SKYFIRMWARE = ${FIRMWAREFILE}
 endif
 
 CPUTEST := tests/cputest.firmware
