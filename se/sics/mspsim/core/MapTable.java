@@ -158,6 +158,14 @@ public class MapTable {
     return -1;
   }
 
+  public void setStackStart(int start) {
+    stackStartAddress = start;
+  }
+
+  public void setHeapStart(int start) {
+    heapStartAddress = start;
+  }
+
   public static void main(String[] args) throws IOException {
     new MapTable(args[0]);
   }
