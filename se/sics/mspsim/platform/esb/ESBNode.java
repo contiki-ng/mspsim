@@ -44,7 +44,7 @@ import java.io.IOException;
 
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.util.*;
-
+import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 public class ESBNode implements PortListener {
 
   public static final boolean DEBUG = false;
@@ -137,7 +137,7 @@ public class ESBNode implements PortListener {
     final MSP430 cpu = new MSP430(0);
     // Monitor execution
     cpu.setMonitorExec(true);
-
+    ELF elf = null;
     int[] memory = cpu.getMemory();
 
     if (args[0].endsWith("ihex")) {
@@ -145,7 +145,7 @@ public class ESBNode implements PortListener {
       IHexReader reader = new IHexReader();
       reader.readFile(memory, args[0]);
     } else {
-      ELF elf = ELF.readELF(args[0]);
+      elf = ELF.readELF(args[0]);
       elf.loadPrograms(memory);
       MapTable map = elf.getMap();
       cpu.getDisAsm().setMap(map);
@@ -155,7 +155,9 @@ public class ESBNode implements PortListener {
     cpu.reset();
     ESBNode node = new ESBNode(cpu);
     node.gui = new ESBGui(node);
-    ControlUI control = new ControlUI(cpu);
+    ControlUI control = new ControlUI(cpu, elf);
+    HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
+    control.setSourceViewer(sourceViewer);
 
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);
