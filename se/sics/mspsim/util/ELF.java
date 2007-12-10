@@ -306,11 +306,18 @@ public class ELF {
 	System.out.println("Found symbol: " + sn + " at " +
 			   Integer.toString(sAddr, 16) + " bind: " + bind +
 			   " type: " + type + " size: " + size);
+
       if (sAddr > 0 && sAddr < 0x10000) {
 	String symbolName = sn;
 	if (bind == ELFSection.SYMBIND_LOCAL) {
 	  symbolName += " (" + currentFile + ')';
 	}
+	if ("_end".equals(symbolName)) {
+	  map.setHeapStart(sAddr);
+	} else if ("__stack".equals(symbolName)){
+	  map.setStackStart(sAddr);
+	}
+
 	map.setFunctionName(sAddr, symbolName);
       }
       addr += symTable.entSize;
