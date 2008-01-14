@@ -43,10 +43,17 @@ package se.sics.mspsim.platform.sky;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.PortListener;
+import se.sics.mspsim.core.USART;
+import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
-import se.sics.mspsim.util.*;
-import java.io.File;
+import se.sics.mspsim.util.ControlUI;
+import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.IHexReader;
+import se.sics.mspsim.util.MapTable;
 
 /**
  * Emulation of Sky Mote
@@ -129,15 +136,14 @@ public class SkyNode implements PortListener, USARTListener {
   public boolean getDebug() {
     return cpu.getDebug();
   }
+
   public void setDebug(boolean debug) {
     cpu.setDebug(debug);
   }
 
-
   public MSP430 getCPU() {
     return cpu;
   }
-
 
   public void portWrite(IOPort source, int data) {
     if (source == port5) {
