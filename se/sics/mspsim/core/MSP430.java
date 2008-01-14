@@ -120,9 +120,9 @@ public class MSP430 extends MSP430Core {
 	if (profiler != null) {
 	  if ((instruction & 0xff80) == CALL) {
 	    /* The profiling should only be made on actual cpuCycles */
-	    String function = map.getFunction(reg[PC]);
+	    MapEntry function = map.getEntry(reg[PC]);
 	    if (function == null) {
-	      function = "fkn at $" + Utils.hex16(reg[PC]);
+	      function = getFunction(map, reg[PC]);
 	    }
 	    profiler.profileCall(function, cpuCycles);
 	  } else if (instruction == RETURN) {
@@ -181,9 +181,9 @@ public class MSP430 extends MSP430Core {
       if (profiler != null) {
 	if ((instruction & 0xff80) == CALL) {
 	  /* The profiling should only be made on actual cpuCycles */
-	  String function = map.getFunction(reg[PC]);
+	  MapEntry function = map.getEntry(reg[PC]);
 	  if (function == null) {
-	    function = "fkn at $" + Utils.hex16(reg[PC]);
+	    function = getFunction(map, reg[PC]);
 	  }
 	  profiler.profileCall(function, cpuCycles);
 	} else if (instruction == RETURN) {
@@ -193,8 +193,15 @@ public class MSP430 extends MSP430Core {
     }
 
     return cycles;
-  }
+}
 
+  private MapEntry getFunction(MapTable map, int address) {
+    MapEntry function = new MapEntry(MapEntry.TYPE.function, address,
+        "fkn at $" + Utils.hex16(address), null, true);
+    map.setEntry(function);
+    return function;
+  }
+  
   public void stop() {
     running = false;
   }

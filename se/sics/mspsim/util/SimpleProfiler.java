@@ -40,6 +40,7 @@
  */
 
 package se.sics.mspsim.util;
+import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -47,27 +48,32 @@ import java.util.Hashtable;
 
 public class SimpleProfiler implements Profiler {
 
-  private Hashtable<String,CallEntry> profileData;
+  private Hashtable<MapEntry,CallEntry> profileData;
   private CallEntry[] callStack;
   private int cSP = 0;
+  private MSP430Core cpu;
 
   public SimpleProfiler() {
-    profileData = new Hashtable<String,CallEntry>();
+    profileData = new Hashtable<MapEntry, CallEntry>();
     callStack = new CallEntry[2048];
   }
 
-  public void profileCall(String function, long cycles) {
-//     System.out.println("Call at: " + Utils.hex16(reg[PC]));
+  public void setCPU(MSP430Core cpu) {
+    this.cpu = cpu;
+  }
+  
+  public void profileCall(MapEntry entry, long cycles) {
+//  System.out.println("Call at: " + Utils.hex16(reg[PC]));
     if (callStack[cSP] == null) {
       callStack[cSP] = new CallEntry();
     }
-    callStack[cSP].function = function;
+    callStack[cSP].function = entry;
     callStack[cSP].calls = 0;
     callStack[cSP++].cycles = cycles;
   }
 
   public void profileReturn(long cycles) {
-    String fkn = callStack[--cSP].function;
+    MapEntry fkn = callStack[--cSP].function;
 //     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
 
     long elapsed = cycles - callStack[cSP].cycles;
@@ -114,8 +120,8 @@ public class SimpleProfiler implements Profiler {
 	String cyclesS = "" + entries[i].cycles;
 	String callS = "" + c;
 	String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
-	System.out.print(entries[i].function);
-	printSpace(56 - entries[i].function.length() - avgS.length());
+	System.out.print(entries[i].function.getName());
+	printSpace(56 - entries[i].function.getName().length() - avgS.length());
 	System.out.print(avgS);
 	System.out.print(' ');
 	printSpace(8 - callS.length());
@@ -133,17 +139,22 @@ public class SimpleProfiler implements Profiler {
     }
   }
 
-  private static class CallEntry implements Comparable {
-    String function;
+  public void printStackTrace() {
+    System.out.println("Stack Trace: number of calls: " + cSP);
+    for (int i = 0; i < cSP; i++) {
+      System.out.println("  " + callStack[cSP - i - 1].function.getInfo());
+    }
+  }
+  
+  private static class CallEntry implements Comparable<CallEntry> {
+    MapEntry function;
     long cycles;
     int calls;
 
-    public int compareTo(Object o) {
-      if (o instanceof CallEntry) {
-	long diff = ((CallEntry)o).cycles - cycles;
-	if (diff > 0) return 1;
-	if (diff < 0) return -1;
-      }
+    public int compareTo(CallEntry o) {
+      long diff = o.cycles - cycles;
+      if (diff > 0) return 1;
+      if (diff < 0) return -1;
       return 0;
     }
   }

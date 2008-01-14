@@ -309,16 +309,17 @@ public class ELF {
 
       if (sAddr > 0 && sAddr < 0x10000) {
 	String symbolName = sn;
-	if (bind == ELFSection.SYMBIND_LOCAL) {
-	  symbolName += " (" + currentFile + ')';
-	}
+//	if (bind == ELFSection.SYMBIND_LOCAL) {
+//	  symbolName += " (" + currentFile + ')';
+//	}
 	if ("_end".equals(symbolName)) {
 	  map.setHeapStart(sAddr);
 	} else if ("__stack".equals(symbolName)){
 	  map.setStackStart(sAddr);
 	}
 
-	map.setFunctionName(sAddr, symbolName);
+	map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, symbolName, currentFile, 
+	    bind == ELFSection.SYMBIND_LOCAL));
       }
       addr += symTable.entSize;
     }

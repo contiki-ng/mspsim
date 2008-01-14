@@ -43,6 +43,7 @@ package se.sics.mspsim.core;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.Utils;
 
 public class DisAsm implements MSP430Constants {
@@ -388,7 +389,7 @@ public class DisAsm implements MSP430Constants {
     dbg.setRegs(regs);
     dbg.setInstruction(instruction, size);
     if (map != null) {
-      dbg.setFunction(map.getFunction(startPC));
+      dbg.setFunction(map.getFunctionName(startPC));
     }
 
     if (!step) {

@@ -95,7 +95,6 @@ public class ControlUI extends JPanel implements ActionListener {
 
     createButton("Debug On");
     createButton("Stop");
-
     stepAction = new AbstractAction("Single Step") {
 	public void actionPerformed(ActionEvent e) {
 	  ControlUI.this.cpu.step();
@@ -123,6 +122,7 @@ public class ControlUI extends JPanel implements ActionListener {
 
     JButton stepButton = new JButton(stepAction);
     add(stepButton);
+    createButton("Stack Trace");
 
     if (elf != null) {
       createButton("Show Source");
@@ -208,6 +208,8 @@ public class ControlUI extends JPanel implements ActionListener {
 	  }
 	}
       }
+    } else if ("Stack Trace".equals(cmd)) {
+      cpu.getProfiler().printStackTrace();
     }
     dui.updateRegs();
   }

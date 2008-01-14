@@ -40,18 +40,19 @@
  */
 
 package se.sics.mspsim.core;
-import java.util.Arrays;
-import java.util.Hashtable;
-
-import se.sics.mspsim.util.Utils;
+import se.sics.mspsim.util.MapEntry;
 
 public interface Profiler {
 
-  public void profileCall(String function, long cycles);
+  public void setCPU(MSP430Core cpu);
+  
+  public void profileCall(MapEntry entry, long cycles);
   public void profileReturn(long cycles);
 
   public void clearProfile();
 
   public void printProfile();
 
+  public void printStackTrace();
+  
 }
