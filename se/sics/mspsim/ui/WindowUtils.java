@@ -39,7 +39,7 @@
  *           $Revision: 1.2 $
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.ui;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;

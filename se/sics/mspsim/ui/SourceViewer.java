@@ -38,7 +38,7 @@
  *           $Revision: 1.4 $
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.ui;
 
 
 public interface SourceViewer {

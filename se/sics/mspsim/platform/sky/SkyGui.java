@@ -52,8 +52,8 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 
 import se.sics.mspsim.core.*;
-import se.sics.mspsim.util.SerialMon;
-import se.sics.mspsim.util.WindowUtils;
+import se.sics.mspsim.ui.SerialMon;
+import se.sics.mspsim.ui.WindowUtils;
 
 public class SkyGui extends JComponent implements KeyListener {
 

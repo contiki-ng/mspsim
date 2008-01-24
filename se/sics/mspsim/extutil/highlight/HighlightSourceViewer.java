@@ -52,8 +52,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 
-import se.sics.mspsim.util.SourceViewer;
-import se.sics.mspsim.util.WindowUtils;
+import se.sics.mspsim.ui.SourceViewer;
+import se.sics.mspsim.ui.WindowUtils;
 
 /**
  *

@@ -56,9 +56,7 @@ import javax.swing.KeyStroke;
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
-import se.sics.mspsim.util.SourceViewer;
 import se.sics.mspsim.util.StackUI;
-import se.sics.mspsim.util.WindowUtils;
 
 public class ControlUI extends JPanel implements ActionListener {
 

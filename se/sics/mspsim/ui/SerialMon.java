@@ -39,7 +39,7 @@
  *           $Revision: 1.4 $
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
