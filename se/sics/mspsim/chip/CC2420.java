@@ -43,7 +43,7 @@ package se.sics.mspsim.chip;
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.util.Utils;
 
-public class CC2420 implements USARTListener {
+public class CC2420 extends Chip implements USARTListener {
 
   public static final boolean DEBUG = true;
 
@@ -120,6 +120,11 @@ public class CC2420 implements USARTListener {
   public static final int RAM_PANID	= 0x168;
   public static final int RAM_SHORTADDR	= 0x16A;
 
+  public static final int MODE_TXRX_OFF = 0x00;
+  public static final int MODE_RX_ON = 0x01;
+  public static final int MODE_TXRX_ON = 0x02;
+  public static final int MODE_MAX = MODE_TXRX_ON;
+  
   // when reading registrers this flag is set!
   public static final int FLAG_READ = 0x40;
 
@@ -144,6 +149,8 @@ public class CC2420 implements USARTListener {
 
   private int status = ST_XOSC16M_STABLE;
 
+  private int mode = MODE_TXRX_OFF;
+  
   private int[] registers = new int[64];
   // More than needed...
   private int[] memory = new int[512];
@@ -169,9 +176,10 @@ public class CC2420 implements USARTListener {
 
   public void dataReceived(USART source, int data) {
     if (chipSelect) {
-      System.out.println("CC2420 byte received: " + Utils.hex8(data) +
-			 '\'' + (char) data + '\'' +
-			 " CS: " + chipSelect + " state: " + state);
+      if (DEBUG)
+        System.out.println("CC2420 byte received: " + Utils.hex8(data) +
+            '\'' + (char) data + '\'' +
+            " CS: " + chipSelect + " state: " + state);
       switch(state) {
       case WAITING:
 	state = WRITE_REGISTER;
@@ -209,8 +217,9 @@ public class CC2420 implements USARTListener {
       		source.byteReceived(registers[address] & 0xff);
       		// set the low bits
       		registers[address] = registers[address] & 0xff00 | data;
-      		System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
-      				+ registers[address]);
+      		if (DEBUG)
+      		  System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
+      		      + registers[address]);
       	}
 	break;
       case READ_REGISTER:
@@ -218,8 +227,9 @@ public class CC2420 implements USARTListener {
       		source.byteReceived(registers[address] >> 8);
       	} else {
       		source.byteReceived(registers[address] & 0xff);
-      		System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
-      				+ registers[address]);
+      		if (DEBUG) 
+      		  System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
+      		      + registers[address]);
       	}
       	break;
       case READ_RXFIFO:
@@ -238,16 +248,17 @@ public class CC2420 implements USARTListener {
       	if (pos == 0) {
       		address = address | (data << 1) & 0x180;
       		ramRead = (data & 0x20) != 0;
-      		System.out.println("CC2420: Address: " + Utils.hex16(address) +
-      				" read: " + ramRead);
+      		if (DEBUG) 
+      		  System.out.println("CC2420: Address: " + Utils.hex16(address) +
+      		      " read: " + ramRead);
       		pos++;
       	} else {
       		if (!ramRead) {
       			memory[address++] = data;
-      			if (address == RAM_PANID + 2) {
-      				System.out.println("CC2420: Pan ID set to: 0x" +
-      						Utils.hex8(memory[RAM_PANID]) +
-      						Utils.hex8(memory[RAM_PANID + 1]));
+      			if (DEBUG && address == RAM_PANID + 2) {
+      			  System.out.println("CC2420: Pan ID set to: 0x" +
+      			      Utils.hex8(memory[RAM_PANID]) +
+      			      Utils.hex8(memory[RAM_PANID + 1]));
       			}
       		}
       	}
@@ -258,19 +269,37 @@ public class CC2420 implements USARTListener {
 
   // Needs to get information about when it is possible to write
   // next data...
-
   private void strobe(int data) {
     // Resets, on/off of different things...
-    System.out.println("CC2420: Strobe on: " + Utils.hex8(data));
+    if (DEBUG)
+      System.out.println("CC2420: Strobe on: " + Utils.hex8(data));
 
     switch (data) {
     case REG_SRXON:
       System.out.println("CC2420: Strobe RX-ON!!!");
+      setMode(MODE_RX_ON);
       break;
+    case REG_SRFOFF:
+      System.out.println("CC2420: Strobe RXTX-OFF!!!");
+      setMode(MODE_TXRX_OFF);
+      break;
+    case REG_STXON:
+      System.out.println("CC2420: Strobe TXON!");
+      setMode(MODE_TXRX_ON);
+      break;
+    case REG_STXONCCA:
+      System.out.println("CC2420: Strobe TXONCCA!");
+      setMode(MODE_TXRX_ON);
+      break;      
     case REG_SFLUSHRX:
       flushRX();
       break;
     }
+  }
+  
+  private void setMode(int mode) {
+    this.mode = mode;
+    modeChanged(mode);
   }
 
 
@@ -310,8 +339,8 @@ public class CC2420 implements USARTListener {
   }
 
   public void setIncomingPacket(int[] packet) {
-  	int adr = RAM_RXFIFO;
-  	memory[adr++] = packet.length + 2;
+    int adr = RAM_RXFIFO;
+    memory[adr++] = packet.length + 2;
     for (int i = 0, n = packet.length; i < n; i++) {
       memory[adr++] = packet[i] & 0xff;
     }
@@ -326,8 +355,9 @@ public class CC2420 implements USARTListener {
   }
 
   private void flushRX() {
-    if (DEBUG) System.out.println("Flushing RX! was: " + rxPacket + " len = " +
-				  rxLen);
+    if (DEBUG) 
+      System.out.println("Flushing RX! was: " + rxPacket + " len = " +
+          rxLen);
     rxPacket = false;
     rxCursor = 0;
     rxLen = 0;
@@ -341,5 +371,14 @@ public class CC2420 implements USARTListener {
   public void setCCA(boolean cca) {
     ccaPort.setPinState(ccaPin, cca ? 1 : 0);
   }
+  
+  public String getName() {
+    return "CC2420";
+  }
 
+  public int getModeMax() {
+    return MODE_MAX;
+  }
+
+  
 } // CC2420

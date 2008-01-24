@@ -308,4 +308,8 @@ public class USART extends IOUnit {
     }
   }
 
+  public int getModeMax() {
+    return 0;
+  }
+
 }

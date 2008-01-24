@@ -116,5 +116,9 @@ public class Multiplier extends IOUnit {
   public void interruptServiced() {
   }
 
+  public int getModeMax() {
+    return 0;
+  }
+
 
 }

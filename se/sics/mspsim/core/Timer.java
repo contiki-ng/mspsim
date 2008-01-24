@@ -629,4 +629,8 @@ public class Timer extends IOUnit {
       System.out.println("interrupt Serviced...");
     }
   }
+
+  public int getModeMax() {
+    return 0;
+  }
 }

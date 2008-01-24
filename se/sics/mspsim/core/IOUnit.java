@@ -41,7 +41,10 @@
 
 package se.sics.mspsim.core;
 
-public abstract class IOUnit {
+import java.util.ArrayList;
+import java.util.Iterator;
+
+public abstract class IOUnit extends Chip {
 
   int[] memory;
   int offset;
@@ -53,7 +56,7 @@ public abstract class IOUnit {
 
   public void reset() {
   }
-
+  
   public boolean needsTick() {
     return true;
   }
@@ -81,8 +84,6 @@ public abstract class IOUnit {
   // read
   // read a value from the IO unit
   public abstract int read(int address, boolean word, long cycles);
-
-  public abstract String getName();
 
   // We should add "Interrupt serviced..." to indicate that its latest
   // Interrupt was serviced...

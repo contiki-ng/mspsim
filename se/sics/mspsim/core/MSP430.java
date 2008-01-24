@@ -64,7 +64,7 @@ public class MSP430 extends MSP430Core {
   private DisAsm disAsm;
   private MapTable map;
   private Profiler profiler;
-
+  
   /**
    * Creates a new <code>MSP430</code> instance.
    *

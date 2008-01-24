@@ -43,6 +43,7 @@ package se.sics.mspsim.platform.sky;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
+import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
@@ -54,14 +55,20 @@ import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
+import se.sics.mspsim.util.OperatingModeStatistics;
 
 /**
  * Emulation of Sky Mote
  */
-public class SkyNode implements PortListener, USARTListener {
+public class SkyNode extends Chip implements PortListener, USARTListener {
 
   public static final boolean DEBUG = false;
 
+  public static final int MODE_LEDS_OFF = 0;
+  public static final int MODE_LEDS_1 = 1;
+  public static final int MODE_LEDS_2 = 2;
+  public static final int MODE_LEDS_3 = 3;
+  public static final int MODE_MAX = MODE_LEDS_3;
   // Port 2.
   public static final int BUTTON_PIN = 7;
 
@@ -81,7 +88,7 @@ public class SkyNode implements PortListener, USARTListener {
 
   private CC2420 radio;
   private ExtFlash flash;
-
+  
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
   public static final int RED_LED = 0x10;
@@ -89,7 +96,10 @@ public class SkyNode implements PortListener, USARTListener {
   public boolean redLed;
   public boolean blueLed;
   public boolean greenLed;
+  private int mode = MODE_LEDS_OFF;
 
+  private OperatingModeStatistics stats; 
+  
   public SkyGui gui;
   /**
    * Creates a new <code>SkyNode</code> instance.
@@ -127,6 +137,9 @@ public class SkyNode implements PortListener, USARTListener {
       	((IOPort) port4).setPortListener(this);
       }
     }
+    
+    stats = new OperatingModeStatistics(cpu);
+    stats.addMonitor(this);
   }
 
   public void setButton(boolean hi) {
@@ -150,6 +163,14 @@ public class SkyNode implements PortListener, USARTListener {
       redLed = (data & RED_LED) == 0;
       blueLed = (data & BLUE_LED) == 0;
       greenLed = (data & GREEN_LED) == 0;
+      int newMode = (redLed ? 1 : 0) + (greenLed ? 1 : 0) + (blueLed ? 1 : 0);  
+      if (mode != newMode) {
+        mode = newMode;
+        modeChanged(mode);
+      }
+      // TODO: put this somewhere else!!!
+      //stats.printStat();
+
       if (gui != null) {
 	gui.repaint();
       }
@@ -203,6 +224,15 @@ public class SkyNode implements PortListener, USARTListener {
       MapTable map = new MapTable(args[1]);
       cpu.getDisAsm().setMap(map);
     }
+    
     cpu.cpuloop();
+  }
+
+  public int getModeMax() {
+    return MODE_MAX;
+  }
+
+  public String getName() {
+    return "Tmote Sky";
   }
 }

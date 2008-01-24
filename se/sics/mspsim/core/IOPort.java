@@ -71,7 +71,7 @@ public class IOPort extends IOUnit {
   public static final int IE = 5;
   public static final int ISEL = 6;
 
-  // One listener per port maximum (now at leat)
+  // One listener per port maximum (now at least)
   private PortListener listener;
 
   /**
@@ -201,6 +201,11 @@ public class IOPort extends IOUnit {
     }
     interruptFlag = 0;
     cpu.flagInterrupt(interrupt, this, interruptFlag > 0);
+  }
+
+  // TODO: Should override this
+  public int getModeMax() {
+    return 0;
   }
 
 }

@@ -91,16 +91,16 @@ public class SimpleProfiler implements Profiler {
   public void clearProfile() {
     if (profileData != null) {
       CallEntry[] entries =
-	profileData.values().toArray(new CallEntry[0]);
+        profileData.values().toArray(new CallEntry[0]);
       for (int i = 0, n = entries.length; i < n; i++) {
-	entries[i].cycles = 0;
-	entries[i].calls = 0;
+        entries[i].cycles = 0;
+        entries[i].calls = 0;
       }
       for (int i = 0, n = callStack.length; i < n; i++) {
-	CallEntry e = callStack[i];
-	if (e != null) {
-	  e.calls = -1;
-	}
+        CallEntry e = callStack[i];
+        if (e != null) {
+          e.calls = -1;
+        }
       }
     }
   }

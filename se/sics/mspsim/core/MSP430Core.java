@@ -45,7 +45,7 @@ import se.sics.mspsim.util.Utils;
 /**
  * The CPU of the MSP430
  */
-public class MSP430Core implements MSP430Constants {
+public class MSP430Core extends Chip implements MSP430Constants {
 
   public static final boolean DEBUG = false;
   public static final boolean debugInterrupts = false;
@@ -54,6 +54,14 @@ public class MSP430Core implements MSP430Constants {
   public static final int MAX_MEM = 64*1024;
   public static final int INTERNAL_IO_SIZE = 5;
   public static final int PORTS = 6;
+  
+  public static final int MODE_ACTIVE = 0;
+  public static final int MODE_LPM0 = 1;
+  public static final int MODE_LPM1 = 2;
+  public static final int MODE_LPM2 = 3;
+  public static final int MODE_LPM3 = 4;
+  public static final int MODE_LPM4 = 5;
+  private static final int MODE_MAX = MODE_LPM4;
 
   // 16 registers of which some are "special" - PC, SP, etc.
   public int[] reg = new int[16];
@@ -246,6 +254,24 @@ public class MSP430Core implements MSP430Constants {
       cpuOff = ((value & CPUOFF) == CPUOFF);
       if (cpuOff != oldCpuOff) {
 // 	System.out.println("LPM CPUOff: " + cpuOff + " cycles: " + cycles);
+      }
+      if (cpuOff) {
+        boolean scg0 = (value & SCG0) == SCG0;
+        boolean scg1 = (value & SCG1) == SCG1;
+        boolean oscoff = (value & OSCOFF) == OSCOFF;
+        if (oscoff && scg1 && scg0) {
+          modeChanged(MODE_LPM4);
+        } else if (scg1 && scg0){
+          modeChanged(MODE_LPM3);
+        } else if (scg1) {
+          modeChanged(MODE_LPM2);
+        } else if (scg0) {
+          modeChanged(MODE_LPM1);
+        } else {
+          modeChanged(MODE_LPM0);          
+        }
+      } else {
+        modeChanged(MODE_ACTIVE);
       }
     }
   }
@@ -964,5 +990,13 @@ public class MSP430Core implements MSP430Constants {
 
     cpuCycles += cycles - startCycles;
     return true;
+  }
+  
+  public String getName() {
+    return "MSP430 Core";
+  }
+  
+  public int getModeMax() {
+    return MODE_MAX;
   }
 }
