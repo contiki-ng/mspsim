@@ -27,30 +27,32 @@ public class DataSourceSampler implements ActionListener {
 
   private int interval = 100;
   private Timer timer;
-  private ArrayList<DataSource> sources = new ArrayList<DataSource>();
+  private ArrayList<TimeSource> sources = new ArrayList<TimeSource>();
 
-  private TimeSeries test;
-  private TimeSeries test2;
-  private TimeSeriesCollection dataset;
+//  private TimeSeries test;
+//  private TimeSeries test2;
+//  private TimeSeriesCollection dataset;  
   
   public DataSourceSampler() {
     timer = new Timer(interval, this);
-    test = new TimeSeries("Data", Millisecond.class);
-    test.setMaximumItemAge(30000);
-    test2 = new TimeSeries("Data 2", Millisecond.class);
-    test2.setMaximumItemAge(30000);
-//    test2.setMaximumItemCount(30000);
-    dataset = new TimeSeriesCollection();
-    dataset.addSeries(test);
-    dataset.addSeries(test2);
+//    test = new TimeSeries("Data", Millisecond.class);
+//    test.setMaximumItemAge(30000);
+//    test2 = new TimeSeries("Data 2", Millisecond.class);
+//    test2.setMaximumItemAge(30000);
+////    test2.setMaximumItemCount(30000);
+//    dataset = new TimeSeriesCollection();
+//    dataset.addSeries(test);
+//    dataset.addSeries(test2);
     timer.start();
   }
   
-  public void addDataSource(DataSource source) {
-    sources.add(source);
+  public TimeSource addDataSource(DataSource source, TimeSeries ts) {
+    TimeSource times = new TimeSource(source, ts);
+    sources.add(times);
+    return times;
   }
   
-  public void removeDataSource(DataSource source) {
+  public void removeDataSource(TimeSource source) {
     sources.remove(source);
   }
   
@@ -61,14 +63,14 @@ public class DataSourceSampler implements ActionListener {
 
   private void sampleAll() {
     if (sources.size() > 0) {
-      DataSource[] srcs = (DataSource[]) sources.toArray(new DataSource[0]);    
+      TimeSource[] srcs = (TimeSource[]) sources.toArray(new TimeSource[0]);    
       for (int i = 0; i < srcs.length; i++) {
-        int val = srcs[i].getValue();
-      
+        srcs[i].update();
       }
     }
-    test.add(new Millisecond(), Math.random() * 100);
-    test2.add(new Millisecond(), Math.random() * 100);
+    
+//    test.add(new Millisecond(), Math.random() * 100);
+//    test2.add(new Millisecond(), Math.random() * 100);
   }
 
   public void actionPerformed(ActionEvent arg0) {
@@ -76,39 +78,55 @@ public class DataSourceSampler implements ActionListener {
   }
   
   
-  public static void main(String[] args) {
-    DataSourceSampler samp = new DataSourceSampler();
-    DateAxis domain = new DateAxis("Time");
-    NumberAxis range = new NumberAxis("Memory");
-    XYPlot xyplot = new XYPlot();
-    xyplot.setDataset(samp.dataset);
-    xyplot.setDomainAxis(domain);
-    xyplot.setRangeAxis(range);
-    xyplot.setBackgroundPaint(Color.black);
+//  public static void main(String[] args) {
+//    DataSourceSampler samp = new DataSourceSampler();
+//    DateAxis domain = new DateAxis("Time");
+//    NumberAxis range = new NumberAxis("Memory");
+//    XYPlot xyplot = new XYPlot();
+//    xyplot.setDataset(samp.dataset);
+//    xyplot.setDomainAxis(domain);
+//    xyplot.setRangeAxis(range);
+//    xyplot.setBackgroundPaint(Color.black);
+//    
+//    XYItemRenderer renderer = new DefaultXYItemRenderer();
+//    renderer.setSeriesPaint(0, Color.red);
+//    renderer.setSeriesPaint(1, Color.green);
+//    renderer.setBaseStroke(
+//        new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL)
+//    );
+//    xyplot.setRenderer(renderer);
+//    
+//    domain.setAutoRange(true);
+//    domain.setLowerMargin(0.0);
+//    domain.setUpperMargin(0.0);
+//    domain.setTickLabelsVisible(true);
+//    range.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+//    JFreeChart chart = new JFreeChart(
+//        "Memory Usage",
+//        JFreeChart.DEFAULT_TITLE_FONT,
+//        xyplot,true);
+//    ChartPanel chartPanel = new ChartPanel(chart);
+//    JFrame jw = new JFrame("test");
+//    jw.add(chartPanel);
+//    jw.setBounds(100, 100, 400, 200);
+//    jw.setVisible(true);
+//        
+//  }
+  
+  class TimeSource {
+
+    private DataSource dataSource;
+    private TimeSeries timeSeries;
+
+    TimeSource(DataSource ds, TimeSeries ts) {
+      dataSource = ds;
+      timeSeries = ts;
+    }
     
-    XYItemRenderer renderer = new DefaultXYItemRenderer();
-    renderer.setSeriesPaint(0, Color.red);
-    renderer.setSeriesPaint(1, Color.green);
-    renderer.setBaseStroke(
-        new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL)
-    );
-    xyplot.setRenderer(renderer);
+    public void update() {
+      timeSeries.add(new Millisecond(), dataSource.getValue());
+    }
     
-    domain.setAutoRange(true);
-    domain.setLowerMargin(0.0);
-    domain.setUpperMargin(0.0);
-    domain.setTickLabelsVisible(true);
-    range.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-    JFreeChart chart = new JFreeChart(
-        "Memory Usage",
-        JFreeChart.DEFAULT_TITLE_FONT,
-        xyplot,true);
-    ChartPanel chartPanel = new ChartPanel(chart);
-    JFrame jw = new JFrame("test");
-    jw.add(chartPanel);
-    jw.setBounds(100, 100, 400, 200);
-    jw.setVisible(true);
-        
   }
   
 }

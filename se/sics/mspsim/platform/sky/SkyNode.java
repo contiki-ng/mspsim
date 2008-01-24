@@ -219,7 +219,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     ControlUI control = new ControlUI(cpu, elf);
     HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
     control.setSourceViewer(sourceViewer);
-
+    
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);
       cpu.getDisAsm().setMap(map);

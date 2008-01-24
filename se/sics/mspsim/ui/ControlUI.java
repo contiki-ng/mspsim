@@ -54,6 +54,7 @@ import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.StackUI;
@@ -82,6 +83,10 @@ public class ControlUI extends JPanel implements ActionListener {
     this.cpu = cpu;
 
     this.stackUI = new StackUI(cpu);
+    
+    DataChart test = new DataChart("Stack Monitor");
+    test.setupStackFrame(cpu);
+    
     stackWindow = new JFrame("Stack");
     stackWindow.add(this.stackUI);
     WindowUtils.restoreWindowBounds("StackUI", stackWindow);
