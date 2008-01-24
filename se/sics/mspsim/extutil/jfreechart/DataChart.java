@@ -28,19 +28,21 @@ public class DataChart extends JPanel {
   
   public DataChart(String title) {
     DateAxis domain = new DateAxis("Time");
-    NumberAxis range = new NumberAxis("Memory");
+    NumberAxis range = new NumberAxis("Bytes");
     XYPlot xyplot = new XYPlot();
     xyplot.setDomainAxis(domain);
     xyplot.setRangeAxis(range);
  // xyplot.setBackgroundPaint(Color.black);
     xyplot.setDataset(dataset = new TimeSeriesCollection());
 
-    XYItemRenderer renderer = new DefaultXYItemRenderer();
+    DefaultXYItemRenderer renderer = new DefaultXYItemRenderer();
     renderer.setSeriesPaint(0, Color.red);
     renderer.setSeriesPaint(1, Color.green);
 //    renderer.setBaseStroke(
 //        new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL)
 //    );
+    renderer.setSeriesShapesVisible(0, false);
+    renderer.setSeriesShapesVisible(1, false);
     xyplot.setRenderer(renderer);
     
     domain.setAutoRange(true);
@@ -61,7 +63,7 @@ public class DataChart extends JPanel {
   }
   
   public void openFrame(String name) {
-    JFrame jw = new JFrame("name");
+    JFrame jw = new JFrame(name);
     jw.add(this);
     jw.setBounds(100, 100, 400, 200);
     jw.setVisible(true);
