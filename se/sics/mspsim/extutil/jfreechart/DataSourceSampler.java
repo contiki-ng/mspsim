@@ -25,20 +25,25 @@ import se.sics.mspsim.util.DataSource;
 
 public class DataSourceSampler implements ActionListener {
 
-  private int interval = 1000;
+  private int interval = 100;
   private Timer timer;
   private ArrayList<DataSource> sources = new ArrayList<DataSource>();
 
   private TimeSeries test;
+  private TimeSeries test2;
   private TimeSeriesCollection dataset;
   
   public DataSourceSampler() {
     timer = new Timer(interval, this);
     test = new TimeSeries("Data", Millisecond.class);
-    test.setMaximumItemCount(30000);
+    test.setMaximumItemAge(30000);
+    test2 = new TimeSeries("Data 2", Millisecond.class);
+    test2.setMaximumItemAge(30000);
+//    test2.setMaximumItemCount(30000);
     dataset = new TimeSeriesCollection();
     dataset.addSeries(test);
-//    timer.start();
+    dataset.addSeries(test2);
+    timer.start();
   }
   
   public void addDataSource(DataSource source) {
@@ -62,11 +67,11 @@ public class DataSourceSampler implements ActionListener {
       
       }
     }
-    test.add(new Millisecond(), Math.random());
+    test.add(new Millisecond(), Math.random() * 100);
+    test2.add(new Millisecond(), Math.random() * 100);
   }
 
   public void actionPerformed(ActionEvent arg0) {
-    System.out.println("Scheduled for sampling...");
     sampleAll();
   }
   
