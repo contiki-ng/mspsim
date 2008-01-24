@@ -64,7 +64,7 @@ CPUTEST := tests/cputest.firmware
 
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware
 
-PACKAGES := ${addprefix se/sics/mspsim/,core platform/esb platform/sky util chip extutil/highlight}
+PACKAGES := ${addprefix se/sics/mspsim/,core platform/esb platform/sky ui util chip extutil/highlight}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
