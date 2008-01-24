@@ -39,7 +39,7 @@
  *           $Revision: 1.4 $
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -54,6 +54,11 @@ import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.util.DebugInfo;
+import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.SourceViewer;
+import se.sics.mspsim.util.StackUI;
+import se.sics.mspsim.util.WindowUtils;
 
 public class ControlUI extends JPanel implements ActionListener {
 

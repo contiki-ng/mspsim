@@ -39,7 +39,7 @@
  *           $Revision: 1.3 $
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -52,6 +52,7 @@ import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
 
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.util.Utils;
 
 public class DebugUI extends JPanel {
 

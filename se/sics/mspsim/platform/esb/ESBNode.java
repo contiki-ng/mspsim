@@ -43,6 +43,7 @@ package se.sics.mspsim.platform.esb;
 import java.io.IOException;
 
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.*;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 public class ESBNode implements PortListener {

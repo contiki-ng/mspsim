@@ -50,7 +50,7 @@ import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
-import se.sics.mspsim.util.ControlUI;
+import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
