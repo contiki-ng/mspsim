@@ -43,6 +43,9 @@ package se.sics.mspsim.util;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.jfree.chart.renderer.category.StatisticalBarRenderer;
+import org.jfree.data.statistics.Statistics;
+
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.OperatingModeListener;
@@ -62,21 +65,91 @@ public class OperatingModeStatistics implements OperatingModeListener {
   
   public void addMonitor(Chip chip) {
     chip.addOperatingModeListener(this);
+    StatEntry entry = new StatEntry(chip.getName(), chip.getModeMax());
+    statistics.put(chip.getName(), entry);    
   }
   
   public void modeChanged(Chip source, int mode) {
     StatEntry entry = statistics.get(source.getName());
-    if (entry == null) {
-      entry = new StatEntry(source.getName(), source.getModeMax());
-      statistics.put(source.getName(), entry);
-    }
-    entry.updateStat(mode, cpu.cycles);
+    if (entry != null)
+      entry.updateStat(mode, cpu.cycles);
   }
 
   public void printStat() {    
     for (Iterator<StatEntry> iterator = statistics.values().iterator(); iterator.hasNext();) {
       StatEntry entry = iterator.next();
       entry.printStat();
+    }
+  }
+  
+  public DataSource getDataSource(String chip, int mode) {
+    StatEntry se = statistics.get(chip);
+    if (se != null) {
+      return new StatDataSource(se, mode);
+    }
+    return null;
+  }
+
+  public DataSource getMultiDataSource(String chip) {
+    StatEntry se = statistics.get(chip);
+    if (se != null) {
+      return new StatMultiDataSource(se);
+    }
+    return null;  
+  }
+  
+  private class StatDataSource implements DataSource {
+
+    private StatEntry entry;
+    private int mode;
+    private long lastCycles;
+    private long lastValue;
+    
+    public StatDataSource(StatEntry entry, int mode) {
+      this.entry = entry;
+      this.mode = mode;
+      lastCycles = cpu.cycles;
+    }
+    
+    // returns percentage since last call...
+    public int getValue() {
+      long diff = cpu.cycles - lastCycles;
+      if (diff == 0) return 0;
+      long val = entry.getValue(mode, cpu.cycles);
+      long valDiff = val - lastValue;
+      lastValue = val;
+      lastCycles = cpu.cycles;
+      return (int) (100 * valDiff / diff);
+    }
+  }
+
+  private class StatMultiDataSource implements DataSource{
+
+    private StatEntry entry;
+    private long lastCycles;
+    private long[] lastValue;
+    
+    public StatMultiDataSource(StatEntry entry) {
+      this.entry = entry;
+      lastCycles = cpu.cycles;
+      lastValue = new long[entry.elapsed.length];
+    }
+    
+    // returns percentage since last call...
+    public int getValue() {
+      long diff = cpu.cycles - lastCycles;
+      if (diff == 0) return 0;
+
+      long valDiff = 0;
+      // Assume that 0 means "off"
+      for (int i = 1; i < lastValue.length; i++) {
+        // Just sum them - later a multiplicator array might be useful...
+        long val = entry.getValue(i, cpu.cycles);
+        valDiff += (val - lastValue[i]);
+        lastValue[i] = val;
+      }
+      lastCycles = cpu.cycles;
+      return (int) (100 * valDiff / diff);
     }
   }
   
@@ -90,6 +163,13 @@ public class OperatingModeStatistics implements OperatingModeListener {
     StatEntry(String key, int max) {
       this.key = key;
       elapsed = new long[max + 1];
+    }
+    
+    long getValue(int mode, long cycles) {
+      if (mode == this.mode) {
+        return elapsed[mode] + (cycles - startTime);
+      }
+      return elapsed[mode];
     }
     
     void updateStat(int mode, long cycles) {

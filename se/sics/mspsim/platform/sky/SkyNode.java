@@ -51,6 +51,7 @@ import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
+import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
@@ -140,6 +141,8 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     
     stats = new OperatingModeStatistics(cpu);
     stats.addMonitor(this);
+    stats.addMonitor(radio);
+    stats.addMonitor(cpu);
   }
 
   public void setButton(boolean hi) {
@@ -163,7 +166,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       redLed = (data & RED_LED) == 0;
       blueLed = (data & BLUE_LED) == 0;
       greenLed = (data & GREEN_LED) == 0;
-      int newMode = (redLed ? 1 : 0) + (greenLed ? 1 : 0) + (blueLed ? 1 : 0);  
+      int newMode = (redLed ? 1 : 0) + (greenLed ? 1 : 0) + (blueLed ? 1 : 0);
       if (mode != newMode) {
         mode = newMode;
         modeChanged(mode);
@@ -224,6 +227,11 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       MapTable map = new MapTable(args[1]);
       cpu.getDisAsm().setMap(map);
     }
+    
+
+    // A HACK!!!
+    DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+    dataChart.setupChipFrame(node.stats);
     
     cpu.cpuloop();
   }

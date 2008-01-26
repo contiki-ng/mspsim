@@ -84,7 +84,7 @@ public class ControlUI extends JPanel implements ActionListener {
 
     this.stackUI = new StackUI(cpu);
     
-    DataChart test = new DataChart("Stack Monitor");
+    DataChart test = new DataChart("Stack Monitor", "Bytes");
     test.setupStackFrame(cpu);
     
     stackWindow = new JFrame("Stack");
