@@ -197,6 +197,11 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   }
 
   public static void main(String[] args) throws IOException {
+    if (args.length == 0) {
+      System.out.println("Usage: mspsim.platform.sky.SkyNode <firmware>");
+      System.exit(1);
+    }
+
     final MSP430 cpu = new MSP430(0);
     // Monitor execution
     cpu.setMonitorExec(true);
