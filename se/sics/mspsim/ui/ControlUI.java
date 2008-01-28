@@ -61,7 +61,7 @@ import se.sics.mspsim.util.ELF;
 public class ControlUI extends JPanel implements ActionListener {
 
   private static final String TITLE = "MSPSim monitor";
-  private static final boolean USE_STACKUI = true;
+  private static final boolean USE_STACKUI = false;
 
   private JFrame window;
   private MSP430 cpu;
