@@ -1,8 +1,8 @@
 package se.sics.mspsim.extutil.jfreechart;
-
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -20,6 +20,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.ui.WindowUtils;
 import se.sics.mspsim.util.OperatingModeStatistics;
 import se.sics.mspsim.util.StackMonitor;
 
@@ -61,6 +62,7 @@ public class DataChart extends JPanel {
         JFreeChart.DEFAULT_TITLE_FONT, xyplot, true);
     ChartPanel chartPanel = new ChartPanel(chart);
     setLayout(new BorderLayout());
+    setPreferredSize(new Dimension(400, 200));
     add(chartPanel, BorderLayout.CENTER);
   }
 
@@ -68,15 +70,17 @@ public class DataChart extends JPanel {
     dataset.addSeries(ts);
   }
   
-  public void openFrame(String name) {
+  private JFrame openFrame(String name) {
     JFrame jw = new JFrame(name);
     jw.add(this);
-    jw.setBounds(100, 100, 400, 200);
-    jw.setVisible(true);
+    WindowUtils.restoreWindowBounds(name, jw);
+    WindowUtils.addSaveOnShutdown(name, jw);
+//     jw.setBounds(100, 100, 400, 200);
+    return jw;
   }
   
   public void setupStackFrame(MSP430 cpu) {
-    openFrame("Stack Monitor");
+    JFrame jw = openFrame("Stack Monitor");
     StackMonitor sm = new StackMonitor(cpu);
     DataSourceSampler dss = new DataSourceSampler();
     TimeSeries ts = new TimeSeries("Max Stack", Millisecond.class);
@@ -87,10 +91,11 @@ public class DataChart extends JPanel {
     ts.setMaximumItemCount(200);
     addTimeSeries(ts);
     dss.addDataSource(sm.getSource(), ts);
+    jw.setVisible(true);
   }
   
   public void setupChipFrame(OperatingModeStatistics oms) {
-    openFrame("Duty-Cycle Monitor");
+    JFrame jw = openFrame("Duty-Cycle Monitor");
     DataSourceSampler dss = new DataSourceSampler();
     dss.setInterval(50);
     TimeSeries ts = new TimeSeries("LEDS", Millisecond.class);
@@ -112,6 +117,6 @@ public class DataChart extends JPanel {
     ts.setMaximumItemCount(200);
     addTimeSeries(ts);
     dss.addDataSource(oms.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE), ts);
-    
+    jw.setVisible(true);
   }
 }
