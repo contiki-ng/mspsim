@@ -43,9 +43,6 @@ package se.sics.mspsim.util;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import org.jfree.chart.renderer.category.StatisticalBarRenderer;
-import org.jfree.data.statistics.Statistics;
-
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.OperatingModeListener;
