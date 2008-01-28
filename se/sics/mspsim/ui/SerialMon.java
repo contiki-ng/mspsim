@@ -61,7 +61,7 @@ public class SerialMon implements KeyListener, USARTListener {
   private USART usart;
   private JTextArea textArea;
   private JLabel statusLabel;
-  private String text = "*** Serial mon for ESB/MSPsim ***\n";
+  private String text = "*** Serial mon for MSPsim ***\n";
 
   private int lines = 1;
   private boolean isUpdatePending = false;
