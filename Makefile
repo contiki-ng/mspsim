@@ -12,6 +12,7 @@
 # Settings
 ###############################################################
 CC=javac
+JAVA=java
 JAVACC=javacc
 JAR=jar
 RM=rm -f
@@ -47,6 +48,8 @@ endif
 
 CLASSPATH=.$(SEPARATOR)lib/jfreechart-1.0.9.jar$(SEPARATOR)lib/jcommon-1.0.12.jar
 CCARGS=-deprecation -classpath "${CLASSPATH}"
+
+JAVAARGS=-classpath "${CLASSPATH}"
 
 
 ###############################################################
@@ -97,25 +100,25 @@ help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
 
 run:	compile
-	java se.sics.mspsim.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
-	java se.sics.mspsim.platform.esb.ESBNode $(ESBFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ESBFIRMWARE) $(MAPFILE)
 
 runsky:	compile
-	java se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPFILE)
 
 test:	cputest
 
 cputest:	$(CPUTEST)
-	java se.sics.mspsim.util.Test $(CPUTEST)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.Test $(CPUTEST)
 
 $(CPUTEST):
 	(cd tests && $(MAKE))
 
 mtest:	compile $(CPUTEST)
 	@-$(RM) mini-test_cpu.txt
-	java se.sics.util.Test -debug $(CPUTEST) >mini-test_cpu.txt
+	$(JAVA) $(JAVAARGS) se.sics.util.Test -debug $(CPUTEST) >mini-test_cpu.txt
 
 
 ###############################################################
