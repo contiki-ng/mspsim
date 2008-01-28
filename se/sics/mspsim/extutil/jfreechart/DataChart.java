@@ -82,7 +82,7 @@ public class DataChart extends JPanel {
   public void setupStackFrame(MSP430 cpu) {
     JFrame jw = openFrame("Stack Monitor");
     StackMonitor sm = new StackMonitor(cpu);
-    DataSourceSampler dss = new DataSourceSampler();
+    DataSourceSampler dss = new DataSourceSampler(cpu);
     TimeSeries ts = new TimeSeries("Max Stack", Millisecond.class);
     ts.setMaximumItemCount(200);
     addTimeSeries(ts);
@@ -94,9 +94,9 @@ public class DataChart extends JPanel {
     jw.setVisible(true);
   }
   
-  public void setupChipFrame(OperatingModeStatistics oms) {
+  public void setupChipFrame(OperatingModeStatistics oms, MSP430 cpu) {
     JFrame jw = openFrame("Duty-Cycle Monitor");
-    DataSourceSampler dss = new DataSourceSampler();
+    DataSourceSampler dss = new DataSourceSampler(cpu);
     dss.setInterval(50);
     TimeSeries ts = new TimeSeries("LEDS", Millisecond.class);
     ts.setMaximumItemCount(200);
