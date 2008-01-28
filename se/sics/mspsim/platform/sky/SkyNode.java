@@ -236,7 +236,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
 
     // A HACK!!!
     DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
-    dataChart.setupChipFrame(node.stats);
+    dataChart.setupChipFrame(node.stats, cpu);
     
     cpu.cpuloop();
   }
