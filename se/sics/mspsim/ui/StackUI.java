@@ -39,15 +39,21 @@
  *           $Revision: 1.3 $
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
+
 import javax.swing.JPanel;
 
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.CPUMonitor;
+import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.util.MapTable;
 
 public class StackUI extends JPanel implements CPUMonitor {
+
+  private static final long serialVersionUID = 8648239617509299768L;
 
   private static final int STACK_FRAME = 1024;
   private int updateCyclePeriod = 2500;
@@ -55,13 +61,21 @@ public class StackUI extends JPanel implements CPUMonitor {
   private MSP430 cpu;
   private int heapStartAddress;
   private int stackStartAddress = 0xa00;
-  private DotDiagram diagram;
+  private ChartPanel chartPanel;
+  private LineChart minStackChart;
+  private LineChart maxStackChart;
+  
+//  private DotDiagram diagram;
   private int[] minData = new int[STACK_FRAME];
   private int[] maxData = new int[STACK_FRAME];
-  private String[] notes = new String[STACK_FRAME];
+  private int[] minCache = new int[STACK_FRAME];
+  private int[] maxCache = new int[STACK_FRAME];
+//  private String[] notes = new String[STACK_FRAME];
 
   private long lastCycles = 0;
   private int pos = 0;
+
+  private boolean update = false;
 
   public StackUI(MSP430 cpu) {
     this(cpu, 2500);
@@ -81,17 +95,57 @@ public class StackUI extends JPanel implements CPUMonitor {
       }
     }
 
-    diagram = new DotDiagram(2);
-    diagram.setDotColor(0, Color.green);
-    diagram.setDotColor(1, Color.green);
-    diagram.addConstant(Color.red,
-        this.stackStartAddress - this.heapStartAddress);
-    add(diagram, BorderLayout.CENTER);
+//    diagram = new DotDiagram(2);
+//    diagram.setDotColor(0, Color.green);
+//    diagram.setDotColor(1, Color.green);
+//    diagram.addConstant(Color.red,
+//        this.stackStartAddress - this.heapStartAddress);
+//    diagram.setShowGrid(true);
+//    add(diagram, BorderLayout.CENTER);
+    chartPanel = new ChartPanel();
+
+    ConstantLineChart maxChart = new ConstantLineChart("Max", this.stackStartAddress - this.heapStartAddress);
+    maxChart.setConfig("color", Color.red);
+    chartPanel.addChart(maxChart);
+
+    minStackChart = new LineChart("Min Stack");
+    minStackChart.setConfig("color", Color.green);
+    chartPanel.addChart(minStackChart);
+
+    maxStackChart = new LineChart("Max Stack");
+    maxStackChart.setConfig("color", Color.green);
+    chartPanel.addChart(maxStackChart);
+    chartPanel.setAxisChart(maxStackChart);
+
+    add(chartPanel, BorderLayout.CENTER);
     setPreferredSize(new Dimension(320, 200));
   }
 
-  public void addNote(String note) {
-    notes[pos] = note;
+//  public void addNote(String note) {
+//    notes[pos] = note;
+//  }
+
+  public void paint(Graphics g) {
+    if (update) {
+      update = false;
+
+      int p = pos;
+      copy(this.minData, this.minCache, p);
+      copy(this.maxData, this.maxCache, p);
+      minStackChart.setData(this.minCache);
+      maxStackChart.setData(this.maxCache);
+    }
+    super.paint(g);
+  }
+
+
+  private void copy(int[] data1, int[] data2, int p) {
+    if (p + 1 < data1.length) {
+      System.arraycopy(data1, p + 1, data2, 0, data1.length - p - 1);
+    }
+    if (p > 0) {
+      System.arraycopy(data1, 0, data2, data1.length - p, p);
+    }
   }
 
   // -------------------------------------------------------------------
@@ -108,13 +162,15 @@ public class StackUI extends JPanel implements CPUMonitor {
     }
     if (cpu.cpuCycles - lastCycles > updateCyclePeriod) {
       lastCycles = cpu.cpuCycles;
-      //System.out.println("STACK UPDATE: " + type + "," + adr + "," + data);
+//      System.out.println("STACK UPDATE: " + type + "," + adr + "," + data + "," + pos);
       pos = (pos + 1) % this.minData.length;
-      this.minData[pos] = 0;
+      this.minData[pos] = Integer.MAX_VALUE;
       this.maxData[pos] = 0;
-      this.notes[pos] = null;
-      diagram.setData(0, this.minData, pos, this.minData.length);
-      diagram.setDataWithNotes(1, this.maxData, notes, pos, this.maxData.length);
+      update = true;
+      repaint();
+//      this.notes[pos] = null;
+//      diagram.setData(0, this.minData, pos, this.minData.length);
+//      diagram.setDataWithNotes(1, this.maxData, notes, pos, this.maxData.length);
     }
   }
 

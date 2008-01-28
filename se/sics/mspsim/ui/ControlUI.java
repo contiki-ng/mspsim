@@ -57,11 +57,11 @@ import se.sics.mspsim.core.*;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
-import se.sics.mspsim.util.StackUI;
 
 public class ControlUI extends JPanel implements ActionListener {
 
   private static final String TITLE = "MSPSim monitor";
+  private static final boolean USE_STACKUI = true;
 
   private JFrame window;
   private MSP430 cpu;
@@ -82,16 +82,16 @@ public class ControlUI extends JPanel implements ActionListener {
     super(new GridLayout(0, 1));
     this.cpu = cpu;
 
-    this.stackUI = new StackUI(cpu);
-    
     DataChart test = new DataChart("Stack Monitor", "Bytes");
     test.setupStackFrame(cpu);
-    
-    stackWindow = new JFrame("Stack");
-    stackWindow.add(this.stackUI);
-    WindowUtils.restoreWindowBounds("StackUI", stackWindow);
-    WindowUtils.addSaveOnShutdown("StackUI", stackWindow);
-    stackWindow.setVisible(true);
+    if (USE_STACKUI) {
+      this.stackUI = new StackUI(cpu);
+      stackWindow = new JFrame("Stack");
+      stackWindow.add(this.stackUI);
+      WindowUtils.restoreWindowBounds("StackUI", stackWindow);
+      WindowUtils.addSaveOnShutdown("StackUI", stackWindow);
+      stackWindow.setVisible(true);
+    }
 
     window = new JFrame(TITLE);
 //     window.setSize(320,240);

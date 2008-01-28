@@ -56,6 +56,8 @@ import javax.swing.JOptionPane;
 
 public class DotDiagram extends JComponent {
 
+  private static final long serialVersionUID = -2284181166518780931L;
+
   public static final int NORMAL = 0;
   public static final int ADDITIVE = 1;
   public static final int FILLED_ADDITIVE = 2;
@@ -84,7 +86,6 @@ public class DotDiagram extends JComponent {
   private int lowerY;
   private double xspace;
   private int ySpacing = 0;
-  private int xSpacing = 0;
   private boolean rescale = false;
   private boolean gridVisible = false;
 
@@ -275,14 +276,26 @@ public class DotDiagram extends JComponent {
 
   protected void paintComponent(Graphics g0) {
     Graphics2D g = (Graphics2D) g0;
+    FontMetrics fm = g.getFontMetrics();
+    int fmHeight = fm.getAscent();
     Color oldColor = g.getColor();
+    Insets insets = getInsets();
     int width = getWidth();
     int height = getHeight();
+    int leftInset = 2;
+    int topInset = 2;
     int yLabelSize = 0;
     if (yLabel != null || xLabel != null) {
-      FontMetrics fm = g.getFontMetrics();
       yLabelSize = fm.stringWidth(yLabel);
     }
+    if(gridVisible) {
+      topInset += fmHeight / 2;
+      height -= fmHeight / 2;
+      leftInset += 40;
+    }
+    height -= topInset + insets.top + insets.bottom;
+    width -= leftInset + insets.left + insets.right;
+    g.translate(leftInset + insets.left + 1, topInset + insets.top + 1);
 
     if (isOpaque()) {
       g.setColor(Color.white);
@@ -377,21 +390,54 @@ public class DotDiagram extends JComponent {
 
     if (gridVisible) {
       g.setColor(Color.lightGray);
-      for (int i = 0, n = 10; i < n; i++) {
-	g.drawLine(x + (i * sizeX) / 10, y,
-		   x + (i * sizeX) / 10, y + sizeY - 1);
+
+      double yfac = (1.0 * height) / (totMax - totMin);
+//      if (totMin < 0) {
+//        zero += (int) (yfac * totMin);
+//      }
+      // Draw zero line
+      g.setColor(Color.lightGray);
+      g.drawLine(0, zero, width, zero);
+      g.setColor(Color.black);
+      g.drawString("0", -4 - fm.stringWidth("0"), zero + fmHeight / 2);
+
+      double div = getDivider(totMin, totMax);
+      for (double d = div; d < totMax; d += div) {
+        int dy = (int) (zero - yfac * d);
+        String text = "" + (int) d;
+        int tlen = fm.stringWidth(text);
+        g.setColor(Color.lightGray);
+        g.drawLine(0, dy, width, dy);
+        g.setColor(Color.black);
+        g.drawString(text, -4 - tlen, dy + fmHeight / 2);
       }
-      int z0 = zero - y;
-      int z1 = zero - (y + sizeY);
-      double tot =  (ySpacing * factor) == 0 ? (sizeY / 10.0)
-	:  (factor * ySpacing);
-      for (double i = 0; i < z0; i += tot) {
-	g.drawLine(x + 1, (int) (zero - i), x + sizeX, (int) (zero - i));
+      for (double d = div; d < -totMin; d += div) {
+        int dy = (int) (zero + yfac * d);
+        String text = "" + (int) -d;
+        int tlen = fm.stringWidth(text);
+        g.setColor(Color.lightGray);
+        g.drawLine(0, dy, width, dy);
+        g.setColor(Color.black);
+        g.drawString(text, -4 - tlen, dy + fmHeight / 2);
       }
 
-      for (double i = 0; i > z1; i -= tot) {
-	g.drawLine(x + 1, (int) (zero - i), x + sizeX, (int) (zero - i));
-      }
+      
+      
+//      for (int i = 0, n = 10; i < n; i++) {
+//	g.drawLine(x + (i * sizeX) / 10, y,
+//		   x + (i * sizeX) / 10, y + sizeY - 1);
+//      }
+//      int z0 = zero - y;
+//      int z1 = zero - (y + sizeY);
+//      double tot =  (ySpacing * factor) == 0 ? (sizeY / 10.0)
+//	:  (factor * ySpacing);
+//      for (double i = 0; i < z0; i += tot) {
+//	g.drawLine(x + 1, (int) (zero - i), x + sizeX, (int) (zero - i));
+//      }
+//
+//      for (double i = 0; i > z1; i -= tot) {
+//	g.drawLine(x + 1, (int) (zero - i), x + sizeX, (int) (zero - i));
+//      }
     }
 
     if (isAdditive) {
@@ -488,8 +534,28 @@ public class DotDiagram extends JComponent {
       g.scale(height/200.0, width/200.0);
       g.drawString(yLabel, -100 - yLabelSize/2, 10);
     }
+    g.setColor(oldColor);
   }
 
+  private double getDivider(double minY, double maxY) {
+    double diff = Math.abs(maxY - minY);
+    if (diff >= 1500) {
+      return 500.0;
+    }
+    if (diff >= 400) {
+      return 100.0;
+    }
+    if (diff >= 80) {
+      return 20.0;
+    }
+    if (diff >= 20) {
+      return 10.0;
+    }
+    if (diff >= 10) {
+      return 5.0;
+    }
+    return 1.0;
+  }
 
 
   // -------------------------------------------------------------------
