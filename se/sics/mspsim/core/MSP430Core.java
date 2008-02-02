@@ -99,16 +99,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private int interruptMax = -1;
   // Op/instruction represents the last executed OP / instruction
-  int op;
+  private int op;
   int instruction;
   int servicedInterrupt = -1;
   IOUnit servicedInterruptUnit = null;
 
-  boolean interruptsEnabled = false;
-  boolean cpuOff = false;
+  private boolean interruptsEnabled = false;
+  private boolean cpuOff = false;
 
   // Not private since they are needed (for fast access...)
-  int dcoFrq = 2500000;
+  private int dcoFrq = 2500000;
   int aclkFrq = 32768;
   int smclkFrq = dcoFrq;
 

@@ -472,10 +472,12 @@ public class Timer extends IOUnit {
   }
 
   private int updateCounter(long cycles) {
-    int divider = 1;
+    // Needs to be non-integer since smclk Frq can be lower
+    // than aclk
+    double divider = 1;
     if (clockSource == SRC_ACLK) {
-      // Is this correct? Should possibly be divided with DCO clock?
-      divider = core.smclkFrq / core.aclkFrq;
+      // Should later be divided with DCO clock?
+      divider = 1.0 * core.smclkFrq / core.aclkFrq;
     }
     divider = divider * inputDivider;
     long cycctr = cycles - counterStart;

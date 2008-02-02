@@ -58,7 +58,8 @@ public class BasicClockModule extends IOUnit {
   // Based on the scatterweb code it looks like less than
   // 5Mhz is more correct...
   public static final int MAX_DCO_FRQ = 4915200;
-  public static final int DCO_FACTOR = MAX_DCO_FRQ / 2048;
+  public static final int MIN_DCO_FRQ = 0;
+  public static final int DCO_FACTOR = (MAX_DCO_FRQ - MIN_DCO_FRQ) / 2048;
 
 
   private MSP430Core core;

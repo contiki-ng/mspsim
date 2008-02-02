@@ -121,11 +121,10 @@ public class DataSourceSampler implements ActionListener {
     public void update() {
       long time = cpu.cycles / 2;
       if (time > lastUpdate) {
-        System.out.println("adding time " + time);
         lastUpdate = time;
         timeSeries.add(new Millisecond(new Date(time)), dataSource.getValue());
       } else {
-        System.out.println("IGNORING TIME " + time);
+//        System.out.println("IGNORING TIME " + time);
       }
     }
     
