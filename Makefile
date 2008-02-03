@@ -126,7 +126,7 @@ mtest:	compile $(CPUTEST)
 ###############################################################
 
 source:
-	zip -9 mspsim-source-`date '+%F'`.zip Makefile $(BINARY) *.java $(addsuffix /*.java,$(PACKAGES)) tests/Makefile tests/*.c tests/*.h
+	zip -9 mspsim-source-`date '+%F'`.zip Makefile $(BINARY) *.java $(addsuffix /*.java,$(PACKAGES)) tests/Makefile tests/*.c tests/*.h lib/*.*
 
 
 ###############################################################
