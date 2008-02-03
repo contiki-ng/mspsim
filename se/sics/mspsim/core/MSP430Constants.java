@@ -43,6 +43,8 @@ package se.sics.mspsim.core;
 
 public interface MSP430Constants {
 
+  public static final String VERSION = "0.82";
+  
   public static final int CLK_ACLK = 1;
   public static final int CLK_SMCLK = 2;
 
