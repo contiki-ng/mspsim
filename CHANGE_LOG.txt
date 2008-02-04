@@ -1,3 +1,10 @@
+0.82 - JFreechart, operation mode statistics (2008-02-03)
+Changes:
+- added jfreechart diagrams for stack and operation mode statistics
+- added profiling of operation modes (e.g. chip modes such as on/off/lpm)
+- fixed bug in Timer causing division by zero when main clock is slower than ACLK.
+- added possibility to print a stack trace when CPU is stopped
+- more symbol information available after loading ELF files
 
 0.81 - ELF Stabs, source debugging (2007-12-07)
 Changes:
