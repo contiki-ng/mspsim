@@ -79,7 +79,7 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
       0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
   };
   private int readAddress;
-  private int loadedAddress;
+  private int loadedAddress = -1;
   private int blockWriteAddress;
   private byte[] readMemory = new byte[256];
   private byte[] buffer = new byte[256];
@@ -234,7 +234,8 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   }
   
   private void ensureLoaded(int address) {
-    if (!((loadedAddress & 0xfff00) == (address & 0xfff00))) {
+    if (loadedAddress < 0
+	|| ((loadedAddress & 0xfff00) != (address & 0xfff00))) {
       try {
         if (DEBUG)
           System.out.println("M25P80: Loading memory: " + (address & 0xfff00));
@@ -274,6 +275,7 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   
   private void sectorErase(int address) {
     int sectorAddress = address & 0xf0000;
+    loadedAddress = -1;
     for (int i = 0; i < buffer.length; i++) {
       buffer[i] = (byte)0xff;
     }
