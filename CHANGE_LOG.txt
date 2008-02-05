@@ -1,3 +1,7 @@
+0.83
+Changes:
+- added support for external flash on Sky node (M25P80)
+
 0.82 - JFreechart, operation mode statistics (2008-02-03)
 Changes:
 - added jfreechart diagrams for stack and operation mode statistics

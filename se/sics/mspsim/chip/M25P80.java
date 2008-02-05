@@ -86,15 +86,18 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   
   private RandomAccessFile file;
   
-  public M25P80(USART usart) {
+  public M25P80(USART usart, String filename) {
     this.usart = usart;
+    if (filename == null) 
+      filename = "flash.bin";
+    // Open flash file for R/W
     try {
-      file = new RandomAccessFile("flash.bin", "rw");
+      file = new RandomAccessFile(filename, "rw");
     } catch (FileNotFoundException e) {
       e.printStackTrace();
       return;
     }
-    
+    // Set size of flash
     try {
       file.setLength(1024 * 1024);
     } catch (IOException e) {

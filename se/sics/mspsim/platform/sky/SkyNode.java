@@ -91,6 +91,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
 
   private CC2420 radio;
   private M25P80 flash;
+  private String flashFile;
   
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
@@ -108,8 +109,9 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
    * Creates a new <code>SkyNode</code> instance.
    *
    */
-  public SkyNode(MSP430 cpu) {
+  public SkyNode(MSP430 cpu, String flashFile) {
     this.cpu = cpu;
+    this.flashFile = flashFile;
     IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
       port5 = (IOPort) unit;
@@ -132,7 +134,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
-      flash = new M25P80((USART)usart0);
+      flash = new M25P80((USART)usart0, flashFile);
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
@@ -222,9 +224,19 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       cpu.getDisAsm().setMap(map);
       cpu.setMap(map);
     }
-
+    
+    // create a filename for the flash file
+    // This should be possible to take from a config file later!
+    String fileName = args[0];
+    int ix = fileName.lastIndexOf('.');
+    if (ix > 0) {
+      fileName = fileName.substring(0, ix);
+    }
+    fileName = fileName + ".flash";
+    System.out.println("Using flash file: " + fileName);
+    
     cpu.reset();
-    SkyNode node = new SkyNode(cpu);
+    SkyNode node = new SkyNode(cpu, fileName);
     node.gui = new SkyGui(node);
     ControlUI control = new ControlUI(cpu, elf);
     HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
