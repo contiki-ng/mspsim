@@ -45,7 +45,7 @@ import se.sics.mspsim.util.Utils;
 
 public class CC2420 extends Chip implements USARTListener {
 
-  public static final boolean DEBUG = true;
+  public static final boolean DEBUG = false;
 
   public static final int REG_SNOP		= 0x00;
   public static final int REG_SXOSCON	        = 0x01;
@@ -195,7 +195,7 @@ public class CC2420 extends Chip implements USARTListener {
 
 	  if (address == REG_RXFIFO) {
 	    // check read/write???
-	    System.out.println("CC2420: Reading RXFIFO!!!");
+//	    System.out.println("CC2420: Reading RXFIFO!!!");
 	    state = READ_RXFIFO;
 	  } else if (address == REG_TXFIFO) {
 	    state = WRITE_TXFIFO;
@@ -233,8 +233,8 @@ public class CC2420 extends Chip implements USARTListener {
       	}
       	break;
       case READ_RXFIFO:
-      	System.out.println("CC2420: RXFIFO READ => " +
-      			memory[RAM_RXFIFO + rxCursor]);
+//      	System.out.println("CC2420: RXFIFO READ => " +
+//      			memory[RAM_RXFIFO + rxCursor]);
       	source.byteReceived(memory[RAM_RXFIFO + rxCursor++]);
       	// What if wrap cursor???
       	if (rxCursor >= 128) rxCursor = 0;
@@ -276,19 +276,19 @@ public class CC2420 extends Chip implements USARTListener {
 
     switch (data) {
     case REG_SRXON:
-      System.out.println("CC2420: Strobe RX-ON!!!");
+//      System.out.println("CC2420: Strobe RX-ON!!!");
       setMode(MODE_RX_ON);
       break;
     case REG_SRFOFF:
-      System.out.println("CC2420: Strobe RXTX-OFF!!!");
+//      System.out.println("CC2420: Strobe RXTX-OFF!!!");
       setMode(MODE_TXRX_OFF);
       break;
     case REG_STXON:
-      System.out.println("CC2420: Strobe TXON!");
+//      System.out.println("CC2420: Strobe TXON!");
       setMode(MODE_TXRX_ON);
       break;
     case REG_STXONCCA:
-      System.out.println("CC2420: Strobe TXONCCA!");
+//      System.out.println("CC2420: Strobe TXONCCA!");
       setMode(MODE_TXRX_ON);
       break;      
     case REG_SFLUSHRX:
@@ -307,7 +307,7 @@ public class CC2420 extends Chip implements USARTListener {
     chipSelect = select;
     if (!chipSelect)
       state = WAITING;
-    System.out.println("CC2420: chipSelect: " + chipSelect);
+//    System.out.println("CC2420: chipSelect: " + chipSelect);
   }
 
   public void setCCAPort(IOPort port, int pin) {

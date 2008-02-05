@@ -48,6 +48,8 @@ import se.sics.mspsim.core.*;
 
 public class M25P80 extends Chip implements USARTListener, PortListener {
 
+  public static final boolean DEBUG = false;
+  
   public static final int WRITE_STATUS = 0x01;
   public static final int PAGE_PROGRAM = 0x02;
   public static final int READ_DATA = 0x03;
@@ -78,6 +80,7 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   };
   private int readAddress;
   private int loadedAddress;
+  private int blockWriteAddress;
   private byte[] readMemory = new byte[256];
   private byte[] buffer = new byte[256];
   
@@ -101,7 +104,9 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
 
   public void dataReceived(USART source, int data) {
     if (chipSelect) {
-      System.out.println("M25P80: byte received: " + data);
+      if (DEBUG) {
+        System.out.println("M25P80: byte received: " + data);
+      }
       switch(state) {
       case READ_IDENT:
         source.byteReceived(identity[pos]);
@@ -118,7 +123,7 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
           readAddress = (readAddress << 8) + data;
           source.byteReceived(0);
           pos++;
-          if (pos == 3)
+          if (DEBUG && pos == 3)
             System.out.println("M25P80: reading from " + Integer.toHexString(readAddress));
         } else {
           source.byteReceived(readMemory(readAddress++));
@@ -127,11 +132,31 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
           }
         }
         return;
+      case SECTOR_ERASE:
+        if (pos < 3) {
+          readAddress = (readAddress << 8) + data;
+          source.byteReceived(0);
+          pos++;
+          if (pos == 3) {
+            // Clear buffer
+            sectorErase(readAddress);
+          }
+        }
+        return;
       case PAGE_PROGRAM:
         if (pos < 3) {
           readAddress = (readAddress << 8) + data;
           source.byteReceived(0);
           pos++;
+          if (pos == 3) {
+            // Clear buffer
+            for (int i = 0; i < buffer.length; i++) {
+              buffer[i] = (byte) 0xff;
+            }
+            blockWriteAddress = readAddress & 0xfff00;
+            if (DEBUG)
+              System.out.println("M25P80: programming at " + Integer.toHexString(readAddress));
+          }
         } else {
           // Do the programming!!!
           source.byteReceived(0);
@@ -139,43 +164,52 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
         }
         return;
       }
-      
+      if (DEBUG)
+        System.out.println("M25P80: new command: " + data);      
       switch (data) {
       case WRITE_ENABLE:
-        System.out.println("M2580: Write Enable");
+        if (DEBUG)
+          System.out.println("M25P80: Write Enable");
         writeEnable = true;
         break;
       case WRITE_DISABLE:
-        System.out.println("M2580: Write Disable");
+        if (DEBUG)
+          System.out.println("M25P80: Write Disable");
         writeEnable = false;
         break;
       case READ_IDENT:
-        System.out.println("M2580: Read ident.");
+        if (DEBUG)
+          System.out.println("M25P80: Read ident.");
         state = READ_IDENT;
         pos = 0;
         source.byteReceived(identity[pos++]);
         return;
       case READ_STATUS:
-        System.out.println("M2580: Read status.");
-        status = status & (0xff - 1 - 2) | (writeEnable ? 0x02 : 0x00);
+        status = (status & (0xff - 1 - 2)) | (writeEnable ? 0x02 : 0x00);
         source.byteReceived(status);
+        if (DEBUG)
+          System.out.println("M25P80: Read status => " + status);
         return;
       case WRITE_STATUS:
-        System.out.println("M2580: Write status");
+        if (DEBUG)
+          System.out.println("M25P80: Write status");
         state = WRITE_STATUS;
         break;
       case READ_DATA:
-        System.out.println("M2580: Read Data");
+        if (DEBUG)
+          System.out.println("M25P80: Read Data");
         state = READ_DATA;
         pos = readAddress = 0;
         break;
       case PAGE_PROGRAM:
-        System.out.println("M2580: Page Program");
+        if (DEBUG)
+          System.out.println("M25P80: Page Program");
         state = PAGE_PROGRAM;
         pos = readAddress = 0;
         break;
       case SECTOR_ERASE:
-        System.out.println("M2580: Sector Erase");
+        if (DEBUG)
+          System.out.println("M25P80: Sector Erase");
         state = SECTOR_ERASE;
         pos = 0;
         break;
@@ -186,7 +220,8 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
 
   // Should return correct data!
   private int readMemory(int address) {
-    System.out.println("M2580: Reading memory address: " + Integer.toHexString(address));
+    if (DEBUG)
+      System.out.println("M25P80: Reading memory address: " + Integer.toHexString(address));
     ensureLoaded(address);
     return readMemory[address & 0xff];
   }
@@ -198,7 +233,8 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   private void ensureLoaded(int address) {
     if (!((loadedAddress & 0xfff00) == (address & 0xfff00))) {
       try {
-        System.out.println("M2580: Loading memory: " + (address & 0xfff00));
+        if (DEBUG)
+          System.out.println("M25P80: Loading memory: " + (address & 0xfff00));
         file.seek(address & 0xfff00);
         file.readFully(readMemory);
       } catch (IOException e) {
@@ -207,16 +243,59 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
       loadedAddress = address & 0xfff00;
     }
   }
-  
+    
   public void portWrite(IOPort source, int data) {
     // Chip select = active low...
+    if (chipSelect && (data & CHIP_SELECT) != 0) {
+      // Chip select will go "off"
+      switch(state) {
+      case PAGE_PROGRAM:
+        programPage();
+        break;  
+      }
+    }
     chipSelect = (data & CHIP_SELECT) == 0;
-    System.out.println("M25P80: write to Port4: " +
-		       Integer.toString(data, 16)
-		       + " CS:" + chipSelect);
+//    System.out.println("M25P80: write to Port4: " +
+//		       Integer.toString(data, 16)
+//		       + " CS:" + chipSelect);
     state = 0;
   }
 
+  private void programPage() {
+    ensureLoaded(blockWriteAddress);
+    for (int i = 0; i < readMemory.length; i++) {
+      readMemory[i] &= buffer[i];
+    }
+    writeBack(blockWriteAddress, readMemory);
+  }
+  
+  private void sectorErase(int address) {
+    int sectorAddress = address & 0xf0000;
+    for (int i = 0; i < buffer.length; i++) {
+      buffer[i] = (byte)0xff;
+    }
+    // Erase a complete sector
+    blockWriteAddress = sectorAddress;
+    for (int i = 0; i < 0x100; i++) {
+      if (DEBUG)
+        System.out.println("M25P80: erasing at " + Integer.toHexString(blockWriteAddress));    
+      writeBack(blockWriteAddress, buffer);
+      blockWriteAddress += 0x100;
+    }
+  }
+  
+  
+  private void writeBack(int address, byte[] data) {
+    try {
+      if (DEBUG)
+        System.out.println("M25P80: Writing data to disk at " + Integer.toHexString(address));
+      file.seek(address & 0xfff00);
+      file.write(data);
+      } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  
   public int getModeMax() {
     return 0;
   }

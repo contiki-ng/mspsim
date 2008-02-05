@@ -40,6 +40,7 @@
  */
 
 package se.sics.mspsim.platform.sky;
+import java.io.File;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
@@ -227,6 +228,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     node.gui = new SkyGui(node);
     ControlUI control = new ControlUI(cpu, elf);
     HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
+    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
     control.setSourceViewer(sourceViewer);
     
     if (args.length > 1) {
