@@ -43,6 +43,7 @@ package se.sics.mspsim.platform.sky;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
+import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
@@ -88,7 +89,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   private IOPort port5;
 
   private CC2420 radio;
-  private ExtFlash flash;
+  private M25P80 flash;
   
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
@@ -130,7 +131,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
-      flash = new ExtFlash((USART)usart0);
+      flash = new M25P80((USART)usart0);
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
