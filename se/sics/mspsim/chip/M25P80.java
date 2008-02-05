@@ -117,6 +117,9 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
         if (pos < 3) {
           readAddress = (readAddress << 8) + data;
           source.byteReceived(0);
+          pos++;
+          if (pos == 3)
+            System.out.println("M25P80: reading from " + Integer.toHexString(readAddress));
         } else {
           source.byteReceived(readMemory(readAddress++));
           if (readAddress > 0xfffff) {
@@ -128,6 +131,7 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
         if (pos < 3) {
           readAddress = (readAddress << 8) + data;
           source.byteReceived(0);
+          pos++;
         } else {
           // Do the programming!!!
           source.byteReceived(0);
@@ -163,12 +167,12 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
       case READ_DATA:
         System.out.println("M2580: Read Data");
         state = READ_DATA;
-        pos = 0;
+        pos = readAddress = 0;
         break;
       case PAGE_PROGRAM:
         System.out.println("M2580: Page Program");
         state = PAGE_PROGRAM;
-        pos = 0;
+        pos = readAddress = 0;
         break;
       case SECTOR_ERASE:
         System.out.println("M2580: Sector Erase");
