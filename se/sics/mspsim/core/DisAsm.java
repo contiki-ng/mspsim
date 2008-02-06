@@ -43,6 +43,7 @@ package se.sics.mspsim.core;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.Utils;
 
@@ -148,7 +149,13 @@ public class DisAsm implements MSP430Constants {
       case AM_IND_AUTOINC:
 	if (register == 0) {
 	  // Can this be PC and be incremented only one byte?
-	  adr = "#" + Utils.hex16(memory[pc] + (memory[pc + 1] << 8));
+	  int tmp = memory[pc] + (memory[pc + 1] << 8);
+	  MapEntry me;
+	  if (map != null && (me = map.getEntry(tmp)) != null) {
+	    adr = me.getName(); // + " = $" + Utils.hex16(tmp);
+	  } else {
+	    adr = "#$" + Utils.hex16(tmp);
+	  }
 	  size += 2;
 	} else {
 	  adr = "@(R" + register + "+)";
@@ -227,7 +234,7 @@ public class DisAsm implements MSP430Constants {
 			   Utils.binary16(instruction));
       }
       output += dumpMem(startPC, size, memory);
-      output += opstr + " " + Integer.toString(jmpOffset, 16);
+      output += opstr + " $" + Utils.hex16(jmpOffset);
       regs = "\tSR=" + dumpSR(reg[SR]);
       break;
     default:
@@ -263,13 +270,20 @@ public class DisAsm implements MSP430Constants {
 	// Indexed if reg != PC & CG1/CG2 - will PC be incremented?
 	if (srcRegister == CG1) {
 	  srcAddress = memory[pc] + (memory[pc + 1] << 8);
-	  srcadr = "&" + Utils.hex16(srcAddress);
+
+	  MapEntry me;
+	  if (map != null && (me = map.getEntry(srcAddress)) != null) {
+	    srcadr = "&" + me.getName(); // + " = $" + Utils.hex16(srcAddress);
+	  } else {
+	    srcadr = "&$" + Utils.hex16(srcAddress);
+	  }
 	  size += 2;
 	} else if (srcRegister == CG2) {
 	  srcadr = "#1";
 	} else {
 	  srcAddress = reg[srcRegister] + memory[pc] + (memory[pc + 1] << 8);
-	  srcadr = "(R" + srcRegister + ")";
+	  srcadr = "$" + Utils.hex16(memory[pc] + (memory[pc + 1] << 8)) + "(R" + srcRegister + ")";
+	  size += 2;
 	}
 	break;
 	// Indirect register
@@ -288,11 +302,11 @@ public class DisAsm implements MSP430Constants {
 	} else if (srcRegister == CG1) {
 	  srcadr = "#8";
 	} else if (srcRegister == PC) {
-	  srcadr = "#" + Utils.hex16(memory[pc] + (memory[pc + 1] << 8));
+	  srcadr = "#$" + Utils.hex16(memory[pc] + (memory[pc + 1] << 8));
 	  pc += 2;
 	  size += 2;
 	} else if (srcRegister == CG2) {
-	  srcadr = "#ffff";
+	  srcadr = "#$ffff";
 	} else {
 	  srcadr = "@" + getRegName(srcRegister) + "+";
 	  srcAddress = reg[srcRegister];
@@ -304,10 +318,19 @@ public class DisAsm implements MSP430Constants {
 	dstadr = getRegName(dstRegister);
       } else {
 	dstAddress = memory[pc] + (memory[pc + 1] << 8);
+        MapEntry me = map != null ? map.getEntry(dstAddress) : null;
 	if (dstRegister == 2) {
-	  dstadr = "&" + Utils.hex16(dstAddress);
+	  if (me != null) {
+            dstadr = "&" + me.getName(); // + " = $" + Utils.hex16(srcAddress);
+	  } else {
+	    dstadr = "&$" + Utils.hex16(dstAddress);
+	  }
 	} else {
-	  dstadr = Utils.hex16(dstAddress) + "(R" + dstRegister + ")";
+          if (me != null) {
+            dstadr = me.getName() + "(R" + dstRegister + ")";
+          } else {
+            dstadr = "$" + Utils.hex16(dstAddress) + "(R" + dstRegister + ")";
+          }
 	}
 	pc += 2;
 	size += 2;
