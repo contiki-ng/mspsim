@@ -261,13 +261,12 @@ public class Timer extends IOUnit {
       } else {
         val &= 0xfffe;
       }
-      System.out.println(getName() + " Read: Timer_" + name[type] +
-          " CTL: inDiv:" + inputDivider +
-          " src: " + getSourceName(clockSource) +
-          " IEn:" + interruptEnable + " IFG: " +
-          interruptPending + " mode: " + mode);
-
-      
+      if (DEBUG)
+        System.out.println(getName() + " Read: Timer_" + name[type] +
+            " CTL: inDiv:" + inputDivider +
+            " src: " + getSourceName(clockSource) +
+            " IEn:" + interruptEnable + " IFG: " +
+            interruptPending + " mode: " + mode);      
       
       break;
     case TCCTL0:
