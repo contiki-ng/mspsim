@@ -165,7 +165,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     ioUnits[3] = usart0;
     ioUnits[4] = usart1;
-
+    
     for (int i = 0, n = 8; i < n; i++) {
       memOut[0x70 + i] = usart0;
       memIn[0x70 + i] = usart0;
@@ -174,6 +174,23 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[0x78 + i] = usart1;
     }
 
+    ADC12 adc12 = new ADC12(this);
+    ioUnits[5] = adc12;
+
+    for (int i = 0, n = 16; i < n; i++) {
+      memOut[0x80 + i] = adc12;
+      memIn[0x80 + i] = adc12;
+      memOut[0x140 + i] = adc12;
+      memIn[0x140 + i] = adc12;
+      memOut[0x150 + i] = adc12;
+      memIn[0x150 + i] = adc12;
+    }
+    for (int i = 0, n = 8; i < n; i++) {    
+      memOut[0x1A0 + i] = adc12;
+      memIn[0x1A0 + i] = adc12;
+    }
+    
+    
     // Add port 1,2 with interrupt capability!
     passiveIOUnits[0] = new IOPort(this, "1", 4, memory, 0x20);
     passiveIOUnits[1] = new IOPort(this, "2", 1, memory, 0x28);
