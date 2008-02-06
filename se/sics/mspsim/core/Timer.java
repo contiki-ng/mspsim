@@ -133,7 +133,11 @@ public class Timer extends IOUnit {
 
   private long lastCycles = 0;
   private long counterStart = 0;
+  private long nextTimerTrigger = 0;
 
+  // valid for timer A
+  private int timerOverflow = 0x0a;
+  
   // Input map for timer A
   public static final int[] TIMER_Ax149 = new int[] {
     SRC_PORT + 0x10, SRC_ACLK, SRC_SMCLK, SRC_PORT + 0x21, // Timer
@@ -164,7 +168,7 @@ public class Timer extends IOUnit {
   // If clocked by anything other than the SubMainClock at full
   // speed this needs to be calculated for correct handling.
   // Should be something like inputDivider * SMCLK_SPEED / CLK_SRC_SPEED;
-  private int cyclesMultiplicator = 1;
+  private double cyclesMultiplicator = 1;
 
   private int clockSource;
   private int mode;
@@ -173,6 +177,7 @@ public class Timer extends IOUnit {
   private int countDirection = 1;
 
   // The IO registers
+  private int tctl;
   private int[] tcctl = new int[7];
   private int[] tccr = new int[7];
 
@@ -212,8 +217,10 @@ public class Timer extends IOUnit {
     }
     if (srcMap == TIMER_Ax149) {
       type = TIMER_A;
+      timerOverflow = 0x0a;
     } else {
       type = TIMER_B;
+      timerOverflow = 0x0e;
     }
     reset();
   }
@@ -242,19 +249,27 @@ public class Timer extends IOUnit {
       resetTIV();
     }
 
-    if (address != 0x166) {
-      if (DEBUG && false) {
-	System.out.println("Read: " + Utils.hex16(address) + " => " +
-			   Utils.hex16(memory[address] +
-				       (memory[address + 1] << 8)) + " (" +
-			   (memory[address] + (memory[address + 1] << 8)) + ")");
-      }
-    }
-
     int index = address - offset;
     switch(index) {
     case TR:
-      return updateCounter(cycles);
+      val = updateCounter(cycles);
+      break;
+    case TCTL:
+      val = tctl;
+      if (interruptPending) {
+        val |= 1;
+      } else {
+        val &= 0xfffe;
+      }
+      System.out.println(getName() + " Read: Timer_" + name[type] +
+          " CTL: inDiv:" + inputDivider +
+          " src: " + getSourceName(clockSource) +
+          " IEn:" + interruptEnable + " IFG: " +
+          interruptPending + " mode: " + mode);
+
+      
+      
+      break;
     case TCCTL0:
     case TCCTL1:
     case TCCTL2:
@@ -263,7 +278,8 @@ public class Timer extends IOUnit {
     case TCCTL5:
     case TCCTL6:
       int i = (index - TCCTL0) / 2;
-      return tcctl[i];
+      val = tcctl[i];
+      break;
     case TCCR0:
     case TCCR1:
     case TCCR2:
@@ -272,14 +288,28 @@ public class Timer extends IOUnit {
     case TCCR5:
     case TCCR6:
       i = (index - TCCR0) / 2;
-      return tccr[i];
+      val = tccr[i];
+      break;
+    }
+    
+    if (DEBUG) {
+      System.out.println(getName() + ": Read " + getName(address) + "(" + Utils.hex16(address) + ") => " +
+          Utils.hex16(val) + " (" + val + ")");
     }
 
     // It reads the interrupt flag for capture...
-    return val;
+    return val & 0xffff;
   }
 
   private void resetTIV() {
+    if (lastTIV == timerOverflow) {
+      interruptPending = false;
+      lastTIV = 0;
+      if (DEBUG) {
+        System.out.println(getName() + " Clearing TIV - overflow ");
+      }
+      triggerInterrupts();
+    }
     if (lastTIV / 2 < noCompare) {
       if (DEBUG) {
 	System.out.println(getName() + " Clearing TIV/Comparex2: " + lastTIV);
@@ -308,7 +338,7 @@ public class Timer extends IOUnit {
       break;
     case TCTL:
       if (DEBUG) {
-        System.out.println(getName() + " wrote to TCTL: " + data);
+        System.out.println(getName() + " wrote to TCTL: " + Utils.hex16(data));
       }
       inputDivider = 1 << ((data >> 6) & 3);
       clockSource = srcMap[(data >> 8) & 3];
@@ -318,38 +348,45 @@ public class Timer extends IOUnit {
 	cyclesMultiplicator = (cyclesMultiplicator * core.smclkFrq) /
 	  core.aclkFrq;
 	if (DEBUG) {
-	  System.out.println(getName() + " setting multiplicator to: " +
-			     cyclesMultiplicator);
+	  System.out.println(getName() + " setting multiplicator to: " +			     cyclesMultiplicator);
 	}
       }
 
-      mode = (data >> 4) & 3;
-
+      
       if ((data & TCLR) != 0) {
 	counter = 0;
 	counterStart = cycles;
 	// inputDivider = 1; ????
 	countDirection = 1;
-	// Clear this bit...
-	memory[address] &= ~4;
       }
 
-      interruptEnable = (data & 1) > 0;
+      int newMode = (data >> 4) & 3;
+      if (mode == STOP && newMode != STOP) {
+        updateCounter(cycles);
+        // Wait until full wrap before setting the IRQ flag!
+        nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((0xffff - counter) & 0xffff));
+      }
+      mode = newMode;
+      
+      interruptEnable = (data & 0x02) > 0;
 
       if (DEBUG) {
 	System.out.println(getName() + " Write: Timer_" + name[type] +
 			   " CTL: inDiv:" + inputDivider +
 			   " src: " + getSourceName(clockSource) +
-			   " IE:" + interruptEnable + " IP: " +
+			   " IEn:" + interruptEnable + " IFG: " +
 			   interruptPending + " mode: " + mode +
 			   ((data & TCLR) != 0 ? " CLR" : ""));
       }
 
-      // Write back the interrupt pending info...
-      if (interruptPending) {
-	memory[address] |= 1;
-      } else {
-	memory[address] &= 0xfe;
+      // Write to the tctl.
+      tctl = data;
+      // Clear clear bit
+      tctl &= ~0x04;
+
+      // Clear interrupt pending if so requested...
+      if ((data & 0x01) == 0) {
+        interruptPending = false;
       }
 
       updateCaptures(-1, cycles);
@@ -396,18 +433,19 @@ public class Timer extends IOUnit {
       index = (iAddress - TCCR0) / 2;
       tccr[index] = data;
       updateCounter(cycles);
+
+      int diff = data - counter;
+      if (diff < 0) {
+        // Ok we need to wrap!
+        diff += 0x10000;
+      }
       if (DEBUG) {
 	System.out.println(getName() +
 			   " Write: Setting compare " + index + " to " +
 			   Utils.hex16(data) + " TR: " +
-			   Utils.hex16(counter));
+			   Utils.hex16(counter) + " diff: " + Utils.hex16(diff));
       }
-      int diff = data - counter;
-      if (diff < 0) {
-	// Ok we need to wrap!
-	diff += 0x10000;
-      }
-      expCaptureTime[index] = cycles + cyclesMultiplicator * diff;
+      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff);
       if (DEBUG) {
 	System.out.println(getName() + " Cycles: " + cycles + " expCap[" + index + "]: " + expCaptureTime[index] + " ctr:" + counter +
 			   " data: " + data + " ~" +
@@ -415,7 +453,7 @@ public class Timer extends IOUnit {
       }
     }
   }
-
+  
   private void setCounter(int newCtr, long cycles) {
     counter = newCtr;
     counterStart = cycles;
@@ -458,7 +496,7 @@ public class Timer extends IOUnit {
 	expCompare[i] = (counter + expCapInterval[i]) & 0xffff;
 	// This could be formulated in something other than cycles...
 	// ...??? should be multiplied with clockspeed diff also?
-	expCaptureTime[i] = cycles + expCapInterval[i] * cyclesMultiplicator;
+	expCaptureTime[i] = cycles + (long)(expCapInterval[i] * cyclesMultiplicator);
 	if (DEBUG) {
 	  System.out.println(getName() +
 			     " Expected compare " + i +
@@ -495,14 +533,22 @@ public class Timer extends IOUnit {
 	counter = 2 * tccr[0] - counter;
       }
     }
-//    System.out.println(getName() + "Updating counter cycctr: " + cycctr + " divider: " + divider + " mode:" + mode + " => " + counter);
 
+    if (DEBUG) {
+      System.out.println(getName() + ": Updating counter cycctr: " + cycctr + " divider: " + divider + " mode:" + mode + " => " + counter);
+    }
    return counter;
   }
 
   // Simplest possible - just a call each 1000 cycles (which is wrong...)
   public long ioTick(long cycles) {
 
+    if (cycles > nextTimerTrigger) {
+      interruptPending = true;
+      // This should be updated whenever clockspeed changes...
+      nextTimerTrigger = (long) (nextTimerTrigger + 0x10000 * cyclesMultiplicator);
+    }
+    
     // This will not work very good...
     // But the timer does not need to be updated this often...
     // Do we need to update the counter here???
@@ -536,7 +582,7 @@ public class Timer extends IOUnit {
 	  // Update expected compare time for this compare/cap reg.
 	  // 0x10000 cycles... e.g. a full 16 bits wrap of the timer
 	  expCaptureTime[i] = expCaptureTime[i] +
-	    0x10000 * cyclesMultiplicator;
+	    (long) (0x10000 * cyclesMultiplicator);
 	  if (DEBUG) {
 	    System.out.println(getName() +
 			       " setting expCaptureTime to full wrap: " +
@@ -563,6 +609,7 @@ public class Timer extends IOUnit {
   public void triggerInterrupts() {
     // First check if any capture register is generating an interrupt...
     boolean trigger = false;
+    
     int tIndex = 0;
     for (int i = 0, n = noCompare; i < n; i++) {
       boolean newTrigger = (tcctl[i] & CC_TRIGGER_INT) == CC_TRIGGER_INT;
@@ -570,34 +617,42 @@ public class Timer extends IOUnit {
 
       // This only triggers interrupts - reading TIV clears!??!
       if (i == 0) {
-	// Execute the interrupt vector... the high-pri one...
-	core.flagInterrupt(type == TIMER_A ? TACCR0_VECTOR : TBCCR0_VECTOR,
-			   this, trigger);
-	// Trigger this!
-	// This is handled by its own vector!!!
-	if (trigger) {
-	  lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = 0;
-	  trigger = false;
-	}
+        // Execute the interrupt vector... the high-pri one...
+        core.flagInterrupt(type == TIMER_A ? TACCR0_VECTOR : TBCCR0_VECTOR,
+            this, trigger);
+        // Trigger this!
+        // This is handled by its own vector!!!
+        if (trigger) {
+          lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = 0;
+          return;
+        }
       } else {
-	// Which would have the highest pri? Will/should this trigger more
-	// than one interrupt at a time?!!?!?!
-	// If so, which TIV would be the correct one?
-	if (newTrigger) {
-	  if (DEBUG) {
-	    System.out.println(getName() + " triggering interrupt TIV: " +
-			       (i * 2));
-	  }
-	  tIndex = i;
-	}
+        // Which would have the highest pri? Will/should this trigger more
+        // than one interrupt at a time?!!?!?!
+        // If so, which TIV would be the correct one?
+        if (newTrigger) {
+          if (DEBUG) {
+            System.out.println(getName() + " triggering interrupt TIV: " +
+                (i * 2));
+          }
+          tIndex = i;
+        }
+      }
+      if (trigger) {
+        // Or if other CCR execute the normal one with correct TAIV
+        lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = tIndex * 2;
       }
     }
+
+    if (!trigger) {
+      if (interruptEnable && interruptPending) {
+        trigger = true;
+        lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = timerOverflow;
+      }
+    }
+    
     core.flagInterrupt(type == TIMER_A ? TACCR1_VECTOR : TBCCR1_VECTOR,
 		       this, trigger);
-    if (trigger) {
-      // Or if other CCR execute the normal one with correct TAIV
-      lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = tIndex * 2;
-    }
   }
 
   public String getSourceName(int source) {
@@ -635,4 +690,14 @@ public class Timer extends IOUnit {
   public int getModeMax() {
     return 0;
   }
+  
+  public String getName(int address) {
+    int reg = address - offset;
+    if (reg == 0) return "TCTL";
+    if (reg < 0x10) return "TCTL" + (reg - 2) / 2;
+    if (reg == 0x10) return "TR";
+    if (reg < 0x20) return "TCCR" + (reg - 0x12) / 2;
+    return " UNDEF(" + Utils.hex16(address) + ")";
+  }
+  
 }
