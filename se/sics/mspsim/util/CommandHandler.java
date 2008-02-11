@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.Hashtable;
 
-public class CommandHandler implements Runnable {
+public class CommandHandler implements ActiveComponent, Runnable {
 
   private Hashtable<String, Command> commands = new Hashtable<String, Command>();
   private boolean exit;
@@ -17,13 +17,13 @@ public class CommandHandler implements Runnable {
   private PrintStream out;
   private PrintStream err;
   private MapTable mapTable;
+  private ComponentRegistry registry;
   
-  public CommandHandler(MapTable table) {
+  public CommandHandler() {
     exit = false;
     inReader = new BufferedReader(new InputStreamReader(in = System.in));
     out = System.out;
     err = System.err;
-    mapTable = table;
     
     registerCommand("help", new Command() {
       public int executeCommand(CommandContext context) {
@@ -66,9 +66,10 @@ public class CommandHandler implements Runnable {
           } else {
             CommandContext cc = new CommandContext(mapTable, parts, in, out, err);
             try {
-              cmd.executeCommand(cc);              
+              cmd.executeCommand(cc);
             } catch (Exception e) {
               err.println("Error: Command failed: " + e.getMessage());
+              e.printStackTrace(err);
             }
           }
         }
@@ -80,10 +81,19 @@ public class CommandHandler implements Runnable {
     }
   }
 
+  public void setComponentRegistry(ComponentRegistry registry) {
+    this.registry = registry;
+  }
+
+  public void start() {
+    new Thread(this).start();
+    mapTable = (MapTable) registry.getComponent(MapTable.class);
+  }
+
   
   
   public static void main(String[] args) {
-    CommandHandler cmd = new CommandHandler(null);
+    CommandHandler cmd = new CommandHandler();
     cmd.registerCommand("test", new Command() {
         public int executeCommand(CommandContext c) {
           System.out.println("Test exected " + c.getCommand() +
@@ -99,5 +109,4 @@ public class CommandHandler implements Runnable {
         }});
     cmd.run();
   }
-
 }

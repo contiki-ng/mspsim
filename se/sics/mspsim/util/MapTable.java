@@ -167,7 +167,7 @@ public class MapTable {
   // Either reimplement this or cache in hashtable...
   public int getFunctionAddress(String function) {
     for (int i = 0, n = entries.length; i < n; i++) {
-      if (function.equals(entries[i])) {
+      if (entries[i] != null && function.equals(entries[i].getName())) {
         return i;
       }
     }
