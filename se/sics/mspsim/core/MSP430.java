@@ -253,7 +253,9 @@ public class MSP430 extends MSP430Core {
     time = System.currentTimeMillis();
     lastCycles = cycles;
     lastCpuCycles = cpuCycles;
-    disAsm.disassemble(pc, memory, reg);
+    if (DEBUGGING_LEVEL > 0) {
+      disAsm.disassemble(pc, memory, reg);
+    }
   }
 
   public boolean getDebug() {

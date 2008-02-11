@@ -461,6 +461,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Read method that handles read from IO units!
   public int read(int address, boolean word) {
     int val = 0;
+//    if (breakPoints[address] != null) {
+//      breakPoints[address].call
+//    }
     if (address < 0x200 && memIn[address] != null) {
       val = memIn[address].read(address, word, cycles);
     } else {
@@ -474,6 +477,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public void write(int dstAddress, int dst, boolean word) {
+    if (breakPoints[dstAddress] != null) {
+      breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
+    }
+
     if (memOut[dstAddress] != null) {
       if (!word) dst &= 0xff;
       memOut[dstAddress].write(dstAddress, dst, word, cycles);

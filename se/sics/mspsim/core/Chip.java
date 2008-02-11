@@ -56,7 +56,7 @@ public abstract class Chip {
     omListeners.add(listener);
   }
   
-  public void removeOperatinModeListener(OperatingModeListener listener) {
+  public void removeOperatingModeListener(OperatingModeListener listener) {
     if (omListeners != null)
       omListeners.remove(listener);
   }
