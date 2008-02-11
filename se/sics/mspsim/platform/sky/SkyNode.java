@@ -55,6 +55,9 @@ import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.ui.ControlUI;
+import se.sics.mspsim.util.CommandHandler;
+import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.DebugCommands;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
@@ -200,13 +203,28 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     radio.setIncomingPacket(data);
   }
 
+  public int getModeMax() {
+    return MODE_MAX;
+  }
+
+  public String getName() {
+    return "Tmote Sky";
+  }
+
+  
   public static void main(String[] args) throws IOException {
     if (args.length == 0) {
       System.out.println("Usage: mspsim.platform.sky.SkyNode <firmware>");
       System.exit(1);
     }
 
+    ComponentRegistry registry = new ComponentRegistry();
     final MSP430 cpu = new MSP430(0);
+    CommandHandler ch = new CommandHandler();
+    registry.registerComponent("cpu", cpu);
+    registry.registerComponent("commandHandler", ch);
+    registry.registerComponent("debugcmd", new DebugCommands());
+    
     // Monitor execution
     cpu.setMonitorExec(true);
     //cpu.setDebug(true);
@@ -223,6 +241,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       MapTable map = elf.getMap();
       cpu.getDisAsm().setMap(map);
       cpu.setMap(map);
+      registry.registerComponent("mapTable", map);      
     }
     
     // create a filename for the flash file
@@ -246,6 +265,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);
       cpu.getDisAsm().setMap(map);
+      registry.registerComponent("mapTable", map);
     }
     
 
@@ -253,14 +273,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
     dataChart.setupChipFrame(node.stats, cpu);
     
+    registry.start();
     cpu.cpuloop();
-  }
-
-  public int getModeMax() {
-    return MODE_MAX;
-  }
-
-  public String getName() {
-    return "Tmote Sky";
   }
 }
