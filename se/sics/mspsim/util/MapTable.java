@@ -44,6 +44,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 
 /**
@@ -133,19 +134,32 @@ public class MapTable {
   }
 
   public MapEntry getEntry(int address) {
-    if (entries != null)
+    if (entries != null) {
       return entries[address];
+    }
     return null;
   }
-  
+
+  public ArrayList<MapEntry> getAllEntries() {
+    ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
+    for (int address=0; address < entries.length; address++) {
+      MapEntry entry = getEntry(address);
+      if (entry != null) {
+        allEntries.add(entry);
+      }
+    }
+    return allEntries;
+  }
+
   // Should be any symbol... not just function...
   public void setFunctionName(int address, String name) {
     setEntry(new MapEntry(MapEntry.TYPE.function, address, name, null, false));
   }
-  
+
   public void setEntry(MapEntry entry) {
-    if (entries == null)
+    if (entries == null) {
       entries = new MapEntry[0x10000];
+    }
     entries[entry.getAddress()] = entry;
   }
 
