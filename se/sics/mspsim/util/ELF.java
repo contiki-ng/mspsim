@@ -45,8 +45,6 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import se.sics.mspsim.core.*;
-
 public class ELF {
 
   public static final int EI_NIDENT = 16;
@@ -286,8 +284,9 @@ public class ELF {
     int count = len / symTable.entSize;
     int addr = symTable.offset;
     String currentFile = "";
-    if (DEBUG)
+    if (DEBUG) {
       System.out.println("Number of symbols:" + count);
+    }
     for (int i = 0, n = count; i < n; i++) {
       pos = addr;
       int nI = readElf32();
@@ -302,10 +301,11 @@ public class ELF {
 	currentFile = sn;
       }
 
-      if (DEBUG)
-	System.out.println("Found symbol: " + sn + " at " +
-			   Integer.toString(sAddr, 16) + " bind: " + bind +
-			   " type: " + type + " size: " + size);
+      if (DEBUG) {
+        System.out.println("Found symbol: " + sn + " at " +
+        		   Integer.toString(sAddr, 16) + " bind: " + bind +
+        		   " type: " + type + " size: " + size);
+      }
 
       if (sAddr > 0 && sAddr < 0x10000) {
 	String symbolName = sn;
@@ -318,8 +318,18 @@ public class ELF {
 	  map.setStackStart(sAddr);
 	}
 
-	map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, symbolName, currentFile, 
-	    bind == ELFSection.SYMBIND_LOCAL));
+	if (type == ELFSection.SYMTYPE_FUNCTION) {
+	  map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, symbolName, currentFile,
+	      bind == ELFSection.SYMBIND_LOCAL));
+	} else if (type == ELFSection.SYMTYPE_OBJECT) {
+	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, symbolName, currentFile,
+	      bind == ELFSection.SYMBIND_LOCAL));
+	} else {
+	  if (DEBUG) {
+	    System.out.println("Skipping entry: '" + symbolName + "' @ 0x" + Integer.toString(sAddr, 16) + " (" + currentFile + ")");
+	  }
+	}
+
       }
       addr += symTable.entSize;
     }
@@ -331,7 +341,10 @@ public class ELF {
     DataInputStream input = new DataInputStream(new FileInputStream(file));
     ByteArrayOutputStream baous = new ByteArrayOutputStream();
     byte[] buf = new byte[2048];
-    for(int read; (read = input.read(buf)) != -1; baous.write(buf, 0, read));
+    for(int read; (read = input.read(buf)) != -1; baous.write(buf, 0, read)) {
+      ;
+    }
+    input.close();
     buf = null;
     byte[] data = baous.toByteArray();
     System.out.println("Length of data: " + data.length);
@@ -354,7 +367,9 @@ public class ELF {
 	  System.out.println(" == Section data ==");
 	  for (int j = 0, m = 2000; j < m; j++) {
 	    System.out.print((char) elf.elfData[adr++]);
-	    if (i % 20 == 19) System.out.println("");
+	    if (i % 20 == 19) {
+        System.out.println("");
+      }
 	  }
 	}
 	System.out.println("");
