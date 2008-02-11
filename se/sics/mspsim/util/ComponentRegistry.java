@@ -24,6 +24,18 @@ public class ComponentRegistry {
   }
   
   @SuppressWarnings("unchecked")
+  public synchronized Object[] getAllComponents(String name) {
+    ArrayList<Object> list = new ArrayList<Object>();
+    for (int i = 0, n = components.size(); i < n; i++) {
+      ComponentEntry entry = components.get(i);
+      if (name.equals(entry.name)) {
+	list.add(entry.component);
+      }
+    }
+    return list.toArray();
+  }
+
+  @SuppressWarnings("unchecked")
   public synchronized Object getComponent(Class name) {
     for (int i = 0, n = components.size(); i < n; i++) {
       if (name.isAssignableFrom(components.get(i).component.getClass())) {
@@ -35,7 +47,14 @@ public class ComponentRegistry {
   
   @SuppressWarnings("unchecked")
   public synchronized Object[] getAllComponents(Class name) {
-    return null;
+    ArrayList<Object> list = new ArrayList<Object>();
+    for (int i = 0, n = components.size(); i < n; i++) {
+      Object component = components.get(i).component;
+      if (name.isAssignableFrom(component.getClass())) {
+	list.add(component);
+      }
+    }
+    return list.toArray();
   }
 
   public void start() {
