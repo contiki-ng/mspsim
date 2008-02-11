@@ -64,7 +64,7 @@ public class MSP430 extends MSP430Core {
   private DisAsm disAsm;
   private MapTable map;
   private Profiler profiler;
-  
+
   /**
    * Creates a new <code>MSP430</code> instance.
    *
@@ -147,6 +147,10 @@ public class MSP430 extends MSP430Core {
   }
 
   public long step() {
+    return step(0);
+  }
+
+  public long step(long max_cycles) {
     if (running) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
@@ -163,10 +167,16 @@ public class MSP430 extends MSP430Core {
     }
 
 
-    int ctr = 0;
     boolean emuOP = false;
-    while (!(emuOP = emulateOP()) && ctr++ < 10000) {
-      /* Stuck in LPM - hopefully not more than 10000 times*/
+    if (max_cycles > 0) {
+      while (cycles < max_cycles && !(emuOP = emulateOP())) {
+        /* Stuck in LPM - hopefully not more than 10000 times*/
+      }
+    } else {
+      int ctr = 0;
+      while (!(emuOP = emulateOP()) && ctr++ < 10000) {
+        /* Stuck in LPM - hopefully not more than 10000 times*/
+        }
     }
 
     if (emuOP) {
@@ -201,7 +211,7 @@ public class MSP430 extends MSP430Core {
     map.setEntry(function);
     return function;
   }
-  
+
   public void stop() {
     running = false;
   }
@@ -228,7 +238,9 @@ public class MSP430 extends MSP430Core {
     int cd = (int) (cycles - lastCycles);
     int cpud = (int) (cpuCycles - lastCpuCycles);
 
-    if (td == 0 || cd == 0) return;
+    if (td == 0 || cd == 0) {
+      return;
+    }
 
     if (DEBUGGING_LEVEL > 0) {
       System.out.println("Elapsed: " + td
