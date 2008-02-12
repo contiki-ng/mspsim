@@ -125,11 +125,11 @@ public class CC2420 extends Chip implements USARTListener {
   public static final int MODE_TXRX_ON = 0x02;
   public static final int MODE_MAX = MODE_TXRX_ON;
   
-  // when reading registrers this flag is set!
+  // when reading registers this flag is set!
   public static final int FLAG_READ = 0x40;
 
   public static final int FLAG_RAM = 0x80;
-  // When accessing RAM the second byte of the address comtains
+  // When accessing RAM the second byte of the address contains
   // a flag indicating read/write
   public static final int FLAG_RAM_READ = 0x20;
 
@@ -169,11 +169,27 @@ public class CC2420 extends Chip implements USARTListener {
   private boolean rxPacket;
   private int rxCursor;
   private int rxLen;
+  private int txCursor;
 
   private PacketListener packetListener;
 
-  public CC2420() {
+  private MSP430Core cpu;
+  
+  private TimeEvent transmissionEvent = new TimeEvent(0) {
+    public void execute(long t) {
+      System.out.println(getName() + ": **** Transmitting package to listener (if any)");
+      if (packetListener != null) {
+        int len = memory[RAM_TXFIFO];
+        int[] data = new int[len];
+        System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len);
+        packetListener.transmissionEnded(data);
+      }
+    }
+  };
+  
+  public CC2420(MSP430Core cpu) {
     registers[REG_SNOP] = 0;
+    this.cpu = cpu;
   }
 
   public void dataReceived(USART source, int data) {
@@ -246,6 +262,9 @@ public class CC2420 extends Chip implements USARTListener {
       		updateFifopPin();
       	}
       	break;
+      case WRITE_TXFIFO:
+        memory[RAM_TXFIFO + txCursor++] = data & 0xff;
+        break;
       case RAM_ACCESS:
       	if (pos == 0) {
       		address = address | (data << 1) & 0x180;
@@ -288,14 +307,30 @@ public class CC2420 extends Chip implements USARTListener {
     case REG_STXON:
 //      System.out.println("CC2420: Strobe TXON!");
       setMode(MODE_TXRX_ON);
+      transmitPacket();
       break;
     case REG_STXONCCA:
 //      System.out.println("CC2420: Strobe TXONCCA!");
       setMode(MODE_TXRX_ON);
+      transmitPacket();
       break;      
     case REG_SFLUSHRX:
       flushRX();
       break;
+    case REG_SFLUSHTX:
+      flushTX();
+      break;
+    }
+  }
+
+  private void transmitPacket() {
+    int len = memory[RAM_TXFIFO];
+    int kBps = 250000 / 8;
+    double time = 1.0 * len / kBps;
+    System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
+    if (packetListener != null) {
+      packetListener.transmissionStarted();
+      cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
     }
   }
   
@@ -369,6 +404,12 @@ public class CC2420 extends Chip implements USARTListener {
     updateFifopPin();
   }
 
+  // TODO: update any pins here?
+  private void flushTX() {
+    txCursor = 0;
+  }
+
+  
   private void updateFifopPin() {
     fifopPort.setPinState(fifopPin, rxPacket ? 1 : 0);
   }

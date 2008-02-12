@@ -45,11 +45,13 @@ import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.M25P80;
+import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
+import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
@@ -133,7 +135,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
 
     IOUnit usart0 = cpu.getIOUnit("USART 0");
     if (usart0 instanceof USART) {
-      radio = new CC2420();
+      radio = new CC2420(cpu);
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
@@ -150,6 +152,24 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     stats.addMonitor(this);
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
+
+    cpu.scheduleTimeEventMillis(new TimeEvent(0) {
+      public void execute(long t) {
+        System.out.println("SkyNode: a second elapsed (wall time): " + t + " millis: " + SkyNode.this.cpu.getTimeMillis());
+        SkyNode.this.cpu.scheduleTimeEventMillis(this, 1000.0);
+      }
+    }, 1000.0);
+    
+    // TODO: remove this test...
+    radio.setPacketListener(new PacketListener() {
+      public void transmissionEnded(int[] receivedData) {
+        System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
+      }
+      public void transmissionStarted() {
+        System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
+      }      
+    });
+    
   }
 
   public void setButton(boolean hi) {

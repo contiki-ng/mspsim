@@ -112,13 +112,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
   int aclkFrq = 32768;
   int smclkFrq = dcoFrq;
 
-  long lastTime = 0;
+  long lastCyclesTime = 0;
+  long lastVTime = 0;
   long currentTime = 0;
   double currentDCOFactor = 1.0;
   
   // Clk A can be "captured" by timers - needs to be handled close to CPU...?
   private int clkACaptureMode = CLKCAPTURE_NONE;
   // Other clocks too...
+  private long nextEventCycles;
+  private EventQueue vTimeEventQueue = new EventQueue();
+  private long nextVTimeEventCycles;
 
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -335,8 +339,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public void setDCOFrq(int frequency, int smclkFrq) {
     dcoFrq = frequency;
     this.smclkFrq = smclkFrq;
-    // update time before updating DCOfactor
-    getTime();
+    // update last virtual time before updating DCOfactor
+    lastCyclesTime = cycles;
+    lastVTime = getTime();
     currentDCOFactor = 1.0 * BasicClockModule.MAX_DCO_FRQ / frequency;
     if (DEBUG)
       System.out.println("Set smclkFrq: " + smclkFrq);
@@ -344,17 +349,75 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // returns global time counted in max speed of DCOs (~5Mhz)
   public long getTime() {
-    long diff = cycles - lastTime;
-    currentTime += (long) (diff * currentDCOFactor);
-    return currentTime;
+    long diff = cycles - lastCyclesTime;
+    return lastVTime + (long) (diff * currentDCOFactor);
+  }
+
+  // Converts a virtual time to a cycles time according to the current
+  // cycle speed
+  private long convertVTime(long vTime) {
+    long tmpTime = lastCyclesTime + (long) ((vTime - lastVTime) / currentDCOFactor);
+//    System.out.println("ConvertVTime: vTime=" + vTime + " => " + tmpTime);
+    return tmpTime;
   }
   
   // get elapsed time in seconds
-  public double getTimeSeconds() {
-    return 1.0 * getTime() / BasicClockModule.MAX_DCO_FRQ;
+  public double getTimeMillis() {
+    return 1000.0 * getTime() / BasicClockModule.MAX_DCO_FRQ;
   }
   
-  // Should also return avtieve units...
+  
+  
+  private void executeEvents() {
+    if (cycles >= nextVTimeEventCycles) {
+      TimeEvent te = vTimeEventQueue.popFirst();
+      long now = getTime();
+      te.execute(now);
+      if (vTimeEventQueue.nextTime > 0) {
+        nextVTimeEventCycles = convertVTime(vTimeEventQueue.nextTime);
+        nextEventCycles = nextVTimeEventCycles;
+      }
+    } else {
+      // Allow 1000 cycles to pass if nothing to do...
+      nextEventCycles = cycles + 1000;
+    }
+  }
+  
+//  public void scheduleCycleEvent(long cycles, TimeEvent event) {
+//  }
+
+  
+  /**
+   * Schedules a new Time event using the virtual time clock
+   * @param event
+   * @param time
+   */
+  public void scheduleTimeEvent(TimeEvent event, long time) {
+    long currentNext = vTimeEventQueue.nextTime;
+    vTimeEventQueue.addEvent(event, time);
+    if (currentNext != vTimeEventQueue.nextTime) {
+      // This is only valid when not having a cycle event queue also...
+      // if we have it needs to be checked also!
+      nextVTimeEventCycles = nextEventCycles = 
+        convertVTime(vTimeEventQueue.nextTime);
+    }
+  }
+  
+  
+  /**
+   * Schedules a new Time event msec milliseconds in the future
+   * @param event
+   * @param time
+   */
+  public void scheduleTimeEventMillis(TimeEvent event, double msec) {
+    long time = (long) (getTime() + msec / 1000 * BasicClockModule.MAX_DCO_FRQ);
+//    System.out.println("Scheduling at: " + time + " (" + msec + ") getTime: " + getTime());
+    scheduleTimeEvent(event, time);
+  }
+
+  
+  
+  // Should also return active units...
   public IOUnit getIOUnit(String name) {
     for (int i = 0, n = passiveIOUnits.length; i < n; i++) {
       if (name.equals(passiveIOUnits[i].getName())) {
@@ -476,7 +539,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //     System.out.println("Smallest IO cycles: " + smallestCyc + " => " +
 // 		       ioUnits[index].getName());
   }
-
+    
+  
   // Read method that handles read from IO units!
   public int read(int address, boolean word) {
     int val = 0;
@@ -563,9 +627,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // -------------------------------------------------------------------
     // Event processing
     // -------------------------------------------------------------------
-//    if (cycles >= nextEventCycles) {
-//      executeEvents();
-//    }
+    if (cycles >= nextEventCycles) {
+      executeEvents();
+    }
     
     // -------------------------------------------------------------------
     // (old) I/O processing
