@@ -112,6 +112,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   int aclkFrq = 32768;
   int smclkFrq = dcoFrq;
 
+  long lastTime = 0;
+  long currentTime = 0;
+  double currentDCOFactor = 1.0;
+  
   // Clk A can be "captured" by timers - needs to be handled close to CPU...?
   private int clkACaptureMode = CLKCAPTURE_NONE;
   // Other clocks too...
@@ -258,7 +262,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public int[] getMemory() {
     return memory;
   }
-
+  
   public void writeRegister(int r, int value) {
     // Before the write!
     if (regWriteMonitors[r] != null) {
@@ -331,10 +335,25 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public void setDCOFrq(int frequency, int smclkFrq) {
     dcoFrq = frequency;
     this.smclkFrq = smclkFrq;
+    // update time before updating DCOfactor
+    getTime();
+    currentDCOFactor = 1.0 * BasicClockModule.MAX_DCO_FRQ / frequency;
     if (DEBUG)
       System.out.println("Set smclkFrq: " + smclkFrq);
   }
 
+  // returns global time counted in max speed of DCOs (~5Mhz)
+  public long getTime() {
+    long diff = cycles - lastTime;
+    currentTime += (long) (diff * currentDCOFactor);
+    return 0;
+  }
+  
+  // get elapsed time in seconds
+  public double getTimeSeconds() {
+    return 1.0 * getTime() / BasicClockModule.MAX_DCO_FRQ;
+  }
+  
   // Should also return avtieve units...
   public IOUnit getIOUnit(String name) {
     for (int i = 0, n = passiveIOUnits.length; i < n; i++) {

@@ -143,11 +143,11 @@ public class BasicClockModule extends IOUnit {
 			 divSMclk + " SMCLK_SEL: "
 			 + smclSel + " MCLKSel: " + mclkSel + " divMclk: " +
 			 divMclk + " DCOResitorSel: " + dcoResitorSel);
-      core.setDCOFrq(calcDCOFrq, calcDCOFrq / divSMclk);
       break;
     }
 
-
+    // resistor selects three bits gives the highest impact on the DCO_FACTOR
+    // then dcoFrq and last dcoModulator
     int newcalcDCOFrq = ((dcoFrequency << 5) + dcoModulator +
 			 (resistorSel << 8)) * DCO_FACTOR;
     if (newcalcDCOFrq != calcDCOFrq) {
