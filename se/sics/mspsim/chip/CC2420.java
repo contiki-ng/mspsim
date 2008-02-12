@@ -170,6 +170,8 @@ public class CC2420 extends Chip implements USARTListener {
   private int rxCursor;
   private int rxLen;
 
+  private PacketListener packetListener;
+
   public CC2420() {
     registers[REG_SNOP] = 0;
   }
@@ -302,6 +304,9 @@ public class CC2420 extends Chip implements USARTListener {
     modeChanged(mode);
   }
 
+  public void setPacketListener(PacketListener listener) {
+    packetListener = listener;
+  }
 
   public void setChipSelect(boolean select) {
     chipSelect = select;
