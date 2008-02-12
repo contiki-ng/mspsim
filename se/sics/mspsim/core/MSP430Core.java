@@ -346,7 +346,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public long getTime() {
     long diff = cycles - lastTime;
     currentTime += (long) (diff * currentDCOFactor);
-    return 0;
+    return currentTime;
   }
   
   // get elapsed time in seconds
@@ -561,7 +561,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
     long startCycles = cycles;
 
     // -------------------------------------------------------------------
-    // I/O processing
+    // Event processing
+    // -------------------------------------------------------------------
+//    if (cycles >= nextEventCycles) {
+//      executeEvents();
+//    }
+    
+    // -------------------------------------------------------------------
+    // (old) I/O processing
     // -------------------------------------------------------------------
     if (cycles >= nextIOTickCycles) {
       handleIO();
