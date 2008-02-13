@@ -193,6 +193,10 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   public boolean getDebug() {
     return cpu.getDebug();
   }
+  
+  public ELF getElfInfo() {
+    return elf;
+  }
 
   public void setDebug(boolean debug) {
     cpu.setDebug(debug);
