@@ -43,8 +43,6 @@ package se.sics.mspsim.platform.sky;
 import java.io.File;
 import java.io.IOException;
 
-import com.sun.org.apache.bcel.internal.generic.BREAKPOINT;
-
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.chip.PacketListener;
