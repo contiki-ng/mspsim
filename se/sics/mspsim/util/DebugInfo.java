@@ -69,5 +69,9 @@ public class DebugInfo {
   public int getLine() {
     return lineNo;
   }
+  
+  public String toString() {
+    return "Line: " + lineNo + " in file: " + file + " (function: " + function + ")";
+  }
 
 } // DebugInfo

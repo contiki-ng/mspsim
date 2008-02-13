@@ -43,9 +43,12 @@ package se.sics.mspsim.platform.sky;
 import java.io.File;
 import java.io.IOException;
 
+import com.sun.org.apache.bcel.internal.generic.BREAKPOINT;
+
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.chip.PacketListener;
+import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
@@ -80,14 +83,18 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   // Port 2.
   public static final int BUTTON_PIN = 7;
 
-  public static final int CC2420_CHIP_SELECT = 0x04;
   /* P1.0 - Input: FIFOP from CC2420 */
   /* P1.3 - Input: FIFO from CC2420 */
   /* P1.4 - Input: CCA from CC2420 */
   public static final int CC2420_FIFOP = 0;
   public static final int CC2420_FIFO = 3;
   public static final int CC2420_CCA = 4;
-
+  
+  /* P4.5 - Output: VREG_EN to CC2420 */
+  /* P4.2 - Output: SPI Chip Select (CS_N) */
+  public static final int CC2420_VREG = (1 << 5);
+  public static final int CC2420_CHIP_SELECT = 0x04;
+  
   private MSP430 cpu;
   private IOPort port1;
   private IOPort port2;
@@ -97,6 +104,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   private CC2420 radio;
   private M25P80 flash;
   private String flashFile;
+  private ELF elf;
   
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
@@ -170,6 +178,14 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       }      
     });
     
+    // UART0 TXreg = 0x77?
+//    cpu.setBreakPoint(0x77, new CPUMonitor() {
+//      public void cpuAction(int type, int adr, int data) {
+//        System.out.println("Write to USART0 TX: " + data + " at " +
+//            SkyNode.this.elf.getDebugInfo(SkyNode.this.cpu.readRegister(0)));
+//      }
+//    });
+    
   }
 
   public void setButton(boolean hi) {
@@ -207,6 +223,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     } else if (source == port4) {
       // Chip select = active low...
       radio.setChipSelect((data & CC2420_CHIP_SELECT) == 0);
+      radio.setVRegOn((data & CC2420_VREG) != 0);
       //radio.portWrite(source, data);
       flash.portWrite(source, data);
     }
@@ -261,7 +278,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       MapTable map = elf.getMap();
       cpu.getDisAsm().setMap(map);
       cpu.setMap(map);
-      registry.registerComponent("mapTable", map);      
+      registry.registerComponent("mapTable", map);
     }
     
     // create a filename for the flash file
@@ -276,6 +293,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     
     cpu.reset();
     SkyNode node = new SkyNode(cpu, fileName);
+    node.elf = elf;
     node.gui = new SkyGui(node);
     ControlUI control = new ControlUI(cpu, elf);
     HighlightSourceViewer sourceViewer = new HighlightSourceViewer();

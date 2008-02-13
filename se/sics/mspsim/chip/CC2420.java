@@ -177,7 +177,7 @@ public class CC2420 extends Chip implements USARTListener {
   
   private TimeEvent transmissionEvent = new TimeEvent(0) {
     public void execute(long t) {
-      System.out.println(getName() + ": **** Transmitting package to listener (if any)");
+      if (DEBUG) System.out.println(getName() + ": **** Transmitting package to listener (if any)");
       if (packetListener != null) {
         int len = memory[RAM_TXFIFO];
         int[] data = new int[len];
@@ -186,6 +186,8 @@ public class CC2420 extends Chip implements USARTListener {
       }
     }
   };
+
+  private boolean on;
   
   public CC2420(MSP430Core cpu) {
     registers[REG_SNOP] = 0;
@@ -193,7 +195,7 @@ public class CC2420 extends Chip implements USARTListener {
   }
 
   public void dataReceived(USART source, int data) {
-    if (chipSelect) {
+    if (on && chipSelect) {
       if (DEBUG)
         System.out.println("CC2420 byte received: " + Utils.hex8(data) +
             '\'' + (char) data + '\'' +
@@ -297,20 +299,20 @@ public class CC2420 extends Chip implements USARTListener {
 
     switch (data) {
     case REG_SRXON:
-//      System.out.println("CC2420: Strobe RX-ON!!!");
+      if (DEBUG) System.out.println("CC2420: Strobe RX-ON!!!");
       setMode(MODE_RX_ON);
       break;
     case REG_SRFOFF:
-//      System.out.println("CC2420: Strobe RXTX-OFF!!!");
+      if (DEBUG) System.out.println("CC2420: Strobe RXTX-OFF!!!");
       setMode(MODE_TXRX_OFF);
       break;
     case REG_STXON:
-//      System.out.println("CC2420: Strobe TXON!");
+      if (DEBUG) System.out.println("CC2420: Strobe TXON!");
       setMode(MODE_TXRX_ON);
       transmitPacket();
       break;
     case REG_STXONCCA:
-//      System.out.println("CC2420: Strobe TXONCCA!");
+      if (DEBUG) System.out.println("CC2420: Strobe TXONCCA!");
       setMode(MODE_TXRX_ON);
       transmitPacket();
       break;      
@@ -327,7 +329,7 @@ public class CC2420 extends Chip implements USARTListener {
     int len = memory[RAM_TXFIFO];
     int kBps = 250000 / 8;
     double time = 1.0 * len / kBps;
-    System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
+    if (DEBUG) System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
     if (packetListener != null) {
       packetListener.transmissionStarted();
       cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
@@ -343,11 +345,16 @@ public class CC2420 extends Chip implements USARTListener {
     packetListener = listener;
   }
 
+  public void setVRegOn(boolean on) {
+    this.on = on;
+  }
+  
   public void setChipSelect(boolean select) {
     chipSelect = select;
     if (!chipSelect)
       state = WAITING;
-//    System.out.println("CC2420: chipSelect: " + chipSelect);
+    if (DEBUG)
+      System.out.println("CC2420: setting chipSelect: " + chipSelect);
   }
 
   public void setCCAPort(IOPort port, int pin) {
