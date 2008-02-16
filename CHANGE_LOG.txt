@@ -6,6 +6,8 @@ Changes:
 - implemented virtual time and event system based on that time.
 - improved emulation of CC2420
 - implemented writer monitors (CPUMonitor - monitor of writes on any address)
+- added commands and command (line) handler
+- added plug-in system
 
 0.82 - JFreechart, operation mode statistics (2008-02-03)
 Changes:

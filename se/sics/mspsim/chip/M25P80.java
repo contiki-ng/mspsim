@@ -67,11 +67,11 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   public static final int CHIP_SELECT = 0x10;
   private boolean chipSelect;
 
-  private USART usart;
   private int pos;
   private int status = 0;
   
   private boolean writeEnable = false;
+  private boolean writing = false;
   
   private int[] identity = new int[] {
       0x20,0x20,0x14,0x10,
@@ -86,8 +86,15 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   
   private RandomAccessFile file;
   
-  public M25P80(USART usart, String filename) {
-    this.usart = usart;
+  private TimeEvent writeEvent = new TimeEvent(0) {
+    public void execute(long t) {
+      writing = false;
+    }};
+  
+  private MSP430Core cpu;
+  
+  public M25P80(MSP430Core cpu, String filename) {
+    this.cpu = cpu;
     if (filename == null) 
       filename = "flash.bin";
     // Open flash file for R/W
@@ -188,7 +195,8 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
         source.byteReceived(identity[pos++]);
         return;
       case READ_STATUS:
-        status = (status & (0xff - 1 - 2)) | (writeEnable ? 0x02 : 0x00);
+        status = (status & (0xff - 1 - 2)) | (writeEnable ? 0x02 : 0x00) |
+          (writing ? 0x01 : 0x00);
         source.byteReceived(status);
         if (DEBUG)
           System.out.println("M25P80: Read status => " + status);
@@ -265,7 +273,13 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
     state = 0;
   }
 
+  private void writeStatus(double time) {
+    writing = true;
+    cpu.scheduleTimeEventMillis(writeEvent, time);
+  }
+  
   private void programPage() {
+    writeStatus(0.64);
     ensureLoaded(blockWriteAddress);
     for (int i = 0; i < readMemory.length; i++) {
       readMemory[i] &= buffer[i];
@@ -274,6 +288,7 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   }
   
   private void sectorErase(int address) {
+    writeStatus(600);
     int sectorAddress = address & 0xf0000;
     loadedAddress = -1;
     for (int i = 0; i < buffer.length; i++) {

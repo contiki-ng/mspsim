@@ -145,7 +145,7 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
-      flash = new M25P80((USART)usart0, flashFile);
+      flash = new M25P80(cpu, flashFile);
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
