@@ -55,6 +55,8 @@ import javax.swing.KeyStroke;
 
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
+import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
 
@@ -65,6 +67,7 @@ public class ControlUI extends JPanel implements ActionListener {
 
   private JFrame window;
   private MSP430 cpu;
+  private GenericNode node;
   private DebugUI dui;
   private JFrame stackWindow;
   private StackUI stackUI;
@@ -74,14 +77,12 @@ public class ControlUI extends JPanel implements ActionListener {
 
   private Action stepAction;
 
-  public ControlUI(MSP430 cpu) {
-    this(cpu, null);
-  }
-
-  public ControlUI(MSP430 cpu, ELF elf) {
+  public ControlUI(ComponentRegistry registry) {
     super(new GridLayout(0, 1));
-    this.cpu = cpu;
-
+    this.cpu = (MSP430) registry.getComponent("cpu");
+    this.node = (GenericNode) registry.getComponent("node");
+    elfData = (ELF) registry.getComponent("elf");
+    
     DataChart test = new DataChart("Stack Monitor", "Bytes");
     test.setupStackFrame(cpu);
     if (USE_STACKUI) {
@@ -105,7 +106,7 @@ public class ControlUI extends JPanel implements ActionListener {
     createButton("Stop");
     stepAction = new AbstractAction("Single Step") {
 	public void actionPerformed(ActionEvent e) {
-	  ControlUI.this.cpu.step();
+	  ControlUI.this.node.step();
 	  dui.updateRegs();
 	  dui.repaint();
 	  if (elfData != null && sourceViewer != null
@@ -132,7 +133,7 @@ public class ControlUI extends JPanel implements ActionListener {
     add(stepButton);
     createButton("Stack Trace");
 
-    if (elf != null) {
+    if (elfData != null) {
       createButton("Show Source");
     }
     createButton("Profile Dump");
@@ -146,7 +147,6 @@ public class ControlUI extends JPanel implements ActionListener {
     WindowUtils.restoreWindowBounds("ControlUI", window);
     WindowUtils.addSaveOnShutdown("ControlUI", window);
     window.setVisible(true);
-    elfData = elf;
   }
 
   public void setSourceViewer(SourceViewer viewer) {
@@ -177,18 +177,15 @@ public class ControlUI extends JPanel implements ActionListener {
       ((JButton) ae.getSource()).setText("Debug On");
 
     } else if ("Run".equals(cmd)) {
-      new Thread(new Runnable() {
-	  public void run() {
-	    cpu.cpuloop();
-	  }}).start();
+      node.start();
       ((JButton) ae.getSource()).setText("Stop");
       stepAction.setEnabled(false);
-
+      
     } else if ("Stop".equals(cmd)) {
-      cpu.stop();
+      node.stop();
       ((JButton) ae.getSource()).setText("Run");
       stepAction.setEnabled(true);
-
+      
     } else if ("Profile Dump".equals(cmd)) {
       if (cpu.getProfiler() != null) {
 	cpu.getProfiler().printProfile();
@@ -221,5 +218,4 @@ public class ControlUI extends JPanel implements ActionListener {
     }
     dui.updateRegs();
   }
-
 }

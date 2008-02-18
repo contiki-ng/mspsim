@@ -21,6 +21,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.ui.WindowUtils;
+import se.sics.mspsim.util.DataSource;
 import se.sics.mspsim.util.OperatingModeStatistics;
 import se.sics.mspsim.util.StackMonitor;
 
@@ -94,29 +95,18 @@ public class DataChart extends JPanel {
     jw.setVisible(true);
   }
   
-  public void setupChipFrame(OperatingModeStatistics oms, MSP430 cpu) {
+  public DataSourceSampler setupChipFrame(MSP430 cpu) {
     JFrame jw = openFrame("Duty-Cycle Monitor");
     DataSourceSampler dss = new DataSourceSampler(cpu);
     dss.setInterval(50);
-    TimeSeries ts = new TimeSeries("LEDS", Millisecond.class);
-    ts.setMaximumItemCount(200);
-    addTimeSeries(ts);
-    dss.addDataSource(oms.getMultiDataSource("Tmote Sky"), ts);
-
-    ts = new TimeSeries("Listen", Millisecond.class);
-    ts.setMaximumItemCount(200);
-    addTimeSeries(ts);
-    dss.addDataSource(oms.getDataSource("CC2420", CC2420.MODE_RX_ON), ts);
-
-    ts = new TimeSeries("Transmit", Millisecond.class);
-    ts.setMaximumItemCount(200);
-    addTimeSeries(ts);
-    dss.addDataSource(oms.getDataSource("CC2420", CC2420.MODE_TXRX_ON), ts);
-
-    ts = new TimeSeries("CPU", Millisecond.class);
-    ts.setMaximumItemCount(200);
-    addTimeSeries(ts);
-    dss.addDataSource(oms.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE), ts);
     jw.setVisible(true);
+    return dss;
   }
+
+  public void addDataSource(DataSourceSampler dss, String name, DataSource src) {
+    TimeSeries ts = new TimeSeries(name, Millisecond.class);
+    ts.setMaximumItemCount(200);
+    addTimeSeries(ts);
+    dss.addDataSource(src, ts);
+  }  
 }

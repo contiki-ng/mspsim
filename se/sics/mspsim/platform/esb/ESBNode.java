@@ -42,11 +42,16 @@
 package se.sics.mspsim.platform.esb;
 import java.io.IOException;
 
+import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.platform.sky.SkyNode;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.*;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
-public class ESBNode implements PortListener {
+import se.sics.mspsim.extutil.jfreechart.DataChart;
+import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
+public class ESBNode extends GenericNode implements PortListener {
 
   public static final boolean DEBUG = false;
 
@@ -55,7 +60,6 @@ public class ESBNode implements PortListener {
   // Port 2.
   public static final int BUTTON_PIN = 7;
 
-  private MSP430 cpu;
   private IOPort port1;
   private IOPort port2;
 
@@ -73,20 +77,7 @@ public class ESBNode implements PortListener {
    * Creates a new <code>ESBNode</code> instance.
    *
    */
-  public ESBNode(MSP430 cpu) {
-    this.cpu = cpu;
-    IOUnit unit = cpu.getIOUnit("Port 2");
-    if (unit instanceof IOPort) {
-      port2 = (IOPort) unit;
-      System.out.println("Found port 2!!!");
-      port2.setPortListener(this);
-    }
-
-    unit = cpu.getIOUnit("Port 1");
-    if (unit instanceof IOPort) {
-      port1 = (IOPort) unit;
-    }
-
+  public ESBNode() {
   }
 
   public void setPIR(boolean hi) {
@@ -134,51 +125,46 @@ public class ESBNode implements PortListener {
     }
   }
 
-  public static void main(String[] args) throws IOException {
-    final MSP430 cpu = new MSP430(0);
-    // Monitor execution
-    cpu.setMonitorExec(true);
-    ELF elf = null;
-    int[] memory = cpu.getMemory();
-
-    if (args[0].endsWith("ihex")) {
-      // IHEX Reading
-      IHexReader reader = new IHexReader();
-      reader.readFile(memory, args[0]);
-    } else {
-      elf = ELF.readELF(args[0]);
-      elf.loadPrograms(memory);
-      MapTable map = elf.getMap();
-      cpu.getDisAsm().setMap(map);
-      cpu.setMap(map);
+  public void setupNode() {
+    IOUnit unit = cpu.getIOUnit("Port 2");
+    if (unit instanceof IOPort) {
+      port2 = (IOPort) unit;
+      System.out.println("Found port 2!!!");
+      port2.setPortListener(this);
     }
 
-    cpu.reset();
-    ESBNode node = new ESBNode(cpu);
-    node.gui = new ESBGui(node);
-    ControlUI control = new ControlUI(cpu, elf);
-    HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
-    control.setSourceViewer(sourceViewer);
-
-    if (args.length > 1) {
-      MapTable map = new MapTable(args[1]);
-      cpu.getDisAsm().setMap(map);
-      cpu.setMap(map);
-
-      // An illustration on how to add a breakpoint!
-//       if (map != null) {
-// 	int adr = map.getFunctionAddress("process_run");
-// 	if (adr != -1) {
-// 	  cpu.setBreakPoint(adr, new CPUMonitor() {
-// 	      public void cpuAction(int type, int adr, int data) {
-// 		System.out.println("Break at: " + cpu.reg[cpu.PC]);
-// 		cpu.stop();
-// 	      }
-// 	    });
-// 	}
-//       }
-
+    unit = cpu.getIOUnit("Port 1");
+    if (unit instanceof IOPort) {
+      port1 = (IOPort) unit;
     }
-    cpu.cpuloop();
+    
+    gui = new ESBGui(this);
+    
+    stats.addMonitor(this);
+//    stats.addMonitor(radio);
+    stats.addMonitor(cpu);
+
+    // A HACK for some "graphs"!!!
+    DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+    DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+//    dataChart.addDataSource(dss, "LEDS", stats.getMultiDataSource("Tmote Sky"));
+//    dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
+//    dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
+    dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));  
   }
+
+  public int getModeMax() {
+    return 0;
+  }
+
+  public String getName() {
+    return "ESB Node";
+  }
+  
+  public static void main(String[] args) throws IOException {
+    ESBNode node = new ESBNode();
+    node.setup(args);
+    node.start();
+  }
+  
 }

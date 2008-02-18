@@ -370,6 +370,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   private void executeEvents() {
     if (cycles >= nextVTimeEventCycles) {
+      if (vTimeEventQueue.nextTime == 0) {
+        nextEventCycles = cycles + 1000;
+        return;
+      }
       TimeEvent te = vTimeEventQueue.popFirst();
       long now = getTime();
       te.execute(now);

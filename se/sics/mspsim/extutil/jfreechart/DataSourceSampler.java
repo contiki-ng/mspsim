@@ -20,21 +20,9 @@ public class DataSourceSampler implements ActionListener {
   private Timer timer;
   private ArrayList<TimeSource> sources = new ArrayList<TimeSource>();
 
-//  private TimeSeries test;
-//  private TimeSeries test2;
-//  private TimeSeriesCollection dataset;  
-  
   public DataSourceSampler(MSP430Core cpu) {
     this.cpu = cpu;
     timer = new Timer(interval, this);
-//    test = new TimeSeries("Data", Millisecond.class);
-//    test.setMaximumItemAge(30000);
-//    test2 = new TimeSeries("Data 2", Millisecond.class);
-//    test2.setMaximumItemAge(30000);
-////    test2.setMaximumItemCount(30000);
-//    dataset = new TimeSeriesCollection();
-//    dataset.addSeries(test);
-//    dataset.addSeries(test2);
     timer.start();
   }
   
@@ -55,9 +43,10 @@ public class DataSourceSampler implements ActionListener {
 
   private void sampleAll() {
     if (sources.size() > 0) {
-      TimeSource[] srcs = (TimeSource[]) sources.toArray(new TimeSource[0]);    
+      TimeSource[] srcs = (TimeSource[]) sources.toArray(new TimeSource[0]);
       for (int i = 0; i < srcs.length; i++) {
-        srcs[i].update();
+        if (srcs[i] != null)
+          srcs[i].update();
       }
     }
     
@@ -68,43 +57,7 @@ public class DataSourceSampler implements ActionListener {
   public void actionPerformed(ActionEvent arg0) {
     sampleAll();
   }
-  
-  
-//  public static void main(String[] args) {
-//    DataSourceSampler samp = new DataSourceSampler();
-//    DateAxis domain = new DateAxis("Time");
-//    NumberAxis range = new NumberAxis("Memory");
-//    XYPlot xyplot = new XYPlot();
-//    xyplot.setDataset(samp.dataset);
-//    xyplot.setDomainAxis(domain);
-//    xyplot.setRangeAxis(range);
-//    xyplot.setBackgroundPaint(Color.black);
-//    
-//    XYItemRenderer renderer = new DefaultXYItemRenderer();
-//    renderer.setSeriesPaint(0, Color.red);
-//    renderer.setSeriesPaint(1, Color.green);
-//    renderer.setBaseStroke(
-//        new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL)
-//    );
-//    xyplot.setRenderer(renderer);
-//    
-//    domain.setAutoRange(true);
-//    domain.setLowerMargin(0.0);
-//    domain.setUpperMargin(0.0);
-//    domain.setTickLabelsVisible(true);
-//    range.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-//    JFreeChart chart = new JFreeChart(
-//        "Memory Usage",
-//        JFreeChart.DEFAULT_TITLE_FONT,
-//        xyplot,true);
-//    ChartPanel chartPanel = new ChartPanel(chart);
-//    JFrame jw = new JFrame("test");
-//    jw.add(chartPanel);
-//    jw.setBounds(100, 100, 400, 200);
-//    jw.setVisible(true);
-//        
-//  }
-  
+    
   private static class TimeSource {
 
     private MSP430Core cpu;

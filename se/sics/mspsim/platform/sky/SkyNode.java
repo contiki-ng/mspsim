@@ -57,9 +57,12 @@ import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
+import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
+import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.CommandHandler;
 import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.DataSource;
 import se.sics.mspsim.util.DebugCommands;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
@@ -69,7 +72,7 @@ import se.sics.mspsim.util.OperatingModeStatistics;
 /**
  * Emulation of Sky Mote
  */
-public class SkyNode extends Chip implements PortListener, USARTListener {
+public class SkyNode extends GenericNode implements PortListener, USARTListener {
 
   public static final boolean DEBUG = false;
 
@@ -93,7 +96,6 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   public static final int CC2420_VREG = (1 << 5);
   public static final int CC2420_CHIP_SELECT = 0x04;
   
-  private MSP430 cpu;
   private IOPort port1;
   private IOPort port2;
   private IOPort port4;
@@ -102,7 +104,6 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   private CC2420 radio;
   private M25P80 flash;
   private String flashFile;
-  private ELF elf;
   
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
@@ -112,78 +113,13 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
   public boolean blueLed;
   public boolean greenLed;
   private int mode = MODE_LEDS_OFF;
-
-  private OperatingModeStatistics stats; 
-  
+ 
   public SkyGui gui;
   /**
    * Creates a new <code>SkyNode</code> instance.
    *
    */
-  public SkyNode(MSP430 cpu, String flashFile) {
-    this.cpu = cpu;
-    this.flashFile = flashFile;
-    IOUnit unit = cpu.getIOUnit("Port 5");
-    if (unit instanceof IOPort) {
-      port5 = (IOPort) unit;
-      port5.setPortListener(this);
-    }
-
-    unit = cpu.getIOUnit("Port 1");
-    if (unit instanceof IOPort) {
-      port1 = (IOPort) unit;
-    }
-
-    unit = cpu.getIOUnit("Port 2");
-    if (unit instanceof IOPort) {
-      port2 = (IOPort) unit;
-    }
-
-    IOUnit usart0 = cpu.getIOUnit("USART 0");
-    if (usart0 instanceof USART) {
-      radio = new CC2420(cpu);
-      radio.setCCAPort(port1, CC2420_CCA);
-      radio.setFIFOPPort(port1, CC2420_FIFOP);
-      radio.setFIFOPort(port1, CC2420_FIFO);
-      flash = new M25P80(cpu, flashFile);
-      ((USART) usart0).setUSARTListener(this);
-      port4 = (IOPort) cpu.getIOUnit("Port 4");
-      if (port4 != null && port4 instanceof IOPort) {
-      	System.out.println("Found port 4!!!");
-      	((IOPort) port4).setPortListener(this);
-      }
-    }
-    
-    stats = new OperatingModeStatistics(cpu);
-    stats.addMonitor(this);
-    stats.addMonitor(radio);
-    stats.addMonitor(cpu);
-
-    cpu.scheduleTimeEventMillis(new TimeEvent(0) {
-      public void execute(long t) {
-        System.out.println("SkyNode: a second elapsed (wall time): " + t + " millis: " + SkyNode.this.cpu.getTimeMillis());
-        SkyNode.this.cpu.scheduleTimeEventMillis(this, 1000.0);
-      }
-    }, 1000.0);
-    
-    // TODO: remove this test...
-    radio.setPacketListener(new PacketListener() {
-      public void transmissionEnded(int[] receivedData) {
-        System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
-      }
-      public void transmissionStarted() {
-        System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
-      }      
-    });
-    
-    // UART0 TXreg = 0x77?
-//    cpu.setBreakPoint(0x77, new CPUMonitor() {
-//      public void cpuAction(int type, int adr, int data) {
-//        System.out.println("Write to USART0 TX: " + data + " at " +
-//            SkyNode.this.elf.getDebugInfo(SkyNode.this.cpu.readRegister(0)));
-//      }
-//    });
-    
+  public SkyNode() {
   }
 
   public void setButton(boolean hi) {
@@ -250,70 +186,94 @@ public class SkyNode extends Chip implements PortListener, USARTListener {
     return "Tmote Sky";
   }
 
-  
-  public static void main(String[] args) throws IOException {
-    if (args.length == 0) {
-      System.out.println("Usage: mspsim.platform.sky.SkyNode <firmware>");
-      System.exit(1);
-    }
-
-    ComponentRegistry registry = new ComponentRegistry();
-    final MSP430 cpu = new MSP430(0);
-    CommandHandler ch = new CommandHandler();
-    registry.registerComponent("cpu", cpu);
-    registry.registerComponent("commandHandler", ch);
-    registry.registerComponent("debugcmd", new DebugCommands());
-    
-    // Monitor execution
-    cpu.setMonitorExec(true);
-    //cpu.setDebug(true);
-    ELF elf = null;
-    int[] memory = cpu.getMemory();
-
-    if (args[0].endsWith("ihex")) {
-      // IHEX Reading
-      IHexReader reader = new IHexReader();
-      reader.readFile(memory, args[0]);
-    } else {
-      elf = ELF.readELF(args[0]);
-      elf.loadPrograms(memory);
-      MapTable map = elf.getMap();
-      cpu.getDisAsm().setMap(map);
-      cpu.setMap(map);
-      registry.registerComponent("mapTable", map);
-    }
-    
+  public void setupNode() {
     // create a filename for the flash file
     // This should be possible to take from a config file later!
-    String fileName = args[0];
+    String fileName = firmwareFile;
     int ix = fileName.lastIndexOf('.');
     if (ix > 0) {
       fileName = fileName.substring(0, ix);
     }
     fileName = fileName + ".flash";
     System.out.println("Using flash file: " + fileName);
-    
-    cpu.reset();
-    SkyNode node = new SkyNode(cpu, fileName);
-    node.elf = elf;
-    node.gui = new SkyGui(node);
-    ControlUI control = new ControlUI(cpu, elf);
-    HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
-    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
-    control.setSourceViewer(sourceViewer);
-    
-    if (args.length > 1) {
-      MapTable map = new MapTable(args[1]);
-      cpu.getDisAsm().setMap(map);
-      registry.registerComponent("mapTable", map);
+
+    this.flashFile = flashFile;
+    IOUnit unit = cpu.getIOUnit("Port 5");
+    if (unit instanceof IOPort) {
+      port5 = (IOPort) unit;
+      port5.setPortListener(this);
+    }
+
+    unit = cpu.getIOUnit("Port 1");
+    if (unit instanceof IOPort) {
+      port1 = (IOPort) unit;
+    }
+
+    unit = cpu.getIOUnit("Port 2");
+    if (unit instanceof IOPort) {
+      port2 = (IOPort) unit;
+    }
+
+    IOUnit usart0 = cpu.getIOUnit("USART 0");
+    if (usart0 instanceof USART) {
+      radio = new CC2420(cpu);
+      radio.setCCAPort(port1, CC2420_CCA);
+      radio.setFIFOPPort(port1, CC2420_FIFOP);
+      radio.setFIFOPort(port1, CC2420_FIFO);
+      flash = new M25P80(cpu, flashFile);
+      ((USART) usart0).setUSARTListener(this);
+      port4 = (IOPort) cpu.getIOUnit("Port 4");
+      if (port4 != null && port4 instanceof IOPort) {
+        System.out.println("Found port 4!!!");
+        ((IOPort) port4).setPortListener(this);
+      }
     }
     
+    stats.addMonitor(this);
+    stats.addMonitor(radio);
+    stats.addMonitor(cpu);
 
-    // A HACK!!!
-    DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
-    dataChart.setupChipFrame(node.stats, cpu);
+    cpu.scheduleTimeEventMillis(new TimeEvent(0) {
+      public void execute(long t) {
+        System.out.println("SkyNode: a second elapsed (wall time): " + t + " millis: " + SkyNode.this.cpu.getTimeMillis());
+        SkyNode.this.cpu.scheduleTimeEventMillis(this, 1000.0);
+      }
+    }, 1000.0);
     
-    registry.start();
-    cpu.cpuloop();
+    // TODO: remove this test...
+    radio.setPacketListener(new PacketListener() {
+      public void transmissionEnded(int[] receivedData) {
+        System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
+      }
+      public void transmissionStarted() {
+        System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
+      }      
+    });
+    
+    // UART0 TXreg = 0x77?
+//    cpu.setBreakPoint(0x77, new CPUMonitor() {
+//      public void cpuAction(int type, int adr, int data) {
+//        System.out.println("Write to USART0 TX: " + data + " at " +
+//            SkyNode.this.elf.getDebugInfo(SkyNode.this.cpu.readRegister(0)));
+//      }
+//    });
+
+    gui = new SkyGui(this);
+
+    // A HACK for some "graphs"!!!
+    DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+    DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+    dataChart.addDataSource(dss, "LEDS", stats.getMultiDataSource("Tmote Sky"));
+    dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
+    dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
+    dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
   }
+
+
+  public static void main(String[] args) throws IOException {
+    SkyNode node = new SkyNode();
+    node.setup(args);
+    node.start();
+  }
+  
 }

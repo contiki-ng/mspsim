@@ -83,17 +83,17 @@ public class MSP430 extends MSP430Core {
   }
 
   public void cpuloop() {
-    if (running) {
+    if (isRunning()) {
       throw new IllegalStateException("already running");
     }
-    running = true;
+    setRunning(true);
     // ??? - power-up reset should be executed?!
     time = System.currentTimeMillis();
     run();
   }
 
   private void run() {
-    while (running) {
+    while (isRunning()) {
       // -------------------------------------------------------------------
       // Debug information
       // -------------------------------------------------------------------
@@ -151,7 +151,7 @@ public class MSP430 extends MSP430Core {
   }
 
   public long step(long max_cycles) {
-    if (running) {
+    if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
 
@@ -213,7 +213,7 @@ public class MSP430 extends MSP430Core {
   }
 
   public void stop() {
-    running = false;
+    setRunning(false);
   }
 
   public int getExecCount(int address) {
@@ -276,5 +276,13 @@ public class MSP430 extends MSP430Core {
     if (profiler == null) {
       this.profiler = new SimpleProfiler();
     }
+  }
+
+  public boolean setRunning(boolean running) {
+    return this.running = running;
+  }
+
+  public boolean isRunning() {
+    return running;
   }
 }
