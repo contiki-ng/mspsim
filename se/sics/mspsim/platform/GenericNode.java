@@ -66,7 +66,7 @@ public abstract class GenericNode extends Chip implements Runnable {
   
   public void setup(String[] args) throws IOException {
     if (args.length == 0) {
-      System.out.println("Usage: mspsim.platform.sky.SkyNode <firmware>");
+      System.out.println("Usage: " + getClass().getName() + " <firmware>");
       System.exit(1);
     }
 
@@ -102,7 +102,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     // Setup control and other UI components
     ControlUI control = new ControlUI(registry);
     HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
-    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
+//    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
     control.setSourceViewer(sourceViewer);
     
     if (args.length > 1) {
