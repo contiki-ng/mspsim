@@ -1,3 +1,9 @@
+0.84
+Changes:
+- fixed bug in source file handling in ELF symbol loader
+- fixed RSSI-ready flag to be set in CC2420
+- refactored code from Sky/ESB into GenericNode
+
 0.83
 Changes:
 - added support for external flash on Sky node (M25P80)

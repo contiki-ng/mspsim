@@ -152,8 +152,6 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
         mode = newMode;
         modeChanged(mode);
       }
-      // TODO: put this somewhere else!!!
-      //stats.printStat();
 
       if (gui != null) {
 	gui.repaint();
