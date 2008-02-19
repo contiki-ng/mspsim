@@ -44,13 +44,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class ELF {
 
   public static final int EI_NIDENT = 16;
   public static final int EI_ENCODING = 5;
 
-  public static final boolean DEBUG = false;
+  public static final boolean DEBUG = true; //false;
 
   boolean encMSB = true;
   int type;
@@ -72,6 +73,7 @@ public class ELF {
 
   private ELFSection sections[];
   private ELFProgram programs[];
+  private ArrayList<FileInfo> files = new ArrayList<FileInfo>();
 
   ELFSection strTable;
   ELFSection symTable;
@@ -276,6 +278,16 @@ public class ELF {
     return debug.getDebugInfo(adr);
   }
 
+  public String lookupFile(int address) {
+    for (int i = 0; i < files.size(); i++) {
+      FileInfo fi = files.get(i);
+      if (address >= fi.start && address <= fi.end) {
+        return fi.name;
+      }
+    }
+    return null;
+  }
+  
   public MapTable getMap() {
     MapTable map = new MapTable();
 
@@ -287,6 +299,7 @@ public class ELF {
     if (DEBUG) {
       System.out.println("Number of symbols:" + count);
     }
+    int currentAddress = 0;
     for (int i = 0, n = count; i < n; i++) {
       pos = addr;
       int nI = readElf32();
@@ -297,6 +310,14 @@ public class ELF {
       int bind = info >> 4;
       int type = info & 0xf;
 
+      if (type == 0 && "Letext".equals(sn)) {
+        if (currentFile != null) {
+          System.out.println("Found file addr for " + currentFile + " : 0x" + 
+              Utils.hex16(currentAddress) + " - 0x" + Utils.hex16(sAddr));    
+          files.add(new FileInfo(currentFile, currentAddress, sAddr));
+          currentAddress = sAddr;
+        }
+      }
       if (type == ELFSection.SYMTYPE_FILE) {
 	currentFile = sn;
       }
@@ -318,11 +339,16 @@ public class ELF {
 	  map.setStackStart(sAddr);
 	}
 
+	
 	if (type == ELFSection.SYMTYPE_FUNCTION) {
-	  map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, symbolName, currentFile,
+          String file = lookupFile(sAddr);
+          if (file == null) file = currentFile;
+	  map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, symbolName, file,
 	      bind == ELFSection.SYMBIND_LOCAL));
 	} else if (type == ELFSection.SYMTYPE_OBJECT) {
-	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, symbolName, currentFile,
+          String file = lookupFile(sAddr);
+          if (file == null) file = currentFile;
+	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, symbolName, file,
 	      bind == ELFSection.SYMBIND_LOCAL));
 	} else {
 	  if (DEBUG) {
@@ -360,19 +386,19 @@ public class ELF {
 
     if (args.length < 2) {
       for (int i = 0, n = elf.shnum; i < n; i++) {
-	System.out.println("-- Section header " + i + " --\n" + elf.sections[i]);
-	if (".stab".equals(elf.sections[i].getSectionName()) ||
-	    ".stabstr".equals(elf.sections[i].getSectionName())) {
-	  int adr = elf.sections[i].offset;
-	  System.out.println(" == Section data ==");
-	  for (int j = 0, m = 2000; j < m; j++) {
-	    System.out.print((char) elf.elfData[adr++]);
-	    if (i % 20 == 19) {
-        System.out.println("");
-      }
-	  }
-	}
-	System.out.println("");
+        System.out.println("-- Section header " + i + " --\n" + elf.sections[i]);
+        if (".stab".equals(elf.sections[i].getSectionName()) ||
+            ".stabstr".equals(elf.sections[i].getSectionName())) {
+          int adr = elf.sections[i].offset;
+          System.out.println(" == Section data ==");
+          for (int j = 0, m = 2000; j < m; j++) {
+            System.out.print((char) elf.elfData[adr++]);
+            if (i % 20 == 19) {
+              System.out.println();
+            }
+          }
+        }
+        System.out.println();
       }
     }
     elf.getMap();
@@ -387,4 +413,17 @@ public class ELF {
   }
 
 
+  class FileInfo {
+    String name;
+    int start;
+    int end;
+    
+    FileInfo(String name, int start, int end) {
+      this.name = name;
+      this.start = start;
+      this.end = end;
+    }
+    
+  }
+  
 } // ELF

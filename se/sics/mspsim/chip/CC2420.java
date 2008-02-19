@@ -27,7 +27,7 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: CC2420.java,v 1.4 2007/10/22 18:03:41 joakime Exp $
+ * $Id:$
  *
  * -----------------------------------------------------------------
  *
@@ -35,8 +35,7 @@
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date: 2007/10/22 18:03:41 $
- *           $Revision: 1.4 $
+ * 
  */
 
 package se.sics.mspsim.chip;
@@ -100,12 +99,12 @@ public class CC2420 extends Chip implements USARTListener {
   public static final int REG_TXFIFO		= 0x3E;
   public static final int REG_RXFIFO		= 0x3F;
 
-  public static final int ST_XOSC16M_STABLE = 1 << 6;
-  public static final int ST_TX_UNDERFLOW   = 1 << 5;
-  public static final int ST_ENC_BUSY	    = 1 << 4;
-  public static final int ST_TX_ACTIVE	= 1 << 3;
-  public static final int ST_LOCK	= 1 << 2;
-  public static final int ST_RSSI_VALID	= 1 << 1;
+  public static final int STATUS_XOSC16M_STABLE = 1 << 6;
+  public static final int STATUS_TX_UNDERFLOW   = 1 << 5;
+  public static final int STATUS_ENC_BUSY	    = 1 << 4;
+  public static final int STATUS_TX_ACTIVE	= 1 << 3;
+  public static final int STATUS_LOCK	= 1 << 2;
+  public static final int STATUS_RSSI_VALID	= 1 << 1;
 
   // RAM Addresses
   public static final int RAM_TXFIFO	= 0x000;
@@ -147,7 +146,7 @@ public class CC2420 extends Chip implements USARTListener {
   private int address;
   private boolean ramRead = false;
 
-  private int status = ST_XOSC16M_STABLE;
+  private int status = STATUS_XOSC16M_STABLE | STATUS_RSSI_VALID;
 
   private int mode = MODE_TXRX_OFF;
   
@@ -401,7 +400,7 @@ public class CC2420 extends Chip implements USARTListener {
     updateFifopPin();
   }
 
-  private void flushRX() {
+    private void flushRX() {
     if (DEBUG) 
       System.out.println("Flushing RX! was: " + rxPacket + " len = " +
           rxLen);
