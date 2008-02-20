@@ -310,12 +310,18 @@ public class ELF {
       int bind = info >> 4;
       int type = info & 0xf;
 
-      if (type == 0 && "Letext".equals(sn)) {
-        if (currentFile != null) {
-          System.out.println("Found file addr for " + currentFile + " : 0x" + 
-              Utils.hex16(currentAddress) + " - 0x" + Utils.hex16(sAddr));    
-          files.add(new FileInfo(currentFile, currentAddress, sAddr));
-          currentAddress = sAddr;
+      if (type == ELFSection.SYMTYPE_NONE && sn != null){
+        if ("Letext".equals(sn)) {
+          if (currentFile != null) {
+            System.out.println("Found file addr for " + currentFile + " : 0x" + 
+                Utils.hex16(currentAddress) + " - 0x" + Utils.hex16(sAddr));    
+            files.add(new FileInfo(currentFile, currentAddress, sAddr));
+            currentAddress = sAddr;
+          }
+        } else if (!sn.startsWith("_")) {
+          System.out.println("Adding entry: " + sn + " at " + sAddr);
+          map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, sn, currentFile,
+              false));
         }
       }
       if (type == ELFSection.SYMTYPE_FILE) {

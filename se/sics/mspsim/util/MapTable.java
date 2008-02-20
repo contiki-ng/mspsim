@@ -45,6 +45,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 
 /**
@@ -140,7 +141,7 @@ public class MapTable {
     return null;
   }
 
-  public ArrayList<MapEntry> getAllEntries() {
+  public MapEntry[] getAllEntries() {
     ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
     for (int address=0; address < entries.length; address++) {
       MapEntry entry = getEntry(address);
@@ -148,9 +149,22 @@ public class MapTable {
         allEntries.add(entry);
       }
     }
-    return allEntries;
+    return allEntries.toArray(new MapEntry[allEntries.size()]);
   }
 
+  public MapEntry[] getEntries(String regexp) {
+    Pattern pattern = Pattern.compile(regexp);
+    ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
+    for (int address=0; address < entries.length; address++) {
+      MapEntry entry = getEntry(address);
+      if (entry != null && pattern.matcher(entry.getName()).matches()) {
+        allEntries.add(entry);
+      }
+    }
+    return allEntries.toArray(new MapEntry[allEntries.size()]);
+  }
+
+  
   // Should be any symbol... not just function...
   public void setFunctionName(int address, String name) {
     setEntry(new MapEntry(MapEntry.TYPE.function, address, name, null, false));

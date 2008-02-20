@@ -46,6 +46,7 @@ public class DebugCommands implements CommandBundle {
 
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+    final ELF elf = (ELF) registry.getComponent(ELF.class);
     if (cpu != null) {
       ch.registerCommand("break", new Command() {
         public int executeCommand(final CommandContext context) {
@@ -61,7 +62,7 @@ public class DebugCommands implements CommandBundle {
         }
 
         public String getArgumentHelp(CommandContext context) {
-          return "<address>";
+          return "<address or symbol>";
         }
 
         public String getCommandHelp(CommandContext context) {
@@ -72,18 +73,26 @@ public class DebugCommands implements CommandBundle {
       ch.registerCommand("watch", new Command() {
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
+          if (baddr == -1) {
+            context.out.println("Error: unkown symbol:" + context.getArgument(0));            
+            return -1;
+          }
           cpu.setBreakPoint(baddr,
               new CPUMonitor() {
-                public void cpuAction(int type, int adr, int data) {
-                  context.out.println("*** Write: " + adr + " = " + data);
-                }
+            public void cpuAction(int type, int adr, int data) {
+              int pc = cpu.readRegister(0);
+              String adrStr = getSymOrAddr(context, adr);
+              String pcStr = getSymOrAddrELF(elf, pc);
+              context.out.println("*** Write from " + pcStr +
+                  ": " + adrStr + " = " + data);
+            }
           });
           context.out.println("Watch set at: " + baddr);
           return 0;
         }
 
         public String getArgumentHelp(CommandContext context) {
-          return "watch";
+          return "<address or symbol>";
         }
 
         public String getCommandHelp(CommandContext context) {
@@ -91,6 +100,64 @@ public class DebugCommands implements CommandBundle {
         }
       });
 
+      ch.registerCommand("clear", new Command() {
+        public int executeCommand(final CommandContext context) {
+          int baddr = context.getArgumentAsAddress(0);
+          cpu.setBreakPoint(baddr, null);
+          return 0;
+        }
+
+        public String getArgumentHelp(CommandContext context) {
+          return "<address or symbol>";
+        }
+
+        public String getCommandHelp(CommandContext context) {
+          return "clears a breakpoint or watch from a given address or symbol";
+        }
+      });
+
+      
+      
+      ch.registerCommand("symbol", new Command() {
+        public int executeCommand(final CommandContext context) {
+          String regExp = context.getArgument(0);
+          MapEntry[] entries = context.getMapTable().getEntries(regExp);
+          for (int i = 0; i < entries.length; i++) {
+            MapEntry mapEntry = entries[i];
+            context.out.println(" " + mapEntry.getName() + " at " +
+                Utils.hex16(mapEntry.getAddress()));
+          }
+          return 0;
+        }
+
+        public String getArgumentHelp(CommandContext context) {
+          return "<regexp>";
+        }
+
+        public String getCommandHelp(CommandContext context) {
+          return "lists matching symbols";
+        }
+      });
+
     }
   }
+
+  private static String getSymOrAddr(CommandContext context, int adr) {
+    MapEntry me = context.getMapTable().getEntry(adr);
+    if (me != null) {
+      return me.getName();
+    } else {
+      return Utils.hex16(adr);
+    }
+  }
+
+  private static String getSymOrAddrELF(ELF elf, int adr) {
+    DebugInfo me = elf.getDebugInfo(adr);
+    if (me != null) {
+      return me.toString();
+    } else {
+      return Utils.hex16(adr);
+    }
+  }
+
 }

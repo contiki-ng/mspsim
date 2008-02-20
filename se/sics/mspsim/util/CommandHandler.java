@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.util.Hashtable;
 import java.util.Map;
@@ -79,11 +80,33 @@ public class CommandHandler implements ActiveComponent, Runnable {
   }
 
   
+  private String readLine(BufferedReader inReader2) throws IOException {
+    StringBuilder str = new StringBuilder();
+    while(true) {
+      if (inReader2.ready()) {
+        int c = inReader2.read();
+        if (c == '\n') {
+          return str.toString();
+        }
+        if (c != '\r') {
+          str.append((char)c);
+        }
+      } else {
+        try {
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException();
+        }
+      }
+    }
+  }
+  
   public void run() {
     while(!exit) {
        try {
         out.print(">");
-        String line = inReader.readLine();
+        out.flush();
+        String line = readLine(inReader);//.readLine();
         if (line != null && line.length() > 0) {
           String[] parts = line.split(" ");
           Command cmd = commands.get(parts[0]);

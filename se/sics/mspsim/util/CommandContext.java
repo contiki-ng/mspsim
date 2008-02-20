@@ -29,6 +29,10 @@ public class CommandContext {
     return args[index + 1];
   }
   
+  public MapTable getMapTable() {
+    return mapTable;
+  }
+  
   public String getCommand() {
     return args[0];
   }
