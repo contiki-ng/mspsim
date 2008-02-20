@@ -145,24 +145,4 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
     new Thread(this, "cmd").start();
   }
-
-  
-  
-  public static void main(String[] args) {
-    CommandHandler cmd = new CommandHandler();
-    cmd.registerCommand("test", new Command() {
-        public int executeCommand(CommandContext c) {
-          System.out.println("Test exected " + c.getCommand() +
-              c.getArgumentAsAddress(0));
-          return 0;
-        }
-    
-        public String getArgumentHelp(CommandContext context) {
-          return "argument 1 - address to something";
-        }
-        public String getCommandHelp(CommandContext context) {
-          return "test - tests the command system";
-        }});
-    cmd.run();
-  }
 }

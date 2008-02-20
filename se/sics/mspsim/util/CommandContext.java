@@ -61,5 +61,14 @@ public class CommandContext {
     }
     return 0;
   }
+
+  public int getArgumentAsInt(int i) {
+    try {
+      return Integer.parseInt(getArgument(i));
+    } catch (Exception e) {
+      err.println("Illegal number format: " + getArgument(i));
+    }
+    return 0;
+  }
   
 }

@@ -41,12 +41,14 @@
 package se.sics.mspsim.util;
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.platform.GenericNode;
 
 public class DebugCommands implements CommandBundle {
 
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     final ELF elf = (ELF) registry.getComponent(ELF.class);
+    final GenericNode node = (GenericNode) registry.getComponent("node");
     if (cpu != null) {
       ch.registerCommand("break", new Command() {
         public int executeCommand(final CommandContext context) {
@@ -118,7 +120,7 @@ public class DebugCommands implements CommandBundle {
 
       
       
-      ch.registerCommand("symbol", new Command() {
+      ch.registerCommand("symbol", new BasicCommand("lists matching symbold", "<regexp>") {
         public int executeCommand(final CommandContext context) {
           String regExp = context.getArgument(0);
           MapEntry[] entries = context.getMapTable().getEntries(regExp);
@@ -129,16 +131,57 @@ public class DebugCommands implements CommandBundle {
           }
           return 0;
         }
-
-        public String getArgumentHelp(CommandContext context) {
-          return "<regexp>";
-        }
-
-        public String getCommandHelp(CommandContext context) {
-          return "lists matching symbols";
-        }
       });
-
+      
+      if (node != null) {
+        ch.registerCommand("stop", new BasicCommand("stops mspsim", "") {
+          public int executeCommand(CommandContext context) {
+            node.stop();
+            context.out.println("CPU stopped at: " + Utils.hex16(cpu.readRegister(0)));
+            return 0;
+          }
+        });
+        ch.registerCommand("start", new BasicCommand("starts mspsim", "") {
+          public int executeCommand(CommandContext context) {
+            node.start();
+            return 0;
+          }
+        });
+        ch.registerCommand("step", new BasicCommand("singlesteps mspsim", "<number of lines>") {
+          public int executeCommand(CommandContext context) {
+            int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
+            while(nr-- > 0)
+              node.step();
+            context.out.println("CPU stepped to: " + Utils.hex16(cpu.readRegister(0)));
+            return 0;
+          }
+        });
+        ch.registerCommand("print", new BasicCommand("prints value of an address or symbol", "<address or symbol>") {
+          public int executeCommand(CommandContext context) {
+            int adr = context.getArgumentAsAddress(0);
+            if (adr != -1) { 
+              context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.read(adr, adr >= 0x100)));
+            } else {
+              context.out.println("unkown symbol");  
+            }
+            return 0;
+          }
+        });
+        ch.registerCommand("printreg", new BasicCommand("prints value of an register", "<register>") {
+          public int executeCommand(CommandContext context) {
+            int adr = context.getArgumentAsInt(0);
+              context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.readRegister(adr)));
+            return 0;
+          }
+        });
+        ch.registerCommand("time", new BasicCommand("prints the elapse time and cycles", "") {
+          public int executeCommand(CommandContext context) {
+            long time = ((long)(cpu.getTimeMillis()));
+              context.out.println("Emulated time elapsed:" + time + "(ms)  cycles: " + cpu.cycles);
+            return 0;
+          }
+        });
+      }
     }
   }
 
