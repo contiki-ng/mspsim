@@ -3,6 +3,9 @@ Changes:
 - fixed bug in source file handling in ELF symbol loader
 - fixed RSSI-ready flag to be set in CC2420
 - refactored code from Sky/ESB into GenericNode
+- fixed workaround for AWT/IO read line hang bug. (works but not nice in
+  cygwin)
+- added several new commands (start, stop, step, print, printreg, etc).
 
 0.83
 Changes:
