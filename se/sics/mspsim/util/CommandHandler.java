@@ -13,6 +13,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
 
   private Hashtable<String, Command> commands = new Hashtable<String, Command>();
   private boolean exit;
+  private boolean workaround = false;
   
   private BufferedReader inReader;
   private InputStream in;
@@ -70,7 +71,13 @@ public class CommandHandler implements ActiveComponent, Runnable {
       }
       public String getCommandHelp(CommandContext context) {
         return "shows help for the specified command";
-      }    
+      }  
+    });
+    registerCommand("workaround", new BasicCommand("", "") {
+      public int executeCommand(CommandContext context) {
+        workaround = true;
+        return 0;
+      }     
     });
   }
   
@@ -81,6 +88,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
 
   
   private String readLine(BufferedReader inReader2) throws IOException {
+    if (workaround) {
     StringBuilder str = new StringBuilder();
     while(true) {
       if (inReader2.ready()) {
@@ -98,6 +106,9 @@ public class CommandHandler implements ActiveComponent, Runnable {
           throw new InterruptedIOException();
         }
       }
+    }
+    } else {
+      return inReader2.readLine();
     }
   }
   
@@ -134,6 +145,10 @@ public class CommandHandler implements ActiveComponent, Runnable {
     this.registry = registry;
   }
 
+  public void setWorkaround(boolean w) {
+    workaround = w;
+  }
+  
   public void start() {
     mapTable = (MapTable) registry.getComponent(MapTable.class);
 
