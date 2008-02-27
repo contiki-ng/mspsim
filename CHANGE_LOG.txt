@@ -8,6 +8,8 @@ Changes:
 - added several new commands (start, stop, step, print, printreg, etc).
 - fixed bug in USART - TX Interrupt implemented
 - changed API for interruptServiced to include which vector that was serviced
+- changed when interruptServiced is called - now before servicing the interrupt
+  instead of after (RETI).
 
 0.83
 Changes:
