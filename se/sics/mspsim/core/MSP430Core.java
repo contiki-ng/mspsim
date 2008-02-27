@@ -503,18 +503,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // By default no int. left to process...
     interruptMax = -1;
 
-//     IOUnit src = interruptSource[servicedInterrupt];
-    // Remove this src since it has been handled already...
-//     interruptSource[servicedInterrupt] = null;
-    // And call the serviced routine (which can cause another interrupt)
-    if (servicedInterruptUnit != null) {
-      if (debugInterrupts) {
-	System.out.println("### Calling serviced interrupt on: " +
-			   servicedInterruptUnit.getName());
-      }
-      servicedInterruptUnit.interruptServiced(servicedInterrupt);
-    }
-
     // Find next pending interrupt
     for (int i = 0, n = 16; i < n; i++) {
       if (interruptSource[i] != null)
@@ -621,6 +609,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
 			 + pcBefore + " to " + pc +
 			 " SP before: " + spBefore);
     }
+    
+    // And call the serviced routine (which can cause another interrupt)
+    if (servicedInterruptUnit != null) {
+      if (debugInterrupts) {
+        System.out.println("### Calling serviced interrupt on: " +
+                           servicedInterruptUnit.getName());
+      }
+      servicedInterruptUnit.interruptServiced(servicedInterrupt);
+    }    
     return pc;
   }
 
