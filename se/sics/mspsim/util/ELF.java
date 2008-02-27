@@ -51,7 +51,7 @@ public class ELF {
   public static final int EI_NIDENT = 16;
   public static final int EI_ENCODING = 5;
 
-  public static final boolean DEBUG = true; //false;
+  public static final boolean DEBUG = false;
 
   boolean encMSB = true;
   int type;
@@ -313,13 +313,13 @@ public class ELF {
       if (type == ELFSection.SYMTYPE_NONE && sn != null){
         if ("Letext".equals(sn)) {
           if (currentFile != null) {
-            System.out.println("Found file addr for " + currentFile + " : 0x" + 
-                Utils.hex16(currentAddress) + " - 0x" + Utils.hex16(sAddr));    
+//            System.out.println("Found file addr for " + currentFile + " : 0x" + 
+//                Utils.hex16(currentAddress) + " - 0x" + Utils.hex16(sAddr));    
             files.add(new FileInfo(currentFile, currentAddress, sAddr));
             currentAddress = sAddr;
           }
         } else if (!sn.startsWith("_")) {
-          System.out.println("Adding entry: " + sn + " at " + sAddr);
+//          System.out.println("Adding entry: " + sn + " at " + sAddr);
           map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, sn, currentFile,
               false));
         }

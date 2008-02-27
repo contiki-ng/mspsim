@@ -43,7 +43,7 @@ package se.sics.mspsim.core;
 
 public class USART extends IOUnit {
 
-  public static final boolean DEBUG = false;
+  public static final boolean DEBUG = true;
 
   // USART 0/1 register offset (0x70 / 0x78)
   public static final int UCTL = 0;
@@ -95,6 +95,16 @@ public class USART extends IOUnit {
 
   private MSP430Core cpu;
   private SFR sfr;
+
+  private int uctl;
+  private int utctl;
+  private int urctl;
+  private int umctl;
+  private int ubr0;
+  private int ubr1;
+  private int urxbuf;
+
+  private int utxbuf;
 
   /**
    * Creates a new <code>USART</code> instance.
@@ -148,24 +158,53 @@ public class USART extends IOUnit {
 
   // Only 8 bits / read!
   public void write(int address, int data, boolean word, long cycles) {
-    memory[address] = data & 0xff;
-    if (word) {
-      memory[address + 1] = (data >> 8) & 0xff;
-    }
-
-
     address = address - offset;
 
     // Indicate ready to write!!! - this should not be done here...
 //     if (uartID == 0) memory[IFG1] |= 0x82;
 //     else memory[IFG1 + 1] |= 0x20;
-    setBitIFG(utxifg);
 
 //     System.out.println(">>>> Write to " + getName() + " at " +
 // 		       address + " = " + data);
     switch (address) {
+    case UCTL:
+      uctl = data;
+      System.out.println(getName() + " write to UCTL " + data);
+      break;
+    case UTCTL:
+      utctl = data;
+      System.out.println(getName() + " write to UTCTL " + data);
+
+      if (((data >> 4) & 3) == 1) {
+        clockSource = MSP430Constants.CLK_ACLK;
+        if (DEBUG) {
+          System.out.println(getName() + " Selected ACLK as source");
+        }
+      } else {
+        clockSource = MSP430Constants.CLK_SMCLK;
+        if (DEBUG) {
+          System.out.println(getName() + " Selected SMCLK as source");
+        }
+      }
+      updateBaudRate();
+      break;
+    case URCTL:
+      urctl = data;
+      break;
+    case UMCTL:
+      umctl = data;
+      System.out.println(getName() + " write to UMCTL " + data);
+      break;
+    case UBR0:
+      ubr0 = data;
+      updateBaudRate();
+      break;
+    case UBR1:
+      ubr1 = data;
+      updateBaudRate();
+      break;
     case UTXBUF:
-//       System.out.print(">>>> USART_UTXBUF:" + (char) data + "\n");
+      if (DEBUG) System.out.print(getName() + ": USART_UTXBUF:" + (char) data + "\n");
 
       if (listener != null) {
 	listener.dataReceived(this, data);
@@ -173,67 +212,41 @@ public class USART extends IOUnit {
 
       // Interruptflag not set!
       clrBitIFG(utxifg);
-      memory[UTCTL + offset] &= ~UTCTL_TXEMPTY;
+      utctl &= ~UTCTL_TXEMPTY;
+      utxbuf = data;
+      if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
+      cpu.flagInterrupt(transmitInterrupt, this, false);
 
       nextTXReady = cycles + tickPerByte;
 
       // We should set the "not-ready" flag here!
       // When should the reception interrupt be received!?
       break;
-    case UTCTL:
-      if (((data >> 4) & 3) == 1) {
-	clockSource = MSP430Constants.CLK_ACLK;
-	if (DEBUG) {
-	  System.out.println(getName() + " Selected ACLK as source");
-	}
-      } else {
-	clockSource = MSP430Constants.CLK_SMCLK;
-  if (DEBUG) {
-    System.out.println(getName() + " Selected SMCLK as source");
-  }
-      }
-      updateBaudRate();
-      break;
-    case UBR0:
-    case UBR1:
-      updateBaudRate();
-    }
-  }
-
-  private void updateBaudRate() {
-    int div = memory[offset + UBR0] + (memory[offset + UBR1] << 8);
-    if (div == 0) {
-      div = 1;
-    }
-    if (clockSource == MSP430Constants.CLK_ACLK) {
-      if (DEBUG) {
-        System.out.println(getName() + " Baud rate is: " + cpu.aclkFrq/div);
-      }
-      baudRate = cpu.aclkFrq / div;
-    } else {
-      if (DEBUG) {
-        System.out.println(getName() + " Baud rate is: " + cpu.smclkFrq/div);
-      }
-      baudRate = cpu.smclkFrq / div;
-    }
-    // Is this correct??? Is it the DCO or smclkFRQ we should have here???
-    tickPerByte = (8 * cpu.smclkFrq) / baudRate;
-    if (DEBUG) {
-      System.out.println(getName() +  " Ticks per byte: " + tickPerByte);
     }
   }
 
   public int read(int address, boolean word, long cycles) {
-    int val = memory[address];
-    if (word) {
-      val |= memory[(address + 1) & 0xffff] << 8;
-    }
-
     address = address - offset;
 //     System.out.println(">>>>> Read from " + getName() + " at " +
 // 		       address + " = " + memory[address]);
-
+    
     switch (address) {
+    case UCTL:
+      System.out.println(getName() + " read from UCTL");
+      return uctl;
+    case UTCTL:
+      System.out.println(getName() + " read from UTCTL: " + utctl);
+      return utctl;
+    case URCTL:
+      return urctl;
+    case UMCTL:
+      return umctl;
+    case UBR0:
+      return ubr0;
+    case UBR1:
+      return ubr1;
+    case UTXBUF:
+      return utxbuf;
     case URXBUF:
       // When byte is read - the interruptflag is cleared!
       // and error status should also be cleared later...
@@ -241,11 +254,35 @@ public class USART extends IOUnit {
         System.out.println(getName() + " clearing rx interrupt flag");
       }
       clrBitIFG(urxifg);
-      break;
+      return urxbuf;
     }
-
-    return val;
+    return 0;
   }
+
+  private void updateBaudRate() {
+    int div = ubr0 + (ubr1 << 8);
+    if (div == 0) {
+      div = 1;
+    }
+    if (clockSource == MSP430Constants.CLK_ACLK) {
+      if (DEBUG) {
+        System.out.println(getName() + " Baud rate is: " + cpu.aclkFrq / div);
+      }
+      baudRate = cpu.aclkFrq / div;
+    } else {
+      if (DEBUG) {
+        System.out.println(getName() + " Baud rate is: " + cpu.smclkFrq / div);
+      }
+      baudRate = cpu.smclkFrq / div;
+    }
+    if (baudRate == 0) baudRate = 1;
+    // Is this correct??? Is it the DCO or smclkFRQ we should have here???
+    tickPerByte = (8 * cpu.smclkFrq) / baudRate;
+    if (DEBUG) {
+      System.out.println(getName() +  " Ticks per byte: " + tickPerByte);
+    }
+  }
+
 
   public String getName() {
     return "USART " + uartID;
@@ -267,10 +304,14 @@ public class USART extends IOUnit {
       // Ready to transmit new byte!
 
       setBitIFG(utxifg);
-      memory[offset + UTCTL] |= UTCTL_TXEMPTY;
-
-      if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-        System.out.println("Ready to transmit next: " + cycles + " " +
+      utctl |= UTCTL_TXEMPTY;
+      cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
+      
+      if (DEBUG) {
+        if (isIEBitsSet(utxifg)) {
+          System.out.println(getName() + " flagging on transmit interrupt");
+        }
+        System.out.println(getName() + " Ready to transmit next: " + cycles + " " +
             tickPerByte);
       }
       nextTXReady = -1;
@@ -294,7 +335,7 @@ public class USART extends IOUnit {
     if (MSP430Constants.DEBUGGING_LEVEL > 0) {
       System.out.println(getName() + " byteReceived: " + b);
     }
-    memory[offset + URXBUF] = b & 0xff;
+    urxbuf = b & 0xff;
     // Indicate interrupt also!
     setBitIFG(urxifg);
 
