@@ -87,7 +87,7 @@ public abstract class IOUnit extends Chip {
 
   // We should add "Interrupt serviced..." to indicate that its latest
   // Interrupt was serviced...
-  public abstract void interruptServiced();
+  public abstract void interruptServiced(int vector);
 
   // Utility function for converting 16 bits data to correct return
   // value depending on address alignment and word/byte mode

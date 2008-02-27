@@ -512,9 +512,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	System.out.println("### Calling serviced interrupt on: " +
 			   servicedInterruptUnit.getName());
       }
-      servicedInterruptUnit.interruptServiced();
+      servicedInterruptUnit.interruptServiced(servicedInterrupt);
     }
 
+    // Find next pending interrupt
     for (int i = 0, n = 16; i < n; i++) {
       if (interruptSource[i] != null)
 	interruptMax = i;

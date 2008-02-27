@@ -4,7 +4,7 @@ Changes:
 - fixed RSSI-ready flag to be set in CC2420
 - refactored code from Sky/ESB into GenericNode
 - fixed workaround for AWT/IO read line hang bug. (works but not nice in
-  cygwin)
+  cygwin). Workaround is off by default by can be configured in CLI.
 - added several new commands (start, stop, step, print, printreg, etc).
 
 0.83

@@ -62,7 +62,7 @@ public class SFR extends IOUnit {
 
   private int[] memory;
   private MSP430Core cpu;
-  private boolean DEBUG = false;
+  private boolean DEBUG = true;
 
   public SFR(MSP430Core cpu, int[] memory) {
     super(memory, 0);
@@ -148,7 +148,7 @@ public class SFR extends IOUnit {
     else return ifg2;
   }
 
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
   }
 
   public String getName() {

@@ -82,9 +82,6 @@ public class USART extends IOUnit {
   private int receiveInterrupt = 0;
   private int transmitInterrupt = 0;
 
-  private boolean rxIntEnabled = false;
-  private boolean txIntEnabled = false;
-
   private int utxifg;
   private int urxifg;
 
@@ -106,6 +103,8 @@ public class USART extends IOUnit {
 
   private int utxbuf;
 
+  private boolean txInterruptPending = false;
+  
   /**
    * Creates a new <code>USART</code> instance.
    *
@@ -294,10 +293,19 @@ public class USART extends IOUnit {
 
   // We should add "Interrupt serviced..." to indicate that its latest
   // Interrupt was serviced...
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
     // Another byte was received while the last interrupt was processed...
-    cpu.flagInterrupt(receiveInterrupt, this,
-		      isIEBitsSet(urxifg) && ((getIFG() & urxifg) != 0));
+    if (vector == receiveInterrupt) {
+      cpu.flagInterrupt(receiveInterrupt, this,
+          isIEBitsSet(urxifg) && ((getIFG() & urxifg) != 0));
+    } else {
+      // Should we immediately make this empty again???
+      if (!txInterruptPending) {
+        cpu.flagInterrupt(transmitInterrupt, this, false);
+      } else {
+        txInterruptPending = false;
+      }
+    }
   }
 
 
@@ -310,7 +318,8 @@ public class USART extends IOUnit {
       setBitIFG(utxifg);
       utctl |= UTCTL_TXEMPTY;
       cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
-      
+      txInterruptPending = true;
+
       if (DEBUG) {
         if (isIEBitsSet(utxifg)) {
           System.out.println(getName() + " flagging on transmit interrupt");

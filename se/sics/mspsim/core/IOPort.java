@@ -158,7 +158,7 @@ public class IOPort extends IOUnit {
     return "Port " + name;
   }
 
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
   }
 
   // for HW to set hi/low on the pins...

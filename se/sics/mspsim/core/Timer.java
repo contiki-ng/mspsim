@@ -680,7 +680,7 @@ public class Timer extends IOUnit {
 
   // The interrupt have been serviced...
   // Some flags should be cleared (the highest priority flags)?
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
     if (MSP430Core.debugInterrupts) {
       System.out.println("interrupt Serviced...");
     }

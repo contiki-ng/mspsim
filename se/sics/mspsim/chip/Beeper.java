@@ -129,7 +129,7 @@ public class Beeper extends IOUnit {
   }
 
   // Nothing for interrupts...
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
   }
 
   public static void main(String[] args) {

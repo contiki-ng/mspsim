@@ -113,7 +113,7 @@ public class Multiplier extends IOUnit {
     return "Hardware Multiplier";
   }
 
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
   }
 
   public int getModeMax() {

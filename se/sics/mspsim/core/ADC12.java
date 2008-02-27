@@ -125,7 +125,7 @@ public class ADC12 extends IOUnit {
     return "AD12";
   }
 
-  public void interruptServiced() {
+  public void interruptServiced(int vector) {
   }
 
   public long ioTick(long cycles) {
