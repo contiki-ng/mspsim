@@ -133,9 +133,13 @@ public class USART extends IOUnit {
       urxifg = URXIFG1;
       memory[IFG1 + 1] = 0x20;
     }
-
+    nextTXReady = cpu.cycles + 1000;
   }
 
+  public void reset() {
+    nextTXReady = cpu.cycles + 1000;
+  }
+  
   private void setBitIFG(int bits) {
     sfr.setBitIFG(uartID, bits);
   }
