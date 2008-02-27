@@ -6,6 +6,8 @@ Changes:
 - fixed workaround for AWT/IO read line hang bug. (works but not nice in
   cygwin). Workaround is off by default by can be configured in CLI.
 - added several new commands (start, stop, step, print, printreg, etc).
+- fixed bug in USART - TX Interrupt implemented
+- changed API for interruptServiced to include which vector that was serviced
 
 0.83
 Changes:
