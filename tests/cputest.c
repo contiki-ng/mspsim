@@ -38,6 +38,7 @@
  */
 
 #include "msp430setup.h"
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -241,6 +242,32 @@ static void testBitFields() {
 
 
 /*--------------------------------------------------------------------------*/
+static int flag;
+interrupt(UART0TX_VECTOR)
+     usart_tx_test0(void)
+{
+  printf("*IRQ: Flags:%d %d\n", IFG1, UTCTL0);
+  flag++;
+}
+
+static void testUSART() {
+  int delay = 10000;
+  testCase("Bit USART Operations");
+  flag = 0xff;
+  UCTL0 = CHAR;                         /* 8-bit character */
+  UTCTL0 = SSEL1;                       /* UCLK = MCLK */
+  ME1 |= (UTXE0 | URXE0);                 /* Enable USART0 TXD/RXD */
+  IE1 |= UTXIE0;                        /* Enable USART0 TX interrupt  */
+  TXBUF_0 = 'a';
+ 
+  while(flag == 0) {
+  }
+  while(delay-- > 0);
+  
+  printf("output finished...\n");
+}
+
+/*--------------------------------------------------------------------------*/
 
 int
 main(void)
@@ -256,6 +283,7 @@ main(void)
   testBitFields();
   testFunctions();
   testModulo();
+  testUSART();
   /*  printf("PROFILE\n"); */
   printf("EXIT\n");
   return 0;
