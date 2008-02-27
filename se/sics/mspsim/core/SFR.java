@@ -62,6 +62,7 @@ public class SFR extends IOUnit {
 
   private int[] memory;
   private MSP430Core cpu;
+  private boolean DEBUG = false;
 
   public SFR(MSP430Core cpu, int[] memory) {
     super(memory, 0);
@@ -80,7 +81,7 @@ public class SFR extends IOUnit {
   // write a value to the IO unit
   public void write(int address, int value, boolean word,
 			     long cycles) {
-    System.out.println(getName() + " write to: " + address + " = " + value);
+    if (DEBUG ) System.out.println(getName() + " write to: " + address + " = " + value);
     switch (address) {
     case IE1:
       ie1 = value;
@@ -108,7 +109,7 @@ public class SFR extends IOUnit {
   // read
   // read a value from the IO unit
   public int read(int address, boolean word, long cycles) {
-    System.out.println(getName() + " read from: " + address);
+    if (DEBUG) System.out.println(getName() + " read from: " + address);
     switch (address) {
     case IE1:
       return ie1;
