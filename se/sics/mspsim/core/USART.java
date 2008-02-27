@@ -43,7 +43,7 @@ package se.sics.mspsim.core;
 
 public class USART extends IOUnit {
 
-  public static final boolean DEBUG = true;
+  public static final boolean DEBUG = false;//true;
 
   // USART 0/1 register offset (0x70 / 0x78)
   public static final int UCTL = 0;
@@ -172,11 +172,11 @@ public class USART extends IOUnit {
     switch (address) {
     case UCTL:
       uctl = data;
-      System.out.println(getName() + " write to UCTL " + data);
+      if (DEBUG) System.out.println(getName() + " write to UCTL " + data);
       break;
     case UTCTL:
       utctl = data;
-      System.out.println(getName() + " write to UTCTL " + data);
+      if (DEBUG) System.out.println(getName() + " write to UTCTL " + data);
 
       if (((data >> 4) & 3) == 1) {
         clockSource = MSP430Constants.CLK_ACLK;
@@ -196,7 +196,7 @@ public class USART extends IOUnit {
       break;
     case UMCTL:
       umctl = data;
-      System.out.println(getName() + " write to UMCTL " + data);
+      if (DEBUG) System.out.println(getName() + " write to UMCTL " + data);
       break;
     case UBR0:
       ubr0 = data;
@@ -235,10 +235,10 @@ public class USART extends IOUnit {
     
     switch (address) {
     case UCTL:
-      System.out.println(getName() + " read from UCTL");
+      if (DEBUG) System.out.println(getName() + " read from UCTL");
       return uctl;
     case UTCTL:
-      System.out.println(getName() + " read from UTCTL: " + utctl);
+      if (DEBUG) System.out.println(getName() + " read from UTCTL: " + utctl);
       return utctl;
     case URCTL:
       return urctl;

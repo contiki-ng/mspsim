@@ -73,20 +73,31 @@ public class DebugCommands implements CommandBundle {
       });
 
       ch.registerCommand("watch", new Command() {
+        int mode = 0;
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           if (baddr == -1) {
             context.out.println("Error: unkown symbol:" + context.getArgument(0));            
             return -1;
           }
+          if (context.getArgumentCount() > 1) {
+            String modeStr = context.getArgument(1);
+            if ("char".equals(modeStr)) {
+              mode = 1;
+            }
+          }
           cpu.setBreakPoint(baddr,
               new CPUMonitor() {
             public void cpuAction(int type, int adr, int data) {
-              int pc = cpu.readRegister(0);
-              String adrStr = getSymOrAddr(context, adr);
-              String pcStr = getSymOrAddrELF(elf, pc);
-              context.out.println("*** Write from " + pcStr +
-                  ": " + adrStr + " = " + data);
+              if (mode == 0) {
+                int pc = cpu.readRegister(0);
+                String adrStr = getSymOrAddr(context, adr);
+                String pcStr = getSymOrAddrELF(elf, pc);
+                context.out.println("*** Write from " + pcStr +
+                    ": " + adrStr + " = " + data);
+              } else {
+                context.out.print((char) data);
+              }
             }
           });
           context.out.println("Watch set at: " + baddr);

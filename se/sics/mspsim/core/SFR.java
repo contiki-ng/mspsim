@@ -46,6 +46,8 @@ package se.sics.mspsim.core;
  */
 public class SFR extends IOUnit {
 
+  private boolean DEBUG = false;//true;
+
   public static final int IE1 = 0;
   public static final int IE2 = 1;
   public static final int IFG1 = 2;
@@ -62,7 +64,6 @@ public class SFR extends IOUnit {
 
   private int[] memory;
   private MSP430Core cpu;
-  private boolean DEBUG = true;
 
   public SFR(MSP430Core cpu, int[] memory) {
     super(memory, 0);
