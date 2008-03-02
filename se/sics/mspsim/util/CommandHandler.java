@@ -45,6 +45,9 @@ public class CommandHandler implements ActiveComponent, Runnable {
 	      helpText = helpText.substring(0, n);
 	    }
 	    context.out.print(prefix);
+	    if (prefix.length() < 8) {
+	      context.out.print('\t');
+	    }
 	    if (prefix.length() < 16) {
 	      context.out.print('\t');
 	    }
@@ -119,19 +122,23 @@ public class CommandHandler implements ActiveComponent, Runnable {
         out.flush();
         String line = readLine(inReader);//.readLine();
         if (line != null && line.length() > 0) {
-          String[] parts = line.split(" ");
-          Command cmd = commands.get(parts[0]);
-          if (cmd == null) {
-            out.println("Error: Unknown command " + parts[0]);
-          } else {
-            CommandContext cc = new CommandContext(mapTable, parts, in, out, err);
-            try {
-              cmd.executeCommand(cc);
-            } catch (Exception e) {
-              err.println("Error: Command failed: " + e.getMessage());
+	  String[][] parts = CommandParser.parseLine(line);
+	  if(parts.length > 0) {
+	    // TODO add support for pipes
+	    String[] args = parts[0];
+	    Command cmd = commands.get(args[0]);
+	    if (cmd == null) {
+	      out.println("Error: Unknown command " + args[0]);
+	    } else {
+	      CommandContext cc = new CommandContext(mapTable, args, in, out, err);
+	      try {
+		cmd.executeCommand(cc);
+	      } catch (Exception e) {
+		err.println("Error: Command failed: " + e.getMessage());
               e.printStackTrace(err);
-            }
-          }
+	      }
+	    }
+	  }
         }
       } catch (IOException e) {
         e.printStackTrace();
