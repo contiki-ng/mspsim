@@ -132,15 +132,19 @@ public class Multiplier extends IOUnit {
       break;
     case MAC:
       mac = data;
-      currentSum = 0;
       if (DEBUG) System.out.println(getName() + " Write to MAC: " + data);
       lastWriteOP = address;
       break;
     case MACS:
       macs = data;
-      currentSum = 0;
       if (DEBUG) System.out.println(getName() + " Write to MACS: " + data);
       lastWriteOP = address;
+      break;
+    case RESLO:
+      resLo = data;
+      break;
+    case RESHI:
+      resHi = data;
       break;
     case OP2:
       if (DEBUG) System.out.println(getName() + " Write to OP2: " + data);
@@ -151,7 +155,7 @@ public class Multiplier extends IOUnit {
       boolean signMode = false;
       boolean sum = false;
       if (lastWriteOP == MPYS) {
-        o1 = MPYS;
+        o1 = mpys;
         signMode = true;
       } else if (lastWriteOP == MAC) {
         o1 = mac;
@@ -168,14 +172,15 @@ public class Multiplier extends IOUnit {
           sumext = 0xffff;
         }
       }
-      int res = o1 * op2;
-
-      if (sum) {
+      long res = o1 * op2;
+      System.out.println("O1:" + o1 + " * " + op2 + " = " + res);
+      if (sum) { 
+        currentSum = (resHi << 16) + resLo;
         currentSum += res;
         res = currentSum;
       }
-      resHi = (res >> 16) & 0xffff;
-      resLo = res & 0xffff;
+      resHi = (int) ((res >> 16) & 0xffff);
+      resLo = (int) (res & 0xffff);
       if(DEBUG) System.out.println(" ===> result = " + res);
       break;
     }

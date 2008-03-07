@@ -252,6 +252,9 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
           System.out.println("M25P80: Loading memory: " + (address & 0xfff00));
         file.seek(address & 0xfff00);
         file.readFully(readMemory);
+        for (int i = 0; i < readMemory.length; i++) {
+          readMemory[i] = (byte) (~readMemory[i] & 0xff);
+        }
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -310,10 +313,14 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
   
   private void writeBack(int address, byte[] data) {
     try {
+      byte[] tmp = new byte[data.length]; 
       if (DEBUG)
         System.out.println("M25P80: Writing data to disk at " + Integer.toHexString(address));
       file.seek(address & 0xfff00);
-      file.write(data);
+      for (int i = 0; i < data.length; i++) {
+        tmp[i] = (byte) (~data[i] & 0xff);
+      }
+      file.write(tmp);
       } catch (IOException e) {
       e.printStackTrace();
     }
