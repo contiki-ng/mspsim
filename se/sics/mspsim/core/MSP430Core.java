@@ -162,6 +162,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Only cares of writes!
     for (int i = 0x130, n = 0x13f; i < n; i++) {
       memOut[i] = mp;
+      memIn[i] = mp;
     }
 
     ioUnits[0] = ta;

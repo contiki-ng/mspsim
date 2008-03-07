@@ -55,6 +55,19 @@ public class Multiplier extends IOUnit {
   public static final int RESHI = 0x13c;
   public static final int SUMEXT = 0x13e;
 
+  private int mpy;
+  private int mpys;
+  private int op2;
+
+  private int resLo;
+  private int resHi;
+  private int mac;
+  private int macs;
+  private int sumext;
+  
+  private int lastWriteOP;
+  private int currentSum;
+  
   MSP430Core core;
   /**
    * Creates a new <code>Multiplier</code> instance.
@@ -70,11 +83,29 @@ public class Multiplier extends IOUnit {
   }
 
   public int read(int address, boolean word, long cycles) {
-    int val = memory[address];
-    if (word) {
-      val |= memory[(address + 1) & 0xffff] << 8;
+    switch (address) {
+    case MPY:
+      return mpy;
+    case MPYS:
+      return mpys;
+    case MAC:
+      return mac;
+    case MACS:
+      return macs;
+    case OP2:
+      return op2;
+    case RESHI:
+      if (DEBUG) System.out.println(getName() + " read res hi: " + resHi );
+      return resHi;
+    case RESLO:
+      if (DEBUG) System.out.println(getName() + " read res lo: " + resLo );
+      return resLo;
+    case SUMEXT:
+      if (DEBUG) System.out.println(getName() + " read sumext: " + sumext);
+      return sumext;
     }
-    return val;
+    System.out.println(getName() + " read other address:" + address);
+    return 0;
   }
 
   public void write(int address, int data, boolean word, long cycles) {
@@ -82,11 +113,6 @@ public class Multiplier extends IOUnit {
       System.out.println("Multiplier: write to: " + Utils.hex16(address) +
 			 " data = " + data + " word = " + word);
     }
-    memory[address] = data & 0xff;
-    if (word) {
-      memory[address + 1] = (data >> 8) & 0xff;
-    }
-
     if (MSP430Constants.DEBUGGING_LEVEL > 0) {
       System.out.println("Write to HW Multiplier: " +
 			 Integer.toString(address, 16) +
@@ -94,17 +120,63 @@ public class Multiplier extends IOUnit {
     }
 
     switch(address) {
+    case MPY:
+      mpy = data;
+      if (DEBUG) System.out.println(getName() + " Write to MPY: " + data);
+      lastWriteOP = address;
+      break;
+    case MPYS:
+      mpys = data;
+      if (DEBUG) System.out.println(getName() + " Write to MPYS: " + data);
+      lastWriteOP = address;
+      break;
+    case MAC:
+      mac = data;
+      currentSum = 0;
+      if (DEBUG) System.out.println(getName() + " Write to MAC: " + data);
+      lastWriteOP = address;
+      break;
+    case MACS:
+      macs = data;
+      currentSum = 0;
+      if (DEBUG) System.out.println(getName() + " Write to MACS: " + data);
+      lastWriteOP = address;
+      break;
     case OP2:
-      int o2 = memory[OP2] + (memory[OP2 + 1] << 8);
+      if (DEBUG) System.out.println(getName() + " Write to OP2: " + data);
+      sumext = 0;
+      op2 = data;
       // This should be picked based on which op was written previously!!!
-      int o1 = memory[MPYS] + (memory[MPYS + 1] << 8);
-      int res = o1 * o2;
-      int hiRes = (res >> 16) & 0xffff;
-      int loRes = res & 0xffff;
-      memory[RESHI] = hiRes & 0xff;
-      memory[RESHI + 1] = (hiRes >> 8) & 0xff;
-      memory[RESLO] = loRes & 0xff;
-      memory[RESLO + 1] = (loRes >> 8) & 0xff;
+      int o1 = mpy;
+      boolean signMode = false;
+      boolean sum = false;
+      if (lastWriteOP == MPYS) {
+        o1 = MPYS;
+        signMode = true;
+      } else if (lastWriteOP == MAC) {
+        o1 = mac;
+        sum = true;
+      } else if (lastWriteOP == MACS) {
+        o1 = macs;
+        signMode = true;
+        sum = true;
+      }
+      
+      if (signMode) {
+        // Assume two 16 bit mults.
+        if (((o1 ^ op2) & 0x8000) > 0) {
+          sumext = 0xffff;
+        }
+      }
+      int res = o1 * op2;
+
+      if (sum) {
+        currentSum += res;
+        res = currentSum;
+      }
+      resHi = (res >> 16) & 0xffff;
+      resLo = res & 0xffff;
+      if(DEBUG) System.out.println(" ===> result = " + res);
       break;
     }
   }

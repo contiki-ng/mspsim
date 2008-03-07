@@ -224,6 +224,9 @@ public class M25P80 extends Chip implements USARTListener, PortListener {
         state = SECTOR_ERASE;
         pos = 0;
         break;
+      case BULK_ERASE:
+        System.out.println("M25P80: Bulk Erase");
+        break;
       }
       source.byteReceived(0);
     }
