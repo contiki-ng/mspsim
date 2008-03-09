@@ -12,17 +12,24 @@ public class CommandContext {
   private int pid;
   private Command command;
   
-  public final PrintStream out;
-  public final PrintStream err;
+  public PrintStream out;
+  public PrintStream err;
   
-  public CommandContext(MapTable table, String[] args,
-      int pid, Command command, PrintStream out, PrintStream err) {
+  public CommandContext(MapTable table, String[] args, int pid, Command command, PrintStream out, PrintStream err) {
+    this(table, args, pid, command);
+    setOutput(out, err);
+  }
+  
+  public CommandContext(MapTable table, String[] args, int pid, Command command) {
     this.args = args;
-    this.out = out;
-    this.err = err;
     this.pid = pid;
     mapTable = table;
     this.command = command;
+  }
+  
+  void setOutput(PrintStream out, PrintStream err) {
+    this.out = out;
+    this.err = err;
   }
   
   Command getCommand( ) {

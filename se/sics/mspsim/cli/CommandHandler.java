@@ -130,13 +130,25 @@ public class CommandHandler implements ActiveComponent, Runnable {
           String[][] parts = CommandParser.parseLine(line);
           if(parts.length > 0 && checkCommands(parts) == 0) {
             // TODO add support for pipes
-            ArrayList<CommandContext> commandList = new ArrayList<CommandContext>();
+            CommandContext[] commands = new CommandContext[parts.length];
             for (int i = 0; i < parts.length; i++) {
               String[] args = parts[i];
               Command cmd = getCommand(args[0]);
-              CommandContext cc = new CommandContext(mapTable, args, 0, cmd, out, err);
+              commands[i] = new CommandContext(mapTable, args, 0, cmd);
+              if (i > 0) {
+                PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
+                commands[i - 1].setOutput(po, err);
+              }
+              // Last element also needs output!
+              if (i == parts.length - 1) {
+                commands[i].setOutput(out, err);
+              }
+              // TODO: Check if first command is also LineListener and set it up for input!!
+            }
+            // Execute when all is set-up in opposite order...
+            for (int i = parts.length - 1; i >= 0; i--) {
               try {
-                cmd.executeCommand(cc);
+                commands[i].getCommand().executeCommand(commands[i]);
               } catch (Exception e) {
                 err.println("Error: Command failed: " + e.getMessage());
                 e.printStackTrace(err);
@@ -162,7 +174,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
     return null;
   }
-  
+    
   private int checkCommands(String[][] cmds) {
     for (int i = 0; i < cmds.length; i++) {
       Command command = commands.get(cmds[i][0]);
