@@ -186,7 +186,7 @@ public class DebugUI extends JPanel {
 	     s += ";   " + i.getFunction();
 	   }
 	   pos = i.getPos();
-	   if (cpu.hasBreakpoint(pos)) {
+	   if (cpu.hasBreakPoint(pos)) {
 	     s = "*B " + s;
 	   } else {
 	     s = "   " + s;

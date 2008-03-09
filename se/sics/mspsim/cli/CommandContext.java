@@ -10,19 +10,27 @@ public class CommandContext {
 
   private String[] args;
   private MapTable mapTable;
+  private int pid;
+  
   public final PrintStream out;
   public final PrintStream err;
   public final InputStream in;
   
+  private CommandContext nextCommand;
+  
   public CommandContext(MapTable table, String[] args,
-      InputStream in, PrintStream out, PrintStream err) {
+      int pid, InputStream in, PrintStream out, PrintStream err) {
     this.args = args;
     this.out = out;
     this.err = err;
     this.in = in;
+    this.pid = pid;
     mapTable = table;
   }
   
+  public int getPID() {
+    return pid;
+  }
   
   /**
    * exit needs to be called as soon as the command is completed (or stopped).

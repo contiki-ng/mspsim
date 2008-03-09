@@ -77,8 +77,10 @@ public class DebugCommands implements CommandBundle {
         }
       });
 
-      ch.registerCommand("watch", new Command() {
+      ch.registerCommand("watch",
+          new BasicAsyncCommand("adds a write watch to a given address or symbol", "<address or symbol>") {
         int mode = 0;
+        int address = 0;
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           if (baddr == -1) {
@@ -91,7 +93,7 @@ public class DebugCommands implements CommandBundle {
               mode = 1;
             }
           }
-          cpu.setBreakPoint(baddr,
+          cpu.setBreakPoint(address = baddr,
               new CPUMonitor() {
             public void cpuAction(int type, int adr, int data) {
               if (mode == 0) {
@@ -108,13 +110,9 @@ public class DebugCommands implements CommandBundle {
           context.out.println("Watch set at: " + baddr);
           return 0;
         }
-
-        public String getArgumentHelp(CommandContext context) {
-          return "<address or symbol>";
-        }
-
-        public String getCommandHelp(CommandContext context) {
-          return "adds a write watch to a given address or symbol";
+        
+        public void stopCommand(CommandContext context) {
+          cpu.clearBreakPoint(address);
         }
       });
 
@@ -196,6 +194,17 @@ public class DebugCommands implements CommandBundle {
               context.out.println("Emulated time elapsed:" + time + "(ms)  cycles: " + cpu.cycles);
             return 0;
           }
+        });
+        // Does nothign yet... TODO!!!
+        ch.registerCommand("grep", new BasicLineCommand("grep", "regexp") {
+          public void lineRead(String line) {
+          }
+          public void stopCommand(CommandContext context) {
+          }
+          public int executeCommand(CommandContext context) {
+            return 0;
+          }
+          
         });
       }
     }

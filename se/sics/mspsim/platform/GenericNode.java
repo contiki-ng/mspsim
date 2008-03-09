@@ -41,14 +41,14 @@ package se.sics.mspsim.platform;
 import java.io.File;
 import java.io.IOException;
 
+import se.sics.mspsim.cli.CommandHandler;
+import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.ui.ControlUI;
-import se.sics.mspsim.util.CommandHandler;
 import se.sics.mspsim.util.ComponentRegistry;
-import se.sics.mspsim.util.DebugCommands;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2008, Swedish Institute of Computer Science.
+ * Copyright (c) 2007, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,36 +27,27 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
+ * $Id: $
  *
  * -----------------------------------------------------------------
  *
- * BasicCommand
+ * BasicAsyncCommand
  *
- * Author  : Joakim Eriksson, Niclas Finne
- * Created : Mon Feb 11 21:28:00 2008
- * Updated : $Date: 2007/10/21 21:17:34 $
- *           $Revision: 1.3 $
+ * Author  : Joakim Eriksson
+ * Created : 9 mar 2008
+ * Updated : $Date:$
+ *           $Revision:$
  */
+package se.sics.mspsim.cli;
 
-package se.sics.mspsim.util;
+/**
+ * @author joakim
+ *
+ */
+public abstract class BasicAsyncCommand extends BasicCommand implements
+    AsyncCommand {
 
-public abstract class BasicCommand implements Command {
-
-  private String argumentHelp;
-  private String commandHelp;
-
-  public BasicCommand(String cmdHelp, String argHelp) {
-    commandHelp = cmdHelp;
-    argumentHelp = argHelp;
+  public BasicAsyncCommand(String cmdHelp, String argHelp) {
+    super(cmdHelp, argHelp);
   }
-  
-  public String getArgumentHelp(CommandContext context) {
-    return argumentHelp;
-  }
-
-  public String getCommandHelp(CommandContext context) {
-    return commandHelp;
-  }
-
 }

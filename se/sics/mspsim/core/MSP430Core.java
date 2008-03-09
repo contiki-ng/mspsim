@@ -252,8 +252,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     breakPoints[address] = mon;
   }
 
-  public boolean hasBreakpoint(int address) {
+  public boolean hasBreakPoint(int address) {
     return breakPoints[address] != null;
+  }
+  
+  public void clearBreakPoint(int address) {
+    breakPoints[address] = null;
   }
 
   public void setRegisterWriteMonitor(int r, CPUMonitor mon) {
