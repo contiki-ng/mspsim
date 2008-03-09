@@ -16,8 +16,6 @@ public class CommandContext {
   public final PrintStream err;
   public final InputStream in;
   
-  private CommandContext nextCommand;
-  
   public CommandContext(MapTable table, String[] args,
       int pid, InputStream in, PrintStream out, PrintStream err) {
     this.args = args;

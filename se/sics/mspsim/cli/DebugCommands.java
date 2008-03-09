@@ -195,17 +195,6 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        // Does nothign yet... TODO!!!
-        ch.registerCommand("grep", new BasicLineCommand("grep", "regexp") {
-          public void lineRead(String line) {
-          }
-          public void stopCommand(CommandContext context) {
-          }
-          public int executeCommand(CommandContext context) {
-            return 0;
-          }
-          
-        });
       }
     }
   }
