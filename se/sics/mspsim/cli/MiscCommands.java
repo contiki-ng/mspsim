@@ -68,6 +68,8 @@ public class MiscCommands implements CommandBundle {
         context.exit(0);
       }
     });
+
+    handler.registerCommand("exec", new ExecCommand());
   }
 
 }
