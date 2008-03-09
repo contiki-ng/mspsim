@@ -41,6 +41,7 @@
 package se.sics.mspsim.cli;
 
 import java.io.PrintStream;
+import java.util.regex.Pattern;
 
 import se.sics.mspsim.util.ComponentRegistry;
 
@@ -53,15 +54,16 @@ public class MiscCommands implements CommandBundle {
   public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
     handler.registerCommand("grep", new BasicLineCommand("grep", "<regexp>") {
       private PrintStream out;
+      private Pattern pattern;
       public int executeCommand(CommandContext context) {
         out = context.out;
+        pattern = Pattern.compile(context.getArgument(0));
         return 0;
       }
-
       public void lineRead(String line) {
-        out.println("Grep: " + line);
+        if (pattern.matcher(line).find())
+          out.println(line);
       }
-
       public void stopCommand(CommandContext context) {
         context.exit(0);
       }
