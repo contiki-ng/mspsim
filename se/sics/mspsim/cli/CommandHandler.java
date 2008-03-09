@@ -20,73 +20,22 @@ public class CommandHandler implements ActiveComponent, Runnable {
   private boolean exit;
   private boolean workaround = false;
 
+  private ArrayList<CommandContext[]> currentAsyncCommands = new ArrayList<CommandContext[]>();
   private BufferedReader inReader;
   private InputStream in;
   private PrintStream out;
   private PrintStream err;
   private MapTable mapTable;
   private ComponentRegistry registry;
-
+  private int pid = 1;
+  
   public CommandHandler() {
     exit = false;
     inReader = new BufferedReader(new InputStreamReader(in = System.in));
     out = System.out;
     err = System.err;
 
-    registerCommand("help", new Command() {
-      public int executeCommand(CommandContext context) {
-        if (context.getArgumentCount() == 0) {
-          context.out.println("Available commands:");
-          for(Map.Entry entry: commands.entrySet()) {
-            String name = (String) entry.getKey();
-            Command command = (Command) entry.getValue();
-            CommandContext cc = new CommandContext(mapTable, new String[] {
-                name
-            }, 0, null, context.out, context.err);
-            String prefix = ' ' + name + ' ' + command.getArgumentHelp(cc);
-            String helpText = command.getCommandHelp(cc);
-            int n;
-            if (helpText != null && (n = helpText.indexOf('\n')) > 0) {
-              helpText = helpText.substring(0, n);
-            }
-            context.out.print(prefix);
-            if (prefix.length() < 8) {
-              context.out.print('\t');
-            }
-            if (prefix.length() < 16) {
-              context.out.print('\t');
-            }
-            context.out.println("\t " + helpText);
-          }
-          return 0;
-        }
-
-        String cmd = context.getArgument(0);
-        Command command = commands.get(cmd);
-        if (command != null) {
-          CommandContext cc = new CommandContext(mapTable, new String[] {
-              cmd
-          }, 0, null, context.out, context.err);
-          context.out.println(cmd + ' ' + command.getArgumentHelp(cc));
-          context.out.println("  " + command.getCommandHelp(cc));
-          return 0;
-        }
-        context.err.println("Error: unknown command '" + cmd + '\'');
-        return 1;
-      }
-      public String getArgumentHelp(CommandContext context) {
-        return "<command>";
-      }
-      public String getCommandHelp(CommandContext context) {
-        return "shows help for the specified command";
-      }  
-    });
-    registerCommand("workaround", new BasicCommand("", "") {
-      public int executeCommand(CommandContext context) {
-        workaround = true;
-        return 0;
-      }     
-    });
+    registerCommands();
   }
 
   // Add it to the hashtable (overwriting anything there)
@@ -129,7 +78,6 @@ public class CommandHandler implements ActiveComponent, Runnable {
         if (line != null && line.length() > 0) {
           String[][] parts = CommandParser.parseLine(line);
           if(parts.length > 0 && checkCommands(parts) == 0) {
-            // TODO add support for pipes
             CommandContext[] commands = new CommandContext[parts.length];
             for (int i = 0; i < parts.length; i++) {
               String[] args = parts[i];
@@ -153,6 +101,10 @@ public class CommandHandler implements ActiveComponent, Runnable {
                 err.println("Error: Command failed: " + e.getMessage());
                 e.printStackTrace(err);
               }
+            }
+            if (commands[0].getCommand() instanceof AsyncCommand) {
+              commands[0].setPID(pid++);
+              currentAsyncCommands.add(commands);
             }
           }
         }
@@ -209,4 +161,85 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
     new Thread(this, "cmd").start();
   }
+
+  private void registerCommands() {
+    registerCommand("help", new Command() {
+      public int executeCommand(CommandContext context) {
+        if (context.getArgumentCount() == 0) {
+          context.out.println("Available commands:");
+          for(Map.Entry entry: commands.entrySet()) {
+            String name = (String) entry.getKey();
+            Command command = (Command) entry.getValue();
+            CommandContext cc = new CommandContext(mapTable, new String[] {
+                name
+            }, 0, null, context.out, context.err);
+            String prefix = ' ' + name + ' ' + command.getArgumentHelp(cc);
+            String helpText = command.getCommandHelp(cc);
+            int n;
+            if (helpText != null && (n = helpText.indexOf('\n')) > 0) {
+              helpText = helpText.substring(0, n);
+            }
+            context.out.print(prefix);
+            if (prefix.length() < 8) {
+              context.out.print('\t');
+            }
+            if (prefix.length() < 16) {
+              context.out.print('\t');
+            }
+            context.out.println("\t " + helpText);
+          }
+          return 0;
+        }
+
+        String cmd = context.getArgument(0);
+        Command command = commands.get(cmd);
+        if (command != null) {
+          CommandContext cc = new CommandContext(mapTable, new String[] {
+              cmd
+          }, 0, null, context.out, context.err);
+          context.out.println(cmd + ' ' + command.getArgumentHelp(cc));
+          context.out.println("  " + command.getCommandHelp(cc));
+          return 0;
+        }
+        context.err.println("Error: unknown command '" + cmd + '\'');
+        return 1;
+      }
+      public String getArgumentHelp(CommandContext context) {
+        return "<command>";
+      }
+      public String getCommandHelp(CommandContext context) {
+        return "shows help for the specified command";
+      }  
+    });
+    registerCommand("workaround", new BasicCommand("", "") {
+      public int executeCommand(CommandContext context) {
+        workaround = true;
+        return 0;
+      }     
+    });
+    
+    registerCommand("ps", new BasicCommand("list current executing commands", "") {
+      public int executeCommand(CommandContext context) {
+        for (int i = 0; i < currentAsyncCommands.size(); i++) {
+          CommandContext cmd = currentAsyncCommands.get(i)[0];
+          System.out.println("  " + cmd.getPID() + " " + cmd.getCommandName());
+        }
+        return 0;
+      }
+    });
+    
+    registerCommand("kill", new BasicCommand("kill a current executing command", "") {
+      public int executeCommand(CommandContext context) {
+        int pid = context.getArgumentAsInt(0);
+        for (int i = 0; i < currentAsyncCommands.size(); i++) {
+          CommandContext cmd = currentAsyncCommands.get(i)[0];
+          if (pid == cmd.getPID()) {
+            System.out.println("Should kill: " + cmd.getCommandName());
+          }
+        }
+        return 0;
+      }
+    });
+  }
+
 }

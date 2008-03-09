@@ -97,5 +97,9 @@ public class CommandContext {
     }
     return 0;
   }
+
+  void setPID(int i) {
+    pid = i;
+  }
   
 }

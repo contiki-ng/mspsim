@@ -55,10 +55,12 @@ public class DebugCommands implements CommandBundle {
     final ELF elf = (ELF) registry.getComponent(ELF.class);
     final GenericNode node = (GenericNode) registry.getComponent("node");
     if (cpu != null) {
-      ch.registerCommand("break", new Command() {
+      ch.registerCommand("break", new BasicAsyncCommand("adds a breakpoint to a given address or symbol",
+          "<address or symbol>") { 
+        int address = 0; 
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
-          cpu.setBreakPoint(baddr,
+          cpu.setBreakPoint(address = baddr,
               new CPUMonitor() {
                 public void cpuAction(int type, int adr, int data) {
                   context.out.println("*** Break at " + adr);
@@ -67,13 +69,8 @@ public class DebugCommands implements CommandBundle {
           context.out.println("Breakpoint set at: " + baddr);
           return 0;
         }
-
-        public String getArgumentHelp(CommandContext context) {
-          return "<address or symbol>";
-        }
-
-        public String getCommandHelp(CommandContext context) {
-          return "adds a breakpoint to a given address or symbol";
+        public void stopCommand(CommandContext context) {
+          cpu.clearBreakPoint(address);
         }
       });
 
