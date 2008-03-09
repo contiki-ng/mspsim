@@ -131,7 +131,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
     for (int i = 0; i < cmds.length; i++) {
       Command command = commands.get(cmds[i][0]);
       if (command == null) {
-        System.out.println("CLI: Command not found: " + cmds[i]);
+        System.out.println("CLI: Command not found: " + cmds[i][0]);
         return -1;
       }
       if (i > 0 && !(command instanceof LineListener)) {
