@@ -1,8 +1,12 @@
 package se.sics.mspsim.cli;
 
 
-public interface Command {
-  public int executeCommand(CommandContext context);
-  public String getCommandHelp(CommandContext context);
-  public String getArgumentHelp(CommandContext context);
+public abstract class Command implements Cloneable {
+  public abstract int executeCommand(CommandContext context);
+  public abstract String getCommandHelp(CommandContext context);
+  public abstract String getArgumentHelp(CommandContext context);
+
+  public Object clone() throws CloneNotSupportedException {
+    return super.clone();
+  }
 }

@@ -1,6 +1,5 @@
 package se.sics.mspsim.cli;
 
-import java.io.InputStream;
 import java.io.PrintStream;
 
 import se.sics.mspsim.util.MapTable;
@@ -11,25 +10,29 @@ public class CommandContext {
   private String[] args;
   private MapTable mapTable;
   private int pid;
+  private Command command;
   
   public final PrintStream out;
   public final PrintStream err;
-  public final InputStream in;
   
   public CommandContext(MapTable table, String[] args,
-      int pid, InputStream in, PrintStream out, PrintStream err) {
+      int pid, Command command, PrintStream out, PrintStream err) {
     this.args = args;
     this.out = out;
     this.err = err;
-    this.in = in;
     this.pid = pid;
     mapTable = table;
+    this.command = command;
+  }
+  
+  Command getCommand( ) {
+    return command;
   }
   
   public int getPID() {
     return pid;
   }
-  
+
   /**
    * exit needs to be called as soon as the command is completed (or stopped).
    * @param exitCode - the exit code of the command
@@ -50,7 +53,7 @@ public class CommandContext {
     return mapTable;
   }
   
-  public String getCommand() {
+  public String getCommandName() {
     return args[0];
   }
   

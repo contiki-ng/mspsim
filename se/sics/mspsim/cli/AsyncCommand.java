@@ -45,6 +45,6 @@ package se.sics.mspsim.cli;
  * @author joakim
  *
  */
-public interface AsyncCommand extends Command {
+public interface AsyncCommand {
   public void stopCommand(CommandContext context);
 }

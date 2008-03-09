@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Map;
 
@@ -41,7 +42,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
             Command command = (Command) entry.getValue();
             CommandContext cc = new CommandContext(mapTable, new String[] {
                 name
-            }, 0, context.in, context.out, context.err);
+            }, 0, null, context.out, context.err);
             String prefix = ' ' + name + ' ' + command.getArgumentHelp(cc);
             String helpText = command.getCommandHelp(cc);
             int n;
@@ -65,7 +66,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         if (command != null) {
           CommandContext cc = new CommandContext(mapTable, new String[] {
               cmd
-          }, 0, context.in, context.out, context.err);
+          }, 0, null, context.out, context.err);
           context.out.println(cmd + ' ' + command.getArgumentHelp(cc));
           context.out.println("  " + command.getCommandHelp(cc));
           return 0;
@@ -127,15 +128,13 @@ public class CommandHandler implements ActiveComponent, Runnable {
         String line = readLine(inReader);//.readLine();
         if (line != null && line.length() > 0) {
           String[][] parts = CommandParser.parseLine(line);
-          if(parts.length > 0) {
-            checkCommands(parts);
+          if(parts.length > 0 && checkCommands(parts) == 0) {
             // TODO add support for pipes
-            String[] args = parts[0];
-            Command cmd = commands.get(args[0]);
-            if (cmd == null) {
-              out.println("Error: Unknown command " + args[0]);
-            } else {              
-              CommandContext cc = new CommandContext(mapTable, args, 0, in, out, err);
+            ArrayList<CommandContext> commandList = new ArrayList<CommandContext>();
+            for (int i = 0; i < parts.length; i++) {
+              String[] args = parts[i];
+              Command cmd = getCommand(args[0]);
+              CommandContext cc = new CommandContext(mapTable, args, 0, cmd, out, err);
               try {
                 cmd.executeCommand(cc);
               } catch (Exception e) {
@@ -153,10 +152,25 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
   }
 
+  // This will return an instance that can be configured -
+  // which is basically not OK... TODO - fix this!!!
+  private Command getCommand(String cmd)  {
+    try {
+      return (Command) commands.get(cmd).clone();
+    } catch (CloneNotSupportedException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+  
   private int checkCommands(String[][] cmds) {
     for (int i = 0; i < cmds.length; i++) {
       Command command = commands.get(cmds[i][0]);
-      if (i > 0 && command != null && !(command instanceof LineListener)) {
+      if (command == null) {
+        System.out.println("CLI: Command not found: " + cmds[i]);
+        return -1;
+      }
+      if (i > 0 && !(command instanceof LineListener)) {
         System.out.println("CLI: Error " + cmds[i][0] + " does not take input");
         return -1;
       }

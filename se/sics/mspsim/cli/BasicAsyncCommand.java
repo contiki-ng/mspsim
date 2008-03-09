@@ -44,8 +44,7 @@ package se.sics.mspsim.cli;
  * @author joakim
  *
  */
-public abstract class BasicAsyncCommand extends BasicCommand implements
-    AsyncCommand {
+public abstract class BasicAsyncCommand extends BasicCommand implements AsyncCommand {
 
   public BasicAsyncCommand(String cmdHelp, String argHelp) {
     super(cmdHelp, argHelp);

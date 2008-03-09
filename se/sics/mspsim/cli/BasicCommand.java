@@ -42,7 +42,7 @@
 package se.sics.mspsim.cli;
 
 
-public abstract class BasicCommand implements Command {
+public abstract class BasicCommand extends Command {
 
   private String argumentHelp;
   private String commandHelp;
@@ -59,5 +59,4 @@ public abstract class BasicCommand implements Command {
   public String getCommandHelp(CommandContext context) {
     return commandHelp;
   }
-
 }
