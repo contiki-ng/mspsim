@@ -52,7 +52,7 @@ public class ExecCommand extends BasicLineCommand {
   private PrintStream output;
 
   public ExecCommand() {
-    super("exec", "<command> [args...]");
+    super("executes the specified command", "<cmd> [args...]");
   }
 
   public int executeCommand(CommandContext context) {
