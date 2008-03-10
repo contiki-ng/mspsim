@@ -43,7 +43,7 @@ package se.sics.mspsim.core;
 
 public interface MSP430Constants {
 
-  public static final String VERSION = "0.85 jag ha";
+  public static final String VERSION = "0.85";
   
   public static final int CLK_ACLK = 1;
   public static final int CLK_SMCLK = 2;
@@ -86,6 +86,10 @@ public interface MSP430Constants {
   public static final String[] TWO_OPS = {
     "-","-","-","-","MOV", "ADD", "ADDC", "SUBC", "SUB",
     "CMP", "DADD", "BIT", "BIC", "BIS", "XOR", "AND"
+  };
+
+  public static final String[] REGISTER_NAMES = {
+    "PC", "SP", "SR", "CG1", "CG2"  
   };
 
   public static final int PC = 0;
