@@ -120,11 +120,11 @@ public class DebugCommands implements CommandBundle {
           return 0;
         }
 
-        public String getArgumentHelp(CommandContext context) {
+        public String getArgumentHelp(String commandName) {
           return "<address or symbol>";
         }
 
-        public String getCommandHelp(CommandContext context) {
+        public String getCommandHelp(String commandName) {
           return "clears a breakpoint or watch from a given address or symbol";
         }
       });

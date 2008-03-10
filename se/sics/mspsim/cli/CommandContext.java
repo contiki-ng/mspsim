@@ -1,29 +1,30 @@
 package se.sics.mspsim.cli;
-
 import java.io.PrintStream;
-
 import se.sics.mspsim.util.MapTable;
-
 
 public class CommandContext {
 
   private String[] args;
+  private String commandLine;
   private MapTable mapTable;
-  private int pid;
+  private int pid = -1;
   private Command command;
   
   public PrintStream out;
   public PrintStream err;
   
-  public CommandContext(MapTable table, String[] args, int pid, Command command, PrintStream out, PrintStream err) {
-    this(table, args, pid, command);
+  public CommandContext(MapTable table, String commandLine, String[] args,
+			int pid, Command command, PrintStream out, PrintStream err) {
+    this(table, commandLine, args, pid, command);
     setOutput(out, err);
   }
   
-  public CommandContext(MapTable table, String[] args, int pid, Command command) {
+  public CommandContext(MapTable table, String commandLine, String[] args,
+			int pid, Command command) {
+    this.commandLine = commandLine;
     this.args = args;
     this.pid = pid;
-    mapTable = table;
+    this.mapTable = table;
     this.command = command;
   }
   
@@ -36,6 +37,10 @@ public class CommandContext {
     return command;
   }
   
+  String getCommandLine() {
+    return commandLine;
+  }
+
   public int getPID() {
     return pid;
   }
@@ -46,22 +51,23 @@ public class CommandContext {
    */
   public void exit(int exitCode) {
     // TODO: Clean up can be done now!
+    pid = -1;
   }
-  
+
+  public MapTable getMapTable() {
+    return mapTable;
+  }
+
+  public String getCommandName() {
+    return args[0];
+  }
+
   public int getArgumentCount() {
     return args.length - 1;
   }
   
   public String getArgument(int index) {
     return args[index + 1];
-  }
-  
-  public MapTable getMapTable() {
-    return mapTable;
-  }
-  
-  public String getCommandName() {
-    return args[0];
   }
   
   public int getArgumentAsAddress(int index) {
@@ -98,8 +104,8 @@ public class CommandContext {
     return 0;
   }
 
-  void setPID(int i) {
-    pid = i;
+  public String toString() {
+    return (pid >= 0 ? ("" + pid) : "?") + '\t' + (commandLine == null ? getCommandName() : commandLine);
   }
-  
+
 }

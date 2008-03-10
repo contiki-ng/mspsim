@@ -2,7 +2,6 @@ package se.sics.mspsim.cli;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
@@ -22,16 +21,15 @@ public class CommandHandler implements ActiveComponent, Runnable {
 
   private ArrayList<CommandContext[]> currentAsyncCommands = new ArrayList<CommandContext[]>();
   private BufferedReader inReader;
-  private InputStream in;
   private PrintStream out;
   private PrintStream err;
   private MapTable mapTable;
   private ComponentRegistry registry;
-  private int pid = 1;
+  private int pidCounter = 0;
   
   public CommandHandler() {
     exit = false;
-    inReader = new BufferedReader(new InputStreamReader(in = System.in));
+    inReader = new BufferedReader(new InputStreamReader(System.in));
     out = System.out;
     err = System.err;
 
@@ -79,10 +77,15 @@ public class CommandHandler implements ActiveComponent, Runnable {
           String[][] parts = CommandParser.parseLine(line);
           if(parts.length > 0 && checkCommands(parts) == 0) {
             CommandContext[] commands = new CommandContext[parts.length];
+	    boolean error = false;
+	    int pid = -1;
             for (int i = 0; i < parts.length; i++) {
               String[] args = parts[i];
               Command cmd = getCommand(args[0]);
-              commands[i] = new CommandContext(mapTable, args, 0, cmd);
+	      if (i == 0 && cmd instanceof AsyncCommand) {
+		pid = ++pidCounter;
+	      }
+              commands[i] = new CommandContext(mapTable, line, args, pid, cmd);
               if (i > 0) {
                 PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
                 commands[i - 1].setOutput(po, err);
@@ -94,22 +97,30 @@ public class CommandHandler implements ActiveComponent, Runnable {
               // TODO: Check if first command is also LineListener and set it up for input!!
             }
             // Execute when all is set-up in opposite order...
+	    // TODO if error the command chain should be stopped
             for (int i = parts.length - 1; i >= 0; i--) {
               try {
-                commands[i].getCommand().executeCommand(commands[i]);
+                int code = commands[i].getCommand().executeCommand(commands[i]);
+		if (code != 0) {
+		  err.println("command '" + commands[i].getCommandName()
+			      + "' failed with error code " + code);
+		  error = true;
+		}
               } catch (Exception e) {
                 err.println("Error: Command failed: " + e.getMessage());
                 e.printStackTrace(err);
+		error = true;
               }
             }
-            if (commands[0].getCommand() instanceof AsyncCommand) {
-              commands[0].setPID(pid++);
+	    if (error) {
+	      // TODO close any started commands 
+	    } else if (pid >= 0) {
               currentAsyncCommands.add(commands);
             }
           }
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        e.printStackTrace(err);
         err.println("Command line tool exiting...");
         exit = true;
       }
@@ -119,10 +130,13 @@ public class CommandHandler implements ActiveComponent, Runnable {
   // This will return an instance that can be configured -
   // which is basically not OK... TODO - fix this!!!
   private Command getCommand(String cmd)  {
-    try {
-      return (Command) commands.get(cmd).clone();
-    } catch (CloneNotSupportedException e) {
-      e.printStackTrace();
+    Command command = commands.get(cmd);
+    if (command != null) {
+      try {
+	return (Command) command.clone();
+      } catch (CloneNotSupportedException e) {
+	e.printStackTrace(err);
+      }
     }
     return null;
   }
@@ -131,12 +145,28 @@ public class CommandHandler implements ActiveComponent, Runnable {
     for (int i = 0; i < cmds.length; i++) {
       Command command = commands.get(cmds[i][0]);
       if (command == null) {
-        System.out.println("CLI: Command not found: " + cmds[i][0]);
+        err.println("CLI: Command not found: " + cmds[i][0]);
         return -1;
       }
       if (i > 0 && !(command instanceof LineListener)) {
-        System.out.println("CLI: Error " + cmds[i][0] + " does not take input");
+        err.println("CLI: Error " + cmds[i][0] + " does not take input");
         return -1;
+      }
+      // TODO replace with command name
+      String argHelp = command.getArgumentHelp(null);
+      if (argHelp != null) {
+	int requiredCount = 0;
+	for (int j = 0, m = argHelp.length(); j < m; j++) {
+	  if (argHelp.charAt(j) == '<') {
+	    requiredCount++;
+	  }
+	}
+	if (requiredCount > cmds[i].length - 1) {
+	  // Too few arguments
+	  err.println("Too few arguments for " + cmds[i][0]);
+	  err.println("Usage: " + cmds[i][0] + ' ' + argHelp);
+	  return -1;
+	}
       }
     }
     return 0;
@@ -163,18 +193,15 @@ public class CommandHandler implements ActiveComponent, Runnable {
   }
 
   private void registerCommands() {
-    registerCommand("help", new Command() {
+    registerCommand("help", new BasicCommand("shows help for the specified command or command list", "[command]") {
       public int executeCommand(CommandContext context) {
         if (context.getArgumentCount() == 0) {
           context.out.println("Available commands:");
-          for(Map.Entry entry: commands.entrySet()) {
-            String name = (String) entry.getKey();
-            Command command = (Command) entry.getValue();
-            CommandContext cc = new CommandContext(mapTable, new String[] {
-                name
-            }, 0, null, context.out, context.err);
-            String prefix = ' ' + name + ' ' + command.getArgumentHelp(cc);
-            String helpText = command.getCommandHelp(cc);
+          for(Map.Entry<String,Command> entry: commands.entrySet()) {
+            String name = entry.getKey();
+            Command command = entry.getValue();
+            String prefix = ' ' + name + ' ' + command.getArgumentHelp(name);
+            String helpText = command.getCommandHelp(name);
             int n;
             if (helpText != null && (n = helpText.indexOf('\n')) > 0) {
               helpText = helpText.substring(0, n);
@@ -194,22 +221,13 @@ public class CommandHandler implements ActiveComponent, Runnable {
         String cmd = context.getArgument(0);
         Command command = commands.get(cmd);
         if (command != null) {
-          CommandContext cc = new CommandContext(mapTable, new String[] {
-              cmd
-          }, 0, null, context.out, context.err);
-          context.out.println(cmd + ' ' + command.getArgumentHelp(cc));
-          context.out.println("  " + command.getCommandHelp(cc));
+          context.out.println(cmd + ' ' + command.getArgumentHelp(cmd));
+          context.out.println("  " + command.getCommandHelp(cmd));
           return 0;
         }
         context.err.println("Error: unknown command '" + cmd + '\'');
         return 1;
       }
-      public String getArgumentHelp(CommandContext context) {
-        return "<command>";
-      }
-      public String getCommandHelp(CommandContext context) {
-        return "shows help for the specified command";
-      }  
     });
     registerCommand("workaround", new BasicCommand("", "") {
       public int executeCommand(CommandContext context) {
@@ -222,19 +240,21 @@ public class CommandHandler implements ActiveComponent, Runnable {
       public int executeCommand(CommandContext context) {
         for (int i = 0; i < currentAsyncCommands.size(); i++) {
           CommandContext cmd = currentAsyncCommands.get(i)[0];
-          System.out.println("  " + cmd.getPID() + " " + cmd.getCommandName());
+          context.out.println("  " + cmd);
         }
         return 0;
       }
     });
     
-    registerCommand("kill", new BasicCommand("kill a current executing command", "") {
+    registerCommand("kill", new BasicCommand("kill a currently executing command", "<process>") {
       public int executeCommand(CommandContext context) {
         int pid = context.getArgumentAsInt(0);
         for (int i = 0; i < currentAsyncCommands.size(); i++) {
-          CommandContext cmd = currentAsyncCommands.get(i)[0];
+	  CommandContext[] contexts = currentAsyncCommands.get(i);
+          CommandContext cmd = contexts[0];
           if (pid == cmd.getPID()) {
-            System.out.println("Should kill: " + cmd.getCommandName());
+            context.out.println("Should kill: " + cmd.getCommandName());
+	    break;
           }
         }
         return 0;
