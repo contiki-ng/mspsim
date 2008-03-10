@@ -41,6 +41,7 @@
 package se.sics.mspsim.cli;
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
@@ -110,6 +111,47 @@ public class DebugCommands implements CommandBundle {
         
         public void stopCommand(CommandContext context) {
           cpu.clearBreakPoint(address);
+          context.exit(0);
+        }
+      });
+
+      ch.registerCommand("watchreg",
+          new BasicAsyncCommand("adds a write watch to a given register", "<register> [int]") {
+        int mode = 0;
+        int register = 0;
+        public int executeCommand(final CommandContext context) {
+          register = context.getArgumentAsRegister(0);
+          if (register < 0) {
+            return -1;
+          }
+          if (context.getArgumentCount() > 1) {
+            String modeStr = context.getArgument(1);
+            if ("int".equals(modeStr)) {
+              mode = 1;
+            } else {
+              context.err.println("illegal argument: " + modeStr);
+              return -1;
+            }
+          }
+          cpu.setRegisterWriteMonitor(register, new CPUMonitor() {
+            public void cpuAction(int type, int adr, int data) {
+              if (mode == 0) {
+                int pc = cpu.readRegister(0);
+                String adrStr = getRegisterName(register);
+                String pcStr = getSymOrAddrELF(elf, pc);
+                context.out.println("*** Write from " + pcStr +
+                    ": " + adrStr + " = " + data);
+              } else {
+                context.out.println(data);
+              }
+            }
+          });
+          context.out.println("Watch set for register " + getRegisterName(register));
+          return 0;
+        }
+        
+        public void stopCommand(CommandContext context) {
+          cpu.clearBreakPoint(register);
         }
       });
 
@@ -137,7 +179,7 @@ public class DebugCommands implements CommandBundle {
           MapEntry[] entries = context.getMapTable().getEntries(regExp);
           for (int i = 0; i < entries.length; i++) {
             MapEntry mapEntry = entries[i];
-            context.out.println(" " + mapEntry.getName() + " at " +
+            context.out.println(" " + mapEntry.getName() + " at $" +
                 Utils.hex16(mapEntry.getAddress()));
           }
           return 0;
@@ -148,7 +190,7 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("stop", new BasicCommand("stops mspsim", "") {
           public int executeCommand(CommandContext context) {
             node.stop();
-            context.out.println("CPU stopped at: " + Utils.hex16(cpu.readRegister(0)));
+            context.out.println("CPU stopped at: $" + Utils.hex16(cpu.readRegister(0)));
             return 0;
           }
         });
@@ -180,15 +222,18 @@ public class DebugCommands implements CommandBundle {
         });
         ch.registerCommand("printreg", new BasicCommand("prints value of an register", "<register>") {
           public int executeCommand(CommandContext context) {
-            int adr = context.getArgumentAsInt(0);
-              context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.readRegister(adr)));
-            return 0;
+            int register = context.getArgumentAsRegister(0);
+            if (register >= 0) {
+              context.out.println(context.getArgument(0) + " = $" + Utils.hex16(cpu.readRegister(register)));
+              return 0;
+            }
+            return -1;
           }
         });
         ch.registerCommand("time", new BasicCommand("prints the elapse time and cycles", "") {
           public int executeCommand(CommandContext context) {
             long time = ((long)(cpu.getTimeMillis()));
-              context.out.println("Emulated time elapsed:" + time + "(ms)  cycles: " + cpu.cycles);
+            context.out.println("Emulated time elapsed: " + time + "(ms)  cycles: " + cpu.cycles);
             return 0;
           }
         });
@@ -215,4 +260,11 @@ public class DebugCommands implements CommandBundle {
     }
   }
 
+  private static String getRegisterName(int register) {
+    if (register >= 0 && register < MSP430Constants.REGISTER_NAMES.length) {
+      return MSP430Constants.REGISTER_NAMES[register];
+    } else {
+      return "R" + register;
+    }
+  }
 }

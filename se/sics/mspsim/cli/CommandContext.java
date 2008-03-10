@@ -1,5 +1,7 @@
 package se.sics.mspsim.cli;
 import java.io.PrintStream;
+
+import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.util.MapTable;
 
 public class CommandContext {
@@ -92,14 +94,35 @@ public class CommandContext {
         return mapTable.getFunctionAddress(adr);
       }
     }
-    return 0;
+    return -1;
   }
 
-  public int getArgumentAsInt(int i) {
+  public int getArgumentAsRegister(int index) {
+    String symbol = getArgument(index);
+    for (int i = 0, n = MSP430Constants.REGISTER_NAMES.length; i < n; i++) {
+      if (MSP430Constants.REGISTER_NAMES[i].equals(symbol)) {
+        return i;
+      }
+    }
+    String reg = symbol.startsWith("R") ? symbol.substring(1) : symbol;
     try {
-      return Integer.parseInt(getArgument(i));
+      int register = Integer.parseInt(reg);
+      if (register >= 0 && register <= 15) {
+        return register;
+      } else {
+        err.println("illegal register: " + symbol);
+      }
     } catch (Exception e) {
-      err.println("Illegal number format: " + getArgument(i));
+      err.println("illegal register: " + symbol);
+    }
+    return -1;
+  }
+
+  public int getArgumentAsInt(int index) {
+    try {
+      return Integer.parseInt(getArgument(index));
+    } catch (Exception e) {
+      err.println("Illegal number format: " + getArgument(index));
     }
     return 0;
   }
