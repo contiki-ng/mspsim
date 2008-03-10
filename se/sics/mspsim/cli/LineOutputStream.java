@@ -55,6 +55,7 @@ public class LineOutputStream extends OutputStream {
   public LineOutputStream(LineListener listener) {
     this.listener = listener;
   }
+
   /* Buffers and calls line listener when a line is complete
    * @see java.io.OutputStream#write(int)
    */
@@ -63,7 +64,7 @@ public class LineOutputStream extends OutputStream {
     if (c == '\n') {
       listener.lineRead(line.toString());
       line.setLength(0);
-    } else {
+    } else if (c != '\r'){
       line.append((char) c);
     }
   }
