@@ -127,6 +127,34 @@ public class CommandContext {
     return 0;
   }
 
+  public long getArgumentAsLong(int index) {
+    try {
+      return Long.parseLong(getArgument(index));
+    } catch (Exception e) {
+      err.println("Illegal number format: " + getArgument(index));
+    }
+    return 0L;
+  }
+
+  public float getArgumentAsFloat(int index) {
+    try {
+      return Float.parseFloat(getArgument(index));
+    } catch (Exception e) {
+      err.println("Illegal number format: " + getArgument(index));
+    }
+    return 0f;
+  }
+
+  public double getArgumentAsDouble(int index) {
+    String arg = getArgument(index);
+    try {
+      return Double.parseDouble(arg);
+    } catch (Exception e) {
+      err.println("Illegal number format: " + getArgument(index));
+    }
+    return 0.0;
+  }
+
   public String toString() {
     return (pid >= 0 ? ("" + pid) : "?") + '\t' + (commandLine == null ? getCommandName() : commandLine);
   }
