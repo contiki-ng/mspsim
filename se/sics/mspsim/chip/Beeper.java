@@ -145,8 +145,4 @@ public class Beeper extends IOUnit {
   		}
   	}
   }
-
-  public int getModeMax() {
-    return 0;
-  }
 }

@@ -163,8 +163,4 @@ public class BasicClockModule extends IOUnit {
 
   public void interruptServiced(int vector) {
   }
-
-  public int getModeMax() {
-    return 0;
-  }
 }

@@ -155,8 +155,4 @@ public class SFR extends IOUnit {
   public String getName() {
     return "SpecialFunctionRegister, SFR";
   }
-
-  public int getModeMax() {
-    return 0;
-  }
 } // SFR

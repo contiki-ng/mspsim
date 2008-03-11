@@ -346,9 +346,4 @@ public class USART extends IOUnit {
       cpu.flagInterrupt(receiveInterrupt, this, true);
     }
   }
-
-  public int getModeMax() {
-    return 0;
-  }
-
 }

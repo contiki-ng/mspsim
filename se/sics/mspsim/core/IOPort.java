@@ -202,10 +202,4 @@ public class IOPort extends IOUnit {
     interruptFlag = 0;
     cpu.flagInterrupt(interrupt, this, interruptFlag > 0);
   }
-
-  // TODO: Should override this
-  public int getModeMax() {
-    return 0;
-  }
-
 }

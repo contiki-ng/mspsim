@@ -65,15 +65,12 @@ public class Multiplier extends IOUnit {
   private int macs;
   private int sumext;
   
-  private int lastWriteOP;
-  private int currentSum;
   private int op1;
-  
-  private boolean signed = false;
   
   MSP430Core core;
 
-  private boolean accumulating;
+  private boolean signed = false;  
+  private boolean accumulating = false;
   /**
    * Creates a new <code>Multiplier</code> instance.
    *
@@ -127,28 +124,24 @@ public class Multiplier extends IOUnit {
     case MPY:
       op1 = mpy = data;
       if (DEBUG) System.out.println(getName() + " Write to MPY: " + data);
-      lastWriteOP = address;
       signed = false;
       accumulating = false;
       break;
     case MPYS:
       op1 = mpys = data;
       if (DEBUG) System.out.println(getName() + " Write to MPYS: " + data);
-      lastWriteOP = address;
       signed = true;
       accumulating = false;
       break;
     case MAC:
       op1 = mac = data;
       if (DEBUG) System.out.println(getName() + " Write to MAC: " + data);
-      lastWriteOP = address;
       signed = false;
       accumulating = true;
       break;
     case MACS:
       op1 = macs = data;
       if (DEBUG) System.out.println(getName() + " Write to MACS: " + data);
-      lastWriteOP = address;
       signed = true;
       accumulating = true;
       break;
@@ -199,10 +192,4 @@ public class Multiplier extends IOUnit {
 
   public void interruptServiced(int vector) {
   }
-
-  public int getModeMax() {
-    return 0;
-  }
-
-
 }

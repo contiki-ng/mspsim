@@ -1,7 +1,9 @@
 0.85
 Changes: 
 - fixed multiplier to handle the different modes better.
-- 
+- refactored so that IOUnit is no longer a Chip
+- added statistics commands to the CLI
+- implemented better support for statistics (operating mode)
 
 0.84
 Changes:

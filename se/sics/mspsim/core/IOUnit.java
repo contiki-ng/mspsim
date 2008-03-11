@@ -41,10 +41,7 @@
 
 package se.sics.mspsim.core;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-
-public abstract class IOUnit extends Chip {
+public abstract class IOUnit {
 
   int[] memory;
   int offset;
@@ -98,4 +95,6 @@ public abstract class IOUnit extends Chip {
     // Second byte => hi byte
     return (data >> 8) & 0xff;
   }
+  
+  public abstract String getName(); 
 }

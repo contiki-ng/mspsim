@@ -122,7 +122,7 @@ public class ADC12 extends IOUnit {
   }
 
   public String getName() {
-    return "AD12";
+    return "ADC12";
   }
 
   public void interruptServiced(int vector) {
@@ -130,9 +130,5 @@ public class ADC12 extends IOUnit {
 
   public long ioTick(long cycles) {
     return cycles + 1000000;
-  }
-
-  public int getModeMax() {
-    return 0;
   }
 }
