@@ -71,7 +71,6 @@ public class SkyGui extends JComponent implements KeyListener {
   public static final Color RED_C = new Color(0xffff8000);
 
   private SerialMon serial;
-  private SerialMon radio;
 
   private ImageIcon skyImage;
   private JFrame window;

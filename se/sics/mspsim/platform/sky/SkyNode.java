@@ -40,33 +40,21 @@
  */
 
 package se.sics.mspsim.platform.sky;
-import java.io.File;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.chip.PacketListener;
-import se.sics.mspsim.cli.CommandHandler;
-import se.sics.mspsim.cli.DebugCommands;
-import se.sics.mspsim.core.CPUMonitor;
-import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
-import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
-import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
-import se.sics.mspsim.ui.ControlUI;
-import se.sics.mspsim.util.ComponentRegistry;
-import se.sics.mspsim.util.DataSource;
 import se.sics.mspsim.util.ELF;
-import se.sics.mspsim.util.IHexReader;
-import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.OperatingModeStatistics;
 
 /**
@@ -222,11 +210,10 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
-        System.out.println("Found port 4!!!");
         ((IOPort) port4).setPortListener(this);
       }
     }
-    
+
     stats.addMonitor(this);
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
@@ -261,7 +248,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     // A HACK for some "graphs"!!!
     DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
     DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-    dataChart.addDataSource(dss, "LEDS", stats.getMultiDataSource("Tmote Sky"));
+    dataChart.addDataSource(dss, "LEDS", stats.getDataSource("Tmote Sky", 0, OperatingModeStatistics.OP_INVERT));
     dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
     dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
     dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));

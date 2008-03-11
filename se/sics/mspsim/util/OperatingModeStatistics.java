@@ -40,8 +40,8 @@
  */
 package se.sics.mspsim.util;
 
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
@@ -51,60 +51,70 @@ import se.sics.mspsim.core.OperatingModeListener;
  * @author Joakim
  *
  */
-public class OperatingModeStatistics implements OperatingModeListener {
-  
+public class OperatingModeStatistics {
+
+  public static final int OP_NORMAL = 0;
+  public static final int OP_INVERT = 1;
+
   private MSP430Core cpu;
   private HashMap<String, StatEntry> statistics = new HashMap<String, StatEntry>();
 
   public OperatingModeStatistics(MSP430Core cpu) {
     this.cpu = cpu;
   }
-  
+
+  public Chip[] getChips() {
+    Chip[] chips = new Chip[statistics.size()];
+    int index = 0;
+    for (StatEntry entry : statistics.values()) {
+      chips[index++] = entry.chip;
+    }
+    return chips;
+  }
+
   public void addMonitor(Chip chip) {
-    chip.addOperatingModeListener(this);
-    StatEntry entry = new StatEntry(chip.getName(), chip.getModeMax());
+    StatEntry entry = new StatEntry(chip);
     statistics.put(chip.getName(), entry);    
   }
   
-  public void modeChanged(Chip source, int mode) {
-    StatEntry entry = statistics.get(source.getName());
-    if (entry != null)
-      entry.updateStat(mode, cpu.cycles);
-  }
-
   public void printStat() {    
-    for (Iterator<StatEntry> iterator = statistics.values().iterator(); iterator.hasNext();) {
-      StatEntry entry = iterator.next();
+    for (StatEntry entry : statistics.values()) {
       entry.printStat();
     }
   }
   
   public DataSource getDataSource(String chip, int mode) {
+    return getDataSource(chip, mode, OP_NORMAL);
+  }
+
+  public DataSource getDataSource(String chip, int mode, int operation) {
     StatEntry se = statistics.get(chip);
     if (se != null) {
-      return new StatDataSource(se, mode);
+      return new StatDataSource(se, mode, operation);
     }
     return null;
   }
 
-  public DataSource getMultiDataSource(String chip) {
+  public MultiDataSource getMultiDataSource(String chip) {
     StatEntry se = statistics.get(chip);
     if (se != null) {
       return new StatMultiDataSource(se);
     }
     return null;  
   }
-  
+
   private class StatDataSource implements DataSource {
 
     private StatEntry entry;
     private int mode;
     private long lastCycles;
     private long lastValue;
+    private final int operation;
     
-    public StatDataSource(StatEntry entry, int mode) {
+    public StatDataSource(StatEntry entry, int mode, int operation) {
       this.entry = entry;
       this.mode = mode;
+      this.operation = operation;
       lastCycles = cpu.cycles;
     }
     
@@ -116,52 +126,59 @@ public class OperatingModeStatistics implements OperatingModeListener {
       long valDiff = val - lastValue;
       lastValue = val;
       lastCycles = cpu.cycles;
+      if (operation == OP_INVERT) {
+        return (int) (100 - 100 * valDiff / diff); 
+      }
       return (int) (100 * valDiff / diff);
     }
   }
 
-  private class StatMultiDataSource implements DataSource{
+  private class StatMultiDataSource implements MultiDataSource {
 
     private StatEntry entry;
-    private long lastCycles;
     private long[] lastValue;
+    private long[] lastCycles;
     
     public StatMultiDataSource(StatEntry entry) {
       this.entry = entry;
-      lastCycles = cpu.cycles;
-      lastValue = new long[entry.elapsed.length];
+      this.lastValue = new long[entry.elapsed.length];
+      this.lastCycles = new long[entry.elapsed.length];
+      Arrays.fill(this.lastCycles, cpu.cycles);
     }
     
+    @Override
+    public int getModeMax() {
+      return entry.chip.getModeMax();
+    }
+
     // returns percentage since last call...
-    public int getValue() {
-      long diff = cpu.cycles - lastCycles;
+    public int getValue(int mode) {
+      long diff = cpu.cycles - lastCycles[mode];
       if (diff == 0) return 0;
 
-      long valDiff = 0;
-      // Assume that 0 means "off"
-      for (int i = 1; i < lastValue.length; i++) {
-        // Just sum them - later a multiplicator array might be useful...
-        long val = entry.getValue(i, cpu.cycles);
-        valDiff += (val - lastValue[i]);
-        lastValue[i] = val;
-      }
-      lastCycles = cpu.cycles;
+      long val = entry.getValue(mode, cpu.cycles);
+      long valDiff = (val - lastValue[mode]);
+      lastValue[mode] = val;
+      lastCycles[mode] = cpu.cycles;
       return (int) (100 * valDiff / diff);
     }
+
   }
-  
-  
-  private class StatEntry {
-    String key;
+
+
+  private class StatEntry implements OperatingModeListener {
+    final Chip chip;
     long startTime;
     int mode = -1;
     long[] elapsed;
     
-    StatEntry(String key, int max) {
-      this.key = key;
+    StatEntry(Chip chip) {
+      this.chip = chip;
+      int max = chip.getModeMax();
       elapsed = new long[max + 1];
+      chip.addOperatingModeListener(this);
     }
-    
+
     long getValue(int mode, long cycles) {
       if (mode == this.mode) {
         return elapsed[mode] + (cycles - startTime);
@@ -169,16 +186,16 @@ public class OperatingModeStatistics implements OperatingModeListener {
       return elapsed[mode];
     }
     
-    void updateStat(int mode, long cycles) {
+    public void modeChanged(Chip source, int mode) {
       if (this.mode != -1) {
-        elapsed[this.mode] += cycles - startTime;
+        elapsed[this.mode] += cpu.cycles - startTime;
       }
       this.mode = mode;
-      startTime = cycles;
+      this.startTime = cpu.cycles;
     }
     
     void printStat() {
-      System.out.println("Stat for: " + key);
+      System.out.println("Stat for: " + chip.getName());
       for (int i = 0; i < elapsed.length; i++) {
         System.out.println("" + (i + 1) + " = " + elapsed[i]);
       }

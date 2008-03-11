@@ -38,7 +38,6 @@
 
 package se.sics.mspsim.platform;
 
-import java.io.File;
 import java.io.IOException;
 
 import se.sics.mspsim.cli.CommandHandler;
@@ -47,13 +46,13 @@ import se.sics.mspsim.cli.MiscCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
-import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.OperatingModeStatistics;
+import se.sics.mspsim.util.StatCommands;
 
 public abstract class GenericNode extends Chip implements Runnable {
 
@@ -72,10 +71,13 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
 
     CommandHandler ch = new CommandHandler();
+    stats = new OperatingModeStatistics(cpu);
+
     registry.registerComponent("cpu", cpu);
     registry.registerComponent("commandHandler", ch);
     registry.registerComponent("debugcmd", new DebugCommands());
-    registry.registerComponent("debugcmd", new MiscCommands());
+    registry.registerComponent("misccmd", new MiscCommands());
+    registry.registerComponent("statcmd", new StatCommands(cpu, stats));
     registry.registerComponent("node", this);
     
     // Monitor execution
@@ -98,7 +100,6 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
       
     cpu.reset();
-    stats = new OperatingModeStatistics(cpu);
     setupNode();
     
     // Setup control and other UI components
