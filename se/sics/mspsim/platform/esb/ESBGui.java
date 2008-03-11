@@ -61,6 +61,8 @@ public class ESBGui extends JComponent implements KeyListener,
 						  MouseMotionListener,
 						  MouseListener {
 
+  private static final long serialVersionUID = -139331418649524704L;
+
   public static final int GREEN_X = 3;
   public static final int YELLOW_X = 10;
   public static final int RED_X = 17;
@@ -75,7 +77,6 @@ public class ESBGui extends JComponent implements KeyListener,
   public static final Color GREEN_C = new Color(0xff40ff40);
 
   private SerialMon serial;
-  private SerialMon radio;
   Beeper beeper;
 
   private ImageIcon esbImage;
@@ -115,12 +116,6 @@ public class ESBGui extends JComponent implements KeyListener,
     if (usart instanceof USART) {
       serial = new SerialMon((USART)usart, "RS232 Port Output");
       ((USART) usart).setUSARTListener(serial);
-    }
-
-    IOUnit usart0 = cpu.getIOUnit("USART 0");
-    if (usart0 instanceof USART) {
-      radio = new SerialMon((USART)usart0, "TR1001 Output");
-      ((USART) usart0).setUSARTListener(radio);
     }
 
     beeper = new Beeper();

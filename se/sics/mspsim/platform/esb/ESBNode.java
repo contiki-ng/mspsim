@@ -42,15 +42,16 @@
 package se.sics.mspsim.platform.esb;
 import java.io.IOException;
 
-import se.sics.mspsim.chip.CC2420;
-import se.sics.mspsim.core.*;
-import se.sics.mspsim.platform.GenericNode;
-import se.sics.mspsim.platform.sky.SkyNode;
-import se.sics.mspsim.ui.ControlUI;
-import se.sics.mspsim.util.*;
-import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
+import se.sics.mspsim.chip.TR1001;
+import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.PortListener;
+import se.sics.mspsim.core.USART;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
+import se.sics.mspsim.platform.GenericNode;
+
 public class ESBNode extends GenericNode implements PortListener {
 
   public static final boolean DEBUG = false;
@@ -62,6 +63,7 @@ public class ESBNode extends GenericNode implements PortListener {
 
   private IOPort port1;
   private IOPort port2;
+  private IOPort port5;
 
   public static final int RED_LED = 0x01;
   public static final int GREEN_LED = 0x02;
@@ -72,7 +74,10 @@ public class ESBNode extends GenericNode implements PortListener {
   public boolean greenLed;
   public boolean yellowLed;
 
+  private TR1001 radio;
   public ESBGui gui;
+
+
   /**
    * Creates a new <code>ESBNode</code> instance.
    *
@@ -122,6 +127,15 @@ public class ESBNode extends GenericNode implements PortListener {
 	gui.repaint();
 	gui.beeper.beepOn((data & BEEPER) != 0);
       }
+
+    } else if (source == port5) {
+      if ((data & 0xc0) == 0xc0) {
+        radio.setMode(TR1001.MODE_RX_ON);
+      } else if ((data & 0xc0) == 0x40) {
+        radio.setMode(TR1001.MODE_TXRX_ON);
+      } else {
+        radio.setMode(TR1001.MODE_TXRX_OFF);
+      }
     }
   }
 
@@ -129,7 +143,6 @@ public class ESBNode extends GenericNode implements PortListener {
     IOUnit unit = cpu.getIOUnit("Port 2");
     if (unit instanceof IOPort) {
       port2 = (IOPort) unit;
-      System.out.println("Found port 2!!!");
       port2.setPortListener(this);
     }
 
@@ -137,19 +150,30 @@ public class ESBNode extends GenericNode implements PortListener {
     if (unit instanceof IOPort) {
       port1 = (IOPort) unit;
     }
-    
+
+    unit = cpu.getIOUnit("Port 5");
+    if (unit instanceof IOPort) {
+      port5 = (IOPort) unit;
+      port5.setPortListener(this);
+    }
+
+    IOUnit usart0 = cpu.getIOUnit("USART 0");
+    if (usart0 instanceof USART) {
+      radio = new TR1001((USART)usart0);
+      ((USART) usart0).setUSARTListener(radio);
+    }
+
     gui = new ESBGui(this);
     
     stats.addMonitor(this);
-//    stats.addMonitor(radio);
+    stats.addMonitor(radio);
     stats.addMonitor(cpu);
 
     // A HACK for some "graphs"!!!
     DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
     DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-//    dataChart.addDataSource(dss, "LEDS", stats.getMultiDataSource("Tmote Sky"));
-//    dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
-//    dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
+    dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
+    dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
     dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));  
   }
 
@@ -166,5 +190,5 @@ public class ESBNode extends GenericNode implements PortListener {
     node.setup(args);
     node.start();
   }
-  
+
 }
