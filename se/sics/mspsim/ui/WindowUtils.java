@@ -27,7 +27,7 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: WindowUtils.java,v 1.2 2007/10/21 20:50:26 nfi Exp $
+ * $Id$
  *
  * -----------------------------------------------------------------
  *
@@ -35,8 +35,8 @@
  *
  * Author  : Joakim Eriksson, Niclas Finne, Fredrik Österlind
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date: 2007/10/21 20:50:26 $
- *           $Revision: 1.2 $
+ * Updated : $Date$
+ *           $Revision$
  */
 
 package se.sics.mspsim.ui;

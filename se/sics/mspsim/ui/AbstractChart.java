@@ -27,7 +27,7 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: 1.4 2007/10/21 22:19:07 nfi Exp $
+ * $Id$
  *
  * -----------------------------------------------------------------
  *
@@ -35,8 +35,8 @@
  *
  * Authors : Adam Dunkels, Joakim Eriksson, Niclas Finne
  * Created : May 3 2007
- * Updated : $Date: 2007/10/21 22:19:07 $
- *           $Revision: 1.4 $
+ * Updated : $Date$
+ *           $Revision$
  */
 
 package se.sics.mspsim.ui;

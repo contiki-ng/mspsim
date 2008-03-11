@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: $
+ * $Id$
  *
  * -----------------------------------------------------------------
  *
@@ -34,8 +34,8 @@
  *
  * Authors : Adam Dunkels, Joakim Eriksson, Niclas Finne
  * Created : 6 dec 2007
- * Updated : $Date: 6 dec 2007 $
- *           $Revision: 1.0 $
+ * Updated : $Date$
+ *           $Revision$
  */
 
 package se.sics.mspsim.extutil.highlight;

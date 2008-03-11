@@ -35,8 +35,8 @@
  *
  * Author  : Joakim Eriksson
  * Created : Jan 14 2008
- * Updated : $Date: 2007/10/21 21:17:34 $
- *           $Revision: 1.3 $
+ * Updated : $Date$
+ *           $Revision$
  */
 
 package se.sics.mspsim.util;

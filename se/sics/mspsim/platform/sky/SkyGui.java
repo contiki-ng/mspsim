@@ -27,7 +27,7 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: SkyGui.java,v 1.6 2007/10/23 07:36:47 joakime Exp $
+ * $Id$
  *
  * -----------------------------------------------------------------
  *
@@ -35,8 +35,8 @@
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date: 2007/10/23 07:36:47 $
- *           $Revision: 1.6 $
+ * Updated : $Date$
+ *           $Revision$
  */
 
 package se.sics.mspsim.platform.sky;
