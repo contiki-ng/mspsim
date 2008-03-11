@@ -67,8 +67,13 @@ public class Multiplier extends IOUnit {
   
   private int lastWriteOP;
   private int currentSum;
+  private int op1;
+  
+  private boolean signed = false;
   
   MSP430Core core;
+
+  private boolean accumulating;
   /**
    * Creates a new <code>Multiplier</code> instance.
    *
@@ -118,27 +123,34 @@ public class Multiplier extends IOUnit {
 			 Integer.toString(address, 16) +
 			 " = " + data);
     }
-
     switch(address) {
     case MPY:
-      mpy = data;
+      op1 = mpy = data;
       if (DEBUG) System.out.println(getName() + " Write to MPY: " + data);
       lastWriteOP = address;
+      signed = false;
+      accumulating = false;
       break;
     case MPYS:
-      mpys = data;
+      op1 = mpys = data;
       if (DEBUG) System.out.println(getName() + " Write to MPYS: " + data);
       lastWriteOP = address;
+      signed = true;
+      accumulating = false;
       break;
     case MAC:
-      mac = data;
+      op1 = mac = data;
       if (DEBUG) System.out.println(getName() + " Write to MAC: " + data);
       lastWriteOP = address;
+      signed = false;
+      accumulating = true;
       break;
     case MACS:
-      macs = data;
+      op1 = macs = data;
       if (DEBUG) System.out.println(getName() + " Write to MACS: " + data);
       lastWriteOP = address;
+      signed = true;
+      accumulating = true;
       break;
     case RESLO:
       resLo = data;
@@ -150,38 +162,33 @@ public class Multiplier extends IOUnit {
       if (DEBUG) System.out.println(getName() + " Write to OP2: " + data);
       sumext = 0;
       op2 = data;
-      // This should be picked based on which op was written previously!!!
-      int o1 = mpy;
-      boolean signMode = false;
-      boolean sum = false;
-      if (lastWriteOP == MPYS) {
-        o1 = mpys;
-        signMode = true;
-      } else if (lastWriteOP == MAC) {
-        o1 = mac;
-        sum = true;
-      } else if (lastWriteOP == MACS) {
-        o1 = macs;
-        signMode = true;
-        sum = true;
+      // Expand to word
+      if (signed) {
+        if (!word) {
+          if (op1 > 0x80) op1 = op1 | 0xff00;
+          if (op2 > 0x80) op2 = op2 | 0xff00;
+        }
+        op1 = op1 > 0x8000 ? op1 - 0x10000 : op1;
+        op2 = op2 > 0x8000 ? op2 - 0x10000 : op2;
       }
       
-      if (signMode) {
-        // Assume two 16 bit mults.
-        if (((o1 ^ op2) & 0x8000) > 0) {
-          sumext = 0xffff;
+      long res = op1 * op2;
+      if (DEBUG) System.out.println("O1:" + op1 + " * " + op2 + " = " + res);
+
+      if (signed) {
+        sumext = res < 0 ? 0xffff : 0;
+      }
+      
+      if (accumulating) { 
+        res += (resHi << 16) + resLo;
+        if (!signed && res > 0xffffffff) {
+          sumext = 1;
         }
       }
-      long res = o1 * op2;
-      System.out.println("O1:" + o1 + " * " + op2 + " = " + res);
-      if (sum) { 
-        currentSum = (resHi << 16) + resLo;
-        currentSum += res;
-        res = currentSum;
-      }
+      
       resHi = (int) ((res >> 16) & 0xffff);
       resLo = (int) (res & 0xffff);
-      if(DEBUG) System.out.println(" ===> result = " + res);
+      if (DEBUG) System.out.println(" ===> result = " + res);
       break;
     }
   }
