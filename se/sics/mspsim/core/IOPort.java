@@ -57,6 +57,7 @@ public class IOPort extends IOUnit {
   private String name;
   private int interrupt;
   private int interruptFlag;
+  private int interruptEnable;
   private MSP430Core cpu;
 
   // External pin state!
@@ -83,6 +84,7 @@ public class IOPort extends IOUnit {
     super(memory, offset);
     name = portName;
     this.interrupt = interrupt;
+    this.interruptEnable = 0;
     this.cpu = cpu;
   }
 
@@ -104,7 +106,9 @@ public class IOPort extends IOUnit {
 
   public void write(int address, int data, boolean word, long cycles) {
     memory[address] = data & 0xff;
-    if (word) memory[address + 1] = (data >> 8) & 0xff;
+    if (word) {
+      memory[address + 1] = (data >> 8) & 0xff;
+    }
 
     // This does not handle word writes yet...
     int iAddress = address - offset;
@@ -141,7 +145,7 @@ public class IOPort extends IOUnit {
 	}
 	interruptFlag &= data;
 	memory[offset + IFG] = interruptFlag;
-	cpu.flagInterrupt(interrupt, this, interruptFlag > 0);
+	cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
       } else {
 	// Samel as ISEL!!!
       }
@@ -149,6 +153,7 @@ public class IOPort extends IOUnit {
     case IES:
       break;
     case IE:
+      interruptEnable = data;
       break;
     case ISEL:
     }
@@ -191,7 +196,7 @@ public class IOPort extends IOUnit {
     memory[offset + IFG] = interruptFlag;
 
     // Maybe this is not the only place where we should flag int?
-    cpu.flagInterrupt(interrupt, this, interruptFlag > 0);
+    cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
   }
 
 
@@ -200,6 +205,7 @@ public class IOPort extends IOUnit {
       pinState[i] = PIN_LOW;
     }
     interruptFlag = 0;
-    cpu.flagInterrupt(interrupt, this, interruptFlag > 0);
+    interruptEnable = 0;
+    cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
   }
 }
