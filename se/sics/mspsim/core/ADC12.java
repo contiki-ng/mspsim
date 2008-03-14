@@ -43,6 +43,8 @@ package se.sics.mspsim.core;
 
 public class ADC12 extends IOUnit {
 
+  private static final boolean DEBUG = false;
+  
   public static final int ADC12CTL0 = 0x01A0;// Reset with POR
   public static final int ADC12CTL1 = 0x01A2;// Reset with POR
   public static final int ADC12IFG = 0x01A4; //Reset with POR
@@ -110,7 +112,7 @@ public class ADC12 extends IOUnit {
       enableConversion = (value & 0x02) > 0;
       startConversion = (value & 0x01) > 0;
       
-      System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
+      if (DEBUG ) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
       break;
     }
@@ -118,6 +120,10 @@ public class ADC12 extends IOUnit {
 
   // read a value from the IO unit
   public int read(int address, boolean word, long cycles) {
+    switch(address) {
+    case ADC12CTL0:
+      return adc12ctl0;
+    }
     return 0;
   }
 
