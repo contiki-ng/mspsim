@@ -139,7 +139,7 @@ public class ESBNode extends GenericNode implements PortListener {
     }
   }
 
-  public void setupNode() {
+  public void setupNodePorts() {
     IOUnit unit = cpu.getIOUnit("Port 2");
     if (unit instanceof IOPort) {
       port2 = (IOPort) unit;
@@ -162,9 +162,13 @@ public class ESBNode extends GenericNode implements PortListener {
       radio = new TR1001((USART)usart0);
       ((USART) usart0).setUSARTListener(radio);
     }
+  }
+
+  public void setupNode() {
+    setupNodePorts();
 
     gui = new ESBGui(this);
-    
+
     stats.addMonitor(this);
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
@@ -174,7 +178,7 @@ public class ESBNode extends GenericNode implements PortListener {
     DataSourceSampler dss = dataChart.setupChipFrame(cpu);
     dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
     dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
-    dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));  
+    dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
   }
 
   public int getModeMax() {
@@ -184,7 +188,7 @@ public class ESBNode extends GenericNode implements PortListener {
   public String getName() {
     return "ESB Node";
   }
-  
+
   public static void main(String[] args) throws IOException {
     ESBNode node = new ESBNode();
     node.setup(args);

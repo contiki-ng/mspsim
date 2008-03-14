@@ -78,21 +78,21 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   public static final int CC2420_FIFOP = 0;
   public static final int CC2420_FIFO = 3;
   public static final int CC2420_CCA = 4;
-  
+
   /* P4.5 - Output: VREG_EN to CC2420 */
   /* P4.2 - Output: SPI Chip Select (CS_N) */
   public static final int CC2420_VREG = (1 << 5);
   public static final int CC2420_CHIP_SELECT = 0x04;
-  
+
   private IOPort port1;
   private IOPort port2;
   private IOPort port4;
   private IOPort port5;
 
-  private CC2420 radio;
+  public CC2420 radio;
   private M25P80 flash;
   private String flashFile;
-  
+
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
   public static final int RED_LED = 0x10;
@@ -101,7 +101,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   public boolean blueLed;
   public boolean greenLed;
   private int mode = MODE_LEDS_OFF;
- 
+
   public SkyGui gui;
   /**
    * Creates a new <code>SkyNode</code> instance.
@@ -117,7 +117,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   public boolean getDebug() {
     return cpu.getDebug();
   }
-  
+
   public ELF getElfInfo() {
     return elf;
   }
@@ -172,18 +172,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     return "Tmote Sky";
   }
 
-  public void setupNode() {
-    // create a filename for the flash file
-    // This should be possible to take from a config file later!
-    String fileName = firmwareFile;
-    int ix = fileName.lastIndexOf('.');
-    if (ix > 0) {
-      fileName = fileName.substring(0, ix);
-    }
-    fileName = fileName + ".flash";
-    System.out.println("Using flash file: " + fileName);
-
-    this.flashFile = flashFile;
+  public void setupNodePorts() {
     IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
       port5 = (IOPort) unit;
@@ -210,9 +199,25 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
-        ((IOPort) port4).setPortListener(this);
+        (port4).setPortListener(this);
       }
     }
+  }
+
+  public void setupNode() {
+    // create a filename for the flash file
+    // This should be possible to take from a config file later!
+    String fileName = firmwareFile;
+    int ix = fileName.lastIndexOf('.');
+    if (ix > 0) {
+      fileName = fileName.substring(0, ix);
+    }
+    fileName = fileName + ".flash";
+    System.out.println("Using flash file: " + fileName);
+
+    this.flashFile = flashFile;
+
+    setupNodePorts();
 
     stats.addMonitor(this);
     stats.addMonitor(radio);
@@ -224,7 +229,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 //        SkyNode.this.cpu.scheduleTimeEventMillis(this, 1000.0);
 //      }
 //    }, 1000.0);
-    
+
     // TODO: remove this test...
     radio.setPacketListener(new PacketListener() {
       public void transmissionEnded(int[] receivedData) {
@@ -232,9 +237,9 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       }
       public void transmissionStarted() {
         System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
-      }      
+      }
     });
-    
+
     // UART0 TXreg = 0x77?
 //    cpu.setBreakPoint(0x77, new CPUMonitor() {
 //      public void cpuAction(int type, int adr, int data) {
@@ -260,5 +265,5 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     node.setup(args);
     node.start();
   }
-  
+
 }
