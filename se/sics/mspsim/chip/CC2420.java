@@ -27,7 +27,7 @@
  *
  * This file is part of MSPSim.
  *
- * $Id:$
+ * $Id$
  *
  * -----------------------------------------------------------------
  *
@@ -35,7 +35,7 @@
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * 
+ *
  */
 
 package se.sics.mspsim.chip;
@@ -123,7 +123,7 @@ public class CC2420 extends Chip implements USARTListener {
   public static final int MODE_RX_ON = 0x01;
   public static final int MODE_TXRX_ON = 0x02;
   public static final int MODE_MAX = MODE_TXRX_ON;
-  
+
   // when reading registers this flag is set!
   public static final int FLAG_READ = 0x40;
 
@@ -146,10 +146,13 @@ public class CC2420 extends Chip implements USARTListener {
   private int address;
   private boolean ramRead = false;
 
+  private int activeFrequency = 0;
+  private int activeChannel = 0;
+
   private int status = STATUS_XOSC16M_STABLE | STATUS_RSSI_VALID;
 
   private int mode = MODE_TXRX_OFF;
-  
+
   private int[] registers = new int[64];
   // More than needed...
   private int[] memory = new int[512];
@@ -173,10 +176,12 @@ public class CC2420 extends Chip implements USARTListener {
   private PacketListener packetListener;
 
   private MSP430Core cpu;
-  
+
   private TimeEvent transmissionEvent = new TimeEvent(0) {
     public void execute(long t) {
-      if (DEBUG) System.out.println(getName() + ": **** Transmitting package to listener (if any)");
+      if (DEBUG) {
+        System.out.println(getName() + ": **** Transmitting package to listener (if any)");
+      }
       if (packetListener != null) {
         int len = memory[RAM_TXFIFO];
         int[] data = new int[len];
@@ -187,7 +192,7 @@ public class CC2420 extends Chip implements USARTListener {
   };
 
   private boolean on;
-  
+
   public CC2420(MSP430Core cpu) {
     registers[REG_SNOP] = 0;
     this.cpu = cpu;
@@ -195,10 +200,11 @@ public class CC2420 extends Chip implements USARTListener {
 
   public void dataReceived(USART source, int data) {
     if (on && chipSelect) {
-      if (DEBUG)
+      if (DEBUG) {
         System.out.println("CC2420 byte received: " + Utils.hex8(data) +
             '\'' + (char) data + '\'' +
             " CS: " + chipSelect + " state: " + state);
+      }
       switch(state) {
       case WAITING:
 	state = WRITE_REGISTER;
@@ -216,8 +222,8 @@ public class CC2420 extends Chip implements USARTListener {
 	    // check read/write???
 //	    System.out.println("CC2420: Reading RXFIFO!!!");
 	    state = READ_RXFIFO;
-	  } else if (address == REG_TXFIFO) {
-	    state = WRITE_TXFIFO;
+    } else if (address == REG_TXFIFO) {
+      state = WRITE_TXFIFO;
 	  }
 	}
 	if (data < 0x0f) {
@@ -236,27 +242,33 @@ public class CC2420 extends Chip implements USARTListener {
       		source.byteReceived(registers[address] & 0xff);
       		// set the low bits
       		registers[address] = registers[address] & 0xff00 | data;
-      		if (DEBUG)
-      		  System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
+      		if (DEBUG) {
+            System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
       		      + registers[address]);
+          }
       	}
-	break;
+        pos++;
+        break;
       case READ_REGISTER:
       	if (pos == 0) {
       		source.byteReceived(registers[address] >> 8);
       	} else {
       		source.byteReceived(registers[address] & 0xff);
-      		if (DEBUG) 
-      		  System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
+      		if (DEBUG) {
+            System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
       		      + registers[address]);
+          }
       	}
-      	break;
+        pos++;
+        break;
       case READ_RXFIFO:
 //      	System.out.println("CC2420: RXFIFO READ => " +
 //      			memory[RAM_RXFIFO + rxCursor]);
       	source.byteReceived(memory[RAM_RXFIFO + rxCursor++]);
       	// What if wrap cursor???
-      	if (rxCursor >= 128) rxCursor = 0;
+      	if (rxCursor >= 128) {
+          rxCursor = 0;
+        }
       	// When is this set to "false" - when is interrupt de-triggered?
       	if (rxPacket) {
       		rxPacket = false;
@@ -270,9 +282,10 @@ public class CC2420 extends Chip implements USARTListener {
       	if (pos == 0) {
       		address = address | (data << 1) & 0x180;
       		ramRead = (data & 0x20) != 0;
-      		if (DEBUG) 
-      		  System.out.println("CC2420: Address: " + Utils.hex16(address) +
+      		if (DEBUG) {
+            System.out.println("CC2420: Address: " + Utils.hex16(address) +
       		      " read: " + ramRead);
+          }
       		pos++;
       	} else {
       		if (!ramRead) {
@@ -293,48 +306,85 @@ public class CC2420 extends Chip implements USARTListener {
   // next data...
   private void strobe(int data) {
     // Resets, on/off of different things...
-    if (DEBUG)
+    if (DEBUG) {
       System.out.println("CC2420: Strobe on: " + Utils.hex8(data));
+    }
 
     switch (data) {
     case REG_SRXON:
-      if (DEBUG) System.out.println("CC2420: Strobe RX-ON!!!");
+      setActiveFrequency(registers[REG_FSCTRL]);
+
+      if (DEBUG) {
+        System.out.println("CC2420: Strobe RX-ON!!!");
+      }
       setMode(MODE_RX_ON);
       break;
     case REG_SRFOFF:
-      if (DEBUG) System.out.println("CC2420: Strobe RXTX-OFF!!!");
+      if (DEBUG) {
+        System.out.println("CC2420: Strobe RXTX-OFF!!!");
+      }
       setMode(MODE_TXRX_OFF);
       break;
     case REG_STXON:
-      if (DEBUG) System.out.println("CC2420: Strobe TXON!");
+      setActiveFrequency(registers[REG_FSCTRL]);
+
+      if (DEBUG) {
+        System.out.println("CC2420: Strobe TXON!");
+      }
       setMode(MODE_TXRX_ON);
       transmitPacket();
       break;
     case REG_STXONCCA:
-      if (DEBUG) System.out.println("CC2420: Strobe TXONCCA!");
+      setActiveFrequency(registers[REG_FSCTRL]);
+
+      if (DEBUG) {
+        System.out.println("CC2420: Strobe TXONCCA!");
+      }
       setMode(MODE_TXRX_ON);
       transmitPacket();
-      break;      
+      break;
     case REG_SFLUSHRX:
       flushRX();
       break;
     case REG_SFLUSHTX:
       flushTX();
       break;
+    default:
+      if (DEBUG) {
+        System.out.println("Unknown strobe command: " + data);
+      }
+
     }
   }
+
+  public void setActiveFrequency(int val) {
+    /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
+    activeFrequency = val - 357 + 2405 - 0x4000;
+    activeChannel = (val - 0x4000 - 357)/5 + 11;
+  }
+
+  public int getActiveFrequency() {
+    return activeFrequency;
+  }
+
+  public int getActiveChannel() {
+    return activeChannel;
+  }
+
 
   private void transmitPacket() {
     int len = memory[RAM_TXFIFO];
     int kBps = 250000 / 8;
     double time = 1.0 * len / kBps;
-    if (DEBUG) System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
+    if (DEBUG) {
+      System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
+    }
     if (packetListener != null) {
       packetListener.transmissionStarted();
       cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
     }
   }
-  
+
   private void setMode(int mode) {
     this.mode = mode;
     modeChanged(mode);
@@ -347,13 +397,15 @@ public class CC2420 extends Chip implements USARTListener {
   public void setVRegOn(boolean on) {
     this.on = on;
   }
-  
+
   public void setChipSelect(boolean select) {
     chipSelect = select;
-    if (!chipSelect)
+    if (!chipSelect) {
       state = WAITING;
-    if (DEBUG)
+    }
+    if (DEBUG) {
       System.out.println("CC2420: setting chipSelect: " + chipSelect);
+    }
   }
 
   public void setCCAPort(IOPort port, int pin) {
@@ -387,23 +439,24 @@ public class CC2420 extends Chip implements USARTListener {
   public void setIncomingPacket(int[] packet) {
     int adr = RAM_RXFIFO;
     memory[adr++] = packet.length + 2;
-    for (int i = 0, n = packet.length; i < n; i++) {
-      memory[adr++] = packet[i] & 0xff;
+    for (int element : packet) {
+      memory[adr++] = element & 0xff;
     }
     // Should take a RSSI value as input or use a set-RSSI value...
     memory[adr++] = (202) & 0xff;
-    // Set CRC ok and add a correlation 
+    // Set CRC ok and add a correlation
     memory[adr++] = (37) | 0x80;
     rxPacket = true;
-    rxCursor = 0;  
+    rxCursor = 0;
     rxLen = adr;
     updateFifopPin();
   }
 
     private void flushRX() {
-    if (DEBUG) 
+    if (DEBUG) {
       System.out.println("Flushing RX! was: " + rxPacket + " len = " +
           rxLen);
+    }
     rxPacket = false;
     rxCursor = 0;
     rxLen = 0;
@@ -415,7 +468,7 @@ public class CC2420 extends Chip implements USARTListener {
     txCursor = 0;
   }
 
-  
+
   private void updateFifopPin() {
     fifopPort.setPinState(fifopPin, rxPacket ? 1 : 0);
   }
@@ -423,7 +476,7 @@ public class CC2420 extends Chip implements USARTListener {
   public void setCCA(boolean cca) {
     ccaPort.setPinState(ccaPin, cca ? 1 : 0);
   }
-  
+
   public String getName() {
     return "CC2420";
   }
@@ -432,5 +485,5 @@ public class CC2420 extends Chip implements USARTListener {
     return MODE_MAX;
   }
 
-  
+
 } // CC2420
