@@ -2,8 +2,12 @@
 Changes: 
 - fixed multiplier to handle the different modes better.
 - refactored so that IOUnit is no longer a Chip
-- added statistics commands to the CLI
+- added statistics commands and an exec command to the CLI
 - implemented better support for statistics (operating mode)
+- fixed interrupt handling bugs in IOUnit
+- added API for accessing frequency/channel and output power in CC2420
+- refactored radio emulation code of ESB platform into a separate TR1001 class
+- added watch on register, grep, and other commands in CLI
 
 0.84
 Changes:
