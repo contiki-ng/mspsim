@@ -195,6 +195,7 @@ public class CC2420 extends Chip implements USARTListener {
 
   public CC2420(MSP430Core cpu) {
     registers[REG_SNOP] = 0;
+    registers[REG_TXCTRL] = 0xa0ff;
     this.cpu = cpu;
   }
 
@@ -312,7 +313,7 @@ public class CC2420 extends Chip implements USARTListener {
 
     switch (data) {
     case REG_SRXON:
-      setActiveFrequency(registers[REG_FSCTRL]);
+      updateActiveFrequency();
 
       if (DEBUG) {
         System.out.println("CC2420: Strobe RX-ON!!!");
@@ -326,7 +327,7 @@ public class CC2420 extends Chip implements USARTListener {
       setMode(MODE_TXRX_OFF);
       break;
     case REG_STXON:
-      setActiveFrequency(registers[REG_FSCTRL]);
+      updateActiveFrequency();
 
       if (DEBUG) {
         System.out.println("CC2420: Strobe TXON!");
@@ -335,7 +336,7 @@ public class CC2420 extends Chip implements USARTListener {
       transmitPacket();
       break;
     case REG_STXONCCA:
-      setActiveFrequency(registers[REG_FSCTRL]);
+      updateActiveFrequency();
 
       if (DEBUG) {
         System.out.println("CC2420: Strobe TXONCCA!");
@@ -357,10 +358,10 @@ public class CC2420 extends Chip implements USARTListener {
     }
   }
 
-  public void setActiveFrequency(int val) {
+  public void updateActiveFrequency() {
     /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
-    activeFrequency = val - 357 + 2405 - 0x4000;
-    activeChannel = (val - 0x4000 - 357)/5 + 11;
+    activeFrequency = registers[REG_FSCTRL] - 357 + 2405 - 0x4000;
+    activeChannel = (registers[REG_FSCTRL] - 357 - 0x4000)/5 + 11;
   }
 
   public int getActiveFrequency() {
@@ -371,6 +372,34 @@ public class CC2420 extends Chip implements USARTListener {
     return activeChannel;
   }
 
+  public int getOutputPowerIndicator() {
+    return (registers[REG_TXCTRL] & 0x1f);
+  }
+
+  public int getOutputPower() {
+    /* From CC2420 datasheet */
+    int indicator = getOutputPowerIndicator();
+    if (indicator >= 31) {
+      return 0;
+    } else if (indicator >= 27) {
+      return -1;
+    } else if (indicator >= 23) {
+      return -3;
+    } else if (indicator >= 19) {
+      return -5;
+    } else if (indicator >= 15) {
+      return -7;
+    } else if (indicator >= 11) {
+      return -10;
+    } else if (indicator >= 7) {
+      return -15;
+    } else if (indicator >= 3) {
+      return -25;
+    }
+
+    /* Unknown */
+    return -100;
+  }
 
   private void transmitPacket() {
     int len = memory[RAM_TXFIFO];
