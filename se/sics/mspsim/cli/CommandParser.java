@@ -53,6 +53,8 @@ public class CommandParser {
     ArrayList<String[]> list = new ArrayList<String[]>();
     ArrayList<String> args = new ArrayList<String>();
     StringBuilder sb = null;
+    String redirectCommand = null;
+    int redirectFile = -1;
     int state = TEXT;
     int index = 0;
     char quote = 0;
@@ -103,7 +105,7 @@ public class CommandParser {
 	    }
 	  } else {
 	    // Start new quote
-	    if (state != TEXT) {
+	    if (state == ARG) {
 	      if (sb == null) {
 		args.add(line.substring(index, i));
 	      } else {
@@ -116,6 +118,37 @@ public class CommandParser {
 	    quote = c;
 	  }
 	  break;
+        case '#':
+          if (state == TEXT && redirectCommand != null && redirectFile == args.size()) {
+            redirectCommand += '#';
+          } else if (state != QUOTE) {
+            throw new IllegalArgumentException("illegal character '#'");
+          }
+          break;
+        case '>':
+          if (state != QUOTE) {
+            // Redirection
+            if (state == ARG) {
+              if (sb == null) {
+                args.add(line.substring(index, i));
+              } else {
+                args.add(sb.append(line.substring(index, i)).toString());
+                sb = null;
+              }
+              state = TEXT;
+            }
+
+            if (redirectCommand == null) {
+              redirectCommand = ">";
+              redirectFile = args.size();
+            } else if (state == TEXT && redirectFile == args.size()) {
+              redirectCommand += '>';
+            } else { 
+              // Double redirect
+              throw new IllegalArgumentException("redirected twice");
+            }
+          }
+          break;
 	case '|':
 	  if (state != QUOTE) {
 	    // PIPE
@@ -130,6 +163,9 @@ public class CommandParser {
 	    state = TEXT;
 	    if (args.size() == 0) {
 	      throw new IllegalArgumentException("empty command");
+	    }
+	    if (redirectCommand != null) {
+	      throw new IllegalArgumentException("pipe can not follow redirection");
 	    }
 	    list.add(args.toArray(new String[args.size()]));
 	    args.clear();
@@ -154,8 +190,18 @@ public class CommandParser {
 	args.add(sb.append(line.substring(index)).toString());
       }
     }
+    String redirectFilename = null;
+    if (redirectCommand != null) {
+      if (args.size() <= redirectFile) {
+        throw new IllegalArgumentException("no redirect target");
+      }
+      redirectFilename = args.remove(redirectFile);
+    }
     if (args.size() > 0) {
       list.add(args.toArray(new String[args.size()]));
+    }
+    if (redirectCommand != null) {
+      list.add(new String[] { redirectCommand, redirectFilename });
     }
     return list.toArray(new String[list.size()][]);
   }
@@ -164,7 +210,7 @@ public class CommandParser {
 //     StringBuilder sb = new StringBuilder();
 //     for (int i = 0, n = args.length; i < n; i++) {
 //       if (i > 0) sb.append(' ');
-//       sb.append(args[0]);
+//       sb.append(args[i]);
 //     }
 //     String[][] list = parseLine(sb.toString());
 //     for (int j = 0, m = list.length; j < m; j++) {
