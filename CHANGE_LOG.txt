@@ -6,8 +6,11 @@ Changes:
 - implemented better support for statistics (operating mode)
 - fixed interrupt handling bugs in IOUnit
 - added API for accessing frequency/channel and output power in CC2420
+- added RSSI support for CC2420
 - refactored radio emulation code of ESB platform into a separate TR1001 class
 - added watch on register, grep, and other commands in CLI
+- added redirect to files in CLI
+- added speed control API and CLI command (speed)
 
 0.84
 Changes:
