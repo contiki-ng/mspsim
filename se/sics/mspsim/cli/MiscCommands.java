@@ -47,6 +47,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
+import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.util.ComponentRegistry;
 
 /**
@@ -56,7 +57,7 @@ import se.sics.mspsim.util.ComponentRegistry;
 public class MiscCommands implements CommandBundle {
   Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
 
-  public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
+  public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
     handler.registerCommand("grep", new BasicLineCommand("grep", "<regexp>") {
       private PrintStream out;
       private Pattern pattern;
@@ -118,7 +119,7 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("files", new BasicCommand("files", "") {
       public int executeCommand(CommandContext context) {
-        for (Iterator iterator = fileTargets.values().iterator(); iterator.hasNext();) {
+        for (Iterator<FileTarget> iterator = fileTargets.values().iterator(); iterator.hasNext();) {
           FileTarget type = (FileTarget) iterator.next();
           context.out.println(type.getName());
         }
@@ -126,6 +127,22 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
+    handler.registerCommand("speed", new BasicCommand("speed", "<factor>") {
+      public int executeCommand(CommandContext context) {
+        double d = context.getArgumentAsDouble(0);
+        MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+        if (cpu != null) {
+          if (d < 0.0) {
+            System.out.println("Rate needs to be larger than zero");
+          } else {
+            long rate = (long)(25000 * d);
+            cpu.setSleepRate(rate);
+          }
+        }
+        return 0;
+      }
+    });
+    
     
     handler.registerCommand("exec", new ExecCommand());
   }
