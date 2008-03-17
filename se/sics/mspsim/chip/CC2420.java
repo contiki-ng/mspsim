@@ -376,6 +376,19 @@ public class CC2420 extends Chip implements USARTListener {
     return (registers[REG_TXCTRL] & 0x1f);
   }
 
+  private static int RSSI_OFFSET = -45; /* cc2420 datasheet */
+
+  public void setRSSI(int power) {
+    if (power < -128) {
+      power = -128;
+    }
+    registers[REG_RSSI] = power - RSSI_OFFSET;
+  }
+
+  public int getRSSI() {
+    return registers[REG_RSSI] + RSSI_OFFSET;
+  }
+
   public int getOutputPower() {
     /* From CC2420 datasheet */
     int indicator = getOutputPowerIndicator();
@@ -472,7 +485,7 @@ public class CC2420 extends Chip implements USARTListener {
       memory[adr++] = element & 0xff;
     }
     // Should take a RSSI value as input or use a set-RSSI value...
-    memory[adr++] = (202) & 0xff;
+    memory[adr++] = (registers[REG_RSSI]) & 0xff;
     // Set CRC ok and add a correlation
     memory[adr++] = (37) | 0x80;
     rxPacket = true;
@@ -481,7 +494,7 @@ public class CC2420 extends Chip implements USARTListener {
     updateFifopPin();
   }
 
-    private void flushRX() {
+  private void flushRX() {
     if (DEBUG) {
       System.out.println("Flushing RX! was: " + rxPacket + " len = " +
           rxLen);
