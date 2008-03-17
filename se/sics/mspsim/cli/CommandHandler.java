@@ -85,7 +85,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
 	      if (i == 0 && cmd instanceof AsyncCommand) {
 		pid = ++pidCounter;
 	      }
-              commands[i] = new CommandContext(mapTable, line, args, pid, cmd);
+              commands[i] = new CommandContext(this, mapTable, line, args, pid, cmd);
               if (i > 0) {
                 PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
                 commands[i - 1].setOutput(po, err);
@@ -249,17 +249,35 @@ public class CommandHandler implements ActiveComponent, Runnable {
     registerCommand("kill", new BasicCommand("kill a currently executing command", "<process>") {
       public int executeCommand(CommandContext context) {
         int pid = context.getArgumentAsInt(0);
-        for (int i = 0; i < currentAsyncCommands.size(); i++) {
-	  CommandContext[] contexts = currentAsyncCommands.get(i);
-          CommandContext cmd = contexts[0];
-          if (pid == cmd.getPID()) {
-            context.out.println("Should kill: " + cmd.getCommandName());
-	    break;
-          }
-        }
+        removePid(pid);
         return 0;
       }
     });
   }
 
+  public void exit(CommandContext commandContext, int exitCode, int pid) {
+    if (pid >= 0) {
+      removePid(pid);
+    }
+  }
+  
+  private void removePid(int pid) {
+    System.out.println("Removing pid: " + pid);
+    for (int i = 0; i < currentAsyncCommands.size(); i++) {
+      CommandContext[] contexts = currentAsyncCommands.get(i);
+      CommandContext cmd = contexts[0];
+      if (pid == cmd.getPID()) {
+        for (int j = 0; j < contexts.length; j++) {
+          Command command = contexts[i].getCommand();
+          // Stop any commands that have not yet been stopped...
+          if (command instanceof AsyncCommand && !contexts[i].hasExited()) {
+            AsyncCommand ac = (AsyncCommand) command;
+            ac.stopCommand(contexts[i]);
+          }
+        }
+        currentAsyncCommands.remove(contexts);
+        break;
+      }
+    }
+  }
 }

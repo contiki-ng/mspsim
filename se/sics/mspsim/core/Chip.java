@@ -35,8 +35,8 @@
  *
  * Author  : Joakim Eriksson
  * Created : 17 jan 2008
- * Updated : $Date:$
- *           $Revision:$
+ * Updated : $Date$
+ *           $Revision$
  */
 package se.sics.mspsim.core;
 import java.util.ArrayList;

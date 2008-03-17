@@ -33,8 +33,8 @@
  *
  * Author  : Joakim Eriksson, Niclas Finne
  * Created : Sun Mar 09 23:15:36 2008
- * Updated : $Date:$
- *           $Revision:$
+ * Updated : $Date$
+ *           $Revision$
  */
 package se.sics.mspsim.cli;
 import java.io.BufferedReader;

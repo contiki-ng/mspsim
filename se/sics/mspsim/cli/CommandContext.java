@@ -10,24 +10,27 @@ public class CommandContext {
   private String commandLine;
   private MapTable mapTable;
   private int pid = -1;
+  private boolean exited = false;
   private Command command;
   
   public PrintStream out;
   public PrintStream err;
+  private CommandHandler commandHandler;
   
-  public CommandContext(MapTable table, String commandLine, String[] args,
+  public CommandContext(CommandHandler ch, MapTable table, String commandLine, String[] args,
 			int pid, Command command, PrintStream out, PrintStream err) {
-    this(table, commandLine, args, pid, command);
+    this(ch, table, commandLine, args, pid, command);
     setOutput(out, err);
   }
   
-  public CommandContext(MapTable table, String commandLine, String[] args,
+  public CommandContext(CommandHandler ch,MapTable table, String commandLine, String[] args,
 			int pid, Command command) {
     this.commandLine = commandLine;
     this.args = args;
     this.pid = pid;
     this.mapTable = table;
     this.command = command;
+    this.commandHandler = ch;
   }
   
   void setOutput(PrintStream out, PrintStream err) {
@@ -47,13 +50,18 @@ public class CommandContext {
     return pid;
   }
 
+  public boolean hasExited() {
+    return exited;
+  }
+  
   /**
    * exit needs to be called as soon as the command is completed (or stopped).
    * @param exitCode - the exit code of the command
    */
   public void exit(int exitCode) {
     // TODO: Clean up can be done now!
-    pid = -1;
+    exited = true;
+    commandHandler.exit(this, exitCode, pid);
   }
 
   public MapTable getMapTable() {

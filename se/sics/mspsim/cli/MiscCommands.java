@@ -35,12 +35,14 @@
  *
  * Author  : Joakim Eriksson
  * Created : 9 mar 2008
- * Updated : $Date:$
- *           $Revision:$
+ * Updated : $Date$
+ *           $Revision$
  */
 package se.sics.mspsim.cli;
 
+import java.io.FileNotFoundException;
 import java.io.PrintStream;
+import java.util.Hashtable;
 import java.util.regex.Pattern;
 
 import se.sics.mspsim.util.ComponentRegistry;
@@ -50,6 +52,7 @@ import se.sics.mspsim.util.ComponentRegistry;
  *
  */
 public class MiscCommands implements CommandBundle {
+  Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
 
   public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
     handler.registerCommand("grep", new BasicLineCommand("grep", "<regexp>") {
@@ -69,6 +72,44 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
+    // TODO: this should also be "registered" as a "sink".
+    // probably this should be handled using ">" instead!
+    handler.registerCommand("file", new BasicLineCommand("file", "<filename>") {
+      FileTarget ft;
+      public int executeCommand(CommandContext context) {
+        String fileName = context.getArgument(0);
+        ft = fileTargets.get(fileName);
+        if (ft == null) {
+          try {
+            ft = new FileTarget(fileName);
+            fileTargets.put(fileName, ft);
+          } catch (FileNotFoundException e) {
+            e.printStackTrace();
+          }
+        }
+        return 0;
+      }
+      public void lineRead(String line) {
+        ft.lineRead(line);
+      }
+      public void stopCommand(CommandContext context) {
+        // Should this do anything?
+        // Probably depending on the ft's config
+      }
+    });
+
+    handler.registerCommand("fclose", new BasicCommand("fclose", "<filename>") {
+      public int executeCommand(CommandContext context) {
+        String name = context.getArgument(0);
+        FileTarget ft = fileTargets.get(name);
+        if (ft != null) {
+          ft.close();
+        }
+        return 0;
+      }
+    });
+
+    
     handler.registerCommand("exec", new ExecCommand());
   }
 
