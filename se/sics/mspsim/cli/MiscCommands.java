@@ -41,8 +41,10 @@
 package se.sics.mspsim.cli;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import se.sics.mspsim.util.ComponentRegistry;
@@ -74,16 +76,17 @@ public class MiscCommands implements CommandBundle {
 
     // TODO: this should also be "registered" as a "sink".
     // probably this should be handled using ">" instead!
-    handler.registerCommand("file", new BasicLineCommand("file", "<filename>") {
+    handler.registerCommand(">", new BasicLineCommand(">", "<filename>") {
       FileTarget ft;
       public int executeCommand(CommandContext context) {
         String fileName = context.getArgument(0);
         ft = fileTargets.get(fileName);
         if (ft == null) {
           try {
+            System.out.println("Creating new file target: " + fileName);
             ft = new FileTarget(fileName);
             fileTargets.put(fileName, ft);
-          } catch (FileNotFoundException e) {
+          } catch (IOException e) {
             e.printStackTrace();
           }
         }
@@ -103,7 +106,21 @@ public class MiscCommands implements CommandBundle {
         String name = context.getArgument(0);
         FileTarget ft = fileTargets.get(name);
         if (ft != null) {
+          context.out.println("Closing file:" + name);
+          fileTargets.remove(name);
           ft.close();
+        } else {
+          context.err.println("No file named: " + name + " open");
+        }
+        return 0;
+      }
+    });
+
+    handler.registerCommand("files", new BasicCommand("files", "") {
+      public int executeCommand(CommandContext context) {
+        for (Iterator iterator = fileTargets.values().iterator(); iterator.hasNext();) {
+          FileTarget type = (FileTarget) iterator.next();
+          context.out.println(type.getName());
         }
         return 0;
       }

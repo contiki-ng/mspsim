@@ -50,10 +50,16 @@ import java.io.IOException;
 public class FileTarget implements LineListener {
 
   FileWriter out;
+  String name;
+  
   public FileTarget(String name) throws IOException {
     out = new FileWriter(name);
+    this.name = name;
   }
   
+  public String getName() {
+    return name;
+  }
   /* (non-Javadoc)
    * @see se.sics.mspsim.cli.LineListener#lineRead(java.lang.String)
    */
