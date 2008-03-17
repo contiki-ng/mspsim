@@ -40,9 +40,7 @@
  */
 package se.sics.mspsim.cli;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 
 /**
@@ -51,10 +49,9 @@ import java.io.IOException;
  */
 public class FileTarget implements LineListener {
 
-  
-  FileOutputStream out;
-  public FileTarget(String name) throws FileNotFoundException {
-    out = new FileOutputStream(name);
+  FileWriter out;
+  public FileTarget(String name) throws IOException {
+    out = new FileWriter(name);
   }
   
   /* (non-Javadoc)
@@ -70,7 +67,7 @@ public class FileTarget implements LineListener {
       }
     } else {
       try {
-        out.write((line + "\n").getBytes());
+        out.write(line + "\n");
       } catch (IOException e) {
         e.printStackTrace();
       };
