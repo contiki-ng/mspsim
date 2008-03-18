@@ -197,7 +197,13 @@ public class Timer extends IOUnit {
   private boolean interruptEnable = false;
   private boolean interruptPending = false;
 
-
+  private TimeEvent timerTrigger = new TimeEvent(0) {
+    public void execute(long t) {
+//      System.out.println(getName() + " executing update timers at " + t);
+      updateTimers(t);
+    }
+  };
+  
   private MSP430Core core;
 
   private int lastTIV;
@@ -389,6 +395,7 @@ public class Timer extends IOUnit {
       }
 
       updateCaptures(-1, cycles);
+      
       break;
     case TCCTL0:
     case TCCTL1:
@@ -448,8 +455,10 @@ public class Timer extends IOUnit {
       if (DEBUG) {
 	System.out.println(getName() + " Cycles: " + cycles + " expCap[" + index + "]: " + expCaptureTime[index] + " ctr:" + counter +
 			   " data: " + data + " ~" +
-			   (100 * (cyclesMultiplicator * diff * 1L) / 2500000) / 100.0 + " sec");
+			   (100 * (cyclesMultiplicator * diff * 1L) / 2500000) / 100.0 + " sec" +
+			   "at cycles: " + expCaptureTime[index]);
       }
+      calculateNextEventTime(cycles);
     }
   }
   
@@ -459,10 +468,8 @@ public class Timer extends IOUnit {
   }
 
   private void updateCaptures(int index, long cycles) {
-    int low = 0;
     int hi = noCompare;
     if (index != -1) {
-      low = index;
       hi = index + 1;
     }
 
@@ -476,12 +483,12 @@ public class Timer extends IOUnit {
       } else if (clockSource == SRC_ACLK) {
 	frqClk = core.aclkFrq / inputDivider;
       }
-
+      
       // Handle the captures...
       if (captureOn[i]) {
-	if (inputSrc[i] == SRC_ACLK) {
-	  divisor = core.aclkFrq;
-	}
+        if (inputSrc[i] == SRC_ACLK) {
+          divisor = core.aclkFrq;
+        }
 
 	if (DEBUG) {
 	  System.out.println(getName() + " expCapInterval[" + i + "] frq = " +
@@ -506,6 +513,7 @@ public class Timer extends IOUnit {
 	}
       }
     }
+    calculateNextEventTime(cycles);
   }
 
   private int updateCounter(long cycles) {
@@ -539,10 +547,15 @@ public class Timer extends IOUnit {
    return counter;
   }
 
-  // Simplest possible - just a call each 1000 cycles (which is wrong...)
+    // Simplest possible - just a call each 1000 cycles (which is wrong...)
   public long ioTick(long cycles) {
+    System.out.println(getName() + " UNEXPECTED CALL TO IOTICK ****");
+    return 100000 + cycles;
+  }
 
-    if (cycles > nextTimerTrigger) {
+  private void updateTimers(long cycles) {
+    
+    if (cycles >= nextTimerTrigger) {
       interruptPending = true;
       // This should be updated whenever clockspeed changes...
       nextTimerTrigger = (long) (nextTimerTrigger + 0x10000 * cyclesMultiplicator);
@@ -551,57 +564,83 @@ public class Timer extends IOUnit {
     // This will not work very good...
     // But the timer does not need to be updated this often...
     // Do we need to update the counter here???
-    //    System.out.println("Checking capture register [ioTick]: " + cycles);
+    // System.out.println("Checking capture register [ioTick]: " + cycles);
     for (int i = 0, n = noCompare; i < n; i++) {
       //      System.out.println("Checking: " + i);
-      if (expCaptureTime[i] != -1 && cycles > expCaptureTime[i]) {
-	if (DEBUG) {
-	  System.out.println(getName() + " CAPTURE: " + i +
-			     " Cycles: " + cycles + " expCap: " +
-			     expCaptureTime[i] +
-			     " => ExpCR: " + Utils.hex16(expCompare[i]) +
-			     " TR: " + Utils.hex16(updateCounter(cycles)));
-	}
-	// Set the interrupt flag...
-	tcctl[i] |= CC_IFG;
+      if (expCaptureTime[i] != -1 && cycles >= expCaptureTime[i]) {
+        if (DEBUG) {
+          System.out.println(getName() + " CAPTURE: " + i +
+                             " Cycles: " + cycles + " expCap: " +
+                             expCaptureTime[i] +
+                             " => ExpCR: " + Utils.hex16(expCompare[i]) +
+                             " TR: " + Utils.hex16(updateCounter(cycles)));
+        }
+        // Set the interrupt flag...
+        tcctl[i] |= CC_IFG;
 
-	if (captureOn[i]) {
-	  // Write the expected capture time to the register (counter could
-	  // differ slightly)
-	  tccr[i] = expCompare[i];
-	  // Update capture times... for next capture
-	  expCompare[i] = (expCompare[i] + expCapInterval[i]) & 0xffff;
-	  expCaptureTime[i] += expCapInterval[i] * cyclesMultiplicator;
-	  if (DEBUG) {
-	    System.out.println(getName() +
-			       " setting expCaptureTime to next capture: " +
-			       expCaptureTime[i]);
-	  }
-	} else {
-	  // Update expected compare time for this compare/cap reg.
-	  // 0x10000 cycles... e.g. a full 16 bits wrap of the timer
-	  expCaptureTime[i] = expCaptureTime[i] +
-	    (long) (0x10000 * cyclesMultiplicator);
-	  if (DEBUG) {
-	    System.out.println(getName() +
-			       " setting expCaptureTime to full wrap: " +
-			       expCaptureTime[i]);
-	  }
-	}
+        if (captureOn[i]) {
+          // Write the expected capture time to the register (counter could
+          // differ slightly)
+          tccr[i] = expCompare[i];
+          // Update capture times... for next capture
+          expCompare[i] = (expCompare[i] + expCapInterval[i]) & 0xffff;
+          expCaptureTime[i] += expCapInterval[i] * cyclesMultiplicator;
+          if (DEBUG) {
+            System.out.println(getName() +
+                               " setting expCaptureTime to next capture: " +
+                               expCaptureTime[i]);
+          }
+        } else {
+          // Update expected compare time for this compare/cap reg.
+          // 0x10000 cycles... e.g. a full 16 bits wrap of the timer
+          expCaptureTime[i] = expCaptureTime[i] +
+            (long) (0x10000 * cyclesMultiplicator);
+          if (DEBUG) {
+            System.out.println(getName() +
+                               " setting expCaptureTime to full wrap: " +
+                               expCaptureTime[i]);
+          }
+        }
 
-	if (DEBUG) {
-	  System.out.println("Wrote to: " +
-			     Utils.hex16(offset + TCCTL0 + i * 2 + 1));
-	}
+        if (DEBUG) {
+          System.out.println("Wrote to: " +
+                             Utils.hex16(offset + TCCTL0 + i * 2 + 1));
+        }
       }
     }
 
+        
     // Trigger interrupts that are up for triggering!
     triggerInterrupts();
-
-    return 1000 + cycles;
+    calculateNextEventTime(cycles);
   }
-
+  
+  private void calculateNextEventTime(long cycles) {
+    long time = nextTimerTrigger;
+//    int smallest = -1;
+    for (int i = 0; i < expCaptureTime.length; i++) {
+      long ct = expCaptureTime[i];
+      if (ct > 0 && ct < time) {
+        time = ct;
+//        smallest = i;
+      }
+    }
+    
+    if (time == 0) {
+      time = cycles + 1000;
+    }
+    
+    if (!timerTrigger.scheduled) {
+//      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
+//             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
+//             nextTimerTrigger) + " C:"+ cycles);
+      core.scheduleCycleEvent(timerTrigger, time);      
+    } else if (timerTrigger.time > time) {
+//      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
+      core.scheduleCycleEvent(timerTrigger, time);
+    }    
+  }
+  
   // Can be called to generate any interrupt...
   public void triggerInterrupts() {
     // First check if any capture register is generating an interrupt...

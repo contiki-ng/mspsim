@@ -52,7 +52,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;
-  public static final int INTERNAL_IO_SIZE = 5;
+  public static final int INTERNAL_IO_SIZE = 3;
   public static final int PORTS = 6;
   
   public static final int MODE_ACTIVE = 0;
@@ -131,12 +131,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Ignore type for now...
 
     // Internal Active IOUnits
+    int passIO = 0;
+    int actIO = 0;
     ioUnits = new IOUnit[INTERNAL_IO_SIZE + 10];
     ioCycles = new long[INTERNAL_IO_SIZE + 10];
 
     // Passive IOUnits (no tick) - do we need to remember them???
     // Maybe for debugging purposes...
-    passiveIOUnits = new IOUnit[PORTS];
+    passiveIOUnits = new IOUnit[PORTS + 2];
 
     Timer ta = new Timer(this, Timer.TIMER_Ax149, memory, 0x160);
     Timer tb = new Timer(this, Timer.TIMER_Bx149, memory, 0x180);
@@ -168,15 +170,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[i] = mp;
     }
 
-    ioUnits[0] = ta;
-    ioUnits[1] = tb;
-    ioUnits[2] = bcs;
+//    ioUnits[0] = ta;
+//    ioUnits[1] = tb;
+    ioUnits[actIO++] = bcs;
 
     USART usart0 = new USART(this, memory, 0x70);
     USART usart1 = new USART(this, memory, 0x78);
 
-    ioUnits[3] = usart0;
-    ioUnits[4] = usart1;
+    ioUnits[actIO++] = usart0;
+    ioUnits[actIO++] = usart1;
     
     for (int i = 0, n = 8; i < n; i++) {
       memOut[0x70 + i] = usart0;
@@ -187,7 +189,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
 
     ADC12 adc12 = new ADC12(this);
-    ioUnits[5] = adc12;
+    ioUnits[actIO++] = adc12;
 
     for (int i = 0, n = 16; i < n; i++) {
       memOut[0x80 + i] = adc12;
@@ -228,6 +230,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[0x32 + i * 4] = passiveIOUnits[i + 4];
       memOut[0x33 + i * 4] = passiveIOUnits[i + 4];
     }
+    passIO = 6;
+    
+    // Add the timers
+    passiveIOUnits[passIO++] = ta;
+    passiveIOUnits[passIO++] = tb;
 
     initIOUnit();
   }
@@ -378,30 +385,30 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   private void executeEvents() {
     if (cycles >= nextVTimeEventCycles) {
-      if (vTimeEventQueue.nextTime == 0) {
-        nextVTimeEventCycles = cycles + 1000;
+      if (vTimeEventQueue.eventCount == 0) {
+        nextVTimeEventCycles = cycles + 10000;
       } else {
         TimeEvent te = vTimeEventQueue.popFirst();
         long now = getTime();
         te.execute(now);
-        if (vTimeEventQueue.nextTime > 0) {
+        if (vTimeEventQueue.eventCount > 0) {
           nextVTimeEventCycles = convertVTime(vTimeEventQueue.nextTime);
         } else {
-          nextVTimeEventCycles = cycles + 1000;          
+          nextVTimeEventCycles = cycles + 10000;          
         }
       }
     }
     
     if (cycles >= nextCycleEventCycles) {
-      if (cycleEventQueue.nextTime == 0) {
-        nextCycleEventCycles = cycles + 1000;
+      if (cycleEventQueue.eventCount == 0) {
+        nextCycleEventCycles = cycles + 10000;
       } else {
         TimeEvent te = cycleEventQueue.popFirst();
         te.execute(cycles);
-        if (cycleEventQueue.nextTime > 0) {
-          nextEventCycles = cycleEventQueue.nextTime;
+        if (cycleEventQueue.eventCount > 0) {
+          nextCycleEventCycles = cycleEventQueue.nextTime;
         } else {
-          nextCycleEventCycles = cycles + 1000;          
+          nextCycleEventCycles = cycles + 10000;          
         }
       }
     }
@@ -417,7 +424,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
    * @param time
    */
   public void scheduleCycleEvent(TimeEvent event, long cycles) {
-    long currentNext = vTimeEventQueue.nextTime;
+    long currentNext = cycleEventQueue.nextTime;
     cycleEventQueue.addEvent(event, cycles);
     if (currentNext != cycleEventQueue.nextTime) {
       nextCycleEventCycles = cycleEventQueue.nextTime;
@@ -425,7 +432,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
         nextEventCycles = nextCycleEventCycles;
       }
     }
-
   }
 
   

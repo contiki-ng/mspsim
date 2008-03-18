@@ -73,7 +73,7 @@ static int caseID = 0;
 static int pos = 0;
 static unsigned int times[10];
 interrupt(TIMERB1_VECTOR) timerb1 (void) {
-  if(TBIV == 2) {
+  if (TBIV == 2) {
 	  if (pos < 10) {
 		  times[pos] = TBR;
 		  pos++;
@@ -309,7 +309,7 @@ static void testTimer() {
   }
   
   for (i = 0; i < pos; i++) {
-	  printf("Trigg time %d => %d\n", i + 1, times[i]);
+	  printf("Trigg time %d => %ud\n", i + 1, times[i]);
   }
 }
 	

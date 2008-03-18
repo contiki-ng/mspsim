@@ -45,6 +45,7 @@ public class EventQueue {
 
   private TimeEvent first;
   public long nextTime;
+  public int eventCount = 0;
 
   public EventQueue() {
   }
@@ -58,6 +59,7 @@ public class EventQueue {
     if (event.scheduled) {
       removeEvent(event);
     }
+    eventCount++;
     if (first == null) {
       first = event;
     } else {
@@ -116,6 +118,7 @@ public class EventQueue {
 //  System.out.println("Removed =>");
 //  print();
     event.scheduled = false;
+    eventCount--;
     return true;
   }
 
