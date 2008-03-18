@@ -289,7 +289,7 @@ static void testTimer() {
   /* Select SMCLK (2.4576MHz), clear TAR; This makes the rtimer count
      the number of processor cycles executed by the CPU. */
   //TBCTL = TBSSEL1 | TBCLR;
-  /* Select ACLK 32768Hz clock, divide by 1 (was ID_8 previously) */
+  /* Select ACLK 32768Hz clock, divide by 1 (was ID_3 / 8 previously) */
   TBCTL = TBSSEL0 | TBCLR | ID_0;
 
   /* CCR1 interrupt enabled, interrupt occurs when timer equals CCR1. */
@@ -305,11 +305,14 @@ static void testTimer() {
   eint();
   
   while (pos < 10) {
-	  printf("waiting for timer...%d\n", pos);
+	  printf(".");
   }
+  printf("\n");
   
   for (i = 0; i < pos; i++) {
-	  printf("Trigg time %d => %ud\n", i + 1, times[i]);
+	  unsigned int t = 100 + i * 100;
+/*	  printf("Trigg time %d => %u\n", i + 1, times[i]); */
+	  assertTrue(times[i] >= t && times[i] < t + 2);
   }
 }
 	
