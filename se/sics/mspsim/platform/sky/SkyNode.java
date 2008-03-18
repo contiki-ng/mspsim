@@ -49,6 +49,7 @@ import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
+import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
@@ -223,12 +224,14 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
 
-//    cpu.scheduleTimeEventMillis(new TimeEvent(0) {
-//      public void execute(long t) {
-//        System.out.println("SkyNode: a second elapsed (wall time): " + t + " millis: " + SkyNode.this.cpu.getTimeMillis());
-//        SkyNode.this.cpu.scheduleTimeEventMillis(this, 1000.0);
-//      }
-//    }, 1000.0);
+    cpu.scheduleCycleEvent(new TimeEvent(0) {
+      public void execute(long t) {
+        System.out.println("SkyNode: 1000000 cycles elapsed: " + t + "  " +
+            SkyNode.this.cpu.getTimeMillis());
+        // schedule at planned time + 1000000
+        SkyNode.this.cpu.scheduleCycleEvent(this, time + 1000000);
+      }
+    }, 1000000);
 
     // TODO: remove this test...
     radio.setPacketListener(new PacketListener() {

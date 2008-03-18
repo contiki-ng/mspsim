@@ -41,6 +41,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <io.h>
 
 /* From Adams test-suite */
 #define TEST(...) if(__VA_ARGS__) {					 \
@@ -67,6 +68,20 @@ static int testzero(int hm)
 }
 
 static int caseID = 0;
+
+/*---------------------------------------------------------------------------*/
+static int pos = 0;
+static unsigned int times[10];
+interrupt(TIMERB1_VECTOR) timerb1 (void) {
+  if(TBIV == 2) {
+	  if (pos < 10) {
+		  times[pos] = TBR;
+		  pos++;
+		  TBCCR1 = TBCCR1 + 100;
+	  }
+  }
+}
+/*---------------------------------------------------------------------------*/
 
 static void initTest() {
   caseID = 0;
@@ -267,6 +282,37 @@ static void testUSART() {
   printf("output finished...\n");
 }
 
+static void testTimer() {
+  int i;
+  pos = 0;
+  dint();
+  /* Select SMCLK (2.4576MHz), clear TAR; This makes the rtimer count
+     the number of processor cycles executed by the CPU. */
+  //TBCTL = TBSSEL1 | TBCLR;
+  /* Select ACLK 32768Hz clock, divide by 1 (was ID_8 previously) */
+  TBCTL = TBSSEL0 | TBCLR | ID_0;
+
+  /* CCR1 interrupt enabled, interrupt occurs when timer equals CCR1. */
+  TBCCTL1 = CCIE;
+
+  /* Start Timer_B in continuous mode. */
+  TBCTL |= MC1;
+
+  TBR = 0;
+  TBCCR1 = 100;
+  
+  /* Enable interrupts. */
+  eint();
+  
+  while (pos < 10) {
+	  printf("waiting for timer...%d\n", pos);
+  }
+  
+  for (i = 0; i < pos; i++) {
+	  printf("Trigg time %d => %d\n", i + 1, times[i]);
+  }
+}
+	
 /*--------------------------------------------------------------------------*/
 
 int
@@ -284,6 +330,7 @@ main(void)
   testFunctions();
   testModulo();
   testUSART();
+  testTimer();
   /*  printf("PROFILE\n"); */
   printf("EXIT\n");
   return 0;

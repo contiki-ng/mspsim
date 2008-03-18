@@ -124,6 +124,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private EventQueue vTimeEventQueue = new EventQueue();
   private long nextVTimeEventCycles;
 
+  private EventQueue cycleEventQueue = new EventQueue();
+  private long nextCycleEventCycles;
+
   public MSP430Core(int type) {
     // Ignore type for now...
 
@@ -376,24 +379,54 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private void executeEvents() {
     if (cycles >= nextVTimeEventCycles) {
       if (vTimeEventQueue.nextTime == 0) {
-        nextEventCycles = cycles + 1000;
-        return;
+        nextVTimeEventCycles = cycles + 1000;
+      } else {
+        TimeEvent te = vTimeEventQueue.popFirst();
+        long now = getTime();
+        te.execute(now);
+        if (vTimeEventQueue.nextTime > 0) {
+          nextVTimeEventCycles = convertVTime(vTimeEventQueue.nextTime);
+        } else {
+          nextVTimeEventCycles = cycles + 1000;          
+        }
       }
-      TimeEvent te = vTimeEventQueue.popFirst();
-      long now = getTime();
-      te.execute(now);
-      if (vTimeEventQueue.nextTime > 0) {
-        nextVTimeEventCycles = convertVTime(vTimeEventQueue.nextTime);
-        nextEventCycles = nextVTimeEventCycles;
-      }
-    } else {
-      // Allow 1000 cycles to pass if nothing to do...
-      nextEventCycles = cycles + 1000;
     }
+    
+    if (cycles >= nextCycleEventCycles) {
+      if (cycleEventQueue.nextTime == 0) {
+        nextCycleEventCycles = cycles + 1000;
+      } else {
+        TimeEvent te = cycleEventQueue.popFirst();
+        te.execute(cycles);
+        if (cycleEventQueue.nextTime > 0) {
+          nextEventCycles = cycleEventQueue.nextTime;
+        } else {
+          nextCycleEventCycles = cycles + 1000;          
+        }
+      }
+    }
+    
+    // Pick the one with shortest time in the future.
+    nextEventCycles = nextCycleEventCycles < nextVTimeEventCycles ? 
+        nextCycleEventCycles : nextVTimeEventCycles;
   }
   
-//  public void scheduleCycleEvent(long cycles, TimeEvent event) {
-//  }
+  /**
+   * Schedules a new Time event using the cycles counter
+   * @param event
+   * @param time
+   */
+  public void scheduleCycleEvent(TimeEvent event, long cycles) {
+    long currentNext = vTimeEventQueue.nextTime;
+    cycleEventQueue.addEvent(event, cycles);
+    if (currentNext != cycleEventQueue.nextTime) {
+      nextCycleEventCycles = cycleEventQueue.nextTime;
+      if (nextEventCycles > nextCycleEventCycles) {
+        nextEventCycles = nextCycleEventCycles;
+      }
+    }
+
+  }
 
   
   /**
@@ -407,8 +440,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (currentNext != vTimeEventQueue.nextTime) {
       // This is only valid when not having a cycle event queue also...
       // if we have it needs to be checked also!
-      nextVTimeEventCycles = nextEventCycles = 
-        convertVTime(vTimeEventQueue.nextTime);
+      nextVTimeEventCycles = convertVTime(vTimeEventQueue.nextTime);
+      if (nextEventCycles > nextVTimeEventCycles) {
+        nextEventCycles = nextVTimeEventCycles;
+      }
     }
   }
   

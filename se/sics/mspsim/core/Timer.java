@@ -599,8 +599,6 @@ public class Timer extends IOUnit {
     // Trigger interrupts that are up for triggering!
     triggerInterrupts();
 
-
-//     System.out.println("Writer: timer ctr = " + Utils.hex16(counter));
     return 1000 + cycles;
   }
 

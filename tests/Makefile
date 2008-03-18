@@ -10,7 +10,8 @@ endif
 
 .SUFFIXES:
 
-MCU=msp430x149
+#MCU=msp430x149
+MCU=msp430x1611
 
 ### Compiler definitions
 CC       = msp430-gcc
