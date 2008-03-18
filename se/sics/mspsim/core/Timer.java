@@ -131,13 +131,10 @@ public class Timer extends IOUnit {
   public static final int CC_IE = 0x10;  // Bit 4
   public static final int CC_TRIGGER_INT = CC_IE | CC_IFG;
 
-  private long lastCycles = 0;
   private long counterStart = 0;
   private long nextTimerTrigger = 0;
   // Number of cycles passed since current counter value was set
-  // useful for setting timeEvents to correct time.
-  private int counterPassed = 0;
-
+  // useful for setting expected compare and capture times to correct time.
   // valid for timer A
   private int timerOverflow = 0x0a;
   
@@ -177,7 +174,7 @@ public class Timer extends IOUnit {
   private int mode;
 
   private int counter = 0;
-  private int countDirection = 1;
+  private int counterPassed = 0;
 
   // The IO registers
   private int tctl;
@@ -365,7 +362,6 @@ public class Timer extends IOUnit {
 	counter = 0;
 	counterStart = cycles;
 	// inputDivider = 1; ????
-	countDirection = 1;
       }
 
       int newMode = (data >> 4) & 3;

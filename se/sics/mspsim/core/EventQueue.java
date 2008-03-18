@@ -59,7 +59,6 @@ public class EventQueue {
     if (event.scheduled) {
       removeEvent(event);
     }
-    eventCount++;
     if (first == null) {
       first = event;
     } else {
@@ -86,6 +85,7 @@ public class EventQueue {
       nextTime = 0;
     }
     event.scheduled = true;
+    eventCount++;
   }
 
   // Not yet impl.
@@ -136,6 +136,7 @@ public class EventQueue {
       nextTime = 0;
     }
     tmp.scheduled = false;
+    eventCount--;
     return tmp;
   }
 

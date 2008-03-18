@@ -224,14 +224,14 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
 
-    cpu.scheduleCycleEvent(new TimeEvent(0) {
-      public void execute(long t) {
-        System.out.println("SkyNode: 1000000 cycles elapsed: " + t + "  " +
-            SkyNode.this.cpu.getTimeMillis());
-        // schedule at planned time + 1000000
-        SkyNode.this.cpu.scheduleCycleEvent(this, time + 1000000);
-      }
-    }, 1000000);
+//    cpu.scheduleCycleEvent(new TimeEvent(0) {
+//      public void execute(long t) {
+//        System.out.println("SkyNode: 1000000 cycles elapsed: " + t + "  " +
+//            SkyNode.this.cpu.getTimeMillis());
+//        // schedule at planned time + 1000000
+//        SkyNode.this.cpu.scheduleCycleEvent(this, time + 1000000);
+//      }
+//    }, 1000000);
 
     // TODO: remove this test...
     radio.setPacketListener(new PacketListener() {
