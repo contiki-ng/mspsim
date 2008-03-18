@@ -311,7 +311,7 @@ static void testTimer() {
   
   for (i = 0; i < pos; i++) {
 	  unsigned int t = 100 + i * 100;
-/*	  printf("Trigg time %d => %u\n", i + 1, times[i]); */
+	  printf("Trigg time %d => %u\n", i + 1, times[i]);
 	  assertTrue(times[i] >= t && times[i] < t + 2);
   }
 }

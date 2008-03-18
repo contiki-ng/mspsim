@@ -134,6 +134,9 @@ public class Timer extends IOUnit {
   private long lastCycles = 0;
   private long counterStart = 0;
   private long nextTimerTrigger = 0;
+  // Number of cycles passed since current counter value was set
+  // useful for setting timeEvents to correct time.
+  private int counterPassed = 0;
 
   // valid for timer A
   private int timerOverflow = 0x0a;
@@ -451,7 +454,9 @@ public class Timer extends IOUnit {
 			   Utils.hex16(data) + " TR: " +
 			   Utils.hex16(counter) + " diff: " + Utils.hex16(diff));
       }
-      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff);
+      // Use the counterPassed information to compensate the expected capture/compare time!!!
+      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff) - counterPassed;
+      counterPassed = 0;
       if (DEBUG) {
 	System.out.println(getName() + " Cycles: " + cycles + " expCap[" + index + "]: " + expCaptureTime[index] + " ctr:" + counter +
 			   " data: " + data + " ~" +
@@ -526,15 +531,17 @@ public class Timer extends IOUnit {
     }
     divider = divider * inputDivider;
     long cycctr = cycles - counterStart;
+    double tick = cycctr / divider;
+    counterPassed = (int) (divider * (tick - (long) (tick)));
     switch (mode) {
     case CONTIN:
-      counter = ((int) (cycctr / divider)) & 0xffff;
+      counter = ((int) tick) & 0xffff;
       break;
     case UP:
-      counter = ((int) (cycctr / divider)) % tccr[0];
+      counter = ((int) tick) % tccr[0];
       break;
     case UPDWN:
-      counter = ((int) (cycctr / divider)) % (tccr[0] * 2);
+      counter = ((int) tick) % (tccr[0] * 2);
       if (counter > tccr[0]) {
 	// Should back down to start again!
 	counter = 2 * tccr[0] - counter;
