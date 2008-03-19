@@ -125,10 +125,11 @@ public class HighlightSourceViewer implements SourceViewer {
     }
     currentFile = filename;
 
-    setup();
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
         try {
+	  setup();
+
           File file = findSourceFile(path, filename);
           if (file != null) {
             FileReader reader = new FileReader(file);
@@ -206,11 +207,15 @@ public class HighlightSourceViewer implements SourceViewer {
       fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
       fileChooser.setDialogTitle("Select compilation directory");
     }
-    fileChooser.showOpenDialog(window);
-    File d = fileChooser.getSelectedFile();
-    if (d != null) {
-      path.add(d);
-      return findSourceFile(fPath, filename);
+    if (!window.isVisible()) {
+      window.setVisible(true);
+    }
+    if (fileChooser.showOpenDialog(window) == JFileChooser.APPROVE_OPTION) {
+      File d = fileChooser.getSelectedFile();
+      if (d != null) {
+	path.add(d);
+	return findSourceFile(fPath, filename);
+      }
     }
     return null;
   }
