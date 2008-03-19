@@ -38,7 +38,7 @@
  */
 
 package se.sics.mspsim.util;
-import se.sics.mspsim.core.*;
+import java.util.ArrayList;
 
 public class ELFDebug {
 
@@ -61,7 +61,9 @@ public class ELFDebug {
     int count = len / dbgStab.entSize;
     int addr = dbgStab.offset;
 
-    if (DEBUG) System.out.println("Number of stabs:" + count);
+    if (DEBUG) {
+      System.out.println("Number of stabs:" + count);
+    }
     stabs = new Stab[count];
     for (int i = 0, n = count; i < n; i++) {
       elf.pos = addr;
@@ -146,6 +148,109 @@ public class ELFDebug {
       }
     }
     return null;
+  }
+
+  public ArrayList<Integer> getExecutableAddresses() {
+    ArrayList<Integer> allAddresses = new ArrayList<Integer>();
+
+    int address = Integer.MAX_VALUE;
+
+    String currentPath = null;
+    String currentFile = null;
+    String currentFunction = null;
+    int lastAddress = 0;
+    int currentLine = 0;
+    int currentLineAdr = 0;
+    for (Stab stab : stabs) {
+      switch(stab.type) {
+      case N_SO:
+        if (stab.value < address) {
+          if (stab.data != null && stab.data.endsWith("/")) {
+            currentPath = stab.data;
+            lastAddress = stab.value;
+            allAddresses.add(new Integer(lastAddress));
+            currentFunction = null;
+          } else {
+            currentFile = stab.data;
+            lastAddress = stab.value;
+            allAddresses.add(new Integer(lastAddress));
+            currentFunction = null;
+          }
+        } else {
+          /* requires sorted order of all file entries in stab section */
+          if (DEBUG) {
+            System.out.println("FILE: Already passed address..." +
+                currentPath + " " +
+                currentFile + " " + currentFunction);
+          }
+          return allAddresses;
+        }
+        break;
+      case N_SLINE:
+        if (currentPath != null) { /* only files with path... */
+          if (currentLineAdr < address) {
+            currentLine = stab.desc;
+            currentLineAdr = lastAddress + stab.value;
+            allAddresses.add(new Integer(currentLineAdr));
+            /*if (currentLineAdr >= address) {
+              // Finished!!!
+              if (DEBUG) {
+                System.out.println("File: " + currentPath + " " + currentFile);
+                System.out.println("Function: " + currentFunction);
+                System.out.println("Line No: " + currentLine);
+              }
+              return new DebugInfo(currentLine, currentPath, currentFile,
+                  currentFunction);
+            }*/
+          }
+        }
+        break;
+      case N_FUN:
+        if (stab.value < address) {
+          currentFunction = stab.data;
+          lastAddress = stab.value;
+          allAddresses.add(new Integer(lastAddress));
+        } else {
+          if (DEBUG) {
+            System.out.println("FUN: Already passed address...");
+          }
+          return allAddresses;
+        }
+        break;
+      }
+    }
+    return allAddresses;
+}
+
+  public String[] getSourceFiles() {
+    String currentPath = null;
+    String currentFile = null;
+    ArrayList<String> sourceFiles = new ArrayList<String>();
+
+    for (Stab stab : stabs) {
+      if (stab.type == N_SO) {
+        if (stab.data != null && stab.data.endsWith("/")) {
+          currentPath = stab.data;
+        } else {
+          currentFile = stab.data;
+
+          if (currentFile != null && !currentFile.isEmpty()) {
+            if (currentPath == null) {
+              sourceFiles.add(currentFile);
+            } else {
+              sourceFiles.add(currentPath + currentFile);
+            }
+          }
+        }
+      }
+    }
+
+    String[] sourceFilesArray = new String[sourceFiles.size()];
+    for (int i=0; i < sourceFilesArray.length; i++) {
+      sourceFilesArray[i] = sourceFiles.get(i);
+    }
+
+    return sourceFilesArray;
   }
 
   private static class Stab {
