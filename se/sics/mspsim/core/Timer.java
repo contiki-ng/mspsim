@@ -196,16 +196,18 @@ public class Timer extends IOUnit {
 
   private boolean interruptEnable = false;
   private boolean interruptPending = false;
+  private int ccr1Vector;
+  private int ccr0Vector;
+
+  private MSP430Core core;
 
   private TimeEvent timerTrigger = new TimeEvent(0) {
     public void execute(long t) {
-//      System.out.println(getName() + " executing update timers at " + t);
+//      System.out.println(getName() + " **** executing update timers at " + t + " cycles=" + core.cycles);
       updateTimers(t);
     }
   };
   
-  private MSP430Core core;
-
   private int lastTIV;
 
   private int[] srcMap;
@@ -213,6 +215,7 @@ public class Timer extends IOUnit {
    * Creates a new <code>Timer</code> instance.
    *
    */
+
   public Timer(MSP430Core core, int[] srcMap, int[] memory, int offset) {
     super(memory, offset);
     this.srcMap = srcMap;
@@ -228,6 +231,10 @@ public class Timer extends IOUnit {
       type = TIMER_B;
       timerOverflow = 0x0e;
     }
+
+    ccr0Vector = type == TIMER_A ? TACCR0_VECTOR : TBCCR0_VECTOR;
+    ccr1Vector = type == TIMER_A ? TACCR1_VECTOR : TBCCR1_VECTOR;
+        
     reset();
   }
 
@@ -259,6 +266,7 @@ public class Timer extends IOUnit {
     switch(index) {
     case TR:
       val = updateCounter(cycles);
+//      System.out.println(getName() + " TR read => " + val);
       break;
     case TCTL:
       val = tctl;
@@ -451,7 +459,12 @@ public class Timer extends IOUnit {
 			   Utils.hex16(counter) + " diff: " + Utils.hex16(diff));
       }
       // Use the counterPassed information to compensate the expected capture/compare time!!!
-      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff) - counterPassed;
+      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff) - counterPassed;      
+//      if (counterPassed > 0) {
+//        System.out.println(getName() + " Comp: " + counterPassed + " cycl: " + cycles + " TR: " +
+//            counter + " CCR" + index + " = " + data + " diff = " + diff + " cycMul: " + cyclesMultiplicator + " expCyc: " +
+//            expCaptureTime[index]);
+//      }
       counterPassed = 0;
       if (DEBUG) {
 	System.out.println(getName() + " Cycles: " + cycles + " expCap[" + index + "]: " + expCaptureTime[index] + " ctr:" + counter +
@@ -620,12 +633,12 @@ public class Timer extends IOUnit {
   
   private void calculateNextEventTime(long cycles) {
     long time = nextTimerTrigger;
-//    int smallest = -1;
+    int smallest = -1;
     for (int i = 0; i < expCaptureTime.length; i++) {
       long ct = expCaptureTime[i];
       if (ct > 0 && ct < time) {
         time = ct;
-//        smallest = i;
+        smallest = i;
       }
     }
     
@@ -657,8 +670,8 @@ public class Timer extends IOUnit {
       // This only triggers interrupts - reading TIV clears!??!
       if (i == 0) {
         // Execute the interrupt vector... the high-pri one...
-        core.flagInterrupt(type == TIMER_A ? TACCR0_VECTOR : TBCCR0_VECTOR,
-            this, trigger);
+//        System.out.println(getName() +">>>> Trigger IRQ for CCR0");
+        core.flagInterrupt(ccr0Vector, this, trigger);
         // Trigger this!
         // This is handled by its own vector!!!
         if (trigger) {
@@ -690,8 +703,8 @@ public class Timer extends IOUnit {
       }
     }
     
-    core.flagInterrupt(type == TIMER_A ? TACCR1_VECTOR : TBCCR1_VECTOR,
-		       this, trigger);
+//    System.out.println(getName() +">>>> Trigger IRQ for CCR:" + tIndex);
+    core.flagInterrupt(ccr1Vector, this, trigger);
   }
 
   public String getSourceName(int source) {
@@ -721,6 +734,9 @@ public class Timer extends IOUnit {
   // The interrupt have been serviced...
   // Some flags should be cleared (the highest priority flags)?
   public void interruptServiced(int vector) {
+    if (vector == ccr0Vector) {
+      core.flagInterrupt(ccr0Vector, this, false);
+    }
     if (MSP430Core.debugInterrupts) {
       System.out.println("interrupt Serviced...");
     }
