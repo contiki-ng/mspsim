@@ -41,7 +41,6 @@
 
 package se.sics.mspsim.platform.esb;
 import java.io.IOException;
-
 import se.sics.mspsim.chip.TR1001;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
@@ -51,6 +50,7 @@ import se.sics.mspsim.core.USART;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.util.ArgumentManager;
 
 public class ESBNode extends GenericNode implements PortListener {
 
@@ -167,18 +167,19 @@ public class ESBNode extends GenericNode implements PortListener {
   public void setupNode() {
     setupNodePorts();
 
-    gui = new ESBGui(this);
+    if (!config.getPropertyAsBoolean("nogui", false)) {
+      gui = new ESBGui(this);
 
+      // A HACK for some "graphs"!!!
+      DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+      DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+      dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
+      dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
+      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
+    }
     stats.addMonitor(this);
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
-
-    // A HACK for some "graphs"!!!
-    DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
-    DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-    dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
-    dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
-    dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
   }
 
   public int getModeMax() {
@@ -191,7 +192,9 @@ public class ESBNode extends GenericNode implements PortListener {
 
   public static void main(String[] args) throws IOException {
     ESBNode node = new ESBNode();
-    node.setup(args);
+    ArgumentManager config = new ArgumentManager();
+    config.handleArguments(args);
+    node.setup(config);
     node.start();
   }
 

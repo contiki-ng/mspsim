@@ -47,7 +47,9 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.ui.ControlUI;
+import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.ConfigManager;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
@@ -55,6 +57,8 @@ import se.sics.mspsim.util.OperatingModeStatistics;
 import se.sics.mspsim.util.StatCommands;
 
 public abstract class GenericNode extends Chip implements Runnable {
+
+  protected ConfigManager config;
 
   protected ComponentRegistry registry = new ComponentRegistry();
   protected MSP430 cpu = new MSP430(0);
@@ -64,11 +68,14 @@ public abstract class GenericNode extends Chip implements Runnable {
   
   public abstract void setupNode();
   
-  public void setup(String[] args) throws IOException {
+  public void setup(ArgumentManager config) throws IOException {
+    String[] args = config.getArguments();
     if (args.length == 0) {
       System.out.println("Usage: " + getClass().getName() + " <firmware>");
       System.exit(1);
     }
+
+    this.config = config;
 
     CommandHandler ch = new CommandHandler();
     stats = new OperatingModeStatistics(cpu);
@@ -101,13 +108,14 @@ public abstract class GenericNode extends Chip implements Runnable {
       
     cpu.reset();
     setupNode();
-    
-    // Setup control and other UI components
-    ControlUI control = new ControlUI(registry);
-    HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
+
+    if (!config.getPropertyAsBoolean("nogui", false)) {
+      // Setup control and other UI components
+      ControlUI control = new ControlUI(registry);
+      HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
 //    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
-    control.setSourceViewer(sourceViewer);
-    
+      control.setSourceViewer(sourceViewer);
+    }
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);
       cpu.getDisAsm().setMap(map);
@@ -119,9 +127,11 @@ public abstract class GenericNode extends Chip implements Runnable {
   
  
   public void run() {
-    System.out.println("Starting new CPU thread...");
-    cpu.cpuloop();
-    System.out.println("Stopping CPU thread...");
+    if (!cpu.isRunning()) {
+      System.out.println("Starting new CPU thread...");
+      cpu.cpuloop();
+      System.out.println("Stopping CPU thread...");
+    }
   }
   public void start() {
     if (!cpu.isRunning()) {

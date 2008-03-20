@@ -55,6 +55,7 @@ import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.OperatingModeStatistics;
 
@@ -216,7 +217,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     fileName = fileName + ".flash";
     System.out.println("Using flash file: " + fileName);
 
-    this.flashFile = flashFile;
+    this.flashFile = fileName;
 
     setupNodePorts();
 
@@ -251,21 +252,25 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 //      }
 //    });
 
-    gui = new SkyGui(this);
+    if (!config.getPropertyAsBoolean("nogui", false)) {
+      gui = new SkyGui(this);
 
-    // A HACK for some "graphs"!!!
-    DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
-    DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-    dataChart.addDataSource(dss, "LEDS", stats.getDataSource("Tmote Sky", 0, OperatingModeStatistics.OP_INVERT));
-    dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
-    dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
-    dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
+      // A HACK for some "graphs"!!!
+      DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+      DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+      dataChart.addDataSource(dss, "LEDS", stats.getDataSource("Tmote Sky", 0, OperatingModeStatistics.OP_INVERT));
+      dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
+      dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
+      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
+    }
   }
 
 
   public static void main(String[] args) throws IOException {
     SkyNode node = new SkyNode();
-    node.setup(args);
+    ArgumentManager config = new ArgumentManager();
+    config.handleArguments(args);
+    node.setup(config);
     node.start();
   }
 
