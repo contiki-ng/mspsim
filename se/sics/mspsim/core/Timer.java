@@ -736,6 +736,8 @@ public class Timer extends IOUnit {
   public void interruptServiced(int vector) {
     if (vector == ccr0Vector) {
       core.flagInterrupt(ccr0Vector, this, false);
+      // Remove the flag also...
+      tcctl[0] &= ~CC_IFG;
     }
     if (MSP430Core.debugInterrupts) {
       System.out.println("interrupt Serviced...");
