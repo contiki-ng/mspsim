@@ -1,4 +1,4 @@
-0.85
+0.90
 Changes: 
 - fixed multiplier to handle the different modes better.
 - refactored so that IOUnit is no longer a Chip
@@ -11,6 +11,9 @@ Changes:
 - added watch on register, grep, and other commands in CLI
 - added redirect to files in CLI
 - added speed control API and CLI command (speed)
+- added event system for cycle based events
+- fixed timer (A/B) to be event driven instead of tick driven
+- fixed bugs in interrupt handling of timer system
 
 0.84
 Changes:

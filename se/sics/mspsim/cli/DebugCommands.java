@@ -50,7 +50,9 @@ import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.Utils;
 
 public class DebugCommands implements CommandBundle {
-
+  private long lastCall = 0;
+  private long lastWall = 0;
+  
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     final ELF elf = (ELF) registry.getComponent(ELF.class);
@@ -230,14 +232,23 @@ public class DebugCommands implements CommandBundle {
             return -1;
           }
         });
-        ch.registerCommand("time", new BasicCommand("prints the elapse time and cycles", "") {
+        ch.registerCommand("reset", new BasicCommand("resets the CPU", "") {
           public int executeCommand(CommandContext context) {
-            long time = ((long)(cpu.getTimeMillis()));
-            context.out.println("Emulated time elapsed: " + time + "(ms)  cycles: " + cpu.cycles);
+            cpu.reset();
             return 0;
           }
         });
 
+        ch.registerCommand("time", new BasicCommand("prints the elapse time and cycles", "") {
+          public int executeCommand(CommandContext context) {
+            long time = ((long)(cpu.getTimeMillis()));
+            context.out.println("Emulated time elapsed: " + time + "(ms)  since last: " + (time - lastCall) + " ms" + " wallTime: " +
+                (System.currentTimeMillis() - lastWall) + " ms");
+            lastCall = time;
+            lastWall = System.currentTimeMillis();
+            return 0;
+          }
+        });
       }
     }
   }

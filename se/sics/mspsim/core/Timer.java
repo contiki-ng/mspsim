@@ -243,6 +243,15 @@ public class Timer extends IOUnit {
       expCompare[i] = -1;
       expCaptureTime[i] = -1;
     }
+    for (int i = 0; i < tcctl.length; i++) {
+      tcctl[i] = 0;
+      tccr[i] = 0;
+    }
+    
+    interruptEnable = false;
+    interruptPending = false;
+    counter = 0;
+    counterPassed = 0;
   }
 
   // Should handle read of byte also (currently ignores that...)
@@ -735,6 +744,7 @@ public class Timer extends IOUnit {
   // Some flags should be cleared (the highest priority flags)?
   public void interruptServiced(int vector) {
     if (vector == ccr0Vector) {
+      // Reset the interrupt trigger in "core".
       core.flagInterrupt(ccr0Vector, this, false);
       // Remove the flag also...
       tcctl[0] &= ~CC_IFG;

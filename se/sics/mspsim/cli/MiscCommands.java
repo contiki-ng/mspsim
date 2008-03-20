@@ -143,6 +143,12 @@ public class MiscCommands implements CommandBundle {
       }
     });
     
+    handler.registerCommand("exit", new BasicCommand("exit", "") {
+      public int executeCommand(CommandContext context) {
+        System.exit(0);
+        return 0;
+      }
+    });
     
     handler.registerCommand("exec", new ExecCommand());
   }

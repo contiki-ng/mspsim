@@ -506,6 +506,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public void reset() {
     resetIOUnits();
     reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
+    System.out.println("Reset the CPU: " + reg[PC]);
+    
     for (int i = 0, n = 16; i < n; i++) {
       interruptSource[i] = null;
     }
