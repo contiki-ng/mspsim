@@ -140,6 +140,19 @@ public class EventQueue {
     return tmp;
   }
 
+  public void removeAll() {
+    TimeEvent t = first;
+    while(t != null) {
+      TimeEvent clr = t;
+      t = t.nextEvent;
+      clr.nextEvent = null;
+      clr.time = 0;
+      clr.scheduled = false;
+    }
+    first = null;
+    eventCount = 0;
+  }
+  
   public void print() {
     TimeEvent t = first;
     System.out.print("nxt: " + nextTime + " [");

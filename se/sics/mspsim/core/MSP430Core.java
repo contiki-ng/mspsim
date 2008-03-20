@@ -515,6 +515,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     servicedInterrupt = -1;
     interruptMax = -1;
     writeRegister(SR, 0);
+   
+    cycleEventQueue.removeAll();
+    vTimeEventQueue.removeAll();
+    
   }
 
   // Indicate that we have an interrupt now!

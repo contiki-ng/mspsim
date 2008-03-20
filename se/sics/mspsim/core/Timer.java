@@ -131,12 +131,12 @@ public class Timer extends IOUnit {
   public static final int CC_IE = 0x10;  // Bit 4
   public static final int CC_TRIGGER_INT = CC_IE | CC_IFG;
 
-  private long counterStart = 0;
-  private long nextTimerTrigger = 0;
   // Number of cycles passed since current counter value was set
   // useful for setting expected compare and capture times to correct time.
   // valid for timer A
   private int timerOverflow = 0x0a;
+  private long counterStart = 0;
+  private long nextTimerTrigger = 0;
   
   // Input map for timer A
   public static final int[] TIMER_Ax149 = new int[] {
@@ -242,35 +242,44 @@ public class Timer extends IOUnit {
     for (int i = 0, n = expCompare.length; i < n; i++) {
       expCompare[i] = -1;
       expCaptureTime[i] = -1;
+      expCapInterval[i] = 0;
+      outMode[i] = 0;
+      capMode[i] = 0;
+      inputSel[i] = 0;
+      inputSrc[i] = 0;
+      captureOn[i] = false;
     }
     for (int i = 0; i < tcctl.length; i++) {
       tcctl[i] = 0;
       tccr[i] = 0;
     }
-    
+    tctl = 0;
+    lastTIV = 0;
     interruptEnable = false;
     interruptPending = false;
     counter = 0;
     counterPassed = 0;
+    counterStart = 0;
+    clockSource = 0;
+    cyclesMultiplicator = 1;
+    mode = STOP;
+    nextTimerTrigger = 0;
+    inputDivider = 1;
   }
 
   // Should handle read of byte also (currently ignores that...)
   public int read(int address, boolean word, long cycles) {
-
-    int val = memory[address];
-    if (word) {
-      val |= memory[(address + 1) & 0xffff] << 8;
-    }
-
     if (address == TAIV || address == TBIV) {
       // should clear registers for cause of interrupt (highest value)?
       // but what if a higher value have been triggered since this was
       // triggered??? -> does that matter???
       // But this mess the TIV up too early......
       // Must DELAY the reset of interrupt flags until next read...?
+      int val = lastTIV;
       resetTIV();
+      return val;
     }
-
+    int val = 0;
     int index = address - offset;
     switch(index) {
     case TR:
@@ -312,6 +321,8 @@ public class Timer extends IOUnit {
       i = (index - TCCR0) / 2;
       val = tccr[i];
       break;
+    default:
+      System.out.println("Not supported read, returning zero!!!");
     }
     
     if (DEBUG) {
@@ -344,11 +355,6 @@ public class Timer extends IOUnit {
   }
 
   public void write(int address, int data, boolean word, long cycles) {
-    memory[address] = data & 0xff;
-    if (word) {
-      memory[address + 1] = (data >> 8) & 0xff;
-    }
-
     // This does not handle word/byte difference yet... assumes it gets
     // all 16 bits when called!!!
 
@@ -579,7 +585,6 @@ public class Timer extends IOUnit {
   }
 
   private void updateTimers(long cycles) {
-    
     if (cycles >= nextTimerTrigger) {
       interruptPending = true;
       // This should be updated whenever clockspeed changes...
@@ -590,8 +595,7 @@ public class Timer extends IOUnit {
     // But the timer does not need to be updated this often...
     // Do we need to update the counter here???
     // System.out.println("Checking capture register [ioTick]: " + cycles);
-    for (int i = 0, n = noCompare; i < n; i++) {
-      //      System.out.println("Checking: " + i);
+    for (int i = 0, n = noCompare; i < n; i++) { 
       if (expCaptureTime[i] != -1 && cycles >= expCaptureTime[i]) {
         if (DEBUG) {
           System.out.println(getName() + " CAPTURE: " + i +
@@ -684,7 +688,7 @@ public class Timer extends IOUnit {
         // Trigger this!
         // This is handled by its own vector!!!
         if (trigger) {
-          lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = 0;
+          lastTIV = 0;
           return;
         }
       } else {
