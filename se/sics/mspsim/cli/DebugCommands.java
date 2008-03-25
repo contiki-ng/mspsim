@@ -52,13 +52,13 @@ import se.sics.mspsim.util.Utils;
 public class DebugCommands implements CommandBundle {
   private long lastCall = 0;
   private long lastWall = 0;
-  
+
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     final ELF elf = (ELF) registry.getComponent(ELF.class);
     final GenericNode node = (GenericNode) registry.getComponent("node");
     if (cpu != null) {
-      ch.registerCommand("break", new BasicAsyncCommand("adds a breakpoint to a given address or symbol",
+      ch.registerCommand("break", new BasicAsyncCommand("add a breakpoint to a given address or symbol",
           "<address or symbol>") { 
         int address = 0; 
         public int executeCommand(final CommandContext context) {
@@ -78,7 +78,7 @@ public class DebugCommands implements CommandBundle {
       });
 
       ch.registerCommand("watch",
-          new BasicAsyncCommand("adds a write watch to a given address or symbol", "<address or symbol>") {
+          new BasicAsyncCommand("add a write watch to a given address or symbol", "<address or symbol>") {
         int mode = 0;
         int address = 0;
         public int executeCommand(final CommandContext context) {
@@ -118,7 +118,7 @@ public class DebugCommands implements CommandBundle {
       });
 
       ch.registerCommand("watchreg",
-          new BasicAsyncCommand("adds a write watch to a given register", "<register> [int]") {
+          new BasicAsyncCommand("add a write watch to a given register", "<register> [int]") {
         int mode = 0;
         int register = 0;
         public int executeCommand(final CommandContext context) {
@@ -169,13 +169,13 @@ public class DebugCommands implements CommandBundle {
         }
 
         public String getCommandHelp(String commandName) {
-          return "clears a breakpoint or watch from a given address or symbol";
+          return "clear a breakpoint or watch from a given address or symbol";
         }
       });
 
       
       
-      ch.registerCommand("symbol", new BasicCommand("lists matching symbold", "<regexp>") {
+      ch.registerCommand("symbol", new BasicCommand("list matching symbold", "<regexp>") {
         public int executeCommand(final CommandContext context) {
           String regExp = context.getArgument(0);
           MapEntry[] entries = context.getMapTable().getEntries(regExp);
@@ -189,29 +189,29 @@ public class DebugCommands implements CommandBundle {
       });
       
       if (node != null) {
-        ch.registerCommand("stop", new BasicCommand("stops mspsim", "") {
+        ch.registerCommand("stop", new BasicCommand("stop the CPU", "") {
           public int executeCommand(CommandContext context) {
             node.stop();
             context.out.println("CPU stopped at: $" + Utils.hex16(cpu.readRegister(0)));
             return 0;
           }
         });
-        ch.registerCommand("start", new BasicCommand("starts mspsim", "") {
+        ch.registerCommand("start", new BasicCommand("start the CPU", "") {
           public int executeCommand(CommandContext context) {
             node.start();
             return 0;
           }
         });
-        ch.registerCommand("step", new BasicCommand("singlesteps mspsim", "<number of lines>") {
+        ch.registerCommand("step", new BasicCommand("singlestep the CPU", "[number of instructions]") {
           public int executeCommand(CommandContext context) {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
             while(nr-- > 0)
               node.step();
-            context.out.println("CPU stepped to: " + Utils.hex16(cpu.readRegister(0)));
+            context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)));
             return 0;
           }
         });
-        ch.registerCommand("print", new BasicCommand("prints value of an address or symbol", "<address or symbol>") {
+        ch.registerCommand("print", new BasicCommand("print value of an address or symbol", "<address or symbol>") {
           public int executeCommand(CommandContext context) {
             int adr = context.getArgumentAsAddress(0);
             if (adr != -1) { 
@@ -222,7 +222,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        ch.registerCommand("printreg", new BasicCommand("prints value of an register", "<register>") {
+        ch.registerCommand("printreg", new BasicCommand("print value of an register", "<register>") {
           public int executeCommand(CommandContext context) {
             int register = context.getArgumentAsRegister(0);
             if (register >= 0) {
@@ -232,14 +232,14 @@ public class DebugCommands implements CommandBundle {
             return -1;
           }
         });
-        ch.registerCommand("reset", new BasicCommand("resets the CPU", "") {
+        ch.registerCommand("reset", new BasicCommand("reset the CPU", "") {
           public int executeCommand(CommandContext context) {
             cpu.reset();
             return 0;
           }
         });
 
-        ch.registerCommand("time", new BasicCommand("prints the elapse time and cycles", "") {
+        ch.registerCommand("time", new BasicCommand("print the elapse time and cycles", "") {
           public int executeCommand(CommandContext context) {
             long time = ((long)(cpu.getTimeMillis()));
             context.out.println("Emulated time elapsed: " + time + "(ms)  since last: " + (time - lastCall) + " ms" + " wallTime: " +

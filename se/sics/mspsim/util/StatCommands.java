@@ -62,23 +62,29 @@ public class StatCommands implements CommandBundle {
 
   @Override
   public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
-    handler.registerCommand("chipinfo", new BasicCommand("shows information about specified chip",
+    handler.registerCommand("chipinfo", new BasicCommand("show information about specified chip",
     "[chips...]") {
 
       @Override
       public int executeCommand(CommandContext context) {
         if (context.getArgumentCount() > 0) {
           for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
-            // TODO list chips
+            String chipName = context.getArgument(i);
+            Chip chip = statistics.getChip(chipName);
+            if (chip == null) {
+              context.out.println("  " + chipName + ": NOT FOUND");
+            } else {
+              context.out.println("  " + chipName + ": " + chip);
+            }
           }
-          return 0;
-        }
-        Chip[] chips = statistics.getChips();
-        if (chips == null) {
-          context.out.println("No chips found");
         } else {
-          for (int i = 0, n = chips.length; i < n; i++) {
-            context.out.println("  " + chips[i].getName());
+          Chip[] chips = statistics.getChips();
+          if (chips == null) {
+            context.out.println("No chips found.");
+          } else {
+            for (int i = 0, n = chips.length; i < n; i++) {
+              context.out.println("  " + chips[i].getName());
+            }
           }
         }
         return 0;
@@ -86,7 +92,7 @@ public class StatCommands implements CommandBundle {
         
     });
 
-    handler.registerCommand("duty", new BasicAsyncCommand("adds a duty cycle sampler for operating modes to the specified chips",
+    handler.registerCommand("duty", new BasicAsyncCommand("add a duty cycle sampler for operating modes to the specified chips",
         "<frequency> <chip> [chips...]") {
 
       private PrintStream out;

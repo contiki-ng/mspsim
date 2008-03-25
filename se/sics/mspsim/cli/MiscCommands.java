@@ -39,14 +39,11 @@
  *           $Revision$
  */
 package se.sics.mspsim.cli;
-
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.regex.Pattern;
-
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.util.ComponentRegistry;
 
@@ -55,10 +52,11 @@ import se.sics.mspsim.util.ComponentRegistry;
  *
  */
 public class MiscCommands implements CommandBundle {
-  Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
+
+  private Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
 
   public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
-    handler.registerCommand("grep", new BasicLineCommand("grep", "<regexp>") {
+    handler.registerCommand("grep", new BasicLineCommand("print lines matching the specified pattern", "<regexp>") {
       private PrintStream out;
       private Pattern pattern;
       public int executeCommand(CommandContext context) {
@@ -77,14 +75,14 @@ public class MiscCommands implements CommandBundle {
 
     // TODO: this should also be "registered" as a "sink".
     // probably this should be handled using ">" instead!
-    handler.registerCommand(">", new BasicLineCommand(">", "<filename>") {
+    handler.registerCommand(">", new BasicLineCommand(null, "<filename>") {
       FileTarget ft;
       public int executeCommand(CommandContext context) {
         String fileName = context.getArgument(0);
         ft = fileTargets.get(fileName);
         if (ft == null) {
           try {
-            System.out.println("Creating new file target: " + fileName);
+//            System.out.println("Creating new file target: " + fileName);
             ft = new FileTarget(fileName);
             fileTargets.put(fileName, ft);
           } catch (IOException e) {
@@ -102,22 +100,23 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    handler.registerCommand("fclose", new BasicCommand("fclose", "<filename>") {
+    handler.registerCommand("fclose", new BasicCommand("close the specified file", "<filename>") {
       public int executeCommand(CommandContext context) {
         String name = context.getArgument(0);
         FileTarget ft = fileTargets.get(name);
         if (ft != null) {
-          context.out.println("Closing file:" + name);
+          context.out.println("Closing file " + name);
           fileTargets.remove(name);
           ft.close();
+          return 0;
         } else {
-          context.err.println("No file named: " + name + " open");
+          context.err.println("Could not find the open file " + name);
+          return 1;
         }
-        return 0;
       }
     });
 
-    handler.registerCommand("files", new BasicCommand("files", "") {
+    handler.registerCommand("files", new BasicCommand("list open files", "") {
       public int executeCommand(CommandContext context) {
         for (Iterator<FileTarget> iterator = fileTargets.values().iterator(); iterator.hasNext();) {
           FileTarget type = (FileTarget) iterator.next();
@@ -127,29 +126,37 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    handler.registerCommand("speed", new BasicCommand("speed", "<factor>") {
+    handler.registerCommand("speed", new BasicCommand("set the speed factor for the CPU", "[factor]") {
       public int executeCommand(CommandContext context) {
-        double d = context.getArgumentAsDouble(0);
         MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
-        if (cpu != null) {
-          if (d < 0.0) {
-            System.out.println("Rate needs to be larger than zero");
-          } else {
-            long rate = (long)(25000 * d);
+        if (cpu == null) {
+          context.err.println("could not access the CPU.");
+          return 1;
+        } else if (context.getArgumentCount() == 0) {
+          long rate = cpu.getSleepRate();
+          double d = rate / 25000.0;
+          context.out.println("Speed factor is set to " + (((int)(d * 100 + 0.5)) / 100.0));
+        } else {
+          double d = context.getArgumentAsDouble(0);
+          if (d > 0.0) {
+            long rate = (long) (25000 * d);
             cpu.setSleepRate(rate);
+          } else {
+            context.err.println("Speed factor must be larger than zero.");
+            return 1;
           }
         }
         return 0;
       }
     });
-    
-    handler.registerCommand("exit", new BasicCommand("exit", "") {
+
+    handler.registerCommand("quit", new BasicCommand("exit MSPSim", "") {
       public int executeCommand(CommandContext context) {
         System.exit(0);
         return 0;
       }
     });
-    
+
     handler.registerCommand("exec", new ExecCommand());
   }
 

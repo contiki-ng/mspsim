@@ -74,8 +74,15 @@ public class CommandHandler implements ActiveComponent, Runnable {
         out.flush();
         String line = readLine(inReader);//.readLine();
         if (line != null && line.length() > 0) {
-          String[][] parts = CommandParser.parseLine(line);
-          if(parts.length > 0 && checkCommands(parts) == 0) {
+          String[][] parts;
+          try {
+            parts = CommandParser.parseLine(line);
+          } catch (Exception e) {
+            err.println("Error: failed to parse command:");
+            e.printStackTrace(err);
+            parts = null;
+          }
+          if(parts != null && parts.length > 0 && checkCommands(parts) == 0) {
             CommandContext[] commands = new CommandContext[parts.length];
 	    boolean error = false;
 	    int pid = -1;
@@ -145,11 +152,11 @@ public class CommandHandler implements ActiveComponent, Runnable {
     for (int i = 0; i < cmds.length; i++) {
       Command command = commands.get(cmds[i][0]);
       if (command == null) {
-        err.println("CLI: Command not found: " + cmds[i][0]);
+        err.println("CLI: Command not found: \"" + cmds[i][0] + "\". Try \"help\".");
         return -1;
       }
       if (i > 0 && !(command instanceof LineListener)) {
-        err.println("CLI: Error " + cmds[i][0] + " does not take input");
+        err.println("CLI: Error, command \"" + cmds[i][0] + "\" does not take input.");
         return -1;
       }
       // TODO replace with command name
@@ -200,20 +207,23 @@ public class CommandHandler implements ActiveComponent, Runnable {
           for(Map.Entry<String,Command> entry: commands.entrySet()) {
             String name = entry.getKey();
             Command command = entry.getValue();
-            String prefix = ' ' + name + ' ' + command.getArgumentHelp(name);
             String helpText = command.getCommandHelp(name);
-            int n;
-            if (helpText != null && (n = helpText.indexOf('\n')) > 0) {
-              helpText = helpText.substring(0, n);
+            if (helpText != null) {
+              String argHelp = command.getArgumentHelp(name);
+              String prefix = argHelp != null ? (' ' + name + ' ' + argHelp) : (' ' + name);
+              int n;
+              if (helpText != null && (n = helpText.indexOf('\n')) > 0) {
+                helpText = helpText.substring(0, n);
+              }
+              context.out.print(prefix);
+              if (prefix.length() < 8) {
+                context.out.print('\t');
+              }
+              if (prefix.length() < 16) {
+                context.out.print('\t');
+              }
+              context.out.println("\t " + helpText);
             }
-            context.out.print(prefix);
-            if (prefix.length() < 8) {
-              context.out.print('\t');
-            }
-            if (prefix.length() < 16) {
-              context.out.print('\t');
-            }
-            context.out.println("\t " + helpText);
           }
           return 0;
         }
@@ -221,15 +231,23 @@ public class CommandHandler implements ActiveComponent, Runnable {
         String cmd = context.getArgument(0);
         Command command = commands.get(cmd);
         if (command != null) {
-          context.out.println(cmd + ' ' + command.getArgumentHelp(cmd));
-          context.out.println("  " + command.getCommandHelp(cmd));
+          String helpText = command.getCommandHelp(cmd);
+          String argHelp = command.getArgumentHelp(cmd);
+          context.out.print(cmd);
+          if (argHelp != null) {
+            context.out.print(' ' + argHelp);
+          }
+          context.out.println();
+          if (helpText != null && helpText.length() > 0) {
+            context.out.println("  " + helpText);
+          }
           return 0;
         }
         context.err.println("Error: unknown command '" + cmd + '\'');
         return 1;
       }
     });
-    registerCommand("workaround", new BasicCommand("", "") {
+    registerCommand("workaround", new BasicCommand("activate workaround for Java console input bug", "") {
       public int executeCommand(CommandContext context) {
         workaround = true;
         return 0;
