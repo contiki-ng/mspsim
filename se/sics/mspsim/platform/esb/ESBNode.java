@@ -167,6 +167,10 @@ public class ESBNode extends GenericNode implements PortListener {
   public void setupNode() {
     setupNodePorts();
 
+    stats.addMonitor(this);
+    stats.addMonitor(radio);
+    stats.addMonitor(cpu);
+    
     if (!config.getPropertyAsBoolean("nogui", false)) {
       gui = new ESBGui(this);
 
@@ -177,9 +181,6 @@ public class ESBNode extends GenericNode implements PortListener {
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
       dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
     }
-    stats.addMonitor(this);
-    stats.addMonitor(radio);
-    stats.addMonitor(cpu);
   }
 
   public int getModeMax() {
