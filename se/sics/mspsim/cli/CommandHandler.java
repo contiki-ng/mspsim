@@ -36,7 +36,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
     registerCommands();
   }
 
-  // Add it to the hashtable (overwriting anything there)
+  // Add it to the command table (overwriting anything there)
   public void registerCommand(String cmd, Command command) {
     commands.put(cmd, command);
   }
@@ -212,7 +212,8 @@ public class CommandHandler implements ActiveComponent, Runnable {
               String argHelp = command.getArgumentHelp(name);
               String prefix = argHelp != null ? (' ' + name + ' ' + argHelp) : (' ' + name);
               int n;
-              if (helpText != null && (n = helpText.indexOf('\n')) > 0) {
+              if ((n = helpText.indexOf('\n')) > 0) {
+                // Show only first line as short help if help text consists of several lines
                 helpText = helpText.substring(0, n);
               }
               context.out.print(prefix);
@@ -234,7 +235,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
           String helpText = command.getCommandHelp(cmd);
           String argHelp = command.getArgumentHelp(cmd);
           context.out.print(cmd);
-          if (argHelp != null) {
+          if (argHelp != null && argHelp.length() > 0) {
             context.out.print(' ' + argHelp);
           }
           context.out.println();
@@ -267,8 +268,11 @@ public class CommandHandler implements ActiveComponent, Runnable {
     registerCommand("kill", new BasicCommand("kill a currently executing command", "<process>") {
       public int executeCommand(CommandContext context) {
         int pid = context.getArgumentAsInt(0);
-        removePid(pid);
-        return 0;
+        if (removePid(pid)) {
+          return 0;
+        }
+        context.err.println("could not find the command to kill.");
+        return 1;
       }
     });
   }
@@ -278,9 +282,8 @@ public class CommandHandler implements ActiveComponent, Runnable {
       removePid(pid);
     }
   }
-  
-  private void removePid(int pid) {
-    System.out.println("Removing pid: " + pid);
+
+  private boolean removePid(int pid) {
     for (int i = 0; i < currentAsyncCommands.size(); i++) {
       CommandContext[] contexts = currentAsyncCommands.get(i);
       CommandContext cmd = contexts[0];
@@ -294,8 +297,9 @@ public class CommandHandler implements ActiveComponent, Runnable {
           }
         }
         currentAsyncCommands.remove(contexts);
-        break;
+        return true;
       }
     }
+    return false;
   }
 }
