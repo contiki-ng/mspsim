@@ -288,8 +288,13 @@ public class MSP430 extends MSP430Core {
   public boolean isRunning() {
     return running;
   }
-  
+
+  public long getSleepRate() {
+    return sleepRate;
+  }
+
   public void setSleepRate(long rate) {
     sleepRate = rate;
   }
+
 }
