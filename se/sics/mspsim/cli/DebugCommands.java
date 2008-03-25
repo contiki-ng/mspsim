@@ -175,7 +175,7 @@ public class DebugCommands implements CommandBundle {
 
       
       
-      ch.registerCommand("symbol", new BasicCommand("list matching symbold", "<regexp>") {
+      ch.registerCommand("symbol", new BasicCommand("list matching symbols", "<regexp>") {
         public int executeCommand(final CommandContext context) {
           String regExp = context.getArgument(0);
           MapEntry[] entries = context.getMapTable().getEntries(regExp);

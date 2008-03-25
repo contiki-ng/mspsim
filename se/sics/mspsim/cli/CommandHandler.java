@@ -200,7 +200,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
   }
 
   private void registerCommands() {
-    registerCommand("help", new BasicCommand("shows help for the specified command or command list", "[command]") {
+    registerCommand("help", new BasicCommand("show help for the specified command or command list", "[command]") {
       public int executeCommand(CommandContext context) {
         if (context.getArgumentCount() == 0) {
           context.out.println("Available commands:");
