@@ -40,6 +40,7 @@
  */
 package se.sics.mspsim.util;
 
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -63,6 +64,11 @@ public class OperatingModeStatistics {
     this.cpu = cpu;
   }
 
+  public Chip getChip(String chipName) {
+    StatEntry entry = statistics.get(chipName);
+    return entry == null ? null : entry.chip;
+  }
+
   public Chip[] getChips() {
     Chip[] chips = new Chip[statistics.size()];
     int index = 0;
@@ -76,13 +82,13 @@ public class OperatingModeStatistics {
     StatEntry entry = new StatEntry(chip);
     statistics.put(chip.getName(), entry);    
   }
-  
-  public void printStat() {    
+
+  public void printStat() {
     for (StatEntry entry : statistics.values()) {
-      entry.printStat();
+      entry.printStat(System.out);
     }
   }
-  
+
   public DataSource getDataSource(String chip, int mode) {
     return getDataSource(chip, mode, OP_NORMAL);
   }
@@ -194,10 +200,10 @@ public class OperatingModeStatistics {
       this.startTime = cpu.cycles;
     }
     
-    void printStat() {
-      System.out.println("Stat for: " + chip.getName());
+    void printStat(PrintStream out) {
+      out.println("Stat for: " + chip.getName());
       for (int i = 0; i < elapsed.length; i++) {
-        System.out.println("" + (i + 1) + " = " + elapsed[i]);
+        out.println("" + (i + 1) + " = " + elapsed[i]);
       }
     }
   }
