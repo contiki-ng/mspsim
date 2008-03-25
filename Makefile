@@ -100,13 +100,13 @@ help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
 
 run:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.IHexReader $(FIRMWAREFILE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.IHexReader $(ARGS) $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ESBFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ARGS) $(ESBFIRMWARE) $(MAPFILE)
 
 runsky:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
 
 test:	cputest
 
