@@ -55,8 +55,10 @@ import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
+//import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.NetworkConnection;
 import se.sics.mspsim.util.OperatingModeStatistics;
 
 /**
@@ -92,6 +94,9 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   private IOPort port5;
 
   public CC2420 radio;
+  public NetworkConnection network;
+  
+  
   private M25P80 flash;
   private String flashFile;
 
@@ -234,10 +239,20 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 //      }
 //    }, 1000000);
 
+    
+    network = new NetworkConnection();
+    network.addPacketListener(new PacketListener() {
+      public void transmissionEnded(int[] receivedData) {
+        radio.setIncomingPacket(receivedData);
+      }
+      public void transmissionStarted() {
+      }
+    });
     // TODO: remove this test...
     radio.setPacketListener(new PacketListener() {
       public void transmissionEnded(int[] receivedData) {
         System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
+        network.dataSent(receivedData);
       }
       public void transmissionStarted() {
         System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
