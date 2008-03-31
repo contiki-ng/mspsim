@@ -14,6 +14,7 @@ Changes:
 - added event system for cycle based events
 - fixed timer (A/B) to be event driven instead of tick driven
 - fixed bugs in interrupt handling of timer system
+- added argument management and -nogui parameter
 
 0.84
 Changes:

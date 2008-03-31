@@ -55,7 +55,7 @@ import se.sics.mspsim.core.*;
 public class SerialMon implements KeyListener, USARTListener {
 
   private static final String PREFIX = " > ";
-
+  private static final int MAX_LINES = 200;
   private String name;
   private JFrame window;
   private USART usart;
@@ -97,7 +97,7 @@ public class SerialMon implements KeyListener, USARTListener {
 
   public void dataReceived(USART source, int data) {
     if (data == '\n') {
-      if (lines >= 60) {
+      if (lines >= MAX_LINES) {
 	int index = text.indexOf('\n');
 	text = text.substring(index + 1);
       } else {
