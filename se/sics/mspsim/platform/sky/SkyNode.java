@@ -44,12 +44,12 @@ import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.M25P80;
+import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
-import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
@@ -129,6 +129,14 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     return elf;
   }
 
+  public M25P80 getFlash() {
+    return flash;
+  }
+
+  public void setFlash(M25P80 flash) {
+    this.flash = flash;
+  }
+
   public void setDebug(boolean debug) {
     cpu.setDebug(debug);
   }
@@ -202,7 +210,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
-      flash = new M25P80(cpu, flashFile);
+      flash = new FileM25P80(cpu, flashFile);
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
