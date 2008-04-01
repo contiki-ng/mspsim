@@ -86,6 +86,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("misccmd", new MiscCommands());
     registry.registerComponent("statcmd", new StatCommands(cpu, stats));
     registry.registerComponent("node", this);
+    registry.registerComponent("config", config);
     
     // Monitor execution
     cpu.setMonitorExec(true);
