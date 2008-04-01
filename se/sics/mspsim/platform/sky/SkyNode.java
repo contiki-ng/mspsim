@@ -222,12 +222,15 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   public void setupNode() {
     // create a filename for the flash file
     // This should be possible to take from a config file later!
-    String fileName = firmwareFile;
-    int ix = fileName.lastIndexOf('.');
-    if (ix > 0) {
-      fileName = fileName.substring(0, ix);
+    String fileName = config.getProperty("flashfile");
+    if (fileName == null) {
+      fileName = firmwareFile;
+      int ix = fileName.lastIndexOf('.');
+      if (ix > 0) {
+        fileName = fileName.substring(0, ix);
+      }
+      fileName = fileName + ".flash";
     }
-    fileName = fileName + ".flash";
     System.out.println("Using flash file: " + fileName);
 
     this.flashFile = fileName;
