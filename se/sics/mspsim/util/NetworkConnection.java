@@ -56,7 +56,9 @@ import se.sics.mspsim.chip.PacketListener;
  */
 public class NetworkConnection implements Runnable {
 
+  private final static boolean DEBUG = true;  
   private final static int DEFAULT_PORT = 4711;
+  
   ServerSocket serverSocket = null;
   
   ArrayList<ConnectionThread> connections = new ArrayList<ConnectionThread>();
@@ -65,10 +67,10 @@ public class NetworkConnection implements Runnable {
   
   public NetworkConnection() {
     if (connect(DEFAULT_PORT)) {
-      System.out.println("Connected to network...");
+      System.out.println("NetworkConnection: Connected to network...");
     } else {
       setupServer(DEFAULT_PORT);
-      System.out.println("Setup network server...");
+      System.out.println("NetworkConnection: Setup network server...");
     }
   }
   
@@ -80,7 +82,7 @@ public class NetworkConnection implements Runnable {
   private void setupServer(int port) {
     try {
       serverSocket = new ServerSocket(port);
-      System.out.println("setup of server socket finished... ");
+      if (DEBUG) System.out.println("NetworkConnection: setup of server socket finished... ");
       new Thread(this).start();
     } catch (IOException e) {
       e.printStackTrace();
@@ -88,11 +90,11 @@ public class NetworkConnection implements Runnable {
   }
   
   public void run() {
-    System.out.println("Accepting new connections...");
+    System.out.println("NetworkConnection: Accepting new connections...");
     while (true) {
       try {
         Socket s = serverSocket.accept();
-        System.out.println("New connection accepted...");
+        if (DEBUG) System.out.println("NetworkConnection: New connection accepted...");
         connections.add(new ConnectionThread(s));
       } catch (IOException e) {
         // TODO Auto-generated catch block
@@ -124,19 +126,23 @@ public class NetworkConnection implements Runnable {
   // Data was sent from the radio in the node (or other node) and should
   // be sent out to other nodes!!!
   public void dataSent(int[] data) {
-    for (int i = 0; i < data.length; i++) {
-      buf[i] = (byte) data[i];
-    }
-    ConnectionThread[] cthr = connections.toArray(new ConnectionThread[connections.size()]);
-    for (int i = 0; i < cthr.length; i++) {
-      if (cthr[i].isClosed()) {
-        connections.remove(cthr);
-      } else {
-        try {
-          cthr[i].output.write(buf);
-        } catch (IOException e) {
-          e.printStackTrace();
-          cthr[i].close();
+    if (connections.size() > 0) {
+      for (int i = 0; i < data.length; i++) {
+        buf[i] = (byte) data[i];
+      }    
+      ConnectionThread[] cthr = connections.toArray(new ConnectionThread[connections.size()]);
+      for (int i = 0; i < cthr.length; i++) {
+        if (cthr[i].isClosed()) {
+          connections.remove(cthr);
+        } else {
+          try {
+            cthr[i].output.write((byte) data.length);
+            cthr[i].output.write(buf);
+            if (DEBUG) System.out.println("NetworkConnection: wrote " + data.length + " bytes");
+          } catch (IOException e) {
+            e.printStackTrace();
+            cthr[i].close();
+          }
         }
       }
     }
@@ -188,15 +194,15 @@ public class NetworkConnection implements Runnable {
     
     @Override
     public void run() {
-      System.out.println("Started connection thread...");
+      if (DEBUG) System.out.println("NetworkConnection: Started connection thread...");
       while (socket != null) {
         int len;
         try {
           len = input.read();
           if (len > 0) {
             input.readFully(buffer, 0, len);
-            System.out.println("Read packet with " + len + " bytes");
-            dataReceived(buffer, len);                
+            if (DEBUG) System.out.println("NetworkConnection: Read packet with " + len + " bytes");
+            dataReceived(buffer, len);          
           }
         } catch (IOException e) {
           e.printStackTrace();
@@ -205,6 +211,4 @@ public class NetworkConnection implements Runnable {
       }
     }    
   }
-  
-  
 }
