@@ -137,8 +137,11 @@ public class NetworkConnection implements Runnable {
         } else {
           try {
             cthr[i].output.write((byte) data.length);
-            cthr[i].output.write(buf);
-            if (DEBUG) System.out.println("NetworkConnection: wrote " + data.length + " bytes");
+            cthr[i].output.write(buf, 0, data.length);
+            if (DEBUG) {
+              System.out.println("NetworkConnection: wrote " + data.length + " bytes");
+              printPacket(buf, data.length);
+            }
           } catch (IOException e) {
             e.printStackTrace();
             cthr[i].close();
@@ -146,6 +149,13 @@ public class NetworkConnection implements Runnable {
         }
       }
     }
+  }
+  
+  private void printPacket(byte[] data, int len) {
+    for (int i = 0; i < len; i++) {
+      System.out.print("" + Utils.hex8(data[i]) + " ");
+    }
+    System.out.println();
   }
   
   private boolean connect(int port) {
@@ -201,7 +211,11 @@ public class NetworkConnection implements Runnable {
           len = input.read();
           if (len > 0) {
             input.readFully(buffer, 0, len);
-            if (DEBUG) System.out.println("NetworkConnection: Read packet with " + len + " bytes");
+            if (DEBUG) {
+              System.out.println("NetworkConnection: Read packet with " + len + " bytes");
+              printPacket(buffer, len);
+            }
+            
             dataReceived(buffer, len);          
           }
         } catch (IOException e) {
