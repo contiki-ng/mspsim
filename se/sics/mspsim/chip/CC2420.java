@@ -184,8 +184,8 @@ public class CC2420 extends Chip implements USARTListener {
       }
       if (packetListener != null) {
         int len = memory[RAM_TXFIFO];
-        int[] data = new int[len];
-        System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len);
+        int[] data = new int[len - 1];
+        System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len - 1);
         packetListener.transmissionEnded(data);
       }
     }
@@ -208,97 +208,98 @@ public class CC2420 extends Chip implements USARTListener {
       }
       switch(state) {
       case WAITING:
-	state = WRITE_REGISTER;
-	if ((data & FLAG_READ) != 0) {
-	  state = READ_REGISTER;
-	}
-	if ((data & FLAG_RAM) != 0) {
-	  state = RAM_ACCESS;
-	  address = data & 0x7f;
-	} else {
-	  // The register address
-	  address = data & 0x3f;
+        state = WRITE_REGISTER;
+        if ((data & FLAG_READ) != 0) {
+          state = READ_REGISTER;
+        }
+        if ((data & FLAG_RAM) != 0) {
+          state = RAM_ACCESS;
+          address = data & 0x7f;
+        } else {
+          // The register address
+          address = data & 0x3f;
 
-	  if (address == REG_RXFIFO) {
-	    // check read/write???
-//	    System.out.println("CC2420: Reading RXFIFO!!!");
-	    state = READ_RXFIFO;
-    } else if (address == REG_TXFIFO) {
-      state = WRITE_TXFIFO;
-	  }
-	}
-	if (data < 0x0f) {
-	  strobe(data);
-	}
-	pos = 0;
-	// Assuming that the status always is sent back???
-	source.byteReceived(status);
-	break;
-      case WRITE_REGISTER:
-      	if (pos == 0) {
-      		source.byteReceived(registers[address] >> 8);
-      		// set the high bits
-      		registers[address] = registers[address] & 0xff | (data << 8);
-      	} else {
-      		source.byteReceived(registers[address] & 0xff);
-      		// set the low bits
-      		registers[address] = registers[address] & 0xff00 | data;
-      		if (DEBUG) {
-            System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
-      		      + registers[address]);
+          if (address == REG_RXFIFO) {
+            // check read/write???
+//          System.out.println("CC2420: Reading RXFIFO!!!");
+            state = READ_RXFIFO;
+          } else if (address == REG_TXFIFO) {
+            state = WRITE_TXFIFO;
           }
-      	}
+        }
+        if (data < 0x0f) {
+          strobe(data);
+        }
+        pos = 0;
+        // Assuming that the status always is sent back???
+        source.byteReceived(status);
+        break;
+      case WRITE_REGISTER:
+        if (pos == 0) {
+          source.byteReceived(registers[address] >> 8);
+          // set the high bits
+          registers[address] = registers[address] & 0xff | (data << 8);
+        } else {
+          source.byteReceived(registers[address] & 0xff);
+          // set the low bits
+          registers[address] = registers[address] & 0xff00 | data;
+          if (DEBUG) {
+            System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
+                + registers[address]);
+          }
+        }
         pos++;
         break;
       case READ_REGISTER:
-      	if (pos == 0) {
-      		source.byteReceived(registers[address] >> 8);
-      	} else {
-      		source.byteReceived(registers[address] & 0xff);
-      		if (DEBUG) {
+        if (pos == 0) {
+          source.byteReceived(registers[address] >> 8);
+        } else {
+          source.byteReceived(registers[address] & 0xff);
+          if (DEBUG) {
             System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
-      		      + registers[address]);
+                + registers[address]);
           }
-      	}
+        }
         pos++;
         break;
       case READ_RXFIFO:
-//      	System.out.println("CC2420: RXFIFO READ => " +
-//      			memory[RAM_RXFIFO + rxCursor]);
-      	source.byteReceived(memory[RAM_RXFIFO + rxCursor++]);
-      	// What if wrap cursor???
-      	if (rxCursor >= 128) {
+//      System.out.println("CC2420: RXFIFO READ => " +
+//      memory[RAM_RXFIFO + rxCursor]);
+        source.byteReceived(memory[RAM_RXFIFO + rxCursor++]);
+        // What if wrap cursor???
+        if (rxCursor >= 128) {
           rxCursor = 0;
         }
-      	// When is this set to "false" - when is interrupt de-triggered?
-      	if (rxPacket) {
-      		rxPacket = false;
-      		updateFifopPin();
-      	}
-      	break;
+        // When is this set to "false" - when is interrupt de-triggered?
+        if (rxPacket) {
+          rxPacket = false;
+          updateFifopPin();
+        }
+        break;
       case WRITE_TXFIFO:
+        System.out.println("Writing data: " + data + " to tx: " + txCursor);
         memory[RAM_TXFIFO + txCursor++] = data & 0xff;
         break;
       case RAM_ACCESS:
-      	if (pos == 0) {
-      		address = address | (data << 1) & 0x180;
-      		ramRead = (data & 0x20) != 0;
-      		if (DEBUG) {
+        if (pos == 0) {
+          address = address | (data << 1) & 0x180;
+          ramRead = (data & 0x20) != 0;
+          if (DEBUG) {
             System.out.println("CC2420: Address: " + Utils.hex16(address) +
-      		      " read: " + ramRead);
+                " read: " + ramRead);
           }
-      		pos++;
-      	} else {
-      		if (!ramRead) {
-      			memory[address++] = data;
-      			if (DEBUG && address == RAM_PANID + 2) {
-      			  System.out.println("CC2420: Pan ID set to: 0x" +
-      			      Utils.hex8(memory[RAM_PANID]) +
-      			      Utils.hex8(memory[RAM_PANID + 1]));
-      			}
-      		}
-      	}
-      	break;
+          pos++;
+        } else {
+          if (!ramRead) {
+            memory[address++] = data;
+            if (DEBUG && address == RAM_PANID + 2) {
+              System.out.println("CC2420: Pan ID set to: 0x" +
+                  Utils.hex8(memory[RAM_PANID]) +
+                  Utils.hex8(memory[RAM_PANID + 1]));
+            }
+          }
+        }
+        break;
       }
     }
   }
@@ -424,6 +425,8 @@ public class CC2420 extends Chip implements USARTListener {
     if (packetListener != null) {
       packetListener.transmissionStarted();
       cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
+      memory[RAM_TXFIFO + len - 2] = 1;
+      memory[RAM_TXFIFO + len - 1] = 2;
     }
   }
 
@@ -478,9 +481,11 @@ public class CC2420 extends Chip implements USARTListener {
     registers[register] = data;
   }
 
+  // Length is not assumed to be and no CRC?!
   public void setIncomingPacket(int[] packet) {
     int adr = RAM_RXFIFO;
-    memory[adr++] = packet.length + 2;
+    // Lenght is added + RSSI and CRC/Correlation!
+    memory[adr++] = packet.length + 3;
     for (int element : packet) {
       memory[adr++] = element & 0xff;
     }
