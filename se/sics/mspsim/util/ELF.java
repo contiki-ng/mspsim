@@ -243,7 +243,7 @@ public class ELF {
     }
   }
 
-  private void readAll() {
+  public void readAll() {
     readHeader();
     readPrograms();
     readSections();
