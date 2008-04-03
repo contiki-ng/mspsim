@@ -31,7 +31,7 @@
  *
  * -----------------------------------------------------------------
  *
- * ExtFlash
+ * FileM25P80 - File based implementation of external flash.
  *
  * Author  : Joakim Eriksson, Fredrik Osterlind
  * Created : Sun Oct 21 22:00:00 2007
@@ -40,31 +40,86 @@
  */
 
 package se.sics.mspsim.chip;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-
-import se.sics.mspsim.core.*;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import se.sics.mspsim.core.MSP430Core;
 
 public class FileM25P80 extends M25P80 {
 
+  private static final boolean DEBUG = true;
+
   private RandomAccessFile file;
+  private FileChannel fileChannel;
+  private FileLock fileLock;
 
   public FileM25P80(MSP430Core cpu, String filename) {
     super(cpu);
     if (filename == null) {
       filename = "flash.bin";
     }
+
     // Open flash file for R/W
-    try {
-      file = new RandomAccessFile(filename, "rw");
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-      return;
+    if (!openFile(filename)) {
+      // Failed to open/lock the specified file. Add a counter and try with next filename.
+      Matcher m = Pattern.compile("^(.+?)(\\d*)(\\..+)$").matcher(filename);
+      if (m.matches()) {
+        String baseName = m.group(1);
+        String c = m.group(2);
+        String extName = m.group(3);
+        int count = 1;
+        if (c != null && c.length() > 0) {
+          count = Integer.parseInt(c) + 1;
+        }
+        for (int i = 0; !openFile(baseName + count + extName) && i < 100; i++, count++);
+      }
+    }
+    if (fileLock == null) {
+      // Failed to open flash file
+      throw new IllegalStateException("failed to open flash file '" + filename + '\'');
     }
     // Set size of flash
     try {
       file.setLength(1024 * 1024);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  private boolean openFile(String filename) {
+    // Open flash file for R/W
+    try {
+      file = new RandomAccessFile(filename, "rw");
+      fileChannel = file.getChannel();
+      fileLock = fileChannel.tryLock();
+      if (fileLock != null) {
+        // The file is now locked for use
+        if (DEBUG) System.out.println("FileM25P80: using flash file '" + filename + '\'');
+        return true;
+      } else {
+        fileChannel.close();
+        return false;
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+      closeFile();
+      return false;
+    }
+  }
+
+  private void closeFile() {
+    try {
+      if (fileLock != null) {
+        fileLock.release();
+        fileLock = null;
+      }
+      if (fileChannel != null) {
+        fileChannel.close();
+        fileChannel = null;
+      }
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -82,4 +137,4 @@ public class FileM25P80 extends M25P80 {
     file.write(b);
   }
 
-} // ExtFlash
+} // FileM25P80
