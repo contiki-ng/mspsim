@@ -187,7 +187,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     return "Tmote Sky";
   }
 
-  public void setupNodePorts() {
+  public void setupNodePorts(boolean loadFlash) {
     IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
       port5 = (IOPort) unit;
@@ -210,7 +210,9 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
-      flash = new FileM25P80(cpu, flashFile);
+      if (loadFlash) {
+        flash = new FileM25P80(cpu, flashFile);
+      }
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
@@ -235,7 +237,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 
     this.flashFile = fileName;
 
-    setupNodePorts();
+    setupNodePorts(true);
 
     stats.addMonitor(this);
     stats.addMonitor(radio);
@@ -250,7 +252,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 //      }
 //    }, 1000000);
 
-    
+
     network = new NetworkConnection();
     network.addPacketListener(new PacketListener() {
       public void transmissionEnded(int[] receivedData) {
