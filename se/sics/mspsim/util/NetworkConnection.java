@@ -104,19 +104,20 @@ public class NetworkConnection implements Runnable {
   }
   
   // Data incoming from the network!!!
-  private void dataReceived(byte[] data, int len) {
+  private void dataReceived(byte[] data, int len, ConnectionThread source) {
     int[] buf = new int[len];
     if (listener != null) {
       for (int i = 0; i < buf.length; i++) {
         buf[i] = data[i];
       }
-      // Send this data to the transmitter
+      // Send this data to the transmitter in this node!
       listener.transmissionStarted();      
       listener.transmissionEnded(buf);
     }
       
+    // And if this is the server, propagate to the others
     if (serverSocket != null) {
-      dataSent(buf);
+      dataSent(buf, source);
     }
   }
   
@@ -126,6 +127,12 @@ public class NetworkConnection implements Runnable {
   // Data was sent from the radio in the node (or other node) and should
   // be sent out to other nodes!!!
   public void dataSent(int[] data) {
+    dataSent(data, null);
+  }
+ 
+  // Data was sent either from radio, or came from another "radio" -
+  // and if so it should be propagated to all others.
+  public void dataSent(int[] data, ConnectionThread source) {
     if (connections.size() > 0) {
       for (int i = 0; i < data.length; i++) {
         buf[i] = (byte) data[i];
@@ -134,7 +141,8 @@ public class NetworkConnection implements Runnable {
       for (int i = 0; i < cthr.length; i++) {
         if (cthr[i].isClosed()) {
           connections.remove(cthr);
-        } else {
+          // Do not write back to the source
+        } else if (cthr[i] != source){
           try {
             cthr[i].output.write((byte) data.length);
             cthr[i].output.write(buf, 0, data.length);
@@ -215,8 +223,7 @@ public class NetworkConnection implements Runnable {
               System.out.println("NetworkConnection: Read packet with " + len + " bytes");
               printPacket(buffer, len);
             }
-            
-            dataReceived(buffer, len);          
+            dataReceived(buffer, len, this);
           }
         } catch (IOException e) {
           e.printStackTrace();
