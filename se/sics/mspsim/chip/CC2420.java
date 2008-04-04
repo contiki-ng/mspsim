@@ -183,9 +183,10 @@ public class CC2420 extends Chip implements USARTListener {
         System.out.println(getName() + ": **** Transmitting package to listener (if any)");
       }
       if (packetListener != null) {
+        // First byte is length and is not included in the data buffer (and its length)
         int len = memory[RAM_TXFIFO];
-        int[] data = new int[len - 1];
-        System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len - 1);
+        int[] data = new int[len];
+        System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len);
         packetListener.transmissionEnded(data);
       }
     }
@@ -425,8 +426,8 @@ public class CC2420 extends Chip implements USARTListener {
     if (packetListener != null) {
       packetListener.transmissionStarted();
       cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
-      memory[RAM_TXFIFO + len - 2] = 1;
-      memory[RAM_TXFIFO + len - 1] = 2;
+      memory[RAM_TXFIFO + len - 1] = 1;
+      memory[RAM_TXFIFO + len - 0] = 2;
     }
   }
 
@@ -484,8 +485,8 @@ public class CC2420 extends Chip implements USARTListener {
   // Length is not assumed to be and no CRC?!
   public void setIncomingPacket(int[] packet) {
     int adr = RAM_RXFIFO;
-    // Lenght is added + RSSI and CRC/Correlation!
-    memory[adr++] = packet.length + 3;
+    // length of packet is data size + RSSI and CRC/Correlation!
+    memory[adr++] = packet.length + 2;
     for (int element : packet) {
       memory[adr++] = element & 0xff;
     }
