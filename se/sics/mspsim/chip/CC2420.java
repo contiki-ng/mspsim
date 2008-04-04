@@ -277,7 +277,7 @@ public class CC2420 extends Chip implements USARTListener {
         }
         break;
       case WRITE_TXFIFO:
-        System.out.println("Writing data: " + data + " to tx: " + txCursor);
+//        System.out.println("Writing data: " + data + " to tx: " + txCursor);
         memory[RAM_TXFIFO + txCursor++] = data & 0xff;
         break;
       case RAM_ACCESS:

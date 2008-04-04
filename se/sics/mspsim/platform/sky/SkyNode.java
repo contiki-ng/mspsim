@@ -264,11 +264,11 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     // TODO: remove this test...
     radio.setPacketListener(new PacketListener() {
       public void transmissionEnded(int[] receivedData) {
-        System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
+//        System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
         network.dataSent(receivedData);
       }
       public void transmissionStarted() {
-        System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
+//        System.out.println(getName() + " got indication on transmission from radio " + SkyNode.this.cpu.getTimeMillis());
       }
     });
 
