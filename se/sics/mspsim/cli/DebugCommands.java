@@ -249,6 +249,39 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
+        
+        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_emtries> [type]") {
+          public int executeCommand(final CommandContext context) {
+            int start = context.getArgumentAsAddress(0);
+            int count = context.getArgumentAsInt(1);
+            int size = 1; // unsigned byte
+            boolean signed = false;
+            if (context.getArgumentCount() > 2) {
+              String tS = context.getArgument(2);
+              if ("byte".equals(tS)) {
+                signed = true;
+              } else if ("word".equals(tS)) {
+                signed = true;
+                size = 2;
+              } else if ("uword".equals(tS)) {
+                size = 2;
+              }
+            }
+            // Does not yet handle signed data...
+            for (int i = 0; i < count; i++) {
+              int data = 0;
+              data = cpu.memory[start++];
+              if (size == 2) {
+                data = data  + (cpu.memory[start++] << 8);
+              }
+              context.out.print(" " + data);
+            }
+            context.out.println();
+            return 0;
+          }
+        });
+
+        
       }
     }
   }

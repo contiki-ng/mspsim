@@ -3,16 +3,19 @@ package se.sics.mspsim.cli;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
 
+import se.sics.mspsim.extutil.jfreechart.LineSampleChart;
+
 public class WindowTarget implements LineListener {
 
   private JFrame window;
   private String targetName;
   private JTextArea jta = new JTextArea(20,20);
+  private WindowDataHandler dataHandler = null;
   
   public WindowTarget(String name) {
     window = new JFrame(name);
     window.setVisible(true);
-    window.add(jta);
+    window.getContentPane().add(jta);
     targetName = name;
   }
   
@@ -30,12 +33,24 @@ public class WindowTarget implements LineListener {
         } catch (Exception e) {
           System.err.println("Cound not set bounds: " + line);
         }
-      }
-      if ("title".equals(cmd)) {
+      } else if ("title".equals(cmd)) {
         window.setTitle(parts[1]);
+      } else if ("type".equals(cmd)) {
+        if ("line-sample".equals(parts[1])) {
+          dataHandler = new LineSampleChart();
+        }
+        if (dataHandler != null) {
+          System.out.println("Replacing window data handler! " + parts[1] + " " + dataHandler);
+          window.getContentPane().removeAll();
+          window.getContentPane().add(dataHandler.getJComponent());
+        }
       }
-    } else {    
-      jta.append(line + '\n');
+    } else {
+      if (dataHandler != null) {
+        dataHandler.lineRead(line);
+      } else {
+        jta.append(line + '\n');
+      }
     }
     //    jta.set
   }
@@ -51,6 +66,5 @@ public class WindowTarget implements LineListener {
   public String getName() {
     // TODO Auto-generated method stub
     return targetName;
-  }
-  
+  }  
 }
