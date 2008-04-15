@@ -31,7 +31,12 @@
  *
  * -----------------------------------------------------------------
  *
- * AD12
+ * ADC12
+ *
+ * Each time a sample is converted the ADC12 system will check for EOS flag
+ * and if not set it just continues with the next conversion (x + 1). 
+ * If EOS next conv is startMem. 
+ *
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
@@ -43,7 +48,7 @@ package se.sics.mspsim.core;
 
 public class ADC12 extends IOUnit {
 
-  private static final boolean DEBUG = false;
+  private static final boolean DEBUG = true; //false;
   
   public static final int ADC12CTL0 = 0x01A0;// Reset with POR
   public static final int ADC12CTL1 = 0x01A2;// Reset with POR
@@ -88,13 +93,28 @@ public class ADC12 extends IOUnit {
     256, 384, 512, 768, 1024, 1024, 1024, 1024
   };
 
+  
+  
   private int adc12ctl0 = 0;
+  private int adc12ctl1 = 0;
+  private int[] adc12mctl = new int[16]; 
+  private int[] adc12mem = new int[16]; 
   
   private int shTime0 = 4;
   private int shTime1 = 4;
   private boolean adc12On = false;
   private boolean enableConversion;
   private boolean startConversion;
+
+  private int shSource = 0;
+  private int startMem = 0;
+  private int adcDiv = 1;
+
+  private int conSeq;
+  private int adc12ie;
+  private int adc12ifg;
+
+  private int adcSSel;
   
   public ADC12(MSP430Core cpu) {
     super(cpu.memory, 0);
@@ -112,9 +132,32 @@ public class ADC12 extends IOUnit {
       enableConversion = (value & 0x02) > 0;
       startConversion = (value & 0x01) > 0;
       
-      if (DEBUG ) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
+      if (DEBUG) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
       break;
+    case ADC12CTL1:
+      startMem = (value >> 12) & 0xf;
+      shSource = (value >> 10) & 0x3;
+      adcDiv = ((value >> 5) & 0x7) + 1;
+      conSeq = (value >> 1) & 0x03;
+      adcSSel = (value >> 3) & 0x03;
+      if (DEBUG) System.out.println(getName() + ": Set startMem: " + startMem + " SHSource: " + shSource +
+          " ConSeq-mode:" + conSeq + " Div: " + adcDiv + " ADCSSEL: " + adcSSel);
+      
+      break;
+    case ADC12IE:
+      adc12ie = value;
+      break;
+    case ADC12IFG:
+      adc12ifg = value;
+      break;
+    default:
+      if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
+        adc12mctl[address - ADC12MCTL0] = value & 0xff;
+        if ((value & 0x80) != 0) {
+          System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " EOS bit set");
+        }
+      }
     }
   }
 
@@ -123,6 +166,18 @@ public class ADC12 extends IOUnit {
     switch(address) {
     case ADC12CTL0:
       return adc12ctl0;
+    case ADC12CTL1:
+      return adc12ctl1;
+    case ADC12IE:
+      return adc12ie;
+    case ADC12IFG:
+      return adc12ifg;
+    default:
+      if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
+        return adc12mctl[address - ADC12MCTL0];
+      } else if (address >= ADC12MEM0) {
+        return adc12mem[address - ADC12MEM0];
+      }
     }
     return 0;
   }
@@ -132,9 +187,5 @@ public class ADC12 extends IOUnit {
   }
 
   public void interruptServiced(int vector) {
-  }
-
-  public long ioTick(long cycles) {
-    return cycles + 1000000;
   }
 }
