@@ -103,7 +103,8 @@ public class NetworkConnection implements Runnable {
     }
   }
   
-  // Data incoming from the network!!!
+  // Data incoming from the network!!! - forward to radio and if server, to
+  // all other nodes
   private void dataReceived(byte[] data, int len, ConnectionThread source) {
     int[] buf = new int[len];
     if (listener != null) {

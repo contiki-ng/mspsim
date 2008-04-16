@@ -3,37 +3,32 @@ package se.sics.mspsim.extutil.jfreechart;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.util.Date;
-
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.DefaultXYItemRenderer;
-import org.jfree.data.time.Millisecond;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+import se.sics.mspsim.cli.AbstractWindowDataHandler;
 
-import se.sics.mspsim.cli.WindowDataHandler;
 
-public class LineSampleChart implements WindowDataHandler {
+public class LineSampleChart extends AbstractWindowDataHandler {
 
   JPanel panel;
-  private TimeSeriesCollection dataset;
-  private TimeSeries timeSeries;
+  private XYSeriesCollection dataset;
+  private XYSeries dataSeries;
   
   public LineSampleChart() {
-    DateAxis domain = new DateAxis("Time");
+    NumberAxis domain = new NumberAxis("Index");
     NumberAxis range = new NumberAxis("Value");
     XYPlot xyplot = new XYPlot();
     xyplot.setDomainAxis(domain);
     xyplot.setRangeAxis(range);
     // xyplot.setBackgroundPaint(Color.black);
-    xyplot.setDataset(dataset = new TimeSeriesCollection());
+    xyplot.setDataset(dataset = new XYSeriesCollection());
 
     DefaultXYItemRenderer renderer = new DefaultXYItemRenderer();
     renderer.setSeriesPaint(0, Color.black);
@@ -54,23 +49,35 @@ public class LineSampleChart implements WindowDataHandler {
     panel.setPreferredSize(new Dimension(400, 200));
     panel.add(chartPanel, BorderLayout.CENTER);
     
-    timeSeries = new TimeSeries("-", Millisecond.class);
-    timeSeries.setMaximumItemCount(200);
-    dataset.addSeries(timeSeries);
+    dataSeries = new XYSeries("-");
+    dataSeries.setMaximumItemCount(200);
+    dataset.addSeries(dataSeries);
   }
   
-  public JComponent getJComponent() {
+  public JComponent getComponent() {
     return panel;
   }
 
   @Override
   public void lineRead(String line) {
-    System.out.println("Got line to: " + line);
     String parts[] = line.trim().split(" ");
-    timeSeries.clear();
+    dataSeries.clear();
     for (int i = 0; i < parts.length; i++) {
-      timeSeries.add(new Millisecond(new Date(i)), Integer.parseInt(parts[i]));      
+      dataSeries.add(i, atoi(parts[i]));
     }
     panel.repaint();
   }
+
+  @Override
+  public void setProperty(int index, String param, String[] args) {
+    if (index != 0) {
+      throw new IndexOutOfBoundsException("Illegal index: " + index);
+    }
+    if ("label".equals(param)) {
+      System.out.println("setting label to: " + args[0]);
+      dataSeries.setKey(args[0]);
+    }
+    panel.repaint();
+  }  
+  
 }

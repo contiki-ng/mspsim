@@ -9,13 +9,15 @@ public class WindowTarget implements LineListener {
 
   private JFrame window;
   private String targetName;
-  private JTextArea jta = new JTextArea(20,20);
+  // Default in the current version - TODO: replace with better
+  private JTextArea jta = new JTextArea(40,40);
   private WindowDataHandler dataHandler = null;
   
   public WindowTarget(String name) {
     window = new JFrame(name);
-    window.setVisible(true);
     window.getContentPane().add(jta);
+    window.pack();
+    window.setVisible(true);
     targetName = name;
   }
   
@@ -24,6 +26,7 @@ public class WindowTarget implements LineListener {
     // TODO Auto-generated method stub
     if (line != null && line.startsWith("#!")) {
       line = line.substring(2);
+      // TODO: replace with command parser
       String[] parts = line.split(" ");
       String cmd = parts[0];
       if ("bounds".equals(cmd)) {
@@ -42,8 +45,10 @@ public class WindowTarget implements LineListener {
         if (dataHandler != null) {
           System.out.println("Replacing window data handler! " + parts[1] + " " + dataHandler);
           window.getContentPane().removeAll();
-          window.getContentPane().add(dataHandler.getJComponent());
+          window.getContentPane().add(dataHandler.getComponent());
         }
+      } else if (dataHandler != null) {
+        dataHandler.handleCommand(parts);
       }
     } else {
       if (dataHandler != null) {

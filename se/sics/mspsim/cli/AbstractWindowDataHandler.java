@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2008, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,26 +27,41 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: $
+ * $Id: AsyncCommand.java 187 2008-03-17 19:34:12Z joxe $
  *
  * -----------------------------------------------------------------
  *
- * WindowDataHandler
  *
  * Author  : Joakim Eriksson
- * Created : 15 apr 2008
- * Updated : $Date:$
- *           $Revision:$
+ * Created : 9 april 2008
+ * Updated : $Date: 2008-03-17 20:34:12 +0100 (Mon, 17 Mar 2008) $
+ *           $Revision: 187 $
  */
 package se.sics.mspsim.cli;
 
 import javax.swing.JComponent;
 
 /**
- * @author joakim
+ * @author joakime
  *
  */
-public interface WindowDataHandler extends LineListener {
-  public JComponent getComponent();
-  public void handleCommand(String[] parts);
+public abstract class AbstractWindowDataHandler implements WindowDataHandler {
+
+  @Override
+  public void handleCommand(String[] parts) {
+    String cmd = parts[0];
+    if ("set".equals(cmd)) {
+      int index = atoi(parts[1]);
+      String[] args = new String[parts.length - 3];
+      System.arraycopy(parts, 3, args, 0, args.length);
+      setProperty(index, parts[2], args);
+    }
+  }
+    
+  public abstract void setProperty(int index, String param, String[] args);
+  
+  public int atoi(String data) {
+    return Integer.parseInt(data);
+  }
+  
 }
