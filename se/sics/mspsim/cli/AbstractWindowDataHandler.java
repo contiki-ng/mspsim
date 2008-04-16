@@ -39,8 +39,6 @@
  */
 package se.sics.mspsim.cli;
 
-import javax.swing.JComponent;
-
 /**
  * @author joakime
  *
@@ -51,17 +49,23 @@ public abstract class AbstractWindowDataHandler implements WindowDataHandler {
   public void handleCommand(String[] parts) {
     String cmd = parts[0];
     if ("set".equals(cmd)) {
-      int index = atoi(parts[1]);
+      int index = atoi(parts[1], 0);
       String[] args = new String[parts.length - 3];
       System.arraycopy(parts, 3, args, 0, args.length);
       setProperty(index, parts[2], args);
+    } else {
+      System.err.println("unknown command: " + cmd);
     }
   }
-    
+
   public abstract void setProperty(int index, String param, String[] args);
-  
-  public int atoi(String data) {
-    return Integer.parseInt(data);
+
+  public int atoi(String data, int defaultValue) {
+    try {
+      return Integer.parseInt(data);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
-  
+
 }
