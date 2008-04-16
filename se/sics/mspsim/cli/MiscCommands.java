@@ -159,7 +159,12 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("echo", new BasicCommand("echoes argument", "") {
       public int executeCommand(CommandContext context) {
-        context.out.println(context.getArgument(0));
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
+          if (i > 0) sb.append(' ');
+          sb.append(context.getArgument(i));
+        }
+        context.out.println(sb.toString());
         return 0;
       }
     });
