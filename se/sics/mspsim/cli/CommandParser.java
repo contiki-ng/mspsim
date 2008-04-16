@@ -49,7 +49,19 @@ public class CommandParser {
     // Prevent instances of this class
   }
 
-  public static String[][] parseLine(String line) {
+  public static String[][] parseCommandLine(String line) {
+    return parseLine(line, true, true);
+  }
+
+  public static String[] parseLine(String line) {
+    String[][] lines = parseLine(line, false, false);
+    if (lines != null && lines.length > 0) {
+      return lines[0];
+    }
+    return null;
+  }
+
+  public static String[][] parseLine(String line, boolean handlePipes, boolean handleRedirect) {
     ArrayList<String[]> list = new ArrayList<String[]>();
     ArrayList<String> args = new ArrayList<String>();
     StringBuilder sb = null;
@@ -119,14 +131,18 @@ public class CommandParser {
 	  }
 	  break;
         case '#':
-          if (state == TEXT && redirectCommand != null && redirectFile == args.size()) {
+          if (!handleRedirect) {
+            // No redirect handling. Process as normal character.
+          } else if (state == TEXT && redirectCommand != null && redirectFile == args.size()) {
             redirectCommand += '#';
           } else if (state != QUOTE) {
             throw new IllegalArgumentException("illegal character '#'");
           }
           break;
         case '>':
-          if (state != QUOTE) {
+          if (!handleRedirect) {
+            // No redirect handling. Process as normal character.
+          } else if (state != QUOTE) {
             // Redirection
             if (state == ARG) {
               if (sb == null) {
@@ -150,7 +166,9 @@ public class CommandParser {
           }
           break;
 	case '|':
-	  if (state != QUOTE) {
+          if (!handlePipes) {
+            // No pipe handling. Process as normal character.
+          } else if (state != QUOTE) {
 	    // PIPE
 	    if (state == ARG) {
 	      if (sb == null) {

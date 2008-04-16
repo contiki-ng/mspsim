@@ -68,15 +68,21 @@ public class CommandHandler implements ActiveComponent, Runnable {
   }
 
   public void run() {
+    String lastLine = null;
     while(!exit) {
       try {
         out.print(">");
         out.flush();
         String line = readLine(inReader);//.readLine();
+        // Simple execution of last called command line when not running from terminal with history support
+        if (((char) 27 + "[A").equals(line)) {
+          line = lastLine;          
+        }
         if (line != null && line.length() > 0) {
+          lastLine = line;
           String[][] parts;
           try {
-            parts = CommandParser.parseLine(line);
+            parts = CommandParser.parseCommandLine(line);
           } catch (Exception e) {
             err.println("Error: failed to parse command:");
             e.printStackTrace(err);
