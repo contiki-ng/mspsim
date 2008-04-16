@@ -80,7 +80,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         }
         if (line != null && line.length() > 0) {
           lastLine = line;
-          executeCommand(line);
+          executeCommand(line, null);
         }
       } catch (IOException e) {
         e.printStackTrace(err);
@@ -90,8 +90,11 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
   }
 
-  public int executeCommand(String commandLine) {
+  public int executeCommand(String commandLine, CommandContext context) {
     String[][] parts;
+    PrintStream out = context == null ? this.out : context.out;
+    PrintStream err = context == null ? this.err : context.err;
+    
     try {
       parts = CommandParser.parseCommandLine(commandLine);
     } catch (Exception e) {

@@ -164,7 +164,7 @@ public class CommandContext {
   }
 
   public int executeCommand(String command) {
-    return commandHandler.executeCommand(command);
+    return commandHandler.executeCommand(command, this);
   }
 
   public String toString() {

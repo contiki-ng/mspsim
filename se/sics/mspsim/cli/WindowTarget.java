@@ -22,8 +22,9 @@ public class WindowTarget implements LineListener {
   }
 
   @Override
-  public void lineRead(String line) {
-    if (line != null && line.startsWith("#!")) {
+  public void lineRead(String line) {    
+    if (line == null) return;
+    if (line.startsWith("#!")) {
       line = line.substring(2);
       String[] parts = CommandParser.parseLine(line);
       String cmd = parts[0];
@@ -48,7 +49,7 @@ public class WindowTarget implements LineListener {
       } else if (dataHandler != null) {
         dataHandler.handleCommand(parts);
       }
-    } else {
+    } else if (!line.startsWith("#")){
       if (dataHandler != null) {
         dataHandler.lineRead(line);
       } else {

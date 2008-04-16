@@ -85,7 +85,9 @@ public class ExecCommand extends BasicLineCommand {
   }
 
   public void lineRead(String line) {
+    System.out.println("Exec: sending a line: " + line);
     output.println(line);
+    output.flush();
   }
 
   public void stopCommand(CommandContext context) {
