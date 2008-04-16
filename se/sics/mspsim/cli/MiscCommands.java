@@ -45,6 +45,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ComponentRegistry;
 
 /**
@@ -157,7 +158,7 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    handler.registerCommand("echo", new BasicCommand("echoes argument", "") {
+    handler.registerCommand("echo", new BasicCommand("echo arguments", "") {
       public int executeCommand(CommandContext context) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
@@ -168,7 +169,74 @@ public class MiscCommands implements CommandBundle {
         return 0;
       }
     });
-    
+
+    handler.registerCommand("repeat", new BasicAsyncCommand("repeat the specified command line", "[-t delay] [-c count] <command line>") {
+
+      private MSP430 cpu;
+      private int period = 1;
+      private int count = 0;
+      private int maxCount = -1;
+      private String commandLine;
+      private boolean isRunning = true;
+
+      public int executeCommand(final CommandContext context) {
+        int index = 0;
+        do {
+          String a = context.getArgument(index);
+          if (a.startsWith("-")) {
+            if (a.equals("-t")) {
+              period = context.getArgumentAsInt(index + 1);
+              index += 2;
+            } else if (a.equals("-c")) {
+              maxCount = context.getArgumentAsInt(index + 1);
+              index += 2;
+            } else {
+              context.err.println("illegal option: " + a);
+              return 1;
+            }
+          } else {
+            break;
+          }
+        } while (true);
+        if (index + 1 < context.getArgumentCount()) {
+          context.err.println("too many arguments");
+          return 1;
+        }
+        commandLine = context.getArgument(index);
+
+        cpu = (MSP430) registry.getComponent(MSP430.class);
+        if (cpu == null) {
+          context.err.println("could not access the CPU.");
+          return 1;
+        }
+
+        cpu.scheduleTimeEventMillis(new TimeEvent(0) {
+
+          @Override
+          public void execute(long t) {
+            if (isRunning) {
+              count++;
+              context.executeCommand(commandLine);
+              if ((maxCount <= 0) || (count < maxCount)) {
+                cpu.scheduleTimeEventMillis(this, period * 1000d);
+              } else {
+                stopCommand(context);
+              }
+            }
+          }
+
+        }, period * 1000d);
+        return 0;
+      }
+
+      @Override
+      public void stopCommand(CommandContext context) {
+        isRunning = false;
+        context.out.println("[repeat exit: " + commandLine + ']');
+        context.exit(0);
+      }
+    });
+
     handler.registerCommand("exec", new ExecCommand());
   }
 
