@@ -98,6 +98,7 @@ public class StatCommands implements CommandBundle {
       private PrintStream out;
       private MultiDataSource[] sources;
       private double frequency;
+      private boolean isRunning = true;
 
       public int executeCommand(CommandContext context) {
         frequency = context.getArgumentAsDouble(0);
@@ -119,22 +120,25 @@ public class StatCommands implements CommandBundle {
 
           @Override
           public void execute(long t) {
-            cpu.scheduleTimeEventMillis(this, 1000.0 / frequency);
-            for (int j = 0, n = sources.length; j < n; j++) {
-              MultiDataSource ds = sources[j];
-              if (j > 0) out.print(' ');
-              for (int k = 0, m = ds.getModeMax(); k <= m; k++) {
-                if (k > 0) out.print(' ');
-                out.print(ds.getValue(k));                 
+            if (isRunning) {
+              cpu.scheduleTimeEventMillis(this, 1000.0 / frequency);
+              for (int j = 0, n = sources.length; j < n; j++) {
+                MultiDataSource ds = sources[j];
+                if (j > 0) out.print(' ');
+                for (int k = 0, m = ds.getModeMax(); k <= m; k++) {
+                  if (k > 0) out.print(' ');
+                  out.print(ds.getValue(k));                 
+                }
               }
+              out.println();
             }
-            out.println();
           }
         }, 1000.0 / frequency);
         return 0;
       }
 
       public void stopCommand(CommandContext context) {
+        isRunning = false;
         context.exit(0);
       }
     });
