@@ -80,57 +80,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         }
         if (line != null && line.length() > 0) {
           lastLine = line;
-          String[][] parts;
-          try {
-            parts = CommandParser.parseCommandLine(line);
-          } catch (Exception e) {
-            err.println("Error: failed to parse command:");
-            e.printStackTrace(err);
-            parts = null;
-          }
-          if(parts != null && parts.length > 0 && checkCommands(parts) == 0) {
-            CommandContext[] commands = new CommandContext[parts.length];
-	    boolean error = false;
-	    int pid = -1;
-            for (int i = 0; i < parts.length; i++) {
-              String[] args = parts[i];
-              Command cmd = getCommand(args[0]);
-	      if (i == 0 && cmd instanceof AsyncCommand) {
-		pid = ++pidCounter;
-	      }
-              commands[i] = new CommandContext(this, mapTable, line, args, pid, cmd);
-              if (i > 0) {
-                PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
-                commands[i - 1].setOutput(po, err);
-              }
-              // Last element also needs output!
-              if (i == parts.length - 1) {
-                commands[i].setOutput(out, err);
-              }
-              // TODO: Check if first command is also LineListener and set it up for input!!
-            }
-            // Execute when all is set-up in opposite order...
-	    // TODO if error the command chain should be stopped
-            for (int i = parts.length - 1; i >= 0; i--) {
-              try {
-                int code = commands[i].getCommand().executeCommand(commands[i]);
-		if (code != 0) {
-		  err.println("command '" + commands[i].getCommandName()
-			      + "' failed with error code " + code);
-		  error = true;
-		}
-              } catch (Exception e) {
-                err.println("Error: Command failed: " + e.getMessage());
-                e.printStackTrace(err);
-		error = true;
-              }
-            }
-	    if (error) {
-	      // TODO close any started commands 
-	    } else if (pid >= 0) {
-              currentAsyncCommands.add(commands);
-            }
-          }
+          executeCommand(line);
         }
       } catch (IOException e) {
         e.printStackTrace(err);
@@ -140,20 +90,77 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
   }
 
+  public int executeCommand(String commandLine) {
+    String[][] parts;
+    try {
+      parts = CommandParser.parseCommandLine(commandLine);
+    } catch (Exception e) {
+      err.println("Error: failed to parse command:");
+      e.printStackTrace(err);
+      return -1;
+    }
+    if(parts != null && parts.length > 0 && checkCommands(parts) == 0) {
+      CommandContext[] commands = new CommandContext[parts.length];
+      boolean error = false;
+      int pid = -1;
+      for (int i = 0; i < parts.length; i++) {
+        String[] args = parts[i];
+        Command cmd = getCommand(args[0]);
+        if (i == 0 && cmd instanceof AsyncCommand) {
+          pid = ++pidCounter;
+        }
+        commands[i] = new CommandContext(this, mapTable, commandLine, args, pid, cmd);
+        if (i > 0) {
+          PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
+          commands[i - 1].setOutput(po, err);
+        }
+        // Last element also needs output!
+        if (i == parts.length - 1) {
+          commands[i].setOutput(out, err);
+        }
+        // TODO: Check if first command is also LineListener and set it up for input!!
+      }
+      // Execute when all is set-up in opposite order...
+      // TODO if error the command chain should be stopped
+      for (int i = parts.length - 1; i >= 0; i--) {
+        try {
+          int code = commands[i].getCommand().executeCommand(commands[i]);
+          if (code != 0) {
+            err.println("command '" + commands[i].getCommandName() + "' failed with error code " + code);
+            error = true;
+          }
+        } catch (Exception e) {
+          err.println("Error: Command failed: " + e.getMessage());
+          e.printStackTrace(err);
+          error = true;
+        }
+      }
+      if (error) {
+        // TODO close any started commands
+        return 1;
+      } else if (pid >= 0) {
+        synchronized (currentAsyncCommands) {
+          currentAsyncCommands.add(commands);
+        }
+      }
+    }
+    return 0;
+  }
+
   // This will return an instance that can be configured -
   // which is basically not OK... TODO - fix this!!!
   private Command getCommand(String cmd)  {
     Command command = commands.get(cmd);
     if (command != null) {
       try {
-	return (Command) command.clone();
+        return (Command) command.clone();
       } catch (CloneNotSupportedException e) {
-	e.printStackTrace(err);
+        e.printStackTrace(err);
       }
     }
     return null;
   }
-    
+
   private int checkCommands(String[][] cmds) {
     for (int i = 0; i < cmds.length; i++) {
       Command command = commands.get(cmds[i][0]);
@@ -168,23 +175,23 @@ public class CommandHandler implements ActiveComponent, Runnable {
       // TODO replace with command name
       String argHelp = command.getArgumentHelp(null);
       if (argHelp != null) {
-	int requiredCount = 0;
-	for (int j = 0, m = argHelp.length(); j < m; j++) {
-	  if (argHelp.charAt(j) == '<') {
-	    requiredCount++;
-	  }
-	}
-	if (requiredCount > cmds[i].length - 1) {
-	  // Too few arguments
-	  err.println("Too few arguments for " + cmds[i][0]);
-	  err.println("Usage: " + cmds[i][0] + ' ' + argHelp);
-	  return -1;
-	}
+        int requiredCount = 0;
+        for (int j = 0, m = argHelp.length(); j < m; j++) {
+          if (argHelp.charAt(j) == '<') {
+            requiredCount++;
+          }
+        }
+        if (requiredCount > cmds[i].length - 1) {
+          // Too few arguments
+          err.println("Too few arguments for " + cmds[i][0]);
+          err.println("Usage: " + cmds[i][0] + ' ' + argHelp);
+          return -1;
+        }
       }
     }
     return 0;
   }
-  
+
   public void setComponentRegistry(ComponentRegistry registry) {
     this.registry = registry;
   }
@@ -290,21 +297,27 @@ public class CommandHandler implements ActiveComponent, Runnable {
   }
 
   private boolean removePid(int pid) {
-    for (int i = 0; i < currentAsyncCommands.size(); i++) {
-      CommandContext[] contexts = currentAsyncCommands.get(i);
-      CommandContext cmd = contexts[0];
-      if (pid == cmd.getPID()) {
-        for (int j = 0; j < contexts.length; j++) {
-          Command command = contexts[i].getCommand();
-          // Stop any commands that have not yet been stopped...
-          if (command instanceof AsyncCommand && !contexts[i].hasExited()) {
-            AsyncCommand ac = (AsyncCommand) command;
-            ac.stopCommand(contexts[i]);
-          }
+    CommandContext[] contexts = null;
+    synchronized (currentAsyncCommands) {
+      for (int i = 0, n = currentAsyncCommands.size(); i < n; i++) {
+        CommandContext[] cntx = currentAsyncCommands.get(i);
+        if (pid == cntx[0].getPID()) {
+          contexts = cntx;
+          currentAsyncCommands.remove(cntx);
+          break;
         }
-        currentAsyncCommands.remove(contexts);
-        return true;
       }
+    }
+    if (contexts != null) {
+      for (int i = 0; i < contexts.length; i++) {
+        Command command = contexts[i].getCommand();
+        // Stop any commands that have not yet been stopped...
+        if (command instanceof AsyncCommand && !contexts[i].hasExited()) {
+          AsyncCommand ac = (AsyncCommand) command;
+          ac.stopCommand(contexts[i]);
+        }
+      }
+      return true;
     }
     return false;
   }

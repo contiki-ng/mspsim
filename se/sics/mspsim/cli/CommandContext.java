@@ -163,6 +163,10 @@ public class CommandContext {
     return 0.0;
   }
 
+  public int executeCommand(String command) {
+    return commandHandler.executeCommand(command);
+  }
+
   public String toString() {
     return (pid >= 0 ? ("" + pid) : "?") + '\t' + (commandLine == null ? getCommandName() : commandLine);
   }
