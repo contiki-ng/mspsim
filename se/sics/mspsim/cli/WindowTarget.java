@@ -12,7 +12,7 @@ public class WindowTarget implements LineListener {
   // Default in the current version - TODO: replace with better
   private JTextArea jta = new JTextArea(40,40);
   private WindowDataHandler dataHandler = null;
-  
+
   public WindowTarget(String name) {
     window = new JFrame(name);
     window.getContentPane().add(jta);
@@ -20,21 +20,19 @@ public class WindowTarget implements LineListener {
     window.setVisible(true);
     targetName = name;
   }
-  
+
   @Override
   public void lineRead(String line) {
-    // TODO Auto-generated method stub
     if (line != null && line.startsWith("#!")) {
       line = line.substring(2);
-      // TODO: replace with command parser
-      String[] parts = line.split(" ");
+      String[] parts = CommandParser.parseLine(line);
       String cmd = parts[0];
       if ("bounds".equals(cmd)) {
         try {
           window.setBounds(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]),
               Integer.parseInt(parts[3]), Integer.parseInt(parts[4]));
         } catch (Exception e) {
-          System.err.println("Cound not set bounds: " + line);
+          System.err.println("Could not set bounds: " + line);
         }
       } else if ("title".equals(cmd)) {
         window.setTitle(parts[1]);
@@ -57,19 +55,17 @@ public class WindowTarget implements LineListener {
         jta.append(line + '\n');
       }
     }
-    //    jta.set
   }
 
   public void close() {
-    // Notify all the currently active "streams" of lines to this windows
-    // data-handlers
+    // TODO Notify all the currently active "streams" of lines to this windows data-handlers
     window.setVisible(false);
+    window.dispose();
     window.removeAll();
     window = null;
   }
 
   public String getName() {
-    // TODO Auto-generated method stub
     return targetName;
-  }  
+  }
 }
