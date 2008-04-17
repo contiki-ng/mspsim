@@ -48,6 +48,11 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseListener;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.TargetDataLine;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -59,7 +64,7 @@ import se.sics.mspsim.ui.WindowUtils;
 
 public class ESBGui extends JComponent implements KeyListener,
 						  MouseMotionListener,
-						  MouseListener {
+						  MouseListener, ADCInput {
 
   private static final long serialVersionUID = -139331418649524704L;
 
@@ -76,6 +81,9 @@ public class ESBGui extends JComponent implements KeyListener,
   public static final Color YELLOW_C = new Color(0xffffff00);
   public static final Color GREEN_C = new Color(0xff40ff40);
 
+  private static final float SAMPLE_RATE = 22050;
+  private static final int DL_BUFFER_SIZE = 2200;
+
   private SerialMon serial;
   Beeper beeper;
 
@@ -84,6 +92,8 @@ public class ESBGui extends JComponent implements KeyListener,
   private ESBNode node;
   private boolean buttonDown = false;
   private boolean resetDown = false;
+
+  private TargetDataLine inDataLine;
 
   public ESBGui(ESBNode node) {
     this.node = node;
@@ -118,10 +128,43 @@ public class ESBGui extends JComponent implements KeyListener,
       ((USART) usart).setUSARTListener(serial);
     }
 
+    IOUnit adc = cpu.getIOUnit("ADC12");
+    if (adc instanceof ADC12) {
+      ((ADC12) adc).setADCInput(0, this);
+    }
+    
     beeper = new Beeper();
     cpu.addIOUnit(-1,0,-1,0,beeper, true);
+    
+    
+    // Just a test... TODO: remove!!!
+    AudioFormat af = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
+    DataLine.Info dlin =
+      new DataLine.Info(TargetDataLine.class, af, DL_BUFFER_SIZE);
+
+    try {
+      inDataLine = (TargetDataLine) AudioSystem.getLine(dlin);
+
+      if (inDataLine == null) {
+        System.out.println("No in dataline");
+      } else {
+        System.out.println("Format: " + inDataLine.getFormat());
+        inDataLine.open(inDataLine.getFormat(), DL_BUFFER_SIZE);
+        inDataLine.start();
+      }
+    } catch (Exception e) {
+      System.out.println("Problem while getting data line ");
+      e.printStackTrace();
+    }
   }
 
+  byte[] data = new byte[2];
+  public int nextData() {
+    inDataLine.read(data, 0, 2);
+    //System.out.println("sampled: " + ((data[1] << 8) + data[0]));
+    return data[0];
+  }
+  
   public void mouseMoved(MouseEvent e) {
     //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
     int x = e.getX();

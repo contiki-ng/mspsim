@@ -39,7 +39,12 @@
  *           $Revision$
  */
 package se.sics.mspsim.cli;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -170,6 +175,30 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
+    handler.registerCommand("source", new BasicCommand("run script", "<filename>") {
+      public int executeCommand(CommandContext context) {
+        FileInputStream infs = null;
+        try {
+          infs = new FileInputStream(context.getArgument(0));
+        } catch (FileNotFoundException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+        BufferedReader input = new BufferedReader(new InputStreamReader(infs));
+        String line = null;
+        try {
+          while ((line = input.readLine()) != null) {
+            context.executeCommand(line);
+          }
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+        return 0;
+      }
+    });
+
+    
     handler.registerCommand("repeat", new BasicAsyncCommand("repeat the specified command line", "[-t delay] [-c count] <command line>") {
 
       private MSP430 cpu;

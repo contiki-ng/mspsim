@@ -35,7 +35,8 @@
  *
  * Each time a sample is converted the ADC12 system will check for EOS flag
  * and if not set it just continues with the next conversion (x + 1). 
- * If EOS next conv is startMem. 
+ * If EOS next conv is startMem.
+ * Interrupt is triggered when the IE flag are set! 
  *
  *
  * Author  : Joakim Eriksson
@@ -45,6 +46,8 @@
  */
 
 package se.sics.mspsim.core;
+
+import com.sun.org.apache.xpath.internal.operations.Div;
 
 public class ADC12 extends IOUnit {
 
@@ -93,31 +96,51 @@ public class ADC12 extends IOUnit {
     256, 384, 512, 768, 1024, 1024, 1024, 1024
   };
 
+  public static final int EOS_MASK = 0x80;
   
   
   private int adc12ctl0 = 0;
   private int adc12ctl1 = 0;
   private int[] adc12mctl = new int[16]; 
   private int[] adc12mem = new int[16]; 
+  private int adc12Pos = 0;
   
   private int shTime0 = 4;
   private int shTime1 = 4;
   private boolean adc12On = false;
   private boolean enableConversion;
   private boolean startConversion;
-
+  
   private int shSource = 0;
   private int startMem = 0;
   private int adcDiv = 1;
 
+  private ADCInput adcInput[] = new ADCInput[8];
+  
   private int conSeq;
   private int adc12ie;
   private int adc12ifg;
-
+  private int adc12iv;
+  
   private int adcSSel;
+  private MSP430Core core;
+  private int adc12Vector = 7;
+
+  private TimeEvent adcTrigger = new TimeEvent(0) {
+    public void execute(long t) {
+//      System.out.println(getName() + " **** executing update timers at " + t + " cycles=" + core.cycles);
+      convert();
+    }
+  };
+
   
   public ADC12(MSP430Core cpu) {
     super(cpu.memory, 0);
+    core = cpu;
+  }
+  
+  public void setADCInput(int adindex, ADCInput input) {
+    adcInput[adindex] = input;
   }
 
   // write a value to the IO unit
@@ -134,8 +157,12 @@ public class ADC12 extends IOUnit {
       
       if (DEBUG) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
+      if (adc12On && enableConversion && startConversion) {
+        convert();
+      }
       break;
     case ADC12CTL1:
+      adc12ctl1 = value;
       startMem = (value >> 12) & 0xf;
       shSource = (value >> 10) & 0x3;
       adcDiv = ((value >> 5) & 0x7) + 1;
@@ -143,7 +170,6 @@ public class ADC12 extends IOUnit {
       adcSSel = (value >> 3) & 0x03;
       if (DEBUG) System.out.println(getName() + ": Set startMem: " + startMem + " SHSource: " + shSource +
           " ConSeq-mode:" + conSeq + " Div: " + adcDiv + " ADCSSEL: " + adcSSel);
-      
       break;
     case ADC12IE:
       adc12ie = value;
@@ -154,6 +180,7 @@ public class ADC12 extends IOUnit {
     default:
       if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
         adc12mctl[address - ADC12MCTL0] = value & 0xff;
+        System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " source = " + (value & 0xf));
         if ((value & 0x80) != 0) {
           System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " EOS bit set");
         }
@@ -176,7 +203,14 @@ public class ADC12 extends IOUnit {
       if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
         return adc12mctl[address - ADC12MCTL0];
       } else if (address >= ADC12MEM0) {
-        return adc12mem[address - ADC12MEM0];
+        int reg = address - ADC12MEM0;
+        // Clear ifg!
+        adc12ifg &= ~(1 << reg);
+        if (adc12iv == reg) {
+          core.flagInterrupt(adc12Vector, this, false);
+          adc12iv = 0;
+        }
+        return adc12mem[reg];
       }
     }
     return 0;
@@ -186,6 +220,27 @@ public class ADC12 extends IOUnit {
     return "ADC12";
   }
 
+  private void convert() {
+    // Some noice...
+    ADCInput input = adcInput[adc12mctl[adc12Pos] & 0x7];
+    adc12mem[adc12Pos] = input != null ? input.nextData() : 2048 + 100 - (int) Math.random() * 200;
+    if ((adc12ie & (1 << adc12Pos)) > 0) {
+      adc12ifg |= (1 << adc12Pos);
+      // This should check if there already is an hihger iv!
+      adc12iv = adc12Pos * 2 + 6;
+      core.flagInterrupt(adc12Vector, this, true);
+    }
+    // Increase
+    if ((adc12mctl[adc12Pos] & EOS_MASK) == EOS_MASK) {
+      adc12Pos = startMem;
+    } else {
+      adc12Pos = (adc12Pos + 1) & 0x0f;
+    }
+    int delay = adcDiv * (shTime0 + 13);
+    //System.out.println("Sampling again after: " + delay + " => " + adc12Pos);
+    core.scheduleTimeEvent(adcTrigger, adcTrigger.time + delay);
+  }
+  
   public void interruptServiced(int vector) {
   }
 }
