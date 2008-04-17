@@ -158,11 +158,11 @@ public class ESBGui extends JComponent implements KeyListener,
     }
   }
 
-  byte[] data = new byte[2];
+  byte[] data = new byte[4];
   public int nextData() {
-    inDataLine.read(data, 0, 2);
+    inDataLine.read(data, 0, 4);
     //System.out.println("sampled: " + ((data[1] << 8) + data[0]));
-    return data[0];
+    return (((data[1] & 0xff) << 8) | data[0] & 0xff) >> 4;
   }
   
   public void mouseMoved(MouseEvent e) {

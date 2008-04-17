@@ -206,9 +206,11 @@ public class ADC12 extends IOUnit {
         int reg = address - ADC12MEM0;
         // Clear ifg!
         adc12ifg &= ~(1 << reg);
-        if (adc12iv == reg) {
+//        System.out.println("Read ADCMEM" + (reg / 2));        
+        if (adc12iv == reg + 6) {
           core.flagInterrupt(adc12Vector, this, false);
           adc12iv = 0;
+//          System.out.println("** de-Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
         }
         return adc12mem[reg];
       }
@@ -228,6 +230,7 @@ public class ADC12 extends IOUnit {
       adc12ifg |= (1 << adc12Pos);
       // This should check if there already is an hihger iv!
       adc12iv = adc12Pos * 2 + 6;
+//      System.out.println("** Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
       core.flagInterrupt(adc12Vector, this, true);
     }
     // Increase
