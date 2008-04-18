@@ -3,6 +3,7 @@ package se.sics.mspsim.cli;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
 
+import se.sics.mspsim.extutil.jfreechart.LineChart;
 import se.sics.mspsim.extutil.jfreechart.LineSampleChart;
 
 public class WindowTarget implements LineListener {
@@ -37,9 +38,14 @@ public class WindowTarget implements LineListener {
         }
       } else if ("title".equals(cmd)) {
         window.setTitle(parts[1]);
+        if (dataHandler != null) {
+          dataHandler.setProperty("title", new String[] {parts[1]});
+        }
       } else if ("type".equals(cmd)) {
         if ("line-sample".equals(parts[1])) {
           dataHandler = new LineSampleChart();
+        } else if ("line".equals(parts[1])) {
+          dataHandler = new LineChart();
         }
         if (dataHandler != null) {
           System.out.println("Replacing window data handler! " + parts[1] + " " + dataHandler);

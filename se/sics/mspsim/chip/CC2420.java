@@ -119,11 +119,15 @@ public class CC2420 extends Chip implements USARTListener {
   public static final int RAM_PANID	= 0x168;
   public static final int RAM_SHORTADDR	= 0x16A;
 
+  // The Operation modes of the CC2420
   public static final int MODE_TXRX_OFF = 0x00;
   public static final int MODE_RX_ON = 0x01;
   public static final int MODE_TXRX_ON = 0x02;
   public static final int MODE_MAX = MODE_TXRX_ON;
-
+  public static final String[] MODE_NAMES = new String[] {
+    "off", "listen", "transmit"
+  };
+  
   // when reading registers this flag is set!
   public static final int FLAG_READ = 0x40;
 
@@ -198,6 +202,7 @@ public class CC2420 extends Chip implements USARTListener {
     registers[REG_SNOP] = 0;
     registers[REG_TXCTRL] = 0xa0ff;
     this.cpu = cpu;
+    setModeNames(MODE_NAMES);
   }
 
   public void dataReceived(USART source, int data) {

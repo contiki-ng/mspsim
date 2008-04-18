@@ -96,7 +96,7 @@ public class StatCommands implements CommandBundle {
         "<frequency> <chip> [chips...]") {
 
       private PrintStream out;
-      private MultiDataSource[] sources;
+      private Object[] sources;
       private double frequency;
       private boolean isRunning = true;
 
@@ -106,12 +106,22 @@ public class StatCommands implements CommandBundle {
           context.err.println("illegal frequency: " + context.getArgument(0));
           return 1;
         }
-        sources = new MultiDataSource[context.getArgumentCount() - 1];
+        sources = new Object[context.getArgumentCount() - 1];
         for (int i = 0, n = sources.length; i < n; i++) {
-          sources[i] = statistics.getMultiDataSource(context.getArgument(i + 1)); 
-          if (sources[i] == null) {
-            context.err.println("could not find chip " + context.getArgument(i + 1));
-            return 1;            
+          String sName = context.getArgument(i + 1);
+          if (sName.indexOf('.') >= 0) {
+            String[] parts = sName.split("\\.");
+            sources[i] = statistics.getDataSource(parts[0], parts[1]); 
+            if (sources[i] == null) {
+              context.err.println("could not find chip / mode combination " + context.getArgument(i + 1));
+              return 1;
+            }
+          } else {
+            sources[i] = statistics.getMultiDataSource(context.getArgument(i + 1)); 
+            if (sources[i] == null) {
+              context.err.println("could not find chip " + context.getArgument(i + 1));
+              return 1;
+            }
           }
         }
         this.out = context.out;
@@ -123,11 +133,16 @@ public class StatCommands implements CommandBundle {
             if (isRunning) {
               cpu.scheduleTimeEventMillis(this, 1000.0 / frequency);
               for (int j = 0, n = sources.length; j < n; j++) {
-                MultiDataSource ds = sources[j];
+                Object s = sources[j];
                 if (j > 0) out.print(' ');
-                for (int k = 0, m = ds.getModeMax(); k <= m; k++) {
-                  if (k > 0) out.print(' ');
-                  out.print(ds.getValue(k));                 
+                if (s instanceof MultiDataSource) {
+                  MultiDataSource ds = (MultiDataSource) s;
+                  for (int k = 0, m = ds.getModeMax(); k <= m; k++) {
+                    if (k > 0) out.print(' ');
+                    out.print(ds.getValue(k));       
+                  }
+                } else {
+                  out.print(((DataSource)s).getValue());
                 }
               }
               out.println();

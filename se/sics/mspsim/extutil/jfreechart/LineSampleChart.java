@@ -10,17 +10,19 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.DefaultXYItemRenderer;
+import org.jfree.data.general.Series;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import se.sics.mspsim.cli.AbstractWindowDataHandler;
 
 
-public class LineSampleChart extends AbstractWindowDataHandler {
+public class LineSampleChart extends JFreeWindowDataHandler {
 
   JPanel panel;
   private XYSeriesCollection dataset;
   private XYSeries dataSeries;
-  
+  private JFreeChart chart;
+ 
   public LineSampleChart() {
     NumberAxis domain = new NumberAxis("Index");
     NumberAxis range = new NumberAxis("Value");
@@ -41,7 +43,7 @@ public class LineSampleChart extends AbstractWindowDataHandler {
 
     domain.setTickLabelsVisible(true);
     range.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-    JFreeChart chart = new JFreeChart("Test",
+    chart = new JFreeChart("Test",
         JFreeChart.DEFAULT_TITLE_FONT, xyplot, true);
     ChartPanel chartPanel = new ChartPanel(chart);
     panel = new JPanel();
@@ -68,16 +70,23 @@ public class LineSampleChart extends AbstractWindowDataHandler {
     panel.repaint();
   }
 
+  public void setProperty(String param, String[] args) {
+    if ("title".equals(param)) {
+      chart.setTitle(args[0]);
+    }
+  }
+  
+  public int getDataSeriesCount() {
+    return 1;
+  }
+  
+  public Series getDataSeries(int index) {
+    return dataSeries;
+  }
+  
   @Override
   public void setProperty(int index, String param, String[] args) {
-    if (index != 0) {
-      throw new IndexOutOfBoundsException("Illegal index: " + index);
-    }
-    if ("label".equals(param)) {
-      System.out.println("setting label to: " + args[0]);
-      dataSeries.setKey(args[0]);
-    }
-    panel.repaint();
-  }  
+    super.setProperty(index, param, args);
+  }
   
 }

@@ -47,8 +47,6 @@
 
 package se.sics.mspsim.core;
 
-import com.sun.org.apache.xpath.internal.operations.Div;
-
 public class ADC12 extends IOUnit {
 
   private static final boolean DEBUG = true; //false;

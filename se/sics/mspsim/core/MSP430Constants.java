@@ -44,6 +44,19 @@ package se.sics.mspsim.core;
 public interface MSP430Constants {
 
   public static final String VERSION = "0.90";
+
+  // MODES
+  public static final int MODE_ACTIVE = 0;
+  public static final int MODE_LPM0 = 1;
+  public static final int MODE_LPM1 = 2;
+  public static final int MODE_LPM2 = 3;
+  public static final int MODE_LPM3 = 4;
+  public static final int MODE_LPM4 = 5;
+  public static final int MODE_MAX = MODE_LPM4;
+
+  public static String[] MODE_NAMES = {
+    "active", "lpm0", "lpm1", "lpm2", "lpm3", "lpm4" 
+  };
   
   public static final int CLK_ACLK = 1;
   public static final int CLK_SMCLK = 2;

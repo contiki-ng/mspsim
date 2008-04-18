@@ -49,4 +49,5 @@ import javax.swing.JComponent;
 public interface WindowDataHandler extends LineListener {
   public JComponent getComponent();
   public void handleCommand(String[] parts);
+  public void setProperty(String name, String[] args);
 }

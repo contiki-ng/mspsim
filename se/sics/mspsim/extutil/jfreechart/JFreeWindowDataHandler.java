@@ -27,77 +27,49 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
+ * $Id: $
  *
  * -----------------------------------------------------------------
  *
- * Chip
+ * JFreeWindowDataHandler
  *
  * Author  : Joakim Eriksson
- * Created : 17 jan 2008
- * Updated : $Date$
- *           $Revision$
+ * Created : 18 apr 2008
+ * Updated : $Date:$
+ *           $Revision:$
  */
-package se.sics.mspsim.core;
-import java.util.ArrayList;
-import java.util.Iterator;
+package se.sics.mspsim.extutil.jfreechart;
+
+import javax.swing.JComponent;
+
+import org.jfree.data.general.Series;
+
+import se.sics.mspsim.cli.AbstractWindowDataHandler;
 
 /**
- * @author Joakim
+ * @author joakim
  *
  */
-public abstract class Chip {
+public abstract class JFreeWindowDataHandler extends AbstractWindowDataHandler {
 
-  private ArrayList<OperatingModeListener> omListeners;
-  private String[] modeNames = null;
+
+  public abstract int getDataSeriesCount();
+  public abstract Series getDataSeries(int index);
   
-  public void addOperatingModeListener(OperatingModeListener listener) {
-    if (omListeners == null)
-      omListeners = new ArrayList<OperatingModeListener>();
-    omListeners.add(listener);
-  }
-  
-  public void removeOperatingModeListener(OperatingModeListener listener) {
-    if (omListeners != null)
-      omListeners.remove(listener);
-  }
-  
-  protected void modeChanged(int mode) {
-    if (omListeners != null) {
-      for (Iterator<OperatingModeListener> iterator = omListeners.iterator(); iterator.hasNext();) {
-        OperatingModeListener type = iterator.next();
-        type.modeChanged(this, mode);
-      }
+  /* (non-Javadoc)
+   * @see se.sics.mspsim.cli.AbstractWindowDataHandler#setProperty(int, java.lang.String, java.lang.String[])
+   */
+  @Override
+  public void setProperty(int index, String param, String[] args) {
+    System.out.println("setProperty called!!! " + param);
+    if (index > getDataSeriesCount()) {
+      throw new IndexOutOfBoundsException("Illegal index: " + index);
     }
-  }
-  
-  protected void setModeNames(String[] names) {
-    modeNames = names;
-  }
-    
-  public String getModeName(int index) {
-    if (modeNames == null) {
-      return null;
+    if ("label".equals(param)) {
+      System.out.println("setting label to: " + args[0]);
+      getDataSeries(index).setKey(args[0]);
     }
-    return modeNames[index];
+    getComponent().revalidate();
   }
-  
-  public int getModeByName(String mode) {
-    if (modeNames != null) {
-      for (int i = 0; i < modeNames.length; i++) {
-        if (mode.equals(modeNames[i])) return i;
-      }
-    }
-    try {
-      // If it is just an int it can be parsed!
-      System.out.println("Parsing as int: " + mode);
-      int modei = Integer.parseInt(mode);
-      return modei;
-    } catch (Exception e) {
-    }
-    return -1;
-  }
-  
-  public abstract String getName();
-  public abstract int getModeMax();
+
 }

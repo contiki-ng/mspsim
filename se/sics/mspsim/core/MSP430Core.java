@@ -55,14 +55,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public static final int INTERNAL_IO_SIZE = 3;
   public static final int PORTS = 6;
   
-  public static final int MODE_ACTIVE = 0;
-  public static final int MODE_LPM0 = 1;
-  public static final int MODE_LPM1 = 2;
-  public static final int MODE_LPM2 = 3;
-  public static final int MODE_LPM3 = 4;
-  public static final int MODE_LPM4 = 5;
-  private static final int MODE_MAX = MODE_LPM4;
-
   // 16 registers of which some are "special" - PC, SP, etc.
   public int[] reg = new int[16];
 
@@ -129,7 +121,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public MSP430Core(int type) {
     // Ignore type for now...
-
+    setModeNames(MODE_NAMES);
     // Internal Active IOUnits
     int passIO = 0;
     int actIO = 0;

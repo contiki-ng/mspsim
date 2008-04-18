@@ -93,6 +93,18 @@ public class OperatingModeStatistics {
     return getDataSource(chip, mode, OP_NORMAL);
   }
 
+  public DataSource getDataSource(String chip, String modeStr) {
+    StatEntry se = statistics.get(chip);
+    if (se != null) {
+      int mode = se.chip.getModeByName(modeStr);
+      if (mode != -1) { 
+        return new StatDataSource(se, mode, OP_NORMAL);
+      }
+    }
+    return null;
+  }
+
+  
   public DataSource getDataSource(String chip, int mode, int operation) {
     StatEntry se = statistics.get(chip);
     if (se != null) {
