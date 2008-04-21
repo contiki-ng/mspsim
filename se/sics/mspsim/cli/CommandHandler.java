@@ -1,6 +1,7 @@
 package se.sics.mspsim.cli;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
@@ -15,6 +16,9 @@ import se.sics.mspsim.util.MapTable;
 
 public class CommandHandler implements ActiveComponent, Runnable {
 
+  private static final String SCRIPT_EXT = ".sc";
+  private String scriptDirectory = "script";
+
   private Hashtable<String, Command> commands = new Hashtable<String, Command>();
   private boolean exit;
   private boolean workaround = false;
@@ -26,7 +30,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
   private MapTable mapTable;
   private ComponentRegistry registry;
   private int pidCounter = 0;
-  
+
   public CommandHandler() {
     exit = false;
     inReader = new BufferedReader(new InputStreamReader(System.in));
@@ -94,7 +98,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
     String[][] parts;
     PrintStream out = context == null ? this.out : context.out;
     PrintStream err = context == null ? this.err : context.err;
-    
+
     try {
       parts = CommandParser.parseCommandLine(commandLine);
     } catch (Exception e) {
@@ -102,13 +106,18 @@ public class CommandHandler implements ActiveComponent, Runnable {
       e.printStackTrace(err);
       return -1;
     }
-    if(parts != null && parts.length > 0 && checkCommands(parts) == 0) {
+    if (parts == null || parts.length == 0) {
+      // Nothing to execute
+      return 0;
+    }
+    Command[] cmds = createCommands(parts);
+    if(cmds != null && cmds.length > 0) {
       CommandContext[] commands = new CommandContext[parts.length];
       boolean error = false;
       int pid = -1;
       for (int i = 0; i < parts.length; i++) {
         String[] args = parts[i];
-        Command cmd = getCommand(args[0]);
+        Command cmd = cmds[i];
         if (i == 0 && cmd instanceof AsyncCommand) {
           pid = ++pidCounter;
         }
@@ -146,8 +155,9 @@ public class CommandHandler implements ActiveComponent, Runnable {
           currentAsyncCommands.add(commands);
         }
       }
+      return 0;
     }
-    return 0;
+    return -1;
   }
 
   // This will return an instance that can be configured -
@@ -159,21 +169,27 @@ public class CommandHandler implements ActiveComponent, Runnable {
         return (Command) command.clone();
       } catch (CloneNotSupportedException e) {
         e.printStackTrace(err);
+        return null;
       }
+    }
+    File scriptFile = new File(scriptDirectory, cmd + SCRIPT_EXT);
+    if (scriptFile.isFile() && scriptFile.canRead()) {
+      return new ScriptCommand(scriptFile);
     }
     return null;
   }
 
-  private int checkCommands(String[][] cmds) {
-    for (int i = 0; i < cmds.length; i++) {
-      Command command = commands.get(cmds[i][0]);
+  private Command[] createCommands(String[][] commandList) {
+    Command[] cmds = new Command[commandList.length];
+    for (int i = 0; i < commandList.length; i++) {
+      Command command = getCommand(commandList[i][0]);
       if (command == null) {
-        err.println("CLI: Command not found: \"" + cmds[i][0] + "\". Try \"help\".");
-        return -1;
+        err.println("CLI: Command not found: \"" + commandList[i][0] + "\". Try \"help\".");
+        return null;
       }
       if (i > 0 && !(command instanceof LineListener)) {
-        err.println("CLI: Error, command \"" + cmds[i][0] + "\" does not take input.");
-        return -1;
+        err.println("CLI: Error, command \"" + commandList[i][0] + "\" does not take input.");
+        return null;
       }
       // TODO replace with command name
       String argHelp = command.getArgumentHelp(null);
@@ -184,15 +200,16 @@ public class CommandHandler implements ActiveComponent, Runnable {
             requiredCount++;
           }
         }
-        if (requiredCount > cmds[i].length - 1) {
+        if (requiredCount > commandList[i].length - 1) {
           // Too few arguments
-          err.println("Too few arguments for " + cmds[i][0]);
-          err.println("Usage: " + cmds[i][0] + ' ' + argHelp);
-          return -1;
+          err.println("Too few arguments for " + commandList[i][0]);
+          err.println("Usage: " + commandList[i][0] + ' ' + argHelp);
+          return null;
         }
       }
+      cmds[i] = command;
     }
-    return 0;
+    return cmds;
   }
 
   public void setComponentRegistry(ComponentRegistry registry) {
@@ -246,7 +263,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         }
 
         String cmd = context.getArgument(0);
-        Command command = commands.get(cmd);
+        Command command = getCommand(cmd);
         if (command != null) {
           String helpText = command.getCommandHelp(cmd);
           String argHelp = command.getArgumentHelp(cmd);
@@ -270,7 +287,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         return 0;
       }     
     });
-    
+
     registerCommand("ps", new BasicCommand("list current executing commands", "") {
       public int executeCommand(CommandContext context) {
         for (int i = 0; i < currentAsyncCommands.size(); i++) {
@@ -280,7 +297,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         return 0;
       }
     });
-    
+
     registerCommand("kill", new BasicCommand("kill a currently executing command", "<process>") {
       public int executeCommand(CommandContext context) {
         int pid = context.getArgumentAsInt(0);
