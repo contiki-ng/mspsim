@@ -2,6 +2,7 @@ package se.sics.mspsim.cli;
 
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 
 import se.sics.mspsim.extutil.jfreechart.LineChart;
 import se.sics.mspsim.extutil.jfreechart.LineSampleChart;
@@ -23,8 +24,17 @@ public class WindowTarget implements LineListener {
   }
 
   @Override
-  public void lineRead(String line) {    
-    if (line == null) return;
+  public void lineRead(final String line) {    
+    if (line != null && window != null) {
+      SwingUtilities.invokeLater(new Runnable() {
+        public void run() {
+          handleLine(line);
+        }
+      });
+    }
+  }
+
+  private void handleLine(String line) {
     if (line.startsWith("#!")) {
       line = line.substring(2);
       String[] parts = CommandParser.parseLine(line);
