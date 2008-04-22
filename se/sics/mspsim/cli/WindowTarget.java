@@ -47,11 +47,19 @@ public class WindowTarget implements LineListener {
           dataHandler = new LineSampleChart();
         } else if ("line".equals(parts[1])) {
           dataHandler = new LineChart();
+        } else {
+          System.err.println("Unknown window data handler type: " + parts[1]);
         }
         if (dataHandler != null) {
           System.out.println("Replacing window data handler! " + parts[1] + " " + dataHandler);
           window.getContentPane().removeAll();
           window.getContentPane().add(dataHandler.getComponent());
+          String title = window.getTitle();
+          if (title != null) {
+            // Set title for the new data handler
+            dataHandler.setProperty("title", new String[] { title });
+          }
+          window.repaint();
         }
       } else if (dataHandler != null) {
         dataHandler.handleCommand(parts);
