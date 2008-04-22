@@ -16,8 +16,7 @@ import se.sics.mspsim.util.MapTable;
 
 public class CommandHandler implements ActiveComponent, Runnable {
 
-  private static final String SCRIPT_EXT = ".sc";
-  private String scriptDirectory = "script";
+  private String scriptDirectory = "scripts";
 
   private Hashtable<String, Command> commands = new Hashtable<String, Command>();
   private boolean exit;
@@ -172,7 +171,7 @@ public class CommandHandler implements ActiveComponent, Runnable {
         return null;
       }
     }
-    File scriptFile = new File(scriptDirectory, cmd + SCRIPT_EXT);
+    File scriptFile = new File(scriptDirectory, cmd);
     if (scriptFile.isFile() && scriptFile.canRead()) {
       return new ScriptCommand(scriptFile);
     }
