@@ -133,6 +133,10 @@ public class CommandParser {
         case '#':
           if (!handleRedirect) {
             // No redirect handling. Process as normal character.
+            if (state == TEXT) {
+              index = i;
+              state = ARG;
+            }
           } else if (state == TEXT && redirectCommand != null && redirectFile == args.size()) {
             redirectCommand += '#';
           } else if (state != QUOTE) {
@@ -142,6 +146,10 @@ public class CommandParser {
         case '>':
           if (!handleRedirect) {
             // No redirect handling. Process as normal character.
+            if (state == TEXT) {
+              index = i;
+              state = ARG;
+            }
           } else if (state != QUOTE) {
             // Redirection
             if (state == ARG) {
@@ -168,6 +176,10 @@ public class CommandParser {
 	case '|':
           if (!handlePipes) {
             // No pipe handling. Process as normal character.
+            if (state == TEXT) {
+              index = i;
+              state = ARG;
+            }
           } else if (state != QUOTE) {
 	    // PIPE
 	    if (state == ARG) {
