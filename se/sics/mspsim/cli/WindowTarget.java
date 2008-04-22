@@ -37,9 +37,10 @@ public class WindowTarget implements LineListener {
           System.err.println("Could not set bounds: " + line);
         }
       } else if ("title".equals(cmd)) {
-        window.setTitle(parts[1]);
+        String args = CommandParser.toString(parts, 1, parts.length);
+        window.setTitle(args);
         if (dataHandler != null) {
-          dataHandler.setProperty("title", new String[] {parts[1]});
+          dataHandler.setProperty("title", new String[] {args});
         }
       } else if ("type".equals(cmd)) {
         if ("line-sample".equals(parts[1])) {
