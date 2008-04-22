@@ -141,6 +141,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[0x180 + i] = tb;
     }
 
+    Watchdog wdt = new Watchdog(this);
+    memOut[0x120] = wdt;
+    memIn[0x120] = wdt;
+    
     sfr = new SFR(this, memory);
     for (int i = 0, n = 0x10; i < n; i++) {
       memOut[i] = sfr;
