@@ -13,16 +13,15 @@ import org.jfree.chart.renderer.xy.DefaultXYItemRenderer;
 import org.jfree.data.general.Series;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import se.sics.mspsim.cli.AbstractWindowDataHandler;
-
 
 public class LineSampleChart extends JFreeWindowDataHandler {
 
-  JPanel panel;
+  private JPanel panel;
   private XYSeriesCollection dataset;
   private XYSeries dataSeries;
   private JFreeChart chart;
- 
+  private DefaultXYItemRenderer renderer;
+
   public LineSampleChart() {
     NumberAxis domain = new NumberAxis("Index");
     NumberAxis range = new NumberAxis("Value");
@@ -32,7 +31,7 @@ public class LineSampleChart extends JFreeWindowDataHandler {
     // xyplot.setBackgroundPaint(Color.black);
     xyplot.setDataset(dataset = new XYSeriesCollection());
 
-    DefaultXYItemRenderer renderer = new DefaultXYItemRenderer();
+    renderer = new DefaultXYItemRenderer();
     renderer.setSeriesPaint(0, Color.black);
     renderer.setSeriesShapesVisible(0, false);
     xyplot.setRenderer(renderer);
@@ -75,18 +74,22 @@ public class LineSampleChart extends JFreeWindowDataHandler {
       chart.setTitle(args[0]);
     }
   }
-  
+
   public int getDataSeriesCount() {
     return 1;
   }
-  
+
   public Series getDataSeries(int index) {
     return dataSeries;
   }
-  
+
   @Override
   public void setProperty(int index, String param, String[] args) {
     super.setProperty(index, param, args);
+    if ("color".equals(param)) {
+      renderer.setSeriesPaint(index, Color.decode(args[0]));
+      panel.repaint();
+    }
   }
-  
+
 }

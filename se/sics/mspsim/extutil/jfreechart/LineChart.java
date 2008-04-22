@@ -43,24 +43,16 @@ package se.sics.mspsim.extutil.jfreechart;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-
 import javax.swing.JComponent;
 import javax.swing.JPanel;
-
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.DefaultXYItemRenderer;
 import org.jfree.data.general.Series;
-import org.jfree.data.time.Millisecond;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-
-import se.sics.mspsim.cli.AbstractWindowDataHandler;
 
 /**
  * @author joakim
@@ -68,11 +60,11 @@ import se.sics.mspsim.cli.AbstractWindowDataHandler;
  */
 public class LineChart extends JFreeWindowDataHandler {
 
-  JPanel panel;
+  private JPanel panel;
   private JFreeChart chart;
   private XYSeriesCollection dataset;
   private DefaultXYItemRenderer renderer = new DefaultXYItemRenderer();
-  
+
   public LineChart() {
     NumberAxis domain = new NumberAxis("Time");
     NumberAxis range = new NumberAxis("Value");
@@ -94,9 +86,8 @@ public class LineChart extends JFreeWindowDataHandler {
     panel.setLayout(new BorderLayout());
     panel.setPreferredSize(new Dimension(400, 200));
     panel.add(chartPanel, BorderLayout.CENTER);
-    
   }
-   
+ 
   @Override
   public JComponent getComponent() {
     return panel;
@@ -105,7 +96,7 @@ public class LineChart extends JFreeWindowDataHandler {
   public int getDataSeriesCount() {
     return dataset.getSeriesCount();
   }
-  
+
   public Series getDataSeries(int index) {
     while (index >= dataset.getSeriesCount()) {
       addSeries();
@@ -144,5 +135,9 @@ public class LineChart extends JFreeWindowDataHandler {
   @Override
   public void setProperty(int index, String param, String[] args) {
     super.setProperty(index, param, args);
+    if ("color".equals(param)) {
+      renderer.setSeriesPaint(index, Color.decode(args[0]));
+      panel.repaint();
+    }
   }
 }

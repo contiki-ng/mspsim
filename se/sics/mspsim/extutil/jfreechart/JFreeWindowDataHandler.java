@@ -40,10 +40,7 @@
  */
 package se.sics.mspsim.extutil.jfreechart;
 
-import javax.swing.JComponent;
-
 import org.jfree.data.general.Series;
-
 import se.sics.mspsim.cli.AbstractWindowDataHandler;
 
 /**
@@ -61,15 +58,14 @@ public abstract class JFreeWindowDataHandler extends AbstractWindowDataHandler {
    */
   @Override
   public void setProperty(int index, String param, String[] args) {
-    System.out.println("setProperty called!!! " + param);
     if (index > getDataSeriesCount()) {
       throw new IndexOutOfBoundsException("Illegal index: " + index);
     }
     if ("label".equals(param)) {
-      System.out.println("setting label to: " + args[0]);
       getDataSeries(index).setKey(args[0]);
+      getComponent().revalidate();
+      getComponent().repaint();
     }
-    getComponent().revalidate();
   }
 
 }
