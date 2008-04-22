@@ -224,6 +224,17 @@ public class CommandParser {
     return list.toArray(new String[list.size()][]);
   }
 
+  public static String toString(String[] parts, int start, int end) {
+    StringBuilder sb = new StringBuilder();
+    for (int i = start; i < end; i++) {
+      if (i > start) {
+        sb.append(' ');
+      }
+      sb.append(parts[i]);
+    }
+    return sb.toString();
+  }
+
 //   public static void main(String[] args) {
 //     StringBuilder sb = new StringBuilder();
 //     for (int i = 0, n = args.length; i < n; i++) {
