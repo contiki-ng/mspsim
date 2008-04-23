@@ -492,18 +492,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private void resetIOUnits() {
     for (int i = 0, n = lastIOUnitPos; i < n; i++) {
-      ioUnits[i].reset();
+      ioUnits[i].reset(RESET_POR);
     }
     for (int i = 0, n = passiveIOUnits.length; i < n; i++) {
-      passiveIOUnits[i].reset();
+      passiveIOUnits[i].reset(RESET_POR);
     }
   }
 
-  public void reset() {
+  private void internalReset() {
     resetIOUnits();
-    reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
-    System.out.println("Reset the CPU: " + reg[PC]);
-    
     for (int i = 0, n = 16; i < n; i++) {
       interruptSource[i] = null;
     }
@@ -514,7 +511,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
    
     cycleEventQueue.removeAll();
     vTimeEventQueue.removeAll();
-    
+  }
+  
+  public void reset() {
+//    flagInterrupt(15, null, true);
+    reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
+    System.out.println("Reset the CPU: " + reg[PC]);
+    internalReset();
   }
 
   // Indicate that we have an interrupt now!
@@ -527,8 +530,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	System.out.println("### Interrupt flagged ON by " + source.getName());
       }
 
+      // MAX priority is executed first - update max if this is higher!
       if (interrupt > interruptMax) {
 	interruptMax = interrupt;
+	if (interruptMax == 15) {
+	  System.out.println("Triggering reset IRQ!!!!!");
+	}
       }
     } else {
       if (interruptSource[interrupt] == source) {
@@ -648,6 +655,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // executed things might change!
     interruptMax = -1;
 
+    if (servicedInterrupt == 15) {
+      System.out.println("Servicing RESET! => " + Utils.hex16(pc));
+      internalReset();
+    }
+    
+    
     // Interrupts take 6 cycles!
     cycles += 6;
 

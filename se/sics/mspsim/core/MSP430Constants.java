@@ -45,6 +45,9 @@ public interface MSP430Constants {
 
   public static final String VERSION = "0.90";
 
+  public static final int RESET_PUC = 0;
+  public static final int RESET_POR = 1;
+  
   // MODES
   public static final int MODE_ACTIVE = 0;
   public static final int MODE_LPM0 = 1;

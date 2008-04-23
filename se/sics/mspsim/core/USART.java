@@ -132,7 +132,7 @@ public class USART extends IOUnit {
     nextTXReady = cpu.cycles + 1000;
   }
 
-  public void reset() {
+  public void reset(int type) {
     nextTXReady = cpu.cycles + 1000;
   }
   

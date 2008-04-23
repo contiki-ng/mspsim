@@ -51,7 +51,7 @@ public abstract class IOUnit {
     this.offset = offset;
   }
 
-  public void reset() {
+  public void reset(int type) {
   }
   
   public boolean needsTick() {

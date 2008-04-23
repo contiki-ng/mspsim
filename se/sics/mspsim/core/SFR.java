@@ -71,7 +71,7 @@ public class SFR extends IOUnit {
     this.memory = memory;
   }
 
-  public void reset() {
+  public void reset(int type) {
   }
 
   public boolean needsTick() {

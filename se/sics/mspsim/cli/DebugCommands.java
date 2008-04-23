@@ -280,6 +280,17 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
+        
+        ch.registerCommand("set", new BasicCommand("set memory", "<address> <value> [type]") {
+          public int executeCommand(final CommandContext context) {
+            int adr = context.getArgumentAsAddress(0);
+            int val = context.getArgumentAsInt(1);
+            boolean word = val > 0xff;
+            cpu.write(adr, val, word);
+            return 0;
+          }});
+        
+        
 
         
       }

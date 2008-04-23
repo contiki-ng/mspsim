@@ -72,7 +72,6 @@ import se.sics.mspsim.util.Utils;
 public class Timer extends IOUnit {
 
   public static final boolean DEBUG = false;
-
   public static final int TIMER_A = 0;
   public static final int TIMER_B = 1;
   private String[] name = new String[] {"A", "B"};
@@ -235,10 +234,10 @@ public class Timer extends IOUnit {
     ccr0Vector = type == TIMER_A ? TACCR0_VECTOR : TBCCR0_VECTOR;
     ccr1Vector = type == TIMER_A ? TACCR1_VECTOR : TBCCR1_VECTOR;
         
-    reset();
+    reset(0);
   }
 
-  public void reset() {
+  public void reset(int type) {
     for (int i = 0, n = expCompare.length; i < n; i++) {
       expCompare[i] = -1;
       expCaptureTime[i] = -1;
@@ -320,12 +319,15 @@ public class Timer extends IOUnit {
     case TCCR6:
       i = (index - TCCR0) / 2;
       val = tccr[i];
+      if (i == 2) {
+        System.out.println("Read CCR2: " + val);
+      }
       break;
     default:
       System.out.println("Not supported read, returning zero!!!");
     }
     
-    if (DEBUG) {
+    if (DEBUG && false) {
       System.out.println(getName() + ": Read " + getName(address) + "(" + Utils.hex16(address) + ") => " +
           Utils.hex16(val) + " (" + val + ")");
     }
@@ -385,6 +387,7 @@ public class Timer extends IOUnit {
 	counter = 0;
 	counterStart = cycles;
 	// inputDivider = 1; ????
+	updateCaptures(-1, cycles);
       }
 
       int newMode = (data >> 4) & 3;
@@ -438,9 +441,9 @@ public class Timer extends IOUnit {
 
       triggerInterrupts();
 
-      if (DEBUG) {
+      if (DEBUG || index == 2) {
 	System.out.println(getName() + " Write: CCTL" +
-			   index + " => " + Utils.hex16(data) +
+			   index + ": => " + Utils.hex16(data) +
 			   " CM: " + capNames[capMode[index]] +
 			   " CCIS:" + inputSel[index] + " name: " +
 			   getSourceName(inputSrc[index]) +
@@ -521,7 +524,7 @@ public class Timer extends IOUnit {
 
 	if (DEBUG) {
 	  System.out.println(getName() + " expCapInterval[" + i + "] frq = " +
-			     frqClk + " div = " + divisor);
+			     frqClk + " div = " + divisor + " SMCLK_FRQ: " + core.smclkFrq);
 	}
 
 	// This is used to calculate expected time before next capture of
@@ -611,6 +614,10 @@ public class Timer extends IOUnit {
           // Write the expected capture time to the register (counter could
           // differ slightly)
           tccr[i] = expCompare[i];
+          if (i == 2) {
+            updateCounter(cycles);
+            System.out.println("CCR2 set to: " + tccr[i] + " should be " + counter);
+          }
           // Update capture times... for next capture
           expCompare[i] = (expCompare[i] + expCapInterval[i]) & 0xffff;
           expCaptureTime[i] += expCapInterval[i] * cyclesMultiplicator;

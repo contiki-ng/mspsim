@@ -55,6 +55,7 @@ public class Watchdog extends IOUnit {
   private static final int WDTSSEL = 0x04;
   private static final int WDTISx = 0x03;
   
+  private static final int RESET_VECTOR = 15;
   
   private int wdtctl;
   private boolean wdtOn = true;
@@ -83,7 +84,7 @@ public class Watchdog extends IOUnit {
   @Override
   public void interruptServiced(int vector) {
     // TODO Auto-generated method stub
-
+    cpu.flagInterrupt(RESET_VECTOR, this, false);
   }
 
   private void triggerWDT(long time) {
@@ -110,6 +111,7 @@ public class Watchdog extends IOUnit {
       } else {
         // Trigger reset!!
         System.out.println("WDTCTL: illegal write - should reset!!!! " + value);
+        cpu.flagInterrupt(RESET_VECTOR, this, true);
       }
     }
   }

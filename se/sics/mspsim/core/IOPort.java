@@ -200,7 +200,7 @@ public class IOPort extends IOUnit {
   }
 
 
-  public void reset() {
+  public void reset(int type) {
     for (int i = 0, n = 8; i < n; i++) {
       pinState[i] = PIN_LOW;
     }
