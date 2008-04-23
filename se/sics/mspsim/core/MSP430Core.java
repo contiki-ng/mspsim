@@ -514,10 +514,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   public void reset() {
-//    flagInterrupt(15, null, true);
-    reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
-    System.out.println("Reset the CPU: " + reg[PC]);
-    internalReset();
+//    reg[PC] = memory[0xfffe] +  (memory[0xffff] << 8);
+//    System.out.println("Reset the CPU: " + reg[PC]);    
+    flagInterrupt(15, null, true);
   }
 
   // Indicate that we have an interrupt now!
@@ -535,6 +534,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	interruptMax = interrupt;
 	if (interruptMax == 15) {
 	  System.out.println("Triggering reset IRQ!!!!!");
+	  // This can not be masked at all!
+	  interruptsEnabled = true;
 	}
       }
     } else {
@@ -629,18 +630,22 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int spBefore = readRegister(SP);
     int sp = spBefore;
     int sr = readRegister(SR);
-    // Push PC and SR to stack
-    // store on stack - always move 2 steps (W) even if B.
-    writeRegister(SP, sp = spBefore - 2);
-    // Put lo & hi on stack!
-    memory[sp] = pc & 0xff;
-    memory[sp + 1] = (pc >> 8) & 0xff;
 
-    writeRegister(SP, sp = sp - 2);
-    // Put lo & hi on stack!
-    memory[sp] = sr & 0xff;
-    memory[sp + 1] = (sr >> 8) & 0xff;
+    // Only store stuff on irq except reset... - not sure if this is correct...
+    // TODO: Check what to do if reset is called!
+    if (interruptMax < 15) {
+      // Push PC and SR to stack
+      // store on stack - always move 2 steps (W) even if B.
+      writeRegister(SP, sp = spBefore - 2);
+      // Put lo & hi on stack!
+      memory[sp] = pc & 0xff;
+      memory[sp + 1] = (pc >> 8) & 0xff;
 
+      writeRegister(SP, sp = sp - 2);
+      // Put lo & hi on stack!
+      memory[sp] = sr & 0xff;
+      memory[sp + 1] = (sr >> 8) & 0xff;
+    }
     // Clear SR - except ...
     // Jump to the address specified in the interrupt vector
     writeRegister(PC, pc =
@@ -656,7 +661,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     interruptMax = -1;
 
     if (servicedInterrupt == 15) {
-      System.out.println("Servicing RESET! => " + Utils.hex16(pc));
+      System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
       internalReset();
     }
     
@@ -678,7 +683,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
                            servicedInterruptUnit.getName());
       }
       servicedInterruptUnit.interruptServiced(servicedInterrupt);
-    }    
+    }
     return pc;
   }
 
