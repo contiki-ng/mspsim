@@ -211,6 +211,15 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
+        ch.registerCommand("stack", new BasicCommand("show stack info", "") {
+          public int executeCommand(CommandContext context) {
+            int stackEnd = context.getMapTable().heapStartAddress;
+            int stackStart = context.getMapTable().stackStartAddress;
+            int current = cpu.readRegister(MSP430Constants.SP);
+            context.out.println("Current stack: $" + Utils.hex16(current) + " (" + (stackStart - current) + " used of " + (stackStart - stackEnd) + ')');
+            return 0;
+          }
+        });
         ch.registerCommand("print", new BasicCommand("print value of an address or symbol", "<address or symbol>") {
           public int executeCommand(CommandContext context) {
             int adr = context.getArgumentAsAddress(0);
