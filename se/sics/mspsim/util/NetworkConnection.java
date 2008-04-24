@@ -78,7 +78,7 @@ public class NetworkConnection implements Runnable {
   public void addPacketListener(PacketListener pl) {
     listener = pl;
   }
-  
+
   private void setupServer(int port) {
     try {
       serverSocket = new ServerSocket(port);
@@ -107,15 +107,15 @@ public class NetworkConnection implements Runnable {
   // all other nodes
   private void dataReceived(byte[] data, int len, ConnectionThread source) {
     int[] buf = new int[len];
+    for (int i = 0; i < buf.length; i++) {
+      buf[i] = data[i];
+    }
     if (listener != null) {
-      for (int i = 0; i < buf.length; i++) {
-        buf[i] = data[i];
-      }
       // Send this data to the transmitter in this node!
       listener.transmissionStarted();      
       listener.transmissionEnded(buf);
     }
-      
+
     // And if this is the server, propagate to the others
     if (serverSocket != null) {
       dataSent(buf, source);
@@ -123,7 +123,7 @@ public class NetworkConnection implements Runnable {
   }
   
 
-  byte[] buf = new byte[256];
+  private byte[] buf = new byte[256];
 
   // Data was sent from the radio in the node (or other node) and should
   // be sent out to other nodes!!!
@@ -137,7 +137,7 @@ public class NetworkConnection implements Runnable {
     if (connections.size() > 0) {
       for (int i = 0; i < data.length; i++) {
         buf[i] = (byte) data[i];
-      }    
+      }
       ConnectionThread[] cthr = connections.toArray(new ConnectionThread[connections.size()]);
       for (int i = 0; i < cthr.length; i++) {
         if (cthr[i].isClosed()) {
@@ -159,10 +159,10 @@ public class NetworkConnection implements Runnable {
       }
     }
   }
-  
+
   private void printPacket(byte[] data, int len) {
     for (int i = 0; i < len; i++) {
-      System.out.print("" + Utils.hex8(data[i]) + " ");
+      System.out.print(Utils.hex8(data[i]) + " ");
     }
     System.out.println();
   }
@@ -214,9 +214,9 @@ public class NetworkConnection implements Runnable {
     @Override
     public void run() {
       if (DEBUG) System.out.println("NetworkConnection: Started connection thread...");
-      while (socket != null) {
-        int len;
-        try {
+      try {
+        while (socket != null) {
+          int len;
           len = input.read();
           if (len > 0) {
             input.readFully(buffer, 0, len);
@@ -226,11 +226,11 @@ public class NetworkConnection implements Runnable {
             }
             dataReceived(buffer, len, this);
           }
-        } catch (IOException e) {
-          e.printStackTrace();
-          socket = null;
         }
+      } catch (IOException e) {
+        e.printStackTrace();
+        close();
       }
-    }    
+    }
   }
 }
