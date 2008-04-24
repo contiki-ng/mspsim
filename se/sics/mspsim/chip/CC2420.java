@@ -192,8 +192,10 @@ public class CC2420 extends Chip implements USARTListener {
       if (packetListener != null) {
         // First byte is length and is not included in the data buffer (and its length)
         int len = memory[RAM_TXFIFO];
-        int[] data = new int[len];
-        System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len);
+        byte[] data = new byte[len + 1];
+        for (int i = 0, n = data.length; i < n; i++) {
+          data[i] = (byte) (memory[RAM_TXFIFO + i] & 0xff);
+        }
         packetListener.transmissionEnded(data);
       }
       status &= ~STATUS_TX_ACTIVE;
@@ -500,21 +502,16 @@ public class CC2420 extends Chip implements USARTListener {
   }
 
   // Length is not assumed to be and no CRC?!
-  public void setIncomingPacket(int[] packet) {
-    setIncomingPacket(packet, 0, packet.length);
-  }
-
-  public void setIncomingPacket(int[] packet, int start, int end) {
+  public void setIncomingPacket(byte[] receivedData) {
     int adr = RAM_RXFIFO;
     // length of packet is data size + RSSI and CRC/Correlation!
-    memory[adr++] = end - start + 2;
-    for (int i = start; i < end; i++) {
-      memory[adr++] = packet[i] & 0xff;
+    for (byte element: receivedData) {
+      memory[adr++] = element & 0xff;
     }
     // Should take a RSSI value as input or use a set-RSSI value...
-    memory[adr++] = (registers[REG_RSSI]) & 0xff;
+    memory[adr - 2] = (registers[REG_RSSI]) & 0xff;
     // Set CRC ok and add a correlation
-    memory[adr++] = (37) | 0x80;
+    memory[adr - 1] = 37 | 0x80;
     rxPacket = true;
     rxCursor = 0;
     rxLen = adr;

@@ -176,11 +176,6 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     flash.dataReceived(source, data);
   }
 
-
-  public void radioIncomingPacket(int[] data) {
-    radio.setIncomingPacket(data);
-  }
-
   public int getModeMax() {
     return MODE_MAX;
   }
@@ -258,15 +253,15 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 
     network = new NetworkConnection();
     network.addPacketListener(new PacketListener() {
-      public void transmissionEnded(int[] receivedData) {
-        radio.setIncomingPacket(receivedData, 0, receivedData.length - 2);
+      public void transmissionEnded(byte[] receivedData) {
+        radio.setIncomingPacket(receivedData);
       }
       public void transmissionStarted() {
       }
     });
     // TODO: remove this test...
     radio.setPacketListener(new PacketListener() {
-      public void transmissionEnded(int[] receivedData) {
+      public void transmissionEnded(byte[] receivedData) {
 //        System.out.println(getName() + " got packet from radio " + SkyNode.this.cpu.getTimeMillis());
         network.dataSent(receivedData);
       }

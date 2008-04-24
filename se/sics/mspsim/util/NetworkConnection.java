@@ -105,39 +105,30 @@ public class NetworkConnection implements Runnable {
   
   // Data incoming from the network!!! - forward to radio and if server, to
   // all other nodes
-  private void dataReceived(byte[] data, int len, ConnectionThread source) {
-    int[] buf = new int[len];
-    for (int i = 0; i < buf.length; i++) {
-      buf[i] = data[i];
-    }
+  private void dataReceived(byte[] data, ConnectionThread source) {
     if (listener != null) {
       // Send this data to the transmitter in this node!
       listener.transmissionStarted();      
-      listener.transmissionEnded(buf);
+      listener.transmissionEnded(data);
     }
 
     // And if this is the server, propagate to the others
     if (serverSocket != null) {
-      dataSent(buf, source);
+      dataSent(data, source);
     }
   }
   
 
-  private byte[] buf = new byte[256];
-
   // Data was sent from the radio in the node (or other node) and should
   // be sent out to other nodes!!!
-  public void dataSent(int[] data) {
-    dataSent(data, null);
+  public void dataSent(byte[] receivedData) {
+    dataSent(receivedData, null);
   }
  
   // Data was sent either from radio, or came from another "radio" -
   // and if so it should be propagated to all others.
-  public void dataSent(int[] data, ConnectionThread source) {
+  public void dataSent(byte[] receivedData, ConnectionThread source) {
     if (connections.size() > 0) {
-      for (int i = 0; i < data.length; i++) {
-        buf[i] = (byte) data[i];
-      }
       ConnectionThread[] cthr = connections.toArray(new ConnectionThread[connections.size()]);
       for (int i = 0; i < cthr.length; i++) {
         if (cthr[i].isClosed()) {
@@ -145,11 +136,10 @@ public class NetworkConnection implements Runnable {
           // Do not write back to the source
         } else if (cthr[i] != source){
           try {
-            cthr[i].output.write((byte) data.length);
-            cthr[i].output.write(buf, 0, data.length);
+            cthr[i].output.write(receivedData, 0, receivedData.length);
             if (DEBUG) {
-              System.out.println("NetworkConnection: wrote " + data.length + " bytes");
-              printPacket(buf, data.length);
+              System.out.println("NetworkConnection: wrote " + receivedData.length + " bytes");
+              printPacket(receivedData);
             }
           } catch (IOException e) {
             e.printStackTrace();
@@ -160,8 +150,8 @@ public class NetworkConnection implements Runnable {
     }
   }
 
-  private void printPacket(byte[] data, int len) {
-    for (int i = 0; i < len; i++) {
+  private void printPacket(byte[] data) {
+    for (int i = 0, len = data.length; i < len; i++) {
       System.out.print(Utils.hex8(data[i]) + " ");
     }
     System.out.println();
@@ -184,8 +174,6 @@ public class NetworkConnection implements Runnable {
   }
   
   class ConnectionThread implements Runnable {
-    byte[] buffer = new byte[256];
-    
     Socket socket;
     DataInputStream input;
     OutputStream output;
@@ -216,15 +204,16 @@ public class NetworkConnection implements Runnable {
       if (DEBUG) System.out.println("NetworkConnection: Started connection thread...");
       try {
         while (socket != null) {
-          int len;
-          len = input.read();
+          int len = input.read();
           if (len > 0) {
-            input.readFully(buffer, 0, len);
+            byte[] buffer = new byte[len + 1];
+            buffer[0] = (byte) (len & 0xff);
+            input.readFully(buffer, 1, len);
             if (DEBUG) {
               System.out.println("NetworkConnection: Read packet with " + len + " bytes");
-              printPacket(buffer, len);
+              printPacket(buffer);
             }
-            dataReceived(buffer, len, this);
+            dataReceived(buffer, this);
           }
         }
       } catch (IOException e) {

@@ -40,5 +40,5 @@ package se.sics.mspsim.chip;
 
 public interface PacketListener {
   public void transmissionStarted();
-  public void transmissionEnded(int[] receivedData);
+  public void transmissionEnded(byte[] receivedData);
 }

@@ -183,9 +183,6 @@ public class SkyGui extends JComponent implements KeyListener {
 //     System.out.println("Key Pressed: " + key.getKeyChar());
     if (key.getKeyChar() == 'd') {
       node.setDebug(!node.getDebug());
-    } else if (key.getKeyChar() == 'r') {
-      System.out.println("Setting incoming radio packet...");
-      node.radioIncomingPacket(new int[] {11,0,42,0,'H','e','j','s','a','n'});
     }
   }
 
