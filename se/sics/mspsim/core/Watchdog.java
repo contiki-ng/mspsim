@@ -40,8 +40,6 @@
  */
 package se.sics.mspsim.core;
 
-import se.sics.mspsim.util.Utils;
-
 /**
  * @author joakim
  *
@@ -68,8 +66,6 @@ public class Watchdog extends IOUnit {
     }
   };
 
-  
-  
   public Watchdog(MSP430Core cpu) {
     super(cpu.memory, 0x120);
     this.cpu = cpu;
@@ -77,19 +73,17 @@ public class Watchdog extends IOUnit {
    
   @Override
   public String getName() {
-    // TODO Auto-generated method stub
     return "Watchdog";
   }
 
   @Override
   public void interruptServiced(int vector) {
-    // TODO Auto-generated method stub
     cpu.flagInterrupt(RESET_VECTOR, this, false);
   }
 
   private void triggerWDT(long time) {
-   // Here the WDT triggered!!!
-    System.out.println("WDT trigger - should reset?!?!");
+    // Here the WDT triggered!!!
+//    System.out.println("WDT trigger - should reset?!?!");
   }
   
   public int read(int address, boolean word, long cycles) {
@@ -101,7 +95,7 @@ public class Watchdog extends IOUnit {
   public void write(int address, int value, boolean word, long cycles) {
     if (address == WDTCTL) {
       if ((value >> 8) == 0x5a) {
-        System.out.println("Wrote to WDTCTL: " + Utils.hex8(wdtctl));
+//        System.out.println("Wrote to WDTCTL: " + Utils.hex8(wdtctl));
         wdtctl = value & 0xff;
         // Is it on?
         wdtOn = (value & 0x80) == 0;
@@ -110,7 +104,7 @@ public class Watchdog extends IOUnit {
         }
       } else {
         // Trigger reset!!
-        System.out.println("WDTCTL: illegal write - should reset!!!! " + value);
+//        System.out.println("WDTCTL: illegal write - should reset!!!! " + value);
         cpu.flagInterrupt(RESET_VECTOR, this, true);
       }
     }
