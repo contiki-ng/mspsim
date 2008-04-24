@@ -168,35 +168,39 @@ public class IOPort extends IOUnit {
 
   // for HW to set hi/low on the pins...
   public void setPinState(int pin, int state) {
-    if (interrupt > 0) {
-      if (pinState[pin] != state) {
-	pinState[pin] = state;
-	int bit = 1 << pin;
-	if ((memory[offset + IES] & bit) == 0) {
-	  // LO/HI transition
-	  if (state == PIN_HI) {
-	    interruptFlag |= bit;
-	    if (DEBUG) {
-	      System.out.println(getName() +
-				 " Flagging interrupt (HI): " + bit);
-	    }
-	  }
-	} else {
-	  // HI/LO transition
-	  if (state == PIN_LOW) {
-	    interruptFlag |= bit;
-	    if (DEBUG) {
-	      System.out.println(getName() +
-				 " Flagging interrupt (LOW): " + bit);
-	    }
-	  }
-	}
+    if (pinState[pin] != state) {
+      pinState[pin] = state;
+      int bit = 1 << pin;
+      if (state == PIN_HI) {
+        memory[IN + offset] |= bit;
+      } else {
+        memory[IN + offset] &= ~bit;
+      }
+      if (interrupt > 0) {
+        if ((memory[offset + IES] & bit) == 0) {
+          // LO/HI transition
+          if (state == PIN_HI) {
+            interruptFlag |= bit;
+            if (DEBUG) {
+              System.out.println(getName() +
+                  " Flagging interrupt (HI): " + bit);
+            }
+          }
+        } else {
+          // HI/LO transition
+          if (state == PIN_LOW) {
+            interruptFlag |= bit;
+            if (DEBUG) {
+              System.out.println(getName() +
+                  " Flagging interrupt (LOW): " + bit);
+            }
+          }
+        }
+        memory[offset + IFG] = interruptFlag;
+        // Maybe this is not the only place where we should flag int?
+        cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
       }
     }
-    memory[offset + IFG] = interruptFlag;
-
-    // Maybe this is not the only place where we should flag int?
-    cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
   }
 
 
