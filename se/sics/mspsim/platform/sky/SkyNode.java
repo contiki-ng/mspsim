@@ -83,8 +83,10 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   public static final int CC2420_FIFO = 3;
   public static final int CC2420_CCA = 4;
 
+  /* P4.1 - Input: SFD from CC2420 */
   /* P4.5 - Output: VREG_EN to CC2420 */
   /* P4.2 - Output: SPI Chip Select (CS_N) */
+  public static final int CC2420_SFD = 1;
   public static final int CC2420_VREG = (1 << 5);
   public static final int CC2420_CHIP_SELECT = 0x04;
 
@@ -95,8 +97,8 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
 
   public CC2420 radio;
   public NetworkConnection network;
-  
-  
+
+
   private M25P80 flash;
   private String flashFile;
 
@@ -216,7 +218,8 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
       if (port4 != null && port4 instanceof IOPort) {
-        (port4).setPortListener(this);
+        port4.setPortListener(this);
+        radio.setSFDPort(port4, CC2420_SFD);
       }
     }
   }
@@ -256,7 +259,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
     network = new NetworkConnection();
     network.addPacketListener(new PacketListener() {
       public void transmissionEnded(int[] receivedData) {
-        radio.setIncomingPacket(receivedData);
+        radio.setIncomingPacket(receivedData, 0, receivedData.length - 2);
       }
       public void transmissionStarted() {
       }

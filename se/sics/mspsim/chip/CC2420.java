@@ -172,6 +172,9 @@ public class CC2420 extends Chip implements USARTListener {
   private IOPort fifoPort = null;
   private int fifoPin;
 
+  private IOPort sfdPort = null;
+  private int sfdPin;
+
   private boolean rxPacket;
   private int rxCursor;
   private int rxLen;
@@ -193,6 +196,8 @@ public class CC2420 extends Chip implements USARTListener {
         System.arraycopy(memory, RAM_TXFIFO + 1, data, 0, len);
         packetListener.transmissionEnded(data);
       }
+      status &= ~STATUS_TX_ACTIVE;
+      updateSFDPin();
     }
   };
 
@@ -428,9 +433,11 @@ public class CC2420 extends Chip implements USARTListener {
     if (DEBUG) {
       System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
     }
+    status |= STATUS_TX_ACTIVE;
+    cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
+    updateSFDPin();
     if (packetListener != null) {
       packetListener.transmissionStarted();
-      cpu.scheduleTimeEventMillis(transmissionEvent, 1000 * time);
       memory[RAM_TXFIFO + len - 1] = 1;
       memory[RAM_TXFIFO + len - 0] = 2;
     }
@@ -474,6 +481,11 @@ public class CC2420 extends Chip implements USARTListener {
     fifoPin = pin;
   }
 
+  public void setSFDPort(IOPort port, int pin) {
+    sfdPort = port;
+    sfdPin = pin;
+  }
+
 
   // -------------------------------------------------------------------
   // Methods for accessing and writing to registers, etc from outside
@@ -489,11 +501,15 @@ public class CC2420 extends Chip implements USARTListener {
 
   // Length is not assumed to be and no CRC?!
   public void setIncomingPacket(int[] packet) {
+    setIncomingPacket(packet, 0, packet.length);
+  }
+
+  public void setIncomingPacket(int[] packet, int start, int end) {
     int adr = RAM_RXFIFO;
     // length of packet is data size + RSSI and CRC/Correlation!
-    memory[adr++] = packet.length + 2;
-    for (int element : packet) {
-      memory[adr++] = element & 0xff;
+    memory[adr++] = end - start + 2;
+    for (int i = start; i < end; i++) {
+      memory[adr++] = packet[i] & 0xff;
     }
     // Should take a RSSI value as input or use a set-RSSI value...
     memory[adr++] = (registers[REG_RSSI]) & 0xff;
@@ -524,6 +540,10 @@ public class CC2420 extends Chip implements USARTListener {
 
   private void updateFifopPin() {
     fifopPort.setPinState(fifopPin, rxPacket ? 1 : 0);
+  }
+
+  private void updateSFDPin() {
+    sfdPort.setPinState(sfdPin, (status & STATUS_TX_ACTIVE) != 0 ? 1 : 0);
   }
 
   public void setCCA(boolean cca) {
