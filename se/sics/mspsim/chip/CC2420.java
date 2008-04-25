@@ -200,6 +200,9 @@ public class CC2420 extends Chip implements USARTListener {
       }
       status &= ~STATUS_TX_ACTIVE;
       updateSFDPin();
+      if (mode == MODE_TXRX_ON) {
+        setMode(MODE_RX_ON);
+      }
     }
   };
 
@@ -431,7 +434,7 @@ public class CC2420 extends Chip implements USARTListener {
   private void transmitPacket() {
     int len = memory[RAM_TXFIFO];
     int kBps = 250000 / 8;
-    double time = 1.0 * len / kBps;
+    double time = 1.0 * (len + 1) / kBps;
     if (DEBUG) {
       System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
     }
@@ -446,6 +449,7 @@ public class CC2420 extends Chip implements USARTListener {
   }
 
   private void setMode(int mode) {
+//    System.out.println(cpu.getTimeMillis() + ": MODE " + getModeName(mode));
     this.mode = mode;
     modeChanged(mode);
   }
@@ -501,21 +505,27 @@ public class CC2420 extends Chip implements USARTListener {
     registers[register] = data;
   }
 
-  // Length is not assumed to be and no CRC?!
   public void setIncomingPacket(byte[] receivedData) {
-    int adr = RAM_RXFIFO;
-    // length of packet is data size + RSSI and CRC/Correlation!
-    for (byte element: receivedData) {
-      memory[adr++] = element & 0xff;
+    if (mode != MODE_RX_ON) {
+//      System.out.println(cpu.getTimeMillis() + ": DROPPING");
+    } else if (rxPacket) {
+      // Already have a waiting packet
+      if (DEBUG) System.out.println(getName() + ": dropping due to unread packet");
+    } else {
+      int adr = RAM_RXFIFO;
+      // length of packet is data size + RSSI and CRC/Correlation!
+      for (byte element: receivedData) {
+        memory[adr++] = element & 0xff;
+      }
+      // Should take a RSSI value as input or use a set-RSSI value...
+      memory[adr - 2] = (registers[REG_RSSI]) & 0xff;
+      // Set CRC ok and add a correlation
+      memory[adr - 1] = 37 | 0x80;
+      rxPacket = true;
+      rxCursor = 0;
+      rxLen = adr;
+      updateFifopPin();
     }
-    // Should take a RSSI value as input or use a set-RSSI value...
-    memory[adr - 2] = (registers[REG_RSSI]) & 0xff;
-    // Set CRC ok and add a correlation
-    memory[adr - 1] = 37 | 0x80;
-    rxPacket = true;
-    rxCursor = 0;
-    rxLen = adr;
-    updateFifopPin();
   }
 
   private void flushRX() {
@@ -554,6 +564,5 @@ public class CC2420 extends Chip implements USARTListener {
   public int getModeMax() {
     return MODE_MAX;
   }
-
 
 } // CC2420
