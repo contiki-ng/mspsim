@@ -56,15 +56,13 @@ import se.sics.mspsim.chip.PacketListener;
  */
 public class NetworkConnection implements Runnable {
 
-  private final static boolean DEBUG = true;  
+  private final static boolean DEBUG = false;
   private final static int DEFAULT_PORT = 4711;
-  
-  ServerSocket serverSocket = null;
-  
-  ArrayList<ConnectionThread> connections = new ArrayList<ConnectionThread>();
-  
+
+  private ServerSocket serverSocket = null;
+  private ArrayList<ConnectionThread> connections = new ArrayList<ConnectionThread>();
   private PacketListener listener;
-  
+
   public NetworkConnection() {
     if (connect(DEFAULT_PORT)) {
       System.out.println("NetworkConnection: Connected to network...");
@@ -137,8 +135,9 @@ public class NetworkConnection implements Runnable {
         } else if (cthr[i] != source){
           try {
             cthr[i].output.write(receivedData, 0, receivedData.length);
+            cthr[i].output.flush();
             if (DEBUG) {
-              System.out.println("NetworkConnection: wrote " + receivedData.length + " bytes");
+//              System.out.println("NetworkConnection: wrote " + receivedData.length + " bytes");
               printPacket(receivedData);
             }
           } catch (IOException e) {
@@ -151,6 +150,7 @@ public class NetworkConnection implements Runnable {
   }
 
   private void printPacket(byte[] data) {
+    System.out.print("NetworkConnection: ");
     for (int i = 0, len = data.length; i < len; i++) {
       System.out.print(Utils.hex8(data[i]) + " ");
     }
@@ -210,7 +210,7 @@ public class NetworkConnection implements Runnable {
             buffer[0] = (byte) (len & 0xff);
             input.readFully(buffer, 1, len);
             if (DEBUG) {
-              System.out.println("NetworkConnection: Read packet with " + len + " bytes");
+//              System.out.println("NetworkConnection: Read packet with " + len + " bytes");
               printPacket(buffer);
             }
             dataReceived(buffer, this);
