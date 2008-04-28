@@ -434,7 +434,7 @@ public class CC2420 extends Chip implements USARTListener {
   private void transmitPacket() {
     int len = memory[RAM_TXFIFO];
     int kBps = 250000 / 8;
-    double time = 1.0 * (len + 1) / kBps;
+    double time = 1.0 * (4 + 1 + 1 + len) / kBps;
     if (DEBUG) {
       System.out.println(getName() + " Transmitting " + len + " bytes  => " + time + " sec");
     }
