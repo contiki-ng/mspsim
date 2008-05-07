@@ -54,7 +54,6 @@ public class TR1001 extends Chip implements USARTListener {
   public static final int MODE_MAX = MODE_TXRX_ON;
 
   private final USART usart;
-  private int mode;
 
   public TR1001(USART usart) {
     this.usart = usart;
@@ -65,20 +64,17 @@ public class TR1001 extends Chip implements USARTListener {
     return "TR1001";
   }
 
+  public void setMode(int mode) {
+    super.setMode(mode);
+  }
+
   @Override
   public int getModeMax() {
     return MODE_MAX;
   }
 
-  public void setMode(int mode) {
-    if (this.mode != mode) {
-      this.mode = mode;
-      modeChanged(mode);
-    }
-  }
-
   @Override
   public void dataReceived(USART source, int data) {
   }
-  
+
 }

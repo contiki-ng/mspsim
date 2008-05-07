@@ -55,7 +55,6 @@ import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
-//import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.NetworkConnection;
@@ -109,7 +108,6 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
   public boolean redLed;
   public boolean blueLed;
   public boolean greenLed;
-  private int mode = MODE_LEDS_OFF;
 
   public SkyGui gui;
   /**
@@ -117,6 +115,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
    *
    */
   public SkyNode() {
+    setMode(MODE_LEDS_OFF);
   }
 
   public void setButton(boolean hi) {
@@ -153,10 +152,7 @@ public class SkyNode extends GenericNode implements PortListener, USARTListener 
       blueLed = (data & BLUE_LED) == 0;
       greenLed = (data & GREEN_LED) == 0;
       int newMode = (redLed ? 1 : 0) + (greenLed ? 1 : 0) + (blueLed ? 1 : 0);
-      if (mode != newMode) {
-        mode = newMode;
-        modeChanged(mode);
-      }
+      setMode(newMode);
 
       if (gui != null) {
 	gui.repaint();

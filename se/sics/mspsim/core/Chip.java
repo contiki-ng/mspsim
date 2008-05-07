@@ -39,8 +39,7 @@
  *           $Revision$
  */
 package se.sics.mspsim.core;
-import java.util.ArrayList;
-import java.util.Iterator;
+import se.sics.mspsim.util.Utils;
 
 /**
  * @author Joakim
@@ -48,40 +47,45 @@ import java.util.Iterator;
  */
 public abstract class Chip {
 
-  private ArrayList<OperatingModeListener> omListeners;
+  private OperatingModeListener[] omListeners;
   private String[] modeNames = null;
+  private int mode;
   
   public void addOperatingModeListener(OperatingModeListener listener) {
-    if (omListeners == null)
-      omListeners = new ArrayList<OperatingModeListener>();
-    omListeners.add(listener);
+    omListeners = (OperatingModeListener[]) Utils.add(OperatingModeListener.class, omListeners, listener);
   }
   
   public void removeOperatingModeListener(OperatingModeListener listener) {
-    if (omListeners != null)
-      omListeners.remove(listener);
+    omListeners = (OperatingModeListener[]) Utils.remove(omListeners, listener);
   }
-  
-  protected void modeChanged(int mode) {
-    if (omListeners != null) {
-      for (Iterator<OperatingModeListener> iterator = omListeners.iterator(); iterator.hasNext();) {
-        OperatingModeListener type = iterator.next();
-        type.modeChanged(this, mode);
+
+  public int getMode() {
+    return mode;
+  }
+
+  protected void setMode(int mode) {
+    if (mode != this.mode) {
+      this.mode = mode;
+      OperatingModeListener[] listeners = omListeners;
+      if (listeners != null) {
+        for (int i = 0, n = listeners.length; i < n; i++) {
+          listeners[i].modeChanged(this, mode);
+        }
       }
     }
   }
-  
+
   protected void setModeNames(String[] names) {
     modeNames = names;
   }
-    
+
   public String getModeName(int index) {
     if (modeNames == null) {
       return null;
     }
     return modeNames[index];
   }
-  
+
   public int getModeByName(String mode) {
     if (modeNames != null) {
       for (int i = 0; i < modeNames.length; i++) {
@@ -90,14 +94,13 @@ public abstract class Chip {
     }
     try {
       // If it is just an int it can be parsed!
-      System.out.println("Parsing as int: " + mode);
       int modei = Integer.parseInt(mode);
       return modei;
     } catch (Exception e) {
     }
     return -1;
   }
-  
+
   public abstract String getName();
   public abstract int getModeMax();
 }

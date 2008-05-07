@@ -124,7 +124,7 @@ public class CC2420 extends Chip implements USARTListener {
   public static final int MODE_RX_ON = 0x01;
   public static final int MODE_TXRX_ON = 0x02;
   public static final int MODE_MAX = MODE_TXRX_ON;
-  public static final String[] MODE_NAMES = new String[] {
+  private static final String[] MODE_NAMES = new String[] {
     "off", "listen", "transmit"
   };
   
@@ -154,8 +154,6 @@ public class CC2420 extends Chip implements USARTListener {
   private int activeChannel = 0;
 
   private int status = STATUS_XOSC16M_STABLE | STATUS_RSSI_VALID;
-
-  private int mode = MODE_TXRX_OFF;
 
   private int[] registers = new int[64];
   // More than needed...
@@ -200,7 +198,7 @@ public class CC2420 extends Chip implements USARTListener {
       }
       status &= ~STATUS_TX_ACTIVE;
       updateSFDPin();
-      if (mode == MODE_TXRX_ON) {
+      if (getMode() == MODE_TXRX_ON) {
         setMode(MODE_RX_ON);
       }
     }
@@ -213,6 +211,7 @@ public class CC2420 extends Chip implements USARTListener {
     registers[REG_TXCTRL] = 0xa0ff;
     this.cpu = cpu;
     setModeNames(MODE_NAMES);
+    setMode(MODE_TXRX_OFF);
   }
 
   public void dataReceived(USART source, int data) {
@@ -448,12 +447,6 @@ public class CC2420 extends Chip implements USARTListener {
     }
   }
 
-  private void setMode(int mode) {
-//    System.out.println(cpu.getTimeMillis() + ": MODE " + getModeName(mode));
-    this.mode = mode;
-    modeChanged(mode);
-  }
-
   public void setPacketListener(PacketListener listener) {
     packetListener = listener;
   }
@@ -506,7 +499,7 @@ public class CC2420 extends Chip implements USARTListener {
   }
 
   public void setIncomingPacket(byte[] receivedData) {
-    if (mode != MODE_RX_ON) {
+    if (getMode() != MODE_RX_ON) {
 //      System.out.println(cpu.getTimeMillis() + ": DROPPING");
     } else if (rxPacket) {
       // Already have a waiting packet

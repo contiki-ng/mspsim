@@ -296,18 +296,18 @@ public class MSP430Core extends Chip implements MSP430Constants {
         boolean scg1 = (value & SCG1) == SCG1;
         boolean oscoff = (value & OSCOFF) == OSCOFF;
         if (oscoff && scg1 && scg0) {
-          modeChanged(MODE_LPM4);
+          setMode(MODE_LPM4);
         } else if (scg1 && scg0){
-          modeChanged(MODE_LPM3);
+          setMode(MODE_LPM3);
         } else if (scg1) {
-          modeChanged(MODE_LPM2);
+          setMode(MODE_LPM2);
         } else if (scg0) {
-          modeChanged(MODE_LPM1);
+          setMode(MODE_LPM1);
         } else {
-          modeChanged(MODE_LPM0);          
+          setMode(MODE_LPM0);          
         }
       } else {
-        modeChanged(MODE_ACTIVE);
+        setMode(MODE_ACTIVE);
       }
     }
   }
