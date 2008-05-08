@@ -56,8 +56,8 @@ public class EventQueue {
   }
 
   public void addEvent(TimeEvent event) {
-    if (event.scheduled) {
-      removeEvent(event);
+    if (event.scheduledIn != null) {
+      event.remove();
     }
     if (first == null) {
       first = event;
@@ -84,7 +84,7 @@ public class EventQueue {
     } else {
       nextTime = 0;
     }
-    event.scheduled = true;
+    event.scheduledIn = this;
     eventCount++;
   }
 
@@ -117,7 +117,7 @@ public class EventQueue {
     }
 //  System.out.println("Removed =>");
 //  print();
-    event.scheduled = false;
+    event.scheduledIn = null;
     eventCount--;
     return true;
   }
@@ -135,7 +135,8 @@ public class EventQueue {
     } else {
       nextTime = 0;
     }
-    tmp.scheduled = false;
+    // No longer scheduled!
+    tmp.scheduledIn = null;
     eventCount--;
     return tmp;
   }
@@ -147,7 +148,7 @@ public class EventQueue {
       t = t.nextEvent;
       clr.nextEvent = null;
       clr.time = 0;
-      clr.scheduled = false;
+      clr.scheduledIn = null;
     }
     first = null;
     eventCount = 0;

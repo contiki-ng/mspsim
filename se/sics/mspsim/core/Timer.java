@@ -666,7 +666,7 @@ public class Timer extends IOUnit {
       time = cycles + 1000;
     }
     
-    if (!timerTrigger.scheduled) {
+    if (timerTrigger.scheduledIn == null) {
 //      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
 //             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
 //             nextTimerTrigger) + " C:"+ cycles);

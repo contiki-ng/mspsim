@@ -45,7 +45,9 @@ public abstract class TimeEvent {
   // For linking events...
   TimeEvent nextEvent;
   TimeEvent prevEvent;
-  boolean scheduled = false;
+
+  // Keeps track of where this is scheduled
+  EventQueue scheduledIn = null;
   String name;
   
   protected long time;
@@ -63,6 +65,17 @@ public abstract class TimeEvent {
     return time;
   }
 
+  public boolean isScheduled() {
+    return scheduledIn != null;
+  }
+  
+  public boolean remove() {
+    if (scheduledIn != null) {
+      return scheduledIn.removeEvent(this);
+    }
+    return false;
+  }
+  
   public abstract void execute(long t);
 
   public String getShort() {

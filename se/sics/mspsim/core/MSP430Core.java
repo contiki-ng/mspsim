@@ -455,10 +455,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
    * @param event
    * @param time
    */
-  public void scheduleTimeEventMillis(TimeEvent event, double msec) {
+  public long scheduleTimeEventMillis(TimeEvent event, double msec) {
     long time = (long) (getTime() + msec / 1000 * BasicClockModule.MAX_DCO_FRQ);
 //    System.out.println("Scheduling at: " + time + " (" + msec + ") getTime: " + getTime());
     scheduleTimeEvent(event, time);
+    return time;
   }
 
   

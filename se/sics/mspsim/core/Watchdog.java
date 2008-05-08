@@ -40,12 +40,15 @@
  */
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.util.Utils;
+
 /**
  * @author joakim
  *
  */
 public class Watchdog extends IOUnit {
-
+  private static final boolean DEBUG = false;
+  
   private static final int WDTCTL = 0x120;
 
   private static final int WDTHOLD = 0x80;
@@ -55,10 +58,23 @@ public class Watchdog extends IOUnit {
   
   private static final int RESET_VECTOR = 15;
   
+  private static final int[] DELAY = {
+    32768, 8192, 512, 64
+  };
+  
   private int wdtctl;
   private boolean wdtOn = true;
+  private boolean hold = false;
   private MSP430Core cpu;
 
+  // The current "delay" when started/clered (or hold)
+  private int delay;
+  // The target time for this timer
+  private long targetTime;
+  // Timer ACLK
+  private boolean sourceACLK = false;
+
+  
   private TimeEvent wdtTrigger = new TimeEvent(0) {
     public void execute(long t) {
 //      System.out.println(getName() + " **** executing update timers at " + t + " cycles=" + core.cycles);
@@ -83,7 +99,8 @@ public class Watchdog extends IOUnit {
 
   private void triggerWDT(long time) {
     // Here the WDT triggered!!!
-//    System.out.println("WDT trigger - should reset?!?!");
+    System.out.println("WDT trigger - should reset?!?!");
+    cpu.flagInterrupt(RESET_VECTOR, this, true);
   }
   
   public int read(int address, boolean word, long cycles) {
@@ -95,16 +112,33 @@ public class Watchdog extends IOUnit {
   public void write(int address, int value, boolean word, long cycles) {
     if (address == WDTCTL) {
       if ((value >> 8) == 0x5a) {
-//        System.out.println("Wrote to WDTCTL: " + Utils.hex8(wdtctl));
         wdtctl = value & 0xff;
+        if (DEBUG) System.out.println(getName() + " Wrote to WDTCTL: " + Utils.hex8(wdtctl));
         // Is it on?
         wdtOn = (value & 0x80) == 0;
+        boolean lastACLK = sourceACLK;
+        sourceACLK = (value & WDTSSEL) != 0;
         if ((value & WDTCNTCL) != 0) {
-          // Clear timer - reschedule the event!
+          // Clear timer => reset the delay
+          delay = DELAY[value & WDTISx];
+        }
+        // Start it if it should be started!
+        if (wdtOn) {
+          if (DEBUG) System.out.println("Setting WDTCNT to count: " + delay);
+          if (sourceACLK) {
+            if (DEBUG) System.out.println("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
+            targetTime = cpu.scheduleTimeEventMillis(wdtTrigger, 1000.0 * delay / cpu.aclkFrq);
+            } else {
+            if (DEBUG) System.out.println("setting delay in cycles");
+            cpu.scheduleCycleEvent(wdtTrigger, targetTime = cpu.cycles + delay);
+          }
+        } else {
+          // Stop it and remember current "delay" left!
+          wdtTrigger.remove();
         }
       } else {
         // Trigger reset!!
-//        System.out.println("WDTCTL: illegal write - should reset!!!! " + value);
+//       System.out.println("WDTCTL: illegal write - should reset!!!! " + value);
         cpu.flagInterrupt(RESET_VECTOR, this, true);
       }
     }
