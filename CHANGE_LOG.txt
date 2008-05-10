@@ -1,3 +1,20 @@
+0.91
+Changes:
+- added window system and support for it in the CLI
+- added two chart types for the windows subsystem
+- added redirect to windows in the CLI
+- added memory dump for both std out and Windows
+- improved CC2420 emulation
+- added CLI commands
+- reimplemented reset of the CPU
+- improved support for Digital IO Ports
+- added working ADC12 subsystem
+- added watchdog WDT subsystem
+- added support for file based scripts to the CLI
+- added configuration system
+- added connectivity between multiple running mspsim's
+
+
 0.90
 Changes: 
 - fixed multiplier to handle the different modes better.
