@@ -46,6 +46,7 @@ import se.sics.mspsim.cli.MiscCommands;
 import se.sics.mspsim.cli.WindowCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.ArgumentManager;
@@ -127,6 +128,10 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
 
     registry.start();
+    
+    System.out.println("-----------------------------------------------");
+    System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
+    System.out.println("-----------------------------------------------");
   }
   
  
