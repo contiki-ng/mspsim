@@ -112,17 +112,18 @@ public abstract class GenericNode extends Chip implements Runnable {
     cpu.reset();
     setupNode();
 
+    if (args.length > 1) {
+      MapTable map = new MapTable(args[1]);
+      cpu.getDisAsm().setMap(map);
+      registry.registerComponent("mapTable", map);
+    }
+    
     if (!config.getPropertyAsBoolean("nogui", false)) {
       // Setup control and other UI components
       ControlUI control = new ControlUI(registry);
       HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
 //    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
       control.setSourceViewer(sourceViewer);
-    }
-    if (args.length > 1) {
-      MapTable map = new MapTable(args[1]);
-      cpu.getDisAsm().setMap(map);
-      registry.registerComponent("mapTable", map);
     }
 
     registry.start();

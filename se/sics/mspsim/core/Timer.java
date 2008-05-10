@@ -319,9 +319,6 @@ public class Timer extends IOUnit {
     case TCCR6:
       i = (index - TCCR0) / 2;
       val = tccr[i];
-      if (i == 2) {
-        System.out.println("Read CCR2: " + val);
-      }
       break;
     default:
       System.out.println("Not supported read, returning zero!!!");
@@ -441,7 +438,7 @@ public class Timer extends IOUnit {
 
       triggerInterrupts();
 
-      if (DEBUG || index == 2) {
+      if (DEBUG) {
 	System.out.println(getName() + " Write: CCTL" +
 			   index + ": => " + Utils.hex16(data) +
 			   " CM: " + capNames[capMode[index]] +
@@ -614,10 +611,6 @@ public class Timer extends IOUnit {
           // Write the expected capture time to the register (counter could
           // differ slightly)
           tccr[i] = expCompare[i];
-          if (i == 2) {
-            updateCounter(cycles);
-            System.out.println("CCR2 set to: " + tccr[i] + " should be " + counter);
-          }
           // Update capture times... for next capture
           expCompare[i] = (expCompare[i] + expCapInterval[i]) & 0xffff;
           expCaptureTime[i] += expCapInterval[i] * cyclesMultiplicator;

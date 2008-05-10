@@ -384,10 +384,11 @@ public class DisAsm implements MSP430Constants {
 	opstr = "AND" + (word ? ".W" : ".B");
 	break;
       default:
-	System.out.println(output + " DoubleOperand not implemented: " +
-			   op + " instruction: " +
-			   Utils.binary16(instruction) + " = " +
-			   Utils.hex16(instruction));
+        if (startPC > 0x200)
+          System.out.println(output + " DoubleOperand not implemented: " +
+              op + " instruction: " +
+              Utils.binary16(instruction) + " = " +
+              Utils.hex16(instruction));
       }
 
 

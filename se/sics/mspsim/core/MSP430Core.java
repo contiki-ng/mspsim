@@ -534,7 +534,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (interrupt > interruptMax) {
 	interruptMax = interrupt;
 	if (interruptMax == 15) {
-	  System.out.println("Triggering reset IRQ!!!!!");
 	  // This can not be masked at all!
 	  interruptsEnabled = true;
 	}
@@ -662,7 +661,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     interruptMax = -1;
 
     if (servicedInterrupt == 15) {
-      System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
+//      System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
       internalReset();
     }
     

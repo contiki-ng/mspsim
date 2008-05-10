@@ -162,12 +162,8 @@ public class NetworkConnection implements Runnable {
       Socket socket = new Socket("127.0.0.1", port);
       connections.add(new ConnectionThread(socket));
     } catch (UnknownHostException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
       return false;
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
       return false;
     }    
     return true;
