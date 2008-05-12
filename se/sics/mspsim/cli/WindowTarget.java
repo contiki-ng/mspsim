@@ -1,5 +1,6 @@
 package se.sics.mspsim.cli;
 
+import java.awt.Font;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -17,6 +18,8 @@ public class WindowTarget implements LineListener {
   private WindowDataHandler dataHandler = null;
 
   public WindowTarget(String name) {
+//    jta.setFont(Font.decode("Courier"));
+    jta.setEditable(false);
     window = new JFrame(name);
     window.getContentPane().add(new JScrollPane(jta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER));
     window.pack();
@@ -74,6 +77,16 @@ public class WindowTarget implements LineListener {
         }
       } else if (dataHandler != null) {
         dataHandler.handleCommand(parts);
+      } else if ("clear".equals(cmd)) {
+        jta.setText("");
+      } else if ("tabsize".equals(cmd)) {
+        try {
+          jta.setTabSize(Integer.parseInt(parts[1]));
+        } catch (Exception e) {
+          System.err.println("Could not set tab size: " + line);
+        }
+      } else if ("font".equals(cmd)) {
+        jta.setFont(Font.decode(parts[1]));
       }
     } else if (!line.startsWith("#")){
       if (dataHandler != null) {
