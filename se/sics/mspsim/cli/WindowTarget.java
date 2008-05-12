@@ -1,6 +1,7 @@
 package se.sics.mspsim.cli;
 
 import javax.swing.JFrame;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
@@ -17,7 +18,7 @@ public class WindowTarget implements LineListener {
 
   public WindowTarget(String name) {
     window = new JFrame(name);
-    window.getContentPane().add(jta);
+    window.getContentPane().add(new JScrollPane(jta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER));
     window.pack();
     window.setVisible(true);
     targetName = name;
