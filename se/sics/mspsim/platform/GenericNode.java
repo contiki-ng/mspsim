@@ -43,6 +43,7 @@ import java.io.IOException;
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.cli.MiscCommands;
+import se.sics.mspsim.cli.ProfilerCommands;
 import se.sics.mspsim.cli.WindowCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
@@ -88,9 +89,10 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("misccmd", new MiscCommands());
     registry.registerComponent("statcmd", new StatCommands(cpu, stats));
     registry.registerComponent("wincmd", new WindowCommands());
+    registry.registerComponent("profilecmd", new ProfilerCommands());
     registry.registerComponent("node", this);
     registry.registerComponent("config", config);
-    
+
     // Monitor execution
     cpu.setMonitorExec(true);
     //cpu.setDebug(true);

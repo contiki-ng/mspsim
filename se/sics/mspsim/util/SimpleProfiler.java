@@ -42,8 +42,10 @@
 package se.sics.mspsim.util;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.regex.Pattern;
 
 
 public class SimpleProfiler implements Profiler {
@@ -61,7 +63,7 @@ public class SimpleProfiler implements Profiler {
   public void setCPU(MSP430Core cpu) {
     this.cpu = cpu;
   }
-  
+
   public void profileCall(MapEntry entry, long cycles) {
 //  System.out.println("Call at: " + Utils.hex16(reg[PC]));
     if (callStack[cSP] == null) {
@@ -91,7 +93,7 @@ public class SimpleProfiler implements Profiler {
   public void clearProfile() {
     if (profileData != null) {
       CallEntry[] entries =
-        profileData.values().toArray(new CallEntry[0]);
+        profileData.values().toArray(new CallEntry[profileData.size()]);
       for (int i = 0, n = entries.length; i < n; i++) {
         entries[i].cycles = 0;
         entries[i].calls = 0;
@@ -105,47 +107,56 @@ public class SimpleProfiler implements Profiler {
     }
   }
 
-  public void printProfile() {
-    CallEntry[] entries =
-      profileData.values().toArray(new CallEntry[0]);
+  public void printProfile(PrintStream out) {
+    printProfile(out, null);
+  }
+
+  public void printProfile(PrintStream out, String functionNameRegexp) {
+    Pattern pattern = null;
+    CallEntry[] entries = profileData.values().toArray(new CallEntry[profileData.size()]);
     Arrays.sort(entries);
 
-    System.out.println("************************* Profile Data **************************************");
-    System.out.println("Function                                         Average    Calls  Tot.Cycles");
+    out.println("************************* Profile Data **************************************");
+    out.println("Function                                         Average    Calls  Tot.Cycles");
 
-
+    if (functionNameRegexp != null && functionNameRegexp.length() > 0) {
+      pattern = Pattern.compile(functionNameRegexp);
+    }
     for (int i = 0, n = entries.length; i < n; i++) {
       int c = entries[i].calls;
       if (c > 0) {
-	String cyclesS = "" + entries[i].cycles;
-	String callS = "" + c;
-	String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
-	System.out.print(entries[i].function.getName());
-	printSpace(56 - entries[i].function.getName().length() - avgS.length());
-	System.out.print(avgS);
-	System.out.print(' ');
-	printSpace(8 - callS.length());
-	System.out.print(callS);
-	System.out.print(' ');
-	printSpace(10 - cyclesS.length());
-	System.out.println(cyclesS);
+        String functionName = entries[i].function.getName();
+        if (pattern == null || pattern.matcher(functionName).find()) {
+          String cyclesS = "" + entries[i].cycles;
+          String callS = "" + c;
+          String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
+          out.print(functionName);
+          printSpace(out, 56 - functionName.length() - avgS.length());
+          out.print(avgS);
+          out.print(' ');
+          printSpace(out, 8 - callS.length());
+          out.print(callS);
+          out.print(' ');
+          printSpace(out, 10 - cyclesS.length());
+          out.println(cyclesS);
+        }
       }
     }
   }
 
-  private void printSpace(int len) {
+  private void printSpace(PrintStream out, int len) {
     for (int i = 0; i < len; i++) {
-      System.out.print(' ');
+      out.print(' ');
     }
   }
 
-  public void printStackTrace() {
-    System.out.println("Stack Trace: number of calls: " + cSP);
+  public void printStackTrace(PrintStream out) {
+    out.println("Stack Trace: number of calls: " + cSP);
     for (int i = 0; i < cSP; i++) {
-      System.out.println("  " + callStack[cSP - i - 1].function.getInfo());
+      out.println("  " + callStack[cSP - i - 1].function.getInfo());
     }
   }
-  
+
   private static class CallEntry implements Comparable<CallEntry> {
     MapEntry function;
     long cycles;

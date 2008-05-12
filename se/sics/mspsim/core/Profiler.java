@@ -40,19 +40,22 @@
  */
 
 package se.sics.mspsim.core;
+import java.io.PrintStream;
 import se.sics.mspsim.util.MapEntry;
 
 public interface Profiler {
 
   public void setCPU(MSP430Core cpu);
-  
+
   public void profileCall(MapEntry entry, long cycles);
   public void profileReturn(long cycles);
 
   public void clearProfile();
 
-  public void printProfile();
+  public void printProfile(PrintStream out);
 
-  public void printStackTrace();
-  
+  public void printProfile(PrintStream out, String functionNameRegexp);
+
+  public void printStackTrace(PrintStream out);
+
 }

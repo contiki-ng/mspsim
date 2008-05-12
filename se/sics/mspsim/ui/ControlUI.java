@@ -188,7 +188,7 @@ public class ControlUI extends JPanel implements ActionListener {
       
     } else if ("Profile Dump".equals(cmd)) {
       if (cpu.getProfiler() != null) {
-	cpu.getProfiler().printProfile();
+	cpu.getProfiler().printProfile(System.out);
       } else {
 	System.out.println("*** No profiler available");
       }
@@ -214,7 +214,7 @@ public class ControlUI extends JPanel implements ActionListener {
 	}
       }
     } else if ("Stack Trace".equals(cmd)) {
-      cpu.getProfiler().printStackTrace();
+      cpu.getProfiler().printStackTrace(System.out);
     }
     dui.updateRegs();
   }
