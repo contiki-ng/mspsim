@@ -65,7 +65,7 @@ public class FileM25P80 extends M25P80 {
     // Open flash file for R/W
     if (!openFile(filename)) {
       // Failed to open/lock the specified file. Add a counter and try with next filename.
-      Matcher m = Pattern.compile("^(.+?)(\\d*)(\\..+)$").matcher(filename);
+      Matcher m = Pattern.compile("(.+?)(\\d*)(\\.[^.]+)").matcher(filename);
       if (m.matches()) {
         String baseName = m.group(1);
         String c = m.group(2);
