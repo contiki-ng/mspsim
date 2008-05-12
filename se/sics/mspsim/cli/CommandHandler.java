@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Map;
 
@@ -236,9 +237,10 @@ public class CommandHandler implements ActiveComponent, Runnable {
       public int executeCommand(CommandContext context) {
         if (context.getArgumentCount() == 0) {
           context.out.println("Available commands:");
-          for(Map.Entry<String,Command> entry: commands.entrySet()) {
-            String name = entry.getKey();
-            Command command = entry.getValue();
+          String[] names = commands.keySet().toArray(new String[commands.size()]);
+          Arrays.sort(names);
+          for(String name : names) {
+            Command command = commands.get(name);
             String helpText = command.getCommandHelp(name);
             if (helpText != null) {
               String argHelp = command.getArgumentHelp(name);
@@ -249,13 +251,19 @@ public class CommandHandler implements ActiveComponent, Runnable {
                 helpText = helpText.substring(0, n);
               }
               context.out.print(prefix);
-              if (prefix.length() < 8) {
+
+              int prefixLen = prefix.length();
+              if (prefixLen < 8) {
+                context.out.print("\t\t\t\t");
+              } else if (prefixLen < 16) {
+                context.out.print("\t\t\t");
+              } else if (prefixLen < 24) {
+                context.out.print("\t\t");
+              } else if (prefixLen < 32) {
                 context.out.print('\t');
               }
-              if (prefix.length() < 16) {
-                context.out.print('\t');
-              }
-              context.out.println("\t " + helpText);
+              context.out.print(' ');
+              context.out.println(helpText);
             }
           }
           return 0;
