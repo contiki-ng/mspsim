@@ -60,7 +60,8 @@ public class NetworkConnection implements Runnable {
   private final static int DEFAULT_PORT = 4711;
 
   private ServerSocket serverSocket = null;
-  private ArrayList<ConnectionThread> connections = new ArrayList<ConnectionThread>();
+  private SendThread sendThread = null;
+  private ConnectionThread[] connections = null;
   private PacketListener listener;
 
   public NetworkConnection() {
@@ -70,6 +71,7 @@ public class NetworkConnection implements Runnable {
       setupServer(DEFAULT_PORT);
       System.out.println("NetworkConnection: Setup network server...");
     }
+    sendThread = new SendThread();
   }
   
   // TODO: this should handle several listeners!!!
@@ -86,16 +88,15 @@ public class NetworkConnection implements Runnable {
       e.printStackTrace();
     }
   }
-  
+
   public void run() {
     System.out.println("NetworkConnection: Accepting new connections...");
     while (true) {
       try {
         Socket s = serverSocket.accept();
-        if (DEBUG) System.out.println("NetworkConnection: New connection accepted...");
-        connections.add(new ConnectionThread(s));
+        if (DEBUG) System.out.println("NetworkConnection: New connection from " + s.getRemoteSocketAddress());
+        connections = (ConnectionThread[]) Utils.add(ConnectionThread.class, connections, new ConnectionThread(s));
       } catch (IOException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }
@@ -115,44 +116,25 @@ public class NetworkConnection implements Runnable {
       dataSent(data, source);
     }
   }
-  
 
   // Data was sent from the radio in the node (or other node) and should
   // be sent out to other nodes!!!
   public void dataSent(byte[] receivedData) {
     dataSent(receivedData, null);
   }
- 
+
   // Data was sent either from radio, or came from another "radio" -
   // and if so it should be propagated to all others.
   public void dataSent(byte[] receivedData, ConnectionThread source) {
-    if (connections.size() > 0) {
-      ConnectionThread[] cthr = connections.toArray(new ConnectionThread[connections.size()]);
-      for (int i = 0; i < cthr.length; i++) {
-        if (cthr[i].isClosed()) {
-          connections.remove(cthr);
-          // Do not write back to the source
-        } else if (cthr[i] != source){
-          try {
-            cthr[i].output.write(receivedData, 0, receivedData.length);
-            cthr[i].output.flush();
-            if (DEBUG) {
-//              System.out.println("NetworkConnection: wrote " + receivedData.length + " bytes");
-              printPacket(receivedData);
-            }
-          } catch (IOException e) {
-            e.printStackTrace();
-            cthr[i].close();
-          }
-        }
-      }
+    if (connections != null && sendThread != null) {
+      sendThread.send(receivedData, source);
     }
   }
 
-  private void printPacket(byte[] data) {
-    System.out.print("NetworkConnection: ");
+  private void printPacket(String prefix, byte[] data) {
+    System.out.print("NetworkConnection: " + prefix);
     for (int i = 0, len = data.length; i < len; i++) {
-      System.out.print(Utils.hex8(data[i]) + " ");
+      System.out.print(' ' + Utils.hex8(data[i]));
     }
     System.out.println();
   }
@@ -160,7 +142,7 @@ public class NetworkConnection implements Runnable {
   private boolean connect(int port) {
     try {
       Socket socket = new Socket("127.0.0.1", port);
-      connections.add(new ConnectionThread(socket));
+      connections = (ConnectionThread[]) Utils.add(ConnectionThread.class, connections, new ConnectionThread(socket));
     } catch (UnknownHostException e) {
       return false;
     } catch (IOException e) {
@@ -168,7 +150,75 @@ public class NetworkConnection implements Runnable {
     }    
     return true;
   }
-  
+
+  private static class SendEvent {
+    public final byte[] data;
+    public final ConnectionThread source;
+    public SendEvent(byte[] data, ConnectionThread source) {
+      this.data = data;
+      this.source = source;
+    }
+  }
+
+  class SendThread implements Runnable {
+
+    private ArrayList<SendEvent> queue = new ArrayList<SendEvent>();
+
+    public SendThread() {
+      new Thread(this).start();
+    }
+
+    public synchronized void send(byte[] receivedData, ConnectionThread source) {
+      queue.add(new SendEvent(receivedData, source));
+      notifyAll();
+    }
+
+    public synchronized SendEvent getNext() throws InterruptedException {
+      while (queue.isEmpty()) {
+        wait();
+      }
+      return queue.remove(0);
+    }
+
+    private void sendPacket(SendEvent event) {
+      ConnectionThread[] cthr = connections;
+      if (cthr != null) {
+        for (int i = 0; i < cthr.length; i++) {
+          if (cthr[i].isClosed()) {
+            connections = (ConnectionThread[]) Utils.remove(connections, cthr[i]);
+            // Do not write back to the source
+          } else if (cthr[i] != event.source){
+            try {
+              cthr[i].output.write(event.data, 0, event.data.length);
+              cthr[i].output.flush();
+            } catch (IOException e) {
+              e.printStackTrace();
+              cthr[i].close();
+            }
+          }
+        }
+        if (DEBUG) {
+//              System.out.println("NetworkConnection: wrote " + receivedData.length + " bytes");
+          printPacket("sent", event.data);
+        }
+      }
+    }
+
+    public void run() {
+      try {
+        SendEvent event;
+        do {
+          event = getNext();
+          if (event != null) {
+            sendPacket(event);
+          }
+        } while (event != null);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
   class ConnectionThread implements Runnable {
     Socket socket;
     DataInputStream input;
@@ -207,7 +257,7 @@ public class NetworkConnection implements Runnable {
             input.readFully(buffer, 1, len);
             if (DEBUG) {
 //              System.out.println("NetworkConnection: Read packet with " + len + " bytes");
-              printPacket(buffer);
+              printPacket("read", buffer);
             }
             dataReceived(buffer, this);
           }
