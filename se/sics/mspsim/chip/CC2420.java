@@ -187,6 +187,11 @@ public class CC2420 extends Chip implements USARTListener {
       if (DEBUG) {
         System.out.println(getName() + ": **** Transmitting package to listener (if any)");
       }
+      status &= ~STATUS_TX_ACTIVE;
+      updateSFDPin();
+      if (getMode() == MODE_TXRX_ON) {
+        setMode(MODE_RX_ON);
+      }
       if (packetListener != null) {
         // First byte is length and is not included in the data buffer (and its length)
         int len = memory[RAM_TXFIFO];
@@ -195,11 +200,6 @@ public class CC2420 extends Chip implements USARTListener {
           data[i] = (byte) (memory[RAM_TXFIFO + i] & 0xff);
         }
         packetListener.transmissionEnded(data);
-      }
-      status &= ~STATUS_TX_ACTIVE;
-      updateSFDPin();
-      if (getMode() == MODE_TXRX_ON) {
-        setMode(MODE_RX_ON);
       }
     }
   };
@@ -218,7 +218,7 @@ public class CC2420 extends Chip implements USARTListener {
     if (on && chipSelect) {
       if (DEBUG) {
         System.out.println("CC2420 byte received: " + Utils.hex8(data) +
-            '\'' + (char) data + '\'' +
+            " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
             " CS: " + chipSelect + " state: " + state);
       }
       switch(state) {
@@ -328,6 +328,8 @@ public class CC2420 extends Chip implements USARTListener {
     }
 
     switch (data) {
+    case REG_SNOP:
+      break;
     case REG_SRXON:
       updateActiveFrequency();
 
@@ -370,7 +372,7 @@ public class CC2420 extends Chip implements USARTListener {
       if (DEBUG) {
         System.out.println("Unknown strobe command: " + data);
       }
-
+      break;
     }
   }
 
@@ -500,7 +502,7 @@ public class CC2420 extends Chip implements USARTListener {
 
   public void setIncomingPacket(byte[] receivedData) {
     if (getMode() != MODE_RX_ON) {
-//      System.out.println(cpu.getTimeMillis() + ": DROPPING");
+      if (DEBUG) System.out.println(getName() + ": dropping due to not in listening mode");
     } else if (rxPacket) {
       // Already have a waiting packet
       if (DEBUG) System.out.println(getName() + ": dropping due to unread packet");
