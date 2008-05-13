@@ -14,7 +14,7 @@ public class WindowTarget implements LineListener {
   private JFrame window;
   private String targetName;
   // Default in the current version - TODO: replace with better
-  private JTextArea jta = new JTextArea(40,40);
+  private JTextArea jta = new JTextArea(40,80);
   private WindowDataHandler dataHandler = null;
 
   public WindowTarget(String name) {
@@ -28,7 +28,7 @@ public class WindowTarget implements LineListener {
   }
 
   @Override
-  public void lineRead(final String line) {    
+  public void lineRead(final String line) {
     if (line != null && window != null) {
       SwingUtilities.invokeLater(new Runnable() {
         public void run() {
