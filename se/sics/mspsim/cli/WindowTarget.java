@@ -18,7 +18,7 @@ public class WindowTarget implements LineListener {
   private WindowDataHandler dataHandler = null;
 
   public WindowTarget(String name) {
-//    jta.setFont(Font.decode("Courier"));
+    jta.setFont(Font.decode("Courier"));
     jta.setEditable(false);
     window = new JFrame(name);
     window.getContentPane().add(new JScrollPane(jta, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER));
