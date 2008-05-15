@@ -157,7 +157,7 @@ public class MapTable {
     ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
     for (int address=0; address < entries.length; address++) {
       MapEntry entry = getEntry(address);
-      if (entry != null && pattern.matcher(entry.getName()).matches()) {
+      if (entry != null && pattern.matcher(entry.getName()).find()) {
         allEntries.add(entry);
       }
     }
