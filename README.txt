@@ -1,4 +1,4 @@
-* MSPSim version 0.8
+* MSPSim version 0.9x
 
 MSPSim is a Java-based instruction level emulator of the MSP430 series
 microprocessor and emulation of some sensor networking
@@ -41,7 +41,10 @@ Run the default example on the Sky node emulator by typing:
 - Easy to add external components that emulates external HW
 - Supports monitoring of registers, adding breakpoints, etc.
 - Built-in profiling of executed code
+- Statistics for various components modes (on/off, LPM modes, etc).
 - Emulates some external hardware such as TR1001 and CC2420.
+- Command Line Interface, CLI, for setting up breakpoints and output
+  to files or windows.
 
 * What is emulated of the MSP430
 - CPU (instruction level simulation)
@@ -49,10 +52,11 @@ Run the default example on the Sky node emulator by typing:
 - USARTs
 - Digital I/O
 - Multiplication unit
+- Basic A/D subsystem (not complete)
+- Watchdog
 
-* Limitations of the emulation (some of them) on version 0.8
+* Limitations of the emulation (some of them) on version 0.9x
 - currently the emulator runs as if it can use all memory as RAM
   (e.g. flash writes, etc not supported)
 - no DMA implementation
-- no ADs implemented (fully)
 - timer system not 100% emulated
