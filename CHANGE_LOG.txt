@@ -13,6 +13,8 @@ Changes:
 - added support for file based scripts to the CLI
 - added configuration system
 - added connectivity between multiple running mspsim's
+- bugfix in instruction emulation thanks to Matt Thompson
+  (addressing mode - autoincrement byte wrong on PC).
 
 
 0.90

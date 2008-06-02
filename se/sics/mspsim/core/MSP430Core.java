@@ -52,6 +52,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;
+  public static final int MAX_MEM_IO = 0x200;
   public static final int INTERNAL_IO_SIZE = 3;
   public static final int PORTS = 6;
   
@@ -73,9 +74,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // Most HW needs only notify write and clocking, others need also read...
   // For notify write...
-  public IOUnit[] memOut = new IOUnit[MAX_MEM];
+  public IOUnit[] memOut = new IOUnit[MAX_MEM_IO];
   // For notify read... -> which will happen before actual read!
-  public IOUnit[] memIn = new IOUnit[MAX_MEM];
+  public IOUnit[] memIn = new IOUnit[MAX_MEM_IO];
 
   private IOUnit[] ioUnits;
   private IOUnit[] passiveIOUnits;
@@ -86,7 +87,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private int lastIOUnitPos = INTERNAL_IO_SIZE;
 
-  // From the possible interrupt sources - to be able to indicate iserviced.
+  // From the possible interrupt sources - to be able to indicate is serviced.
   private IOUnit interruptSource[] = new IOUnit[16];
 
   private int interruptMax = -1;
@@ -613,10 +614,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
     }
 
-    if (memOut[dstAddress] != null) {
+    if (dstAddress <= 0x200 && memOut[dstAddress] != null) {
       if (!word) dst &= 0xff;
       memOut[dstAddress].write(dstAddress, dst, word, cycles);
     } else {
+      // TODO: add check for Flash / RAM!
       memory[dstAddress] = dst & 0xff;
       if (word) {
 	memory[dstAddress + 1] = (dst >> 8) & 0xff;
@@ -797,12 +799,26 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  dstAddress = readRegister(dstRegister);
 	  cycles += 3;
 	  break;
-	case AM_IND_AUTOINC:
-	  dstAddress = readRegister(dstRegister);
-	  writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
-	  cycles += 3;
-	  break;
+	  // Bugfix suggested by Matt Thompson
+        case AM_IND_AUTOINC:
+          if(dstRegister == PC) {
+            dstAddress = readRegister(PC);
+            pc += 2;
+            writeRegister(PC, pc);
+            cycles += 5;
+          } else {
+            dstAddress = readRegister(dstRegister);
+            writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
+            cycles += 3;
+          }
+          break;
 	}
+//	case AM_IND_AUTOINC:
+//	  dstAddress = readRegister(dstRegister);
+//	  writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
+//	  cycles += 3;
+//	  break;
+//	}
       }
 
 
