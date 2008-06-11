@@ -597,7 +597,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //    if (breakPoints[address] != null) {
 //      breakPoints[address].call
 //    }
-    if (address < 0x200 && memIn[address] != null) {
+    // Only word reads at 0x1fe which is highest address...
+    if (address < 0x1ff && memIn[address] != null) {
       val = memIn[address].read(address, word, cycles);
     } else {
       address &= 0xffff;
@@ -614,7 +615,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
     }
 
-    if (dstAddress <= 0x200 && memOut[dstAddress] != null) {
+    // Only word writes at 0x1fe which is highest address...
+    if (dstAddress < 0x1ff && memOut[dstAddress] != null) {
       if (!word) dst &= 0xff;
       memOut[dstAddress].write(dstAddress, dst, word, cycles);
     } else {
