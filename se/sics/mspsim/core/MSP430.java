@@ -153,6 +153,49 @@ public class MSP430 extends MSP430Core {
     return step(0);
   }
 
+  public long stepInstructions(int count) {
+    if (isRunning()) {
+      throw new IllegalStateException("step not possible when CPU is running");
+    }
+    setRunning(true);
+    // -------------------------------------------------------------------
+    // Debug information
+    // -------------------------------------------------------------------
+
+
+    while (count-- > 0 && isRunning()) {
+      if (debug) {
+        if (servicedInterrupt >= 0) {
+          disAsm.disassemble(reg[PC], memory, reg, servicedInterrupt);
+        } else {
+          disAsm.disassemble(reg[PC], memory, reg);
+        }
+      }
+
+      boolean emuOP = emulateOP();
+      if (emuOP) {
+        if (execCounter != null) {
+          execCounter[reg[PC]]++;
+        }
+
+        if (profiler != null) {
+          if ((instruction & 0xff80) == CALL) {
+            /* The profiling should only be made on actual cpuCycles */
+            MapEntry function = map.getEntry(reg[PC]);
+            if (function == null) {
+              function = getFunction(map, reg[PC]);
+            }
+            profiler.profileCall(function, cpuCycles);
+          } else if (instruction == RETURN) {
+            profiler.profileReturn(cpuCycles);
+          }
+        }
+      }
+    }
+    setRunning(false);
+    return cycles;
+  }
+  
   public long step(long max_cycles) {
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");

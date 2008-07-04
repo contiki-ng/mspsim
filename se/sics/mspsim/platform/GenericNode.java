@@ -159,4 +159,12 @@ public abstract class GenericNode extends Chip implements Runnable {
       cpu.step();
     }
   }
+  
+  // A step that will break out of breakpoints!
+  public void step(int nr) {
+    if (!cpu.isRunning()) {
+      cpu.stepInstructions(nr);
+    }
+  }
+  
 }

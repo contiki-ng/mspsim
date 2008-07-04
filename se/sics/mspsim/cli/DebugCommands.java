@@ -39,6 +39,8 @@
  *           $Revision$
  */
 package se.sics.mspsim.cli;
+import javax.swing.MenuSelectionManager;
+
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
@@ -78,7 +80,7 @@ public class DebugCommands implements CommandBundle {
       });
 
       ch.registerCommand("watch",
-          new BasicAsyncCommand("add a write watch to a given address or symbol", "<address or symbol>") {
+          new BasicAsyncCommand("add a write/read watch to a given address or symbol", "<address or symbol> [char | break]") {
         int mode = 0;
         int address = 0;
         public int executeCommand(final CommandContext context) {
@@ -91,17 +93,28 @@ public class DebugCommands implements CommandBundle {
             String modeStr = context.getArgument(1);
             if ("char".equals(modeStr)) {
               mode = 1;
+            } else if ("break".equals(modeStr)) {
+              mode = 2;
             }
           }
           cpu.setBreakPoint(address = baddr,
               new CPUMonitor() {
             public void cpuAction(int type, int adr, int data) {
-              if (mode == 0) {
+              if (mode == 0 || mode == 2) {
                 int pc = cpu.readRegister(0);
                 String adrStr = getSymOrAddr(context, adr);
                 String pcStr = getSymOrAddrELF(elf, pc);
-                context.out.println("*** Write from " + pcStr +
+                String op = "op";
+                if (type == MEMORY_READ) {
+                  op = "Read";
+                } else if (type == MEMORY_WRITE){
+                  op = "Write";
+                }
+                context.out.println("*** " + op + " from " + pcStr +
                     ": " + adrStr + " = " + data);
+                if (mode == 2) {
+                  cpu.stop();
+                }
               } else {
                 context.out.print((char) data);
               }
@@ -205,9 +218,10 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("step", new BasicCommand("singlestep the CPU", "[number of instructions]") {
           public int executeCommand(CommandContext context) {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
-            while(nr-- > 0)
-              node.step();
-            context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)));
+            long cyc = cpu.cycles;
+            node.step(nr);
+            context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)) +
+                " in " + (cpu.cycles - cyc) + " cycles (" + cpu.cycles + ")");
             return 0;
           }
         });

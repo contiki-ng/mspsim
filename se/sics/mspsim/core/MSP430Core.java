@@ -48,7 +48,7 @@ import se.sics.mspsim.util.Utils;
 public class MSP430Core extends Chip implements MSP430Constants {
 
   public static final boolean DEBUG = false;
-  public static final boolean debugInterrupts = false;
+  public static final boolean debugInterrupts = true; //false;
 
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;
@@ -528,7 +528,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       interruptSource[interrupt] = source;
 
       if (debugInterrupts) {
-	System.out.println("### Interrupt flagged ON by " + source.getName());
+        if (source != null) {
+          System.out.println("### Interrupt flagged ON by " + source.getName());
+        } else {
+          System.out.println("### Interrupt flagged ON by <null>");
+        }
       }
 
       // MAX priority is executed first - update max if this is higher!
@@ -594,9 +598,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Read method that handles read from IO units!
   public int read(int address, boolean word) {
     int val = 0;
-//    if (breakPoints[address] != null) {
-//      breakPoints[address].call
-//    }
     // Only word reads at 0x1fe which is highest address...
     if (address < 0x1ff && memIn[address] != null) {
       val = memIn[address].read(address, word, cycles);
@@ -606,6 +607,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (word) {
 	val |= (memory[(address + 1) & 0xffff] << 8);
       }
+    }
+    if (breakPoints[address] != null) {
+      breakPoints[address].cpuAction(CPUMonitor.MEMORY_READ, address, val);
     }
     return val;
   }
@@ -693,6 +697,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   /* returns true if any instruction was emulated - false if CpuOff */
   public boolean emulateOP() {
+    //System.out.println("CYCLES BEFORE: " + cycles);
     int pc = readRegister(PC);
     long startCycles = cycles;
 
@@ -726,7 +731,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
 
     // This is quite costly... should probably be made more
-    // efficiently (maybe in CORE where PC is read anyway?)
+    // efficiently
     if (breakPoints[pc] != null) {
       if (breakpointActive) {
 	breakPoints[pc].cpuAction(CPUMonitor.BREAK, pc, 0);
@@ -929,8 +934,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	2 * jmpOffset : -(2 * (0x200 - (jmpOffset & 0x1ff)));
       boolean jump = false;
 
-      // All jump takes one extra cycle
-      cycles++;
+      // All jump takes two cycles
+      cycles += 2;
       sr = readRegister(SR);
       switch(instruction & 0xfc00) {
       case JNE:
@@ -986,7 +991,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	if (!word) {
 	  src &= 0xff;
 	}
-
+	cycles += dstRegMode ? 1 : 4;
       } else {
 	switch(as) {
 	  // Operand in register!
@@ -996,6 +1001,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  if (!word) {
 	    src &= 0xff;
 	  }
+	  cycles += dstRegMode ? 1 : 4;
 	  break;
 	case AM_INDEX:
 	  // Indexed if reg != PC & CG1/CG2 - will PC be incremented?
@@ -1187,6 +1193,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	 ((dst & 0x80) > 0 ? NEGATIVE : 0));
       writeRegister(SR, sr);
     }
+
+    //System.out.println("CYCLES AFTER: " + cycles);
 
     cpuCycles += cycles - startCycles;
     return true;
