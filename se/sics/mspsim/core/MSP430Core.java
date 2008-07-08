@@ -1177,6 +1177,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     if (write) {
       if (dstRegMode) {
+        if (!word) dst &= 0xff;
 	writeRegister(dstRegister, dst);
       } else {
 	dstAddress &= 0xffff;
