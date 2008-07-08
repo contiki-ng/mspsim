@@ -1,3 +1,8 @@
+0.92
+Changes:
+- fixed bug with a write register which did not handle word/byte
+- fixed bug which caused array out of bounds on IO-units.
+
 0.91
 Changes:
 - added window system and support for it in the CLI
