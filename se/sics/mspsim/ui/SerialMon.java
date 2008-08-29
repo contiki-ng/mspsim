@@ -135,17 +135,33 @@ public class SerialMon implements KeyListener, USARTListener {
 
   public void keyTyped(KeyEvent key) {
     char c = key.getKeyChar();
-    // Send it to the usart!
-    usart.byteReceived(c & 0xff);
 
-    // Visualize the input
-    if (c == '\n') {
-      statusLabel.setText(PREFIX);
-      keyBuffer = new StringBuilder();
-      keyBuffer.append(PREFIX);
+    if(!usart.isReceiveFlagCleared()) {
+      try {
+        // Wait for at most 2 seconds before giving up
+        for (int i = 0, n = 20; !usart.isReceiveFlagCleared() && i < n; i++) {
+          Thread.sleep(100);
+        }
+      } catch (InterruptedException e) {
+        // Ignore
+      }
+    }
+
+    // Send it to the usart if possible!
+    if (usart.isReceiveFlagCleared()) {
+      usart.byteReceived(c & 0xff);
+
+      // Visualize the input
+      if (c == '\n') {
+        statusLabel.setText(PREFIX);
+        keyBuffer = new StringBuilder();
+        keyBuffer.append(PREFIX);
+      } else {
+        keyBuffer.append(c);
+        statusLabel.setText(keyBuffer.toString());
+      }
     } else {
-      keyBuffer.append(c);
-      statusLabel.setText(keyBuffer.toString());
+      statusLabel.getToolkit().beep();
     }
   }
 
