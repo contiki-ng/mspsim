@@ -133,7 +133,7 @@ public class Timer extends IOUnit {
   // Number of cycles passed since current counter value was set
   // useful for setting expected compare and capture times to correct time.
   // valid for timer A
-  private int timerOverflow = 0x0a;
+  private final int timerOverflow;
   private long counterStart = 0;
   private long nextTimerTrigger = 0;
   
@@ -185,7 +185,7 @@ public class Timer extends IOUnit {
   private int[] tccr = new int[7];
 
   // Support variables Max 7 compare regs... (timer b)
-  private int noCompare = 0;
+  private final int noCompare;
   private int[] expCompare = new int[7];
   private int[] expCapInterval = new int[7];
   private long[] expCaptureTime = new long[7];
@@ -199,10 +199,10 @@ public class Timer extends IOUnit {
 
   private boolean interruptEnable = false;
   private boolean interruptPending = false;
-  private int ccr1Vector;
-  private int ccr0Vector;
 
-  private MSP430Core core;
+  private final int ccr1Vector;
+  private final int ccr0Vector;
+  private final MSP430Core core;
 
   private TimeEvent timerTrigger = new TimeEvent(0) {
     public void execute(long t) {
@@ -213,7 +213,7 @@ public class Timer extends IOUnit {
   
   private int lastTIV;
 
-  private int[] srcMap;
+  private final int[] srcMap;
   /**
    * Creates a new <code>Timer</code> instance.
    *
