@@ -108,6 +108,78 @@ public class Utils {
     return array;
   }
 
+  public static int decodeInt(String value) throws NumberFormatException {
+    int radix = 10;
+    int index = 0;
+    boolean negative = false;
+    if (value.startsWith("-")) {
+      index++;
+      negative = true;
+    }
+
+    if (value.startsWith("$", index) || value.startsWith("#", index)) {
+      radix = 16;
+      index++;
+    } else if (value.startsWith("0x", index) || value.startsWith("0X", index)) {
+      radix = 16;
+      index += 2;
+    } else if (value.startsWith("0", index) && value.length() > index + 1) {
+      radix = 8;
+      index++;
+    } else if (value.startsWith("%", index)) {
+      radix = 2;
+      index++;
+    }
+    String intValue = value;
+    if (radix != 10) {
+      if (value.startsWith("-", index)) {
+        throw new NumberFormatException("unexpected negative sign: " + value);
+      }
+      if (negative) {
+        intValue = '-' + value.substring(index);
+      } else {
+        intValue = value.substring(index);
+      }
+    }
+    return Integer.parseInt(intValue, radix);
+  }
+
+  public static long decodeLong(String value) throws NumberFormatException {
+    int radix = 10;
+    int index = 0;
+    boolean negative = false;
+    if (value.startsWith("-")) {
+      index++;
+      negative = true;
+    }
+
+    if (value.startsWith("$", index) || value.startsWith("#", index)) {
+      radix = 16;
+      index++;
+    } else if (value.startsWith("0x", index) || value.startsWith("0X", index)) {
+      radix = 16;
+      index += 2;
+    } else if (value.startsWith("0", index) && value.length() > index + 1) {
+      radix = 8;
+      index++;
+    } else if (value.startsWith("%", index)) {
+      radix = 2;
+      index++;
+    }
+    String longValue = value;
+    if (radix != 10) {
+      if (value.startsWith("-", index)) {
+        throw new NumberFormatException("unexpected negative sign: " + value);
+      }
+      if (negative) {
+        longValue = '-' + value.substring(index);
+      } else {
+        longValue = value.substring(index);
+      }
+    }
+    return Long.parseLong(longValue, radix);
+  }
+
 //  public static void main(String[] args) {
 //    System.out.println("Hex 47 = " + hex8(47));
 //  }

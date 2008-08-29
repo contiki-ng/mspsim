@@ -3,6 +3,7 @@ import java.io.PrintStream;
 
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.util.MapTable;
+import se.sics.mspsim.util.Utils;
 
 public class CommandContext {
 
@@ -83,18 +84,12 @@ public class CommandContext {
   public int getArgumentAsAddress(int index) {
     String adr = getArgument(index);
     if (adr == null || adr.length() == 0) return 0;
-    adr = adr.trim();
-    if (adr.charAt(0) == '$') {
+    char c = adr.charAt(0);
+    if (!Character.isLetter(c) && c != '_' && c != '.') {
       try {
-        return Integer.parseInt(adr.substring(1), 16);
+        return Utils.decodeInt(adr);
       } catch (Exception e) {
-        err.println("Illegal hex number format: " + adr);
-      }
-    } else if (Character.isDigit(adr.charAt(0))) {
-      try {
-        return Integer.parseInt(adr); 
-      } catch (Exception e) {
-        err.println("Illegal number format: " + adr);
+        err.println("Illegal address format: " + adr);
       }
     } else {
       // Assume that it is a symbol
@@ -112,7 +107,7 @@ public class CommandContext {
         return i;
       }
     }
-    String reg = symbol.startsWith("R") ? symbol.substring(1) : symbol;
+    String reg = (symbol.startsWith("R") || symbol.startsWith("r")) ? symbol.substring(1) : symbol;
     try {
       int register = Integer.parseInt(reg);
       if (register >= 0 && register <= 15) {
@@ -127,40 +122,56 @@ public class CommandContext {
   }
 
   public int getArgumentAsInt(int index) {
+    return getArgumentAsInt(index, 0);
+  }
+
+  public int getArgumentAsInt(int index, int defaultValue) {
     try {
-      return Integer.parseInt(getArgument(index));
+      return Utils.decodeInt(getArgument(index));
     } catch (Exception e) {
       err.println("Illegal number format: " + getArgument(index));
+      return defaultValue;
     }
-    return 0;
   }
 
   public long getArgumentAsLong(int index) {
+    return getArgumentAsLong(index, 0L);
+  }
+
+  public long getArgumentAsLong(int index, long defaultValue) {
     try {
-      return Long.parseLong(getArgument(index));
+      return Utils.decodeLong(getArgument(index));
     } catch (Exception e) {
       err.println("Illegal number format: " + getArgument(index));
+      return defaultValue;
     }
-    return 0L;
   }
 
   public float getArgumentAsFloat(int index) {
+    return getArgumentAsFloat(index, 0f);
+  }
+
+  public float getArgumentAsFloat(int index, float defaultValue) {
     try {
       return Float.parseFloat(getArgument(index));
     } catch (Exception e) {
       err.println("Illegal number format: " + getArgument(index));
+      return defaultValue;
     }
-    return 0f;
   }
 
   public double getArgumentAsDouble(int index) {
+    return getArgumentAsDouble(index, 0.0);
+  }
+
+  public double getArgumentAsDouble(int index, double defaultValue) {
     String arg = getArgument(index);
     try {
       return Double.parseDouble(arg);
     } catch (Exception e) {
       err.println("Illegal number format: " + getArgument(index));
+      return defaultValue;
     }
-    return 0.0;
   }
 
   public int executeCommand(String command) {
