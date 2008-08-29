@@ -71,7 +71,7 @@ import se.sics.mspsim.util.Utils;
  */
 public class Timer extends IOUnit {
 
-  public static final boolean DEBUG = false;
+  public static final boolean DEBUG = true;//false;
   public static final int TIMER_A = 0;
   public static final int TIMER_B = 1;
   private String[] name = new String[] {"A", "B"};
@@ -174,7 +174,11 @@ public class Timer extends IOUnit {
 
   private int counter = 0;
   private int counterPassed = 0;
-
+  // The value of the counter when something changed last time
+  // (change of divisor, or a start TAR different than 0 when timer
+  // starts, etc).
+  private int initialCounter = 0;
+  
   // The IO registers
   private int tctl;
   private int[] tcctl = new int[7];
@@ -259,6 +263,7 @@ public class Timer extends IOUnit {
     counter = 0;
     counterPassed = 0;
     counterStart = 0;
+    initialCounter = 0;
     clockSource = 0;
     cyclesMultiplicator = 1;
     mode = STOP;
@@ -275,7 +280,7 @@ public class Timer extends IOUnit {
       // But this mess the TIV up too early......
       // Must DELAY the reset of interrupt flags until next read...?
       int val = lastTIV;
-      resetTIV();
+      resetTIV(cycles);
       return val;
     }
     int val = 0;
@@ -333,14 +338,14 @@ public class Timer extends IOUnit {
     return val & 0xffff;
   }
 
-  private void resetTIV() {
+  private void resetTIV(long cycles) {
     if (lastTIV == timerOverflow) {
       interruptPending = false;
       lastTIV = 0;
       if (DEBUG) {
         System.out.println(getName() + " Clearing TIV - overflow ");
       }
-      triggerInterrupts();
+      triggerInterrupts(cycles);
     }
     if (lastTIV / 2 < noCompare) {
       if (DEBUG) {
@@ -348,7 +353,7 @@ public class Timer extends IOUnit {
       }
       // Clear interrupt flags!
       tcctl[lastTIV / 2] &= ~CC_IFG;
-      triggerInterrupts();
+      triggerInterrupts(cycles);
       //      memory[offset + TCCTL0 + lastTIV] &= ~CC_IFG;
     }
   }
@@ -389,9 +394,14 @@ public class Timer extends IOUnit {
 
       int newMode = (data >> 4) & 3;
       if (mode == STOP && newMode != STOP) {
-        updateCounter(cycles);
+        // Set the initial counter to the value that counter should have after
+        // recalculation
+        initialCounter = counter;
+        counterStart = cycles;
         // Wait until full wrap before setting the IRQ flag!
         nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((0xffff - counter) & 0xffff));
+        if (DEBUG) System.out.println(getName() + " Starting timer!");
+        recalculateCompares(cycles);
       }
       mode = newMode;
       
@@ -436,7 +446,7 @@ public class Timer extends IOUnit {
       inputSrc[index] = srcMap[4 + index * 4 + inputSel[index]];
       capMode[index] = (data >> 14) & 3;
 
-      triggerInterrupts();
+      triggerInterrupts(cycles);
 
       if (DEBUG) {
 	System.out.println(getName() + " Write: CCTL" +
@@ -546,6 +556,8 @@ public class Timer extends IOUnit {
   }
 
   private int updateCounter(long cycles) {
+    if (mode == STOP) return counter;
+    
     // Needs to be non-integer since smclk Frq can be lower
     // than aclk
     double divider = 1;
@@ -559,19 +571,18 @@ public class Timer extends IOUnit {
     counterPassed = (int) (divider * (tick - (long) (tick)));
     switch (mode) {
     case CONTIN:
-      counter = ((int) tick) & 0xffff;
+      counter = ((int) tick + initialCounter) & 0xffff;
       break;
     case UP:
-      counter = ((int) tick) % tccr[0];
+      counter = ((int) tick + initialCounter) % tccr[0];
       break;
     case UPDWN:
-      counter = ((int) tick) % (tccr[0] * 2);
+      counter = ((int) tick + initialCounter) % (tccr[0] * 2);
       if (counter > tccr[0]) {
 	// Should back down to start again!
 	counter = 2 * tccr[0] - counter;
       }
     }
-
     if (DEBUG) {
       System.out.println(getName() + ": Updating counter cycctr: " + cycctr + " divider: " + divider + " mode:" + mode + " => " + counter);
     }
@@ -584,7 +595,13 @@ public class Timer extends IOUnit {
     return 100000 + cycles;
   }
 
+  // Only called by the interrupt handler
   private void updateTimers(long cycles) {
+    if (mode == STOP) {
+      System.out.println("No timer running -> no interrupt can be caused -> no scheduling...");
+      return;
+    }
+    
     if (cycles >= nextTimerTrigger) {
       interruptPending = true;
       // This should be updated whenever clockspeed changes...
@@ -598,7 +615,7 @@ public class Timer extends IOUnit {
     for (int i = 0, n = noCompare; i < n; i++) { 
       if (expCaptureTime[i] != -1 && cycles >= expCaptureTime[i]) {
         if (DEBUG) {
-          System.out.println(getName() + " CAPTURE: " + i +
+          System.out.println(getName() + (captureOn[i] ? " CAPTURE: " : " COMPARE: ") + i +
                              " Cycles: " + cycles + " expCap: " +
                              expCaptureTime[i] +
                              " => ExpCR: " + Utils.hex16(expCompare[i]) +
@@ -640,14 +657,31 @@ public class Timer extends IOUnit {
 
         
     // Trigger interrupts that are up for triggering!
-    triggerInterrupts();
+    triggerInterrupts(cycles);
     calculateNextEventTime(cycles);
   }
   
+  private void recalculateCompares(long cycles) {
+    for (int i = 0; i < expCaptureTime.length; i++) {
+      if (expCaptureTime[i] != 0) {
+        int diff = tccr[i] - counter;
+        if (diff < 0) {
+          // Wrap...
+          diff += 0x10000;
+        }
+        expCaptureTime[i] = cycles + (long) (diff * cyclesMultiplicator);
+      }
+    }
+  }
+  
   private void calculateNextEventTime(long cycles) {
+    if (mode == STOP) {
+      // If nothing is "running" there is no point scheduling...
+      return;
+    }
     long time = nextTimerTrigger;
     int smallest = -1;
-    for (int i = 0; i < expCaptureTime.length; i++) {
+    for (int i = 0; i < noCompare; i++) {
       long ct = expCaptureTime[i];
       if (ct > 0 && ct < time) {
         time = ct;
@@ -660,18 +694,18 @@ public class Timer extends IOUnit {
     }
     
     if (timerTrigger.scheduledIn == null) {
-//      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
-//             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
-//             nextTimerTrigger) + " C:"+ cycles);
-      core.scheduleCycleEvent(timerTrigger, time);      
-    } else if (timerTrigger.time > time) {
-//      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
+      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
+             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
+             nextTimerTrigger) + " C:"+ cycles);
       core.scheduleCycleEvent(timerTrigger, time);
-    }    
+    } else if (timerTrigger.time > time) {
+      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
+      core.scheduleCycleEvent(timerTrigger, time);
+    }
   }
   
   // Can be called to generate any interrupt...
-  public void triggerInterrupts() {
+  public void triggerInterrupts(long cycles) {
     // First check if any capture register is generating an interrupt...
     boolean trigger = false;
     
@@ -698,7 +732,7 @@ public class Timer extends IOUnit {
         if (newTrigger) {
           if (DEBUG) {
             System.out.println(getName() + " triggering interrupt TIV: " +
-                (i * 2));
+                (i * 2) + " at cycles:" + cycles);
           }
           tIndex = i;
         }
