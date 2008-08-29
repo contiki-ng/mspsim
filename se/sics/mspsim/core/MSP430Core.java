@@ -48,7 +48,7 @@ import se.sics.mspsim.util.Utils;
 public class MSP430Core extends Chip implements MSP430Constants {
 
   public static final boolean DEBUG = false;
-  public static final boolean debugInterrupts = true; //false;
+  public static final boolean debugInterrupts = false;
 
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;

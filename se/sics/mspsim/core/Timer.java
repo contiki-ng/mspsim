@@ -71,7 +71,7 @@ import se.sics.mspsim.util.Utils;
  */
 public class Timer extends IOUnit {
 
-  public static final boolean DEBUG = true;//false;
+  public static final boolean DEBUG = false;//true;
   public static final int TIMER_A = 0;
   public static final int TIMER_B = 1;
   private String[] name = new String[] {"A", "B"};
@@ -694,12 +694,12 @@ public class Timer extends IOUnit {
     }
     
     if (timerTrigger.scheduledIn == null) {
-      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
-             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
-             nextTimerTrigger) + " C:"+ cycles);
+//      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
+//             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
+//             nextTimerTrigger) + " C:"+ cycles);
       core.scheduleCycleEvent(timerTrigger, time);
     } else if (timerTrigger.time > time) {
-      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
+//      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
       core.scheduleCycleEvent(timerTrigger, time);
     }
   }
