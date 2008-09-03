@@ -65,7 +65,7 @@ import se.sics.mspsim.util.Utils;
  *
  * ___---___---___
  *
- * ==> Reads might be another problem. If a loop is just cheking the
+ * ==> Reads might be another problem. If a loop is just checking the
  * counter it will be reading same value for a long time. Needs to "capture"
  * reads to Timers by some simple means...
  */
@@ -134,9 +134,18 @@ public class Timer extends IOUnit {
   // useful for setting expected compare and capture times to correct time.
   // valid for timer A
   private final int timerOverflow;
-  private long counterStart = 0;
   private long nextTimerTrigger = 0;
   
+  // this is used to create "tick" since last reset of the timer.
+  // it will contain the full number of ticks since that reset and
+  // is used to calculate the real counter value
+  private long counterStart = 0;
+  private long counterAcc;
+
+  // Counter stores the current timer counter register (TR)
+  private int counter = 0;
+  private int counterPassed = 0;
+
   // Input map for timer A
   public static final int[] TIMER_Ax149 = new int[] {
     SRC_PORT + 0x10, SRC_ACLK, SRC_SMCLK, SRC_PORT + 0x21, // Timer
@@ -171,13 +180,6 @@ public class Timer extends IOUnit {
 
   private int clockSource;
   private int mode;
-
-  private int counter = 0;
-  private int counterPassed = 0;
-  // The value of the counter when something changed last time
-  // (change of divisor, or a start TAR different than 0 when timer
-  // starts, etc).
-  private int initialCounter = 0;
   
   // The IO registers
   private int tctl;
@@ -263,7 +265,7 @@ public class Timer extends IOUnit {
     counter = 0;
     counterPassed = 0;
     counterStart = 0;
-    initialCounter = 0;
+    counterAcc = 0;
     clockSource = 0;
     cyclesMultiplicator = 1;
     mode = STOP;
@@ -387,8 +389,8 @@ public class Timer extends IOUnit {
       
       if ((data & TCLR) != 0) {
 	counter = 0;
-	counterStart = cycles;
-	// inputDivider = 1; ????
+	resetCounter(cycles);
+	
 	updateCaptures(-1, cycles);
       }
 
@@ -396,8 +398,8 @@ public class Timer extends IOUnit {
       if (mode == STOP && newMode != STOP) {
         // Set the initial counter to the value that counter should have after
         // recalculation
-        initialCounter = counter;
-        counterStart = cycles;
+        resetCounter(cycles);
+        
         // Wait until full wrap before setting the IRQ flag!
         nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((0xffff - counter) & 0xffff));
         if (DEBUG) System.out.println(getName() + " Starting timer!");
@@ -469,6 +471,14 @@ public class Timer extends IOUnit {
     case TCCR6:
       // update of compare register
       index = (iAddress - TCCR0) / 2;
+      if (index == 0) {
+        // Reset the counter to bring it down to a smaller value...
+        // Check if up or updwn and reset if counter too high...
+        if (counter > data && (mode == UPDWN || mode == UP)) {
+          counter = 0;
+        }
+        resetCounter(cycles);
+      }
       tccr[index] = data;
       updateCounter(cycles);
 
@@ -500,10 +510,17 @@ public class Timer extends IOUnit {
       calculateNextEventTime(cycles);
     }
   }
+
+  private void resetCounter(long cycles) {
+    counterStart = cycles;
+    // set counterACC to the last returned value (which is the same
+    // as bigCounter except that it is "moduloed" to a smaller value
+    counterAcc = counter;
+  }
   
   private void setCounter(int newCtr, long cycles) {
     counter = newCtr;
-    counterStart = cycles;
+    resetCounter(cycles);
   }
 
   private void updateCaptures(int index, long cycles) {
@@ -566,23 +583,36 @@ public class Timer extends IOUnit {
       divider = 1.0 * core.smclkFrq / core.aclkFrq;
     }
     divider = divider * inputDivider;
+    
+    // These calculations assume that we have a big counter that counts from
+    // last reset and upwards (without any roundoff errors).
+    // tick - represent the counted value since last "reset" of some kind
+    // counterAcc - represent the value of the counter at the last reset.
     long cycctr = cycles - counterStart;
     double tick = cycctr / divider;
     counterPassed = (int) (divider * (tick - (long) (tick)));
+    long bigCounter = (long) (tick + counterAcc);
+    
+    //System.out.println("BigStart: " + bigCounterStart + " C:" + cycles + " bigCounter: " + bigCounter);
+    
     switch (mode) {
     case CONTIN:
-      counter = ((int) tick + initialCounter) & 0xffff;
+      counter = (int) (bigCounter & 0xffff);
       break;
     case UP:
-      counter = ((int) tick + initialCounter) % tccr[0];
+      counter = (int) (bigCounter % tccr[0]);
       break;
     case UPDWN:
-      counter = ((int) tick + initialCounter) % (tccr[0] * 2);
+      counter = (int) (bigCounter % (tccr[0] * 2));
       if (counter > tccr[0]) {
 	// Should back down to start again!
 	counter = 2 * tccr[0] - counter;
       }
     }
+    
+//    System.out.println("UpdateCounter: C1: " + counter + " C2:" + ctr);
+    
+    
     if (DEBUG) {
       System.out.println(getName() + ": Updating counter cycctr: " + cycctr + " divider: " + divider + " mode:" + mode + " => " + counter);
     }
