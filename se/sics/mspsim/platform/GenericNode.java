@@ -103,13 +103,7 @@ public abstract class GenericNode extends Chip implements Runnable {
       IHexReader reader = new IHexReader();
       reader.readFile(memory, firmwareFile = args[0]);
     } else {
-      elf = ELF.readELF(firmwareFile = args[0]);
-      elf.loadPrograms(memory);
-      MapTable map = elf.getMap();
-      cpu.getDisAsm().setMap(map);
-      cpu.setMap(map);
-      registry.registerComponent("elf", elf);
-      registry.registerComponent("mapTable", map);
+      loadFirmware(args[0], memory);
     }
       
     cpu.reset();
@@ -158,6 +152,17 @@ public abstract class GenericNode extends Chip implements Runnable {
     if (!cpu.isRunning()) {
       cpu.step();
     }
+  }
+  
+  public void loadFirmware(String name, int[] memory) throws IOException {
+    stop();
+    elf = ELF.readELF(firmwareFile = name);
+    elf.loadPrograms(memory);
+    MapTable map = elf.getMap();
+    cpu.getDisAsm().setMap(map);
+    cpu.setMap(map);
+    registry.registerComponent("elf", elf);
+    registry.registerComponent("mapTable", map);
   }
   
   // A step that will break out of breakpoints!

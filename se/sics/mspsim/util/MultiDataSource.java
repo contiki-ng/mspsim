@@ -44,6 +44,7 @@ public interface MultiDataSource {
 
   public int getModeMax();
 
+  public double getDoubleValue(int mode);
   public int getValue(int mode);
 
 }

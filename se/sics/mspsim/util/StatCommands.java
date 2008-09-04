@@ -139,10 +139,10 @@ public class StatCommands implements CommandBundle {
                   MultiDataSource ds = (MultiDataSource) s;
                   for (int k = 0, m = ds.getModeMax(); k <= m; k++) {
                     if (k > 0) out.print(' ');
-                    out.print(ds.getValue(k));       
+                    out.print(((int) (ds.getDoubleValue(k) * 100)) / 100.0);       
                   }
                 } else {
-                  out.print(((DataSource)s).getValue());
+                  out.print(((int)((DataSource)s).getDoubleValue() * 100) / 100.0);
                 }
               }
               out.println();

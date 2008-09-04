@@ -137,7 +137,7 @@ public class OperatingModeStatistics {
     }
     
     // returns percentage since last call...
-    public int getValue() {
+    public double getDoubleValue() {
       long diff = cpu.cycles - lastCycles;
       if (diff == 0) return 0;
       long val = entry.getValue(mode, cpu.cycles);
@@ -147,7 +147,11 @@ public class OperatingModeStatistics {
       if (operation == OP_INVERT) {
         return (int) (100 - 100 * valDiff / diff); 
       }
-      return (int) (100 * valDiff / diff);
+      return (100.0 * valDiff / diff);
+    }
+    
+    public int getValue() {
+      return (int) getDoubleValue();
     }
   }
 
@@ -171,6 +175,10 @@ public class OperatingModeStatistics {
 
     // returns percentage since last call...
     public int getValue(int mode) {
+      return (int) getDoubleValue(mode);
+    }
+    
+    public double getDoubleValue(int mode) {
       long diff = cpu.cycles - lastCycles[mode];
       if (diff == 0) return 0;
 
@@ -178,7 +186,7 @@ public class OperatingModeStatistics {
       long valDiff = (val - lastValue[mode]);
       lastValue[mode] = val;
       lastCycles[mode] = cpu.cycles;
-      return (int) (100 * valDiff / diff);
+      return (100.0 * valDiff / diff);
     }
 
   }

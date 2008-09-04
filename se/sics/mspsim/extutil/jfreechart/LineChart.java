@@ -126,7 +126,7 @@ public class LineChart extends JFreeWindowDataHandler {
       addSeries();
     }
     for (int i = 0; i < parts.length; i++) {
-      dataset.getSeries(i).add(point, atoi(parts[i], 0));
+      dataset.getSeries(i).add(point, atod(parts[i], 0));
     }
     point++;
     panel.repaint();

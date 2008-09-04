@@ -60,7 +60,7 @@ public abstract class AbstractWindowDataHandler implements WindowDataHandler {
 
   public abstract void setProperty(int index, String param, String[] args);
 
-  public int atoi(String data, int defaultValue) {
+  public static int atoi(String data, int defaultValue) {
     try {
       return Integer.parseInt(data);
     } catch (NumberFormatException e) {
@@ -68,4 +68,11 @@ public abstract class AbstractWindowDataHandler implements WindowDataHandler {
     }
   }
 
+  public static double atod(String data, double defaultValue) {
+    try {
+      return Double.parseDouble(data);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
+  }  
 }

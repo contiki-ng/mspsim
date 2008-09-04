@@ -20,6 +20,9 @@ public class StackMonitor implements CPUMonitor {
       stackMax = stack;
       return tmp;
     }
+    public double getDoubleValue() {
+      return getValue();
+    }
   };
   
   private DataSource minDataSource = new DataSource() {
@@ -28,11 +31,17 @@ public class StackMonitor implements CPUMonitor {
       stackMin = stack;
       return tmp;
     }   
+    public double getDoubleValue() {
+      return getValue();
+    }
   };
   
   private DataSource dataSource = new DataSource() {
     public int getValue() {
       return stack;
+    }
+    public double getDoubleValue() {
+      return getValue();
     }
   };
   

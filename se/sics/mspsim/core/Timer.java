@@ -610,9 +610,6 @@ public class Timer extends IOUnit {
       }
     }
     
-//    System.out.println("UpdateCounter: C1: " + counter + " C2:" + ctr);
-    
-    
     if (DEBUG) {
       System.out.println(getName() + ": Updating counter cycctr: " + cycctr + " divider: " + divider + " mode:" + mode + " => " + counter);
     }

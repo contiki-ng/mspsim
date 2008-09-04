@@ -64,7 +64,7 @@ public class LineSampleChart extends JFreeWindowDataHandler {
     String parts[] = line.trim().split(" ");
     dataSeries.clear();
     for (int i = 0; i < parts.length; i++) {
-      dataSeries.add(i, atoi(parts[i], 0));
+      dataSeries.add(i, atod(parts[i], 0));
     }
     panel.repaint();
   }
