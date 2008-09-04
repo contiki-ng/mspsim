@@ -1073,9 +1073,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       case MOV: // MOV
 	dst = src;
 	write = true;
+	updateStatus = false;
 	break;
 	// FIX THIS!!! - make SUB a separate operation so that
-	// it is clear that overflow flag is corretct...
+	// it is clear that overflow flag is correct...
       case SUB:
 	// Carry always 1 with SUB
 	tmpAdd = 1;
