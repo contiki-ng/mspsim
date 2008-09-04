@@ -4,10 +4,11 @@ Changes:
 - fixed bug which caused array out of bounds on IO-units.
 - fixed bug in timer causing interrupts when timer was stopped
 - fixed bug in timer to handle start/stop better
-- fixed bug in MSP430 core that caused MOV operand to change status flags
+- fixed bug in MSP430 core that caused MOV instruction to change status flags
 - added getDoubleValue in DataSource and made "duty" command print 
   duty cycle information as double instead of int
 - fixed windows to accept double input and not only int input
+- corrected cycle count on some instructions
 
 0.91
 Changes:
