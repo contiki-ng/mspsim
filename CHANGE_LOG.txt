@@ -9,6 +9,9 @@ Changes:
   duty cycle information as double instead of int
 - fixed windows to accept double input and not only int input
 - corrected cycle count on some instructions
+- improved CC2420 emulation (thanks to Matt Thompson)
+- added Telos platformincluding AT45DB flash memory chip (Matt Thompson)
+
 
 0.91
 Changes:
