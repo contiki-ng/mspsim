@@ -57,6 +57,11 @@ import se.sics.mspsim.ui.WindowUtils;
 
 public class SkyGui extends JComponent implements KeyListener {
 
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 7753659717805292786L;
+  
   public static final int GREEN_Y = 40;
   public static final int BLUE_Y = 46;
   public static final int RED_Y = 34;
@@ -74,9 +79,9 @@ public class SkyGui extends JComponent implements KeyListener {
 
   private ImageIcon skyImage;
   private JFrame window;
-  private SkyNode node;
+  private MoteIVNode node;
 
-  public SkyGui(SkyNode node) {
+  public SkyGui(MoteIVNode node) {
     this.node = node;
 
     setBackground(Color.black);

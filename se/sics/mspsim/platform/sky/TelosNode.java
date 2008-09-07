@@ -27,7 +27,7 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
+ * $Id: SkyNode.java 304 2008-09-06 20:04:45Z joxe $
  *
  * -----------------------------------------------------------------
  *
@@ -35,16 +35,16 @@
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
+ * Updated : $Date: 2008-09-06 22:04:45 +0200 (Sat, 06 Sep 2008) $
+ *           $Revision: 304 $
  */
 
 package se.sics.mspsim.platform.sky;
 import java.io.IOException;
 
+import se.sics.mspsim.chip.AT45DB;
 import se.sics.mspsim.chip.CC2420;
-import se.sics.mspsim.chip.FileM25P80;
-import se.sics.mspsim.chip.M25P80;
+import se.sics.mspsim.chip.FileAT45DB;
 import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.chip.RFListener;
 import se.sics.mspsim.core.IOPort;
@@ -58,33 +58,44 @@ import se.sics.mspsim.util.NetworkConnection;
 import se.sics.mspsim.util.OperatingModeStatistics;
 
 /**
- * Emulation of Sky Mote
+ * Emulation of Telos Mote (old version of Sky Node)
+ * 
+ * TODO: Cleanup the MoteIVNode, SkyNode and TelosNode
  */
-public class SkyNode extends MoteIVNode {
-
+public class TelosNode extends MoteIVNode {
   public static final boolean DEBUG = false;
 
+  // P4.4 - Output: SPI Flash Chip Select
+  public static final int FLASH_RESET = (1<<3);
+  public static final int FLASH_CS = (1<<4);
+  
   public NetworkConnection network;
 
-  private M25P80 flash;
+
+  private AT45DB flash;
   private String flashFile;
 
   /**
    * Creates a new <code>SkyNode</code> instance.
    *
    */
-  public SkyNode() {
+  public TelosNode() {
     setMode(MODE_LEDS_OFF);
   }
 
-  public M25P80 getFlash() {
+  public AT45DB getFlash() {
     return flash;
   }
 
-  public void setFlash(M25P80 flash) {
+  public void setFlash(AT45DB flash) {
     this.flash = flash;
   }
 
+  @Override
+  void flashWrite(IOPort source, int data) {
+    flash.setReset((data & FLASH_RESET) == 0);
+    flash.setChipSelect((data & FLASH_CS) == 0);
+  }
 
   // USART Listener
   public void dataReceived(USART source, int data) {
@@ -92,13 +103,8 @@ public class SkyNode extends MoteIVNode {
     flash.dataReceived(source, data);
   }
 
-  @Override
-  void flashWrite(IOPort source, int data) {
-    flash.portWrite(source, data);
-  }
-  
   public String getName() {
-    return "Tmote Sky";
+    return "TelosB";
   }
 
   public void setupNodePorts(boolean loadFlash) {
@@ -125,7 +131,7 @@ public class SkyNode extends MoteIVNode {
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
       if (loadFlash) {
-        flash = new FileM25P80(cpu, flashFile);
+        flash = new FileAT45DB(cpu, flashFile);
       }
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
@@ -214,11 +220,10 @@ public class SkyNode extends MoteIVNode {
 
 
   public static void main(String[] args) throws IOException {
-    SkyNode node = new SkyNode();
+    TelosNode node = new TelosNode();
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
     node.setup(config);
     node.start();
   }
-
 }
