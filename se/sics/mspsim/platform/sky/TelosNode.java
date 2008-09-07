@@ -104,7 +104,7 @@ public class TelosNode extends MoteIVNode {
   }
 
   public String getName() {
-    return "TelosB";
+    return "Telos";
   }
 
   public void setupNodePorts(boolean loadFlash) {
@@ -211,7 +211,7 @@ public class TelosNode extends MoteIVNode {
       // A HACK for some "graphs"!!!
       DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
       DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-      dataChart.addDataSource(dss, "LEDS", stats.getDataSource("Tmote Sky", 0, OperatingModeStatistics.OP_INVERT));
+      dataChart.addDataSource(dss, "LEDS", stats.getDataSource("Telos", 0, OperatingModeStatistics.OP_INVERT));
       dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
       dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
