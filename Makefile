@@ -108,6 +108,10 @@ runesb:	compile
 runsky:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
 
+runtelos:	compile
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.TelosNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+
+
 test:	cputest
 
 cputest:	$(CPUTEST)
