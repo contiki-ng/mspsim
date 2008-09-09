@@ -95,11 +95,6 @@ public class BasicClockModule extends IOUnit {
     memory[DCOCTL] = 0;
   }
 
-  // Should return the cycle it wants the next tick...
-  public long ioTick(long cycles) {
-    return cycles + 4711;
-  }
-
   // do nothing?
   public int read(int address, boolean word, long cycles) {
     int val = memory[address];

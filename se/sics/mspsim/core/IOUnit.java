@@ -58,7 +58,7 @@ public abstract class IOUnit {
     return true;
   }
 
-  // Default implementation assums notify write and read on all
+  // Default implementation assumes notify write and read on all
   // addresses (should be optimized for each unit)
   public boolean needsWrite(int address) {
     return true;

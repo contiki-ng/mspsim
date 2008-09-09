@@ -53,7 +53,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;
   public static final int MAX_MEM_IO = 0x200;
-  public static final int INTERNAL_IO_SIZE = 3;
   public static final int PORTS = 6;
   
   // 16 registers of which some are "special" - PC, SP, etc.
@@ -85,7 +84,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private long nextIOTickCycles;
   private int nextIOTickIndex;
 
-  private int lastIOUnitPos = INTERNAL_IO_SIZE;
+  private int lastIOUnitPos = 0;
 
   // From the possible interrupt sources - to be able to indicate is serviced.
   private IOUnit interruptSource[] = new IOUnit[16];
@@ -126,12 +125,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Internal Active IOUnits
     int passIO = 0;
     int actIO = 0;
-    ioUnits = new IOUnit[INTERNAL_IO_SIZE + 10];
-    ioCycles = new long[INTERNAL_IO_SIZE + 10];
+    ioUnits = new IOUnit[10];
+    ioCycles = new long[10];
 
-    // Passive IOUnits (no tick) - do we need to remember them???
+    // Passive IOUnits (no tick) - should likely be placed in a hashtable?
     // Maybe for debugging purposes...
-    passiveIOUnits = new IOUnit[PORTS + 2];
+    passiveIOUnits = new IOUnit[PORTS + 4];
 
     Timer ta = new Timer(this, Timer.TIMER_Ax149, memory, 0x160);
     Timer tb = new Timer(this, Timer.TIMER_Bx149, memory, 0x180);
@@ -167,10 +166,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[i] = mp;
     }
 
-//    ioUnits[0] = ta;
-//    ioUnits[1] = tb;
-    ioUnits[actIO++] = bcs;
-
     USART usart0 = new USART(this, memory, 0x70);
     USART usart1 = new USART(this, memory, 0x78);
 
@@ -183,22 +178,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       memOut[0x78 + i] = usart1;
       memIn[0x78 + i] = usart1;
-    }
-
-    ADC12 adc12 = new ADC12(this);
-    ioUnits[actIO++] = adc12;
-
-    for (int i = 0, n = 16; i < n; i++) {
-      memOut[0x80 + i] = adc12;
-      memIn[0x80 + i] = adc12;
-      memOut[0x140 + i] = adc12;
-      memIn[0x140 + i] = adc12;
-      memOut[0x150 + i] = adc12;
-      memIn[0x150 + i] = adc12;
-    }
-    for (int i = 0, n = 8; i < n; i++) {    
-      memOut[0x1A0 + i] = adc12;
-      memIn[0x1A0 + i] = adc12;
     }
     
     
@@ -229,10 +208,31 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
     passIO = 6;
     
+    // Basic clock syst.
+    passiveIOUnits[passIO++] = bcs;
+    
     // Add the timers
     passiveIOUnits[passIO++] = ta;
     passiveIOUnits[passIO++] = tb;
 
+    ADC12 adc12 = new ADC12(this);
+    passiveIOUnits[passIO++] = adc12;
+
+    for (int i = 0, n = 16; i < n; i++) {
+      memOut[0x80 + i] = adc12;
+      memIn[0x80 + i] = adc12;
+      memOut[0x140 + i] = adc12;
+      memIn[0x140 + i] = adc12;
+      memOut[0x150 + i] = adc12;
+      memIn[0x150 + i] = adc12;
+    }
+    for (int i = 0, n = 8; i < n; i++) {    
+      memOut[0x1A0 + i] = adc12;
+      memIn[0x1A0 + i] = adc12;
+    }
+    System.out.println("Number of active: " + actIO);
+    System.out.println("Number of passive: " + passIO);
+    lastIOUnitPos = actIO;
     initIOUnit();
   }
 
