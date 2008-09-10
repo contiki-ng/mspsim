@@ -87,7 +87,7 @@ public class USART extends IOUnit {
 
   private int clockSource = 0;
   private int baudRate = 0;
-  private int tickPerByte = 0;
+  private int tickPerByte = 1000;
   private long nextTXReady = -1;
 
   private MSP430Core cpu;
@@ -102,6 +102,14 @@ public class USART extends IOUnit {
   private int urxbuf;
 
   private int utxbuf;
+  
+  private TimeEvent txTrigger = new TimeEvent(0) {
+    public void execute(long t) {
+        // Ready to transmit new byte!
+        handleTransmit(t);
+    }
+  };
+  
   /**
    * Creates a new <code>USART</code> instance.
    *
@@ -129,11 +137,14 @@ public class USART extends IOUnit {
       urxifg = URXIFG1;
       memory[IFG1 + 1] = 0x20;
     }
+    
     nextTXReady = cpu.cycles + 1000;
+    cpu.scheduleCycleEvent(txTrigger, nextTXReady);
   }
 
   public void reset(int type) {
     nextTXReady = cpu.cycles + 1000;
+    cpu.scheduleCycleEvent(txTrigger, nextTXReady);
   }
   
   private void setBitIFG(int bits) {
@@ -204,8 +215,8 @@ public class USART extends IOUnit {
       updateBaudRate();
       break;
     case UTXBUF:
-      if (DEBUG) System.out.print(getName() + ": USART_UTXBUF:" + (char) data + "\n");
-
+      if (DEBUG) System.out.print(getName() + ": USART_UTXBUF:" + (char) data + " = " + data + "\n");
+      
       if (listener != null) {
 	listener.dataReceived(this, data);
       }
@@ -217,7 +228,9 @@ public class USART extends IOUnit {
       if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
       cpu.flagInterrupt(transmitInterrupt, this, false);
 
+      // Schedule on cycles here...
       nextTXReady = cycles + tickPerByte;
+      cpu.scheduleCycleEvent(txTrigger, nextTXReady);
 
       // We should set the "not-ready" flag here!
       // When should the reception interrupt be received!?
@@ -296,30 +309,16 @@ public class USART extends IOUnit {
     cpu.flagInterrupt(vector, this, false);
   }
 
+   private void handleTransmit(long cycles) {
+    setBitIFG(utxifg);
+    utctl |= UTCTL_TXEMPTY;
+    cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
 
-  // This should be used to delay the output of the USART down to the
-  // baudrate!
-  public long ioTick(long cycles) {
-    if (nextTXReady != -1 && cycles >= nextTXReady) {
-      // Ready to transmit new byte!
-
-      setBitIFG(utxifg);
-      utctl |= UTCTL_TXEMPTY;
-      cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
-
-      if (DEBUG) {
-        if (isIEBitsSet(utxifg)) {
-          System.out.println(getName() + " flagging on transmit interrupt");
-        }
-        System.out.println(getName() + " Ready to transmit next: " + cycles + " " +
-            tickPerByte);
+    if (DEBUG) {
+      if (isIEBitsSet(utxifg)) {
+        System.out.println(getName() + " flagging on transmit interrupt");
       }
-      nextTXReady = -1;
-    }
-    if (baudRate == 0) {
-      return cycles + 1000;
-    } else {
-      return cycles + tickPerByte;
+      System.out.println(getName() + " Ready to transmit next at: " + cycles);
     }
   }
 

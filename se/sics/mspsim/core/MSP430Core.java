@@ -77,16 +77,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // For notify read... -> which will happen before actual read!
   public IOUnit[] memIn = new IOUnit[MAX_MEM_IO];
 
-  private IOUnit[] ioUnits;
   private IOUnit[] passiveIOUnits;
   private SFR sfr;
-  private long[] ioCycles;
-  private long nextIOTickCycles;
-  private int nextIOTickIndex;
 
-  private int lastIOUnitPos = 0;
-
-  // From the possible interrupt sources - to be able to indicate is serviced.
+    // From the possible interrupt sources - to be able to indicate is serviced.
   private IOUnit interruptSource[] = new IOUnit[16];
 
   private int interruptMax = -1;
@@ -122,15 +116,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public MSP430Core(int type) {
     // Ignore type for now...
     setModeNames(MODE_NAMES);
-    // Internal Active IOUnits
     int passIO = 0;
-    int actIO = 0;
-    ioUnits = new IOUnit[10];
-    ioCycles = new long[10];
-
     // Passive IOUnits (no tick) - should likely be placed in a hashtable?
     // Maybe for debugging purposes...
-    passiveIOUnits = new IOUnit[PORTS + 4];
+    passiveIOUnits = new IOUnit[PORTS + 6];
 
     Timer ta = new Timer(this, Timer.TIMER_Ax149, memory, 0x160);
     Timer tb = new Timer(this, Timer.TIMER_Bx149, memory, 0x180);
@@ -168,9 +157,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     USART usart0 = new USART(this, memory, 0x70);
     USART usart1 = new USART(this, memory, 0x78);
-
-    ioUnits[actIO++] = usart0;
-    ioUnits[actIO++] = usart1;
     
     for (int i = 0, n = 8; i < n; i++) {
       memOut[0x70 + i] = usart0;
@@ -210,6 +196,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     // Basic clock syst.
     passiveIOUnits[passIO++] = bcs;
+
+    // Usarts
+    passiveIOUnits[passIO++] = usart0;
+    passiveIOUnits[passIO++] = usart1;
+
     
     // Add the timers
     passiveIOUnits[passIO++] = ta;
@@ -230,10 +221,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[0x1A0 + i] = adc12;
       memIn[0x1A0 + i] = adc12;
     }
-    System.out.println("Number of active: " + actIO);
     System.out.println("Number of passive: " + passIO);
-    lastIOUnitPos = actIO;
-    initIOUnit();
   }
 
 
@@ -243,16 +231,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public void addIOUnit(int loReadMem, int hiReadMem,
 			int loWriteMem, int hiWriteMem,
-			IOUnit unit, boolean active) {
+			IOUnit unit) {
     // Not implemented yet... IS it needed?
 //     if (loReadMem != -1) {
 //       for (int i = lo, n = hiMem; i < n; i++) {
 //       }
 //     }
-
-    if (active) {
-      ioUnits[lastIOUnitPos++] = unit;
-    }
   }
 
   public void setBreakPoint(int address, CPUMonitor mon) {
@@ -472,37 +456,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	return passiveIOUnits[i];
       }
     }
-
-    for (int i = 0, n = ioUnits.length; i < n; i++) {
-      if (name.equals(ioUnits[i].getName())) {
-	return ioUnits[i];
-      }
-    }
-
     return null;
   }
 
-  private void initIOUnit() {
-    long smallestCyc = 10000000l;
-    for (int i = 0, n = lastIOUnitPos; i < n; i++) {
-      if ((ioCycles[i] = ioUnits[i].ioTick(0)) < smallestCyc) {
-	smallestCyc = ioCycles[i];
-	nextIOTickIndex = i;
-      }
-    }
-  }
-
   private void resetIOUnits() {
-    for (int i = 0, n = lastIOUnitPos; i < n; i++) {
-      ioUnits[i].reset(RESET_POR);
-    }
     for (int i = 0, n = passiveIOUnits.length; i < n; i++) {
       passiveIOUnits[i].reset(RESET_POR);
     }
   }
 
   private void internalReset() {
-    resetIOUnits();
     for (int i = 0, n = 16; i < n; i++) {
       interruptSource[i] = null;
     }
@@ -513,6 +476,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
    
     cycleEventQueue.removeAll();
     vTimeEventQueue.removeAll();
+
+    // Needs to be last since these can add events...
+    resetIOUnits();
+
   }
   
   public void reset() {
@@ -573,27 +540,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     servicedInterrupt = -1;
     servicedInterruptUnit = null;
   }
-
-  private void handleIO() {
-    // Call the IO unit!
-    // 	System.out.println("Calling: " + ioUnits[nextIOTickIndex].getName());
-    ioCycles[nextIOTickIndex] = ioUnits[nextIOTickIndex].ioTick(cycles);
-
-    // Find the next unit to call...
-    long smallestCyc = cycles + 1000000l;
-    int index = 0;
-    for (int i = 0, n = lastIOUnitPos; i < n; i++) {
-      if (ioCycles[i] < smallestCyc) {
-	smallestCyc = ioCycles[i];
-	index = i;
-      }
-    }
-    nextIOTickCycles = smallestCyc;
-    nextIOTickIndex = index;
-//     System.out.println("Smallest IO cycles: " + smallestCyc + " => " +
-// 		       ioUnits[index].getName());
-  }
-    
   
   // Read method that handles read from IO units!
   public int read(int address, boolean word) {
@@ -709,14 +655,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
     
     // -------------------------------------------------------------------
-    // (old) I/O processing
-    // -------------------------------------------------------------------
-    if (cycles >= nextIOTickCycles) {
-      handleIO();
-    }
-
-
-    // -------------------------------------------------------------------
     // Interrupt processing [after the last instruction was executed]
     // -------------------------------------------------------------------
     if (interruptsEnabled && servicedInterrupt == -1 && interruptMax >= 0) {
@@ -726,7 +664,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     /* Did not execute any instructions */
     if (cpuOff) {
 //       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
-      cycles = nextIOTickCycles;
+      if (cycleEventQueue.eventCount > 0)
+        cycles = cycleEventQueue.nextTime;
+      if (vTimeEventQueue.eventCount > 0 &&
+          cycles > vTimeEventQueue.nextTime) {
+        cycles = vTimeEventQueue.nextTime;
+      }
       return false;
     }
 
