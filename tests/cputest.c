@@ -274,11 +274,11 @@ static void testUSART() {
   ME1 |= (UTXE0 | URXE0);                 /* Enable USART0 TXD/RXD */
   IE1 |= UTXIE0;                        /* Enable USART0 TX interrupt  */
   TXBUF_0 = 'a';
- 
+
   while(flag == 0) {
   }
   while(delay-- > 0);
-  
+
   printf("output finished...\n");
 }
 
@@ -292,30 +292,32 @@ static void testTimer() {
   /* Select ACLK 32768Hz clock, divide by 1 (was ID_3 / 8 previously) */
   TBCTL = TBSSEL0 | TBCLR | ID_0;
 
-  /* CCR1 interrupt enabled, interrupt occurs when timer equals CCR1. */
-  TBCCTL1 = CCIE;
-
   /* Start Timer_B in continuous mode. */
   TBCTL |= MC1;
 
   TBR = 0;
   TBCCR1 = 100;
-  
+
+  /* CCR1 interrupt enabled, interrupt occurs when timer equals CCR1. */
+  /* Should be set here, since setting TBR to zero can cause triggering */
+  /* if CCR1 = 0 */
+  TBCCTL1 = CCIE;
+
   /* Enable interrupts. */
   eint();
-  
+
   while (pos < 10) {
 	  printf(".");
   }
   printf("\n");
-  
+
   for (i = 0; i < pos; i++) {
 	  unsigned int t = 100 + i * 100;
 	  printf("Trigg time %d => %u\n", i + 1, times[i]);
 	  assertTrue(times[i] >= t && times[i] < t + 2);
   }
 }
-	
+
 /*--------------------------------------------------------------------------*/
 
 int
