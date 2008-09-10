@@ -307,7 +307,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     switch(stateMachine) {
 
     case STATE_VREG_OFF:
-      System.out.println("CC2420: VREG Off.");
+      if (DEBUG) System.out.println("CC2420: VREG Off.");
       break;
 
     case STATE_POWER_DOWN:
@@ -384,7 +384,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         if(data == 0x7A) {
           // In RX mode, SFD goes high when the SFD is received
           setSFD(true);
-          System.out.println("CC2420: RX: Preamble/SFD Synchronized.");
+          if (DEBUG) System.out.println("CC2420: RX: Preamble/SFD Synchronized.");
           rxread = 0;
           setState(STATE_RX_FRAME);
         }else{
@@ -406,7 +406,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
         if(rxread == 0) {
           rxlen = (int)data;
-          System.out.println("CC2420: RX: Start frame length " + rxlen);
+          if (DEBUG) System.out.println("CC2420: RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
           setFIFO(true);
         }
@@ -420,7 +420,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           memory[RAM_RXFIFO + (rxfifo_write_pos -1 )] = 37 | 0x80;
           setFIFOP(true);
           setSFD(false);
-          System.out.println("CC2420: RX: Complete.");
+          if (DEBUG) System.out.println("CC2420: RX: Complete.");
           setState(STATE_RX_WAIT);
         }
       }
@@ -647,7 +647,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       flushRX();
       break;
     case REG_SFLUSHTX:
-      System.out.println("CC2420: Flushing TXFIFO");
+      if (DEBUG) System.out.println("CC2420: Flushing TXFIFO");
       flushTX();
       break;
     case REG_SXOSCON:
@@ -739,7 +739,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       // Two symbol periods to send a byte..	  
       cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
     } else {
-      System.out.println("Completed Transmission.");
+      if (DEBUG) System.out.println("Completed Transmission.");
       status &= ~STATUS_TX_ACTIVE;
       setSFD(false);
       setState(STATE_RX_CALIBRATE);
@@ -860,11 +860,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   public void setClear(boolean clear) {
     cca = clear;
     setCCA(clear);
-    System.out.println("CC2420: CCA: " + clear);
+    if (DEBUG) System.out.println("CC2420: CCA: " + clear);
   }
 
   public void setSFD(boolean sfd) {
-    System.out.println("SFD: " + sfd);
+    if (DEBUG) System.out.println("SFD: " + sfd);
     sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
   }
 

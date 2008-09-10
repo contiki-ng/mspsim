@@ -336,8 +336,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     dcoFrq = frequency;
     this.smclkFrq = smclkFrq;
     // update last virtual time before updating DCOfactor
-    lastCyclesTime = cycles;
     lastVTime = getTime();
+    lastCyclesTime = cycles;
     currentDCOFactor = 1.0 * BasicClockModule.MAX_DCO_FRQ / frequency;
     if (DEBUG)
       System.out.println("Set smclkFrq: " + smclkFrq);
@@ -663,13 +663,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     /* Did not execute any instructions */
     if (cpuOff) {
-//       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
-      if (cycleEventQueue.eventCount > 0)
-        cycles = cycleEventQueue.nextTime;
-      if (vTimeEventQueue.eventCount > 0 &&
-          cycles > vTimeEventQueue.nextTime) {
-        cycles = vTimeEventQueue.nextTime;
-      }
+      //       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
+      // nextEventCycles must exist, otherwise CPU can not wake up!?
+      cycles = nextEventCycles;
       return false;
     }
 
