@@ -266,12 +266,14 @@ public class USART extends IOUnit {
     }
     if (clockSource == MSP430Constants.CLK_ACLK) {
       if (DEBUG) {
-        System.out.println(getName() + " Baud rate is: " + cpu.aclkFrq / div);
+        System.out.println(getName() + " Baud rate is (bps): " + cpu.aclkFrq / div +
+            " div = " + div);
       }
       baudRate = cpu.aclkFrq / div;
     } else {
-      if (DEBUG) {
-        System.out.println(getName() + " Baud rate is: " + cpu.smclkFrq / div);
+      if (DEBUG) {     
+        System.out.println(getName() + " Baud rate is (bps): " + cpu.smclkFrq / div +
+            " div = " + div);
       }
       baudRate = cpu.smclkFrq / div;
     }
@@ -298,7 +300,7 @@ public class USART extends IOUnit {
   // This should be used to delay the output of the USART down to the
   // baudrate!
   public long ioTick(long cycles) {
-    if (nextTXReady != -1 && cycles > nextTXReady) {
+    if (nextTXReady != -1 && cycles >= nextTXReady) {
       // Ready to transmit new byte!
 
       setBitIFG(utxifg);

@@ -248,7 +248,6 @@ public class ESBGui extends JComponent implements KeyListener,
   }
 
   public void keyPressed(KeyEvent key) {
-//     System.out.println("Key Pressed: " + key.getKeyChar());
     if (key.getKeyChar() == 'd') {
       node.setDebug(!node.getDebug());
     }

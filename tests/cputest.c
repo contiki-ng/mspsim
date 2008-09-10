@@ -284,6 +284,8 @@ static void testUSART() {
 
 static void testTimer() {
   int i;
+  unsigned int time;
+  int result;
   pos = 0;
   dint();
   /* Select SMCLK (2.4576MHz), clear TAR; This makes the rtimer count
@@ -316,6 +318,15 @@ static void testTimer() {
 	  printf("Trigg time %d => %u\n", i + 1, times[i]);
 	  assertTrue(times[i] >= t && times[i] < t + 2);
   }
+
+  printf("Start modulo\n",time = TBR);
+  result = 47;
+  for (i = 0; i < 1000; i++) {
+    result = result + i % 27;
+  }
+  printf("Elapsed %i %i\n",TBR - time, result);
+
+
 }
 
 /*--------------------------------------------------------------------------*/
