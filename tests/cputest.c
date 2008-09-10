@@ -319,7 +319,7 @@ static void testTimer() {
 	  assertTrue(times[i] >= t && times[i] < t + 2);
   }
 
-  printf("Start modulo\n",time = TBR);
+  printf("Start modulo\n");
   result = 47;
   for (i = 0; i < 1000; i++) {
     result = result + i % 27;
