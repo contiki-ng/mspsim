@@ -134,7 +134,7 @@ public class ESBGui extends JComponent implements KeyListener,
     }
     
     beeper = new Beeper();
-    cpu.addIOUnit(-1,0,-1,0,beeper, true);
+    cpu.addIOUnit(-1,0,-1,0,beeper);
     
     
     // Just a test... TODO: remove!!!
