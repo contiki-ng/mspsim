@@ -156,6 +156,8 @@ public class ADC12 extends IOUnit {
       if (DEBUG) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
       if (adc12On && enableConversion && startConversion) {
+        // Set the start time to be now!
+        adcTrigger.time = core.getTime();
         convert();
       }
       break;

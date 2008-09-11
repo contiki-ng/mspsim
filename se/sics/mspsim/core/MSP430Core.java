@@ -371,6 +371,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       } else {
         TimeEvent te = vTimeEventQueue.popFirst();
         long now = getTime();
+//        if (now > te.time) {
+//          System.out.println("VTimeEvent got delayed by: " + (now - te.time) + " at " +
+//              cycles + " target Time: " + te.time + " class: " + te.getClass().getName());
+//        }
         te.execute(now);
         if (vTimeEventQueue.eventCount > 0) {
           nextVTimeEventCycles = convertVTime(vTimeEventQueue.nextTime);

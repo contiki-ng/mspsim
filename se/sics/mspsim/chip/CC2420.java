@@ -208,7 +208,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private int rxread;
   private int zero_symbols;
   private boolean ramRead = false;
-  private boolean fifopState;
   private boolean cca;
 
   private int activeFrequency = 0;
@@ -254,7 +253,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setState(STATE_IDLE);
       if( (registers[REG_IOCFG1] & CCAMUX) == CCA_XOSC16M_STABLE) {
         setCCA(true);
-      }else{
+      } else {
         System.out.println("CC2420: CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
       }
     }
@@ -262,7 +261,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   private TimeEvent vregEvent = new TimeEvent(0) {
     public void execute(long t) {
-      if(DEBUG) System.out.println("CC2420: VREG Started.");
+      if(DEBUG) System.out.println("CC2420: VREG Started at: " + t + " cyc: " +
+          cpu.cycles + " " + getTime());
       setCCA(false);
       on = true;
       setState(STATE_POWER_DOWN);
@@ -779,6 +779,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if(on) {
       // 0.6ms maximum vreg startup from datasheet pg 13
       cpu.scheduleTimeEventMillis(vregEvent, 0.1);
+      System.out.println(getName() + ": Scheduling vregEvent at: cyc = " + cpu.cycles +
+         " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     }else{
       this.on = on;
       setState(STATE_VREG_OFF);
@@ -876,7 +878,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   public void setFIFOP(boolean fifop) {
-    fifopState = fifop;
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
     } else {
