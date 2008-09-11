@@ -2,7 +2,10 @@
 Changes:
 - removed tick based component support from MSP430 core
 - reimplemented USART to be event based instead of tick based
-- ...
+- fixed bug in ADC12 subsystem that caused lots of events to be
+  scheduled back in time (causing other subsystems to get
+  delays on their events...)
+
 
 0.92
 Changes:
