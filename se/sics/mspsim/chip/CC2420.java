@@ -291,7 +291,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
       case STATE_TX_CALIBRATE:
         setState(STATE_TX_PREAMBLE);
-        break; 
+        break;
 
       case STATE_RX_WAIT:
         setClear(true);
@@ -850,14 +850,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private void flushTX() {
     txCursor = 0;
   }
-
-  // For incoming packets... - mostly for backward compatibility...
-  public void setIncomingPacket(byte[] receivedData) {
-      for (byte element: receivedData) {
-        receivedByte((byte)(element & 0xff));
-      }
-  }
-
   
   public void setClear(boolean clear) {
     cca = clear;

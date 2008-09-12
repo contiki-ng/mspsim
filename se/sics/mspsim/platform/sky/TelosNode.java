@@ -165,35 +165,20 @@ public class TelosNode extends MoteIVNode {
     stats.addMonitor(cpu);
 
     network = new NetworkConnection();
-    network.addPacketListener(new PacketListener() {
-      public void transmissionEnded(byte[] receivedData) {
-        radio.setIncomingPacket(receivedData);
-      }
+    final RadioWrapper radioWrapper = new RadioWrapper(radio);
+    radioWrapper.setPacketListener(new PacketListener() {
       public void transmissionStarted() {
       }
+      public void transmissionEnded(byte[] receivedData) {
+        network.dataSent(receivedData);
+      }
     });
-    // TODO: remove this test...
-    radio.setRFListener(new RFListener() {
-      int len = 0;
-      int pos = 0;
-      byte[] buffer = new byte[128];
-      // NOTE: len is not in the packet for now...
-      public void receivedByte(byte data) {
-//        System.out.println("*** RF Data :" + data);
-        if (pos == 5) {
-//          System.out.println("**** Setting length to:" + data);
-          len = data;
-        }
-        buffer[pos++] = data;
-        // len + 1 = pos + 5 (preambles)
-        if (len > 0 && len + 1 == pos - 5) {
-//          System.out.println("***** SENDING DATA!!!");
-          byte[] packet = new byte[len];
-          System.arraycopy(buffer, 5, packet, 0, len);
-          network.dataSent(packet);
-          pos = 0;
-          len = 0;
-        }
+    
+    network.addPacketListener(new PacketListener() {
+      public void transmissionStarted() {
+      }
+      public void transmissionEnded(byte[] receivedData) {
+        radioWrapper.packetReceived(receivedData);
       }
     });
 
