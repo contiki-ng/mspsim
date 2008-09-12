@@ -86,7 +86,7 @@ all:	compile
 
 compile:	$(OBJECTS)
 
-jar:	compile JarManifest.txt
+jar:	clean compile JarManifest.txt
 	$(JAR) cfm $(JARFILE) JarManifest.txt ${addsuffix /*.class,$(PACKAGES)} images/*.jpg
 	-$(RM) JarManifest.txt
 
