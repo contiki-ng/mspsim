@@ -111,7 +111,7 @@ public class MSP430 extends MSP430Core {
 	nextOut = cycles + 20000007;
       }
 
-      if (emulateOP()) {
+      if (emulateOP(-1)) {
 	instCtr++;
 
 	if (execCounter != null) {
@@ -172,7 +172,7 @@ public class MSP430 extends MSP430Core {
         }
       }
 
-      boolean emuOP = emulateOP();
+      boolean emuOP = emulateOP(-1);
       if (emuOP) {
         if (execCounter != null) {
           execCounter[reg[PC]]++;
@@ -196,7 +196,10 @@ public class MSP430 extends MSP430Core {
     return cycles;
   }
   
-  public long step(long max_cycles) {
+  /* 
+   * Perform a single step (even if in LPM) but no longer than to maxCycles + 1 instr
+   */
+  public long step(long maxCycles) {
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
@@ -214,13 +217,12 @@ public class MSP430 extends MSP430Core {
 
 
     boolean emuOP = false;
-    if (max_cycles > 0) {
-      while (cycles < max_cycles && !(emuOP = emulateOP())) {
-        /* Stuck in LPM - hopefully not more than 10000 times*/
+    if (maxCycles > 0) {
+      while (cycles < maxCycles && !(emuOP = emulateOP(maxCycles))) {
       }
     } else {
       int ctr = 0;
-      while (!(emuOP = emulateOP()) && ctr++ < 10000) {
+      while (!(emuOP = emulateOP(-1)) && ctr++ < 10000) {
         /* Stuck in LPM - hopefully not more than 10000 times*/
         }
     }

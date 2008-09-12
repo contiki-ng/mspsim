@@ -646,7 +646,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   /* returns true if any instruction was emulated - false if CpuOff */
-  public boolean emulateOP() {
+  public boolean emulateOP(long maxCycles) {
     //System.out.println("CYCLES BEFORE: " + cycles);
     int pc = readRegister(PC);
     long startCycles = cycles;
@@ -669,7 +669,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (cpuOff) {
       //       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
       // nextEventCycles must exist, otherwise CPU can not wake up!?
-      cycles = nextEventCycles;
+      if (maxCycles >= 0 && maxCycles < nextEventCycles) {
+        // Should it just freeze or take on extra cycle step if cycles > max?
+        cycles = cycles < maxCycles ? maxCycles : cycles;
+      } else {
+        cycles = nextEventCycles;
+      }
       return false;
     }
 
