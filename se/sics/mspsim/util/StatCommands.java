@@ -43,6 +43,7 @@ import java.io.PrintStream;
 
 import se.sics.mspsim.cli.BasicAsyncCommand;
 import se.sics.mspsim.cli.BasicCommand;
+import se.sics.mspsim.cli.BasicLineCommand;
 import se.sics.mspsim.cli.CommandBundle;
 import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.cli.CommandHandler;
@@ -92,6 +93,31 @@ public class StatCommands implements CommandBundle {
         
     });
 
+    handler.registerCommand("mult", new BasicLineCommand("multiply line of doubles",
+        "[m1...mn]") {
+          double[] multiplicator;
+          private PrintStream out;
+          public int executeCommand(CommandContext context) {
+            this.out = context.out;
+            int args = context.getArgumentCount();
+            multiplicator = new double[args];
+            for(int i = 0; i < args; i++) {
+              multiplicator[i] = context.getArgumentAsDouble(i);
+            }
+            return 0;
+          }
+          public void lineRead(String line) {
+            // Split & parse double on each + multiplicate...
+            String[] parts = line.split(" ");
+            for(int i = 0; i < parts.length; i++) {
+              out.print(multiplicator[i % multiplicator.length] * Double.parseDouble(parts[i]) + " ");
+            }
+            out.println();
+          }
+          public void stopCommand(CommandContext context) {
+          }
+    });
+    
     handler.registerCommand("duty", new BasicAsyncCommand("add a duty cycle sampler for operating modes to the specified chips",
         "<frequency> <chip> [chips...]") {
 

@@ -223,14 +223,16 @@ public class ADC12 extends IOUnit {
   }
 
   private void convert() {
+    // If either off or not enable conversion then just return...
+    if (!adc12On || !enableConversion) return;
     // Some noice...
     ADCInput input = adcInput[adc12mctl[adc12Pos] & 0x7];
     adc12mem[adc12Pos] = input != null ? input.nextData() : 2048 + 100 - (int) Math.random() * 200;
     if ((adc12ie & (1 << adc12Pos)) > 0) {
       adc12ifg |= (1 << adc12Pos);
-      // This should check if there already is an hihger iv!
+      // This should check if there already is an higher iv!
       adc12iv = adc12Pos * 2 + 6;
-//      System.out.println("** Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
+      //System.out.println("** Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
       core.flagInterrupt(adc12Vector, this, true);
     }
     // Increase
@@ -240,7 +242,6 @@ public class ADC12 extends IOUnit {
       adc12Pos = (adc12Pos + 1) & 0x0f;
     }
     int delay = adcDiv * (shTime0 + 13);
-    //System.out.println("Sampling again after: " + delay + " => " + adc12Pos);
     core.scheduleTimeEvent(adcTrigger, adcTrigger.time + delay);
   }
   
