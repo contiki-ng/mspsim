@@ -83,7 +83,7 @@ public class FileM25P80 extends M25P80 {
     }
     // Set size of flash
     try {
-      file.setLength(1024 * 1024);
+      file.setLength(MEMORY_SIZE);
     } catch (IOException e) {
       e.printStackTrace();
     }

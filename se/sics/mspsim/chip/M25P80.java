@@ -43,7 +43,7 @@ package se.sics.mspsim.chip;
 import java.io.IOException;
 import se.sics.mspsim.core.*;
 
-public abstract class M25P80 extends Chip implements USARTListener, PortListener {
+public abstract class M25P80 extends Chip implements USARTListener, PortListener, Memory {
 
   public static final boolean DEBUG = false;
 
@@ -59,7 +59,9 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public static final int BULK_ERASE = 0xc7;
   public static final int DEEP_POWER_DOWN = 0xb9;
   public static final int WAKE_UP = 0xab;
-
+  
+  public static final int MEMORY_SIZE = 1024 * 1024;
+  
   private int state = 0;
   public static final int CHIP_SELECT = 0x10;
   private boolean chipSelect;
@@ -224,6 +226,34 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     }
   }
 
+  /***********************************************
+   * Memory interface methods
+   ***********************************************/
+  public int readByte(int address) {
+    byte[] data = new byte[256];
+    try {
+      loadMemory(address, data);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return ~(byte)data[address & 0xff];
+  }
+  
+  public void writeByte(int address, int data) {
+    byte[] mem = new byte[256];
+    try {
+      loadMemory(address, mem);
+      mem[address & 0xff] = (byte) ~data;
+      writeBack(address, mem);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  
+  public int getSize() {
+    return MEMORY_SIZE;
+  }
+  
   // Should return correct data!
   private int readMemory(int address) {
     if (DEBUG) {
@@ -244,11 +274,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         if (DEBUG) {
           System.out.println("M25P80: Loading memory: " + (address & 0xfff00));
         }
-        seek(address & 0xfff00);
-        readFully(readMemory);
-        for (int i = 0; i < readMemory.length; i++) {
-          readMemory[i] = (byte) (~readMemory[i] & 0xff);
-        }
+        loadMemory(address, readMemory);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -256,6 +282,14 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     }
   }
 
+  private void loadMemory(int address, byte[] readMemory) throws IOException {
+    seek(address & 0xfff00);
+    readFully(readMemory);
+    for (int i = 0; i < readMemory.length; i++) {
+      readMemory[i] = (byte) (~readMemory[i] & 0xff);
+    }
+  }
+  
   public void portWrite(IOPort source, int data) {
     // Chip select = active low...
     if (chipSelect && (data & CHIP_SELECT) != 0) {
@@ -329,7 +363,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public String getName() {
     return "M25P80: external flash";
   }
-
+  
   public abstract void seek(long pos) throws IOException;
   public abstract int readFully(byte[] b) throws IOException;
   public abstract void write(byte[] b) throws IOException;

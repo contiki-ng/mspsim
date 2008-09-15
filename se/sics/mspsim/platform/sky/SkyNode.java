@@ -199,6 +199,7 @@ public class SkyNode extends MoteIVNode {
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
       dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
     }
+    registry.registerComponent("xmem", flash);
   }
 
 

@@ -44,6 +44,7 @@ import javax.swing.MenuSelectionManager;
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
+import se.sics.mspsim.core.Memory;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
@@ -54,8 +55,10 @@ import se.sics.mspsim.util.Utils;
 public class DebugCommands implements CommandBundle {
   private long lastCall = 0;
   private long lastWall = 0;
-
+  private ComponentRegistry registry;
+  
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
+    this.registry = registry;
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     final ELF elf = (ELF) registry.getComponent(ELF.class);
     final GenericNode node = (GenericNode) registry.getComponent("node");
@@ -303,7 +306,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        
+
         ch.registerCommand("set", new BasicCommand("set memory", "<address> <value> [type]") {
           public int executeCommand(final CommandContext context) {
             int adr = context.getArgumentAsAddress(0);
@@ -313,8 +316,63 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }});
         
+        /******************************************************
+         * handle external memory (flash, etc). 
+         ******************************************************/
+        ch.registerCommand("xmem", new BasicCommand("dump flash memory", "<start address> <num_emtries> [type]") {
+          public int executeCommand(final CommandContext context) {
+            Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
+            if (xmem == null) {
+              context.err.print("No xmem component registered");
+              return 0;
+            }
+            int start = context.getArgumentAsAddress(0);
+            int count = context.getArgumentAsInt(1);
+            int size = 1; // unsigned byte
+            boolean signed = false;
+            if (context.getArgumentCount() > 2) {
+              String tS = context.getArgument(2);
+              if ("byte".equals(tS)) {
+                signed = true;
+              } else if ("word".equals(tS)) {
+                signed = true;
+                size = 2;
+              } else if ("uword".equals(tS)) {
+                size = 2;
+              }
+            }
+            // Does not yet handle signed data...
+            for (int i = 0; i < count; i++) {
+              int data = 0;
+              data = xmem.readByte(start++);
+              if (size == 2) {
+                data = data  + (xmem.readByte(start++) << 8);
+              }
+              context.out.print(" " + data);
+            }
+            context.out.println();
+            return 0;
+          }
+        });
         
-
+        ch.registerCommand("xset", new BasicCommand("set memory", "<address> <value> [type]") {
+          public int executeCommand(final CommandContext context) {
+            Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
+            if (xmem == null) {
+              context.err.print("No xmem component registered");
+              return 0;
+            }
+            int adr = context.getArgumentAsAddress(0);
+            int val = context.getArgumentAsInt(1);
+            boolean word = val > 0xff;
+            if (word) {
+              xmem.writeByte(adr, val >> 8);
+              val = val & 0xff;
+              adr++;
+            }
+            xmem.writeByte(adr, val & 0xff);
+            return 0;
+          }});
         
       }
     }
