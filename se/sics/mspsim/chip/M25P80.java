@@ -236,7 +236,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return ~(byte)data[address & 0xff];
+    return ~data[address & 0xff];
   }
   
   public void writeByte(int address, int data) {
@@ -248,8 +248,12 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     } catch (IOException e) {
       e.printStackTrace();
     }
+    if (loadedAddress >= 0
+        && ((loadedAddress & 0xfff00) == (address & 0xfff00))) {
+      loadedAddress = -1;
+    }
   }
-  
+
   public int getSize() {
     return MEMORY_SIZE;
   }
