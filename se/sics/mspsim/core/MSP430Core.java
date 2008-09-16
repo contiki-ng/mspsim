@@ -289,7 +289,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         } else if (scg0) {
           setMode(MODE_LPM1);
         } else {
-          setMode(MODE_LPM0);          
+          setMode(MODE_LPM0); 
         }
       } else {
         setMode(MODE_ACTIVE);
@@ -981,10 +981,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       // Perform the read of destination!
       if (dstRegMode) {
-	dst = readRegister(dstRegister);
-	if (!word) {
-	  dst &= 0xff;
-	}
+        if (op != MOV) {
+          dst = readRegister(dstRegister);
+          if (!word) {
+            dst &= 0xff;
+          }
+        }
       } else {
 	// PC Could have changed above!
 	pc = readRegister(PC);
@@ -996,7 +998,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    + memory[pc] + (memory[pc + 1] << 8);
 	}
 
-	dst = read(dstAddress, word);
+	if (op != MOV)
+	  dst = read(dstAddress, word);
 	pc += 2;
 	incRegister(PC, 2);
       }
