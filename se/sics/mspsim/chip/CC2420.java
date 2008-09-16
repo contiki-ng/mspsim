@@ -601,7 +601,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         //if (DEBUG) {
         //    System.out.println("CC2420: Strobe RX-ON!!!");
         //}
-        //setMode(MODE_RX_ON);
+        setMode(MODE_RX_ON);
       }else{
         System.out.println("CC2420: WARNING: SRXON when not IDLE");
       }
@@ -612,7 +612,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         System.out.println("CC2420: Strobe RXTX-OFF!!!");
       }
       setState(STATE_IDLE);
-
       setMode(MODE_TXRX_OFF);
       break;
     case REG_STXON:
@@ -625,6 +624,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           (stateMachine == STATE_RX_WAIT)) {
         status |= STATUS_TX_ACTIVE;
         setState(STATE_TX_CALIBRATE);
+        // Starting up TX subsystem - indicate that we are in TX mode!
+        setMode(MODE_TXRX_ON);
       }
       break;
     case REG_STXONCCA:
@@ -638,6 +639,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         if(cca) {
           status |= STATUS_TX_ACTIVE;
           setState(STATE_TX_CALIBRATE);
+          setMode(MODE_TXRX_ON);
         }else{
           System.out.println("CC2420: STXONCCA Ignored, CCA false");
         }

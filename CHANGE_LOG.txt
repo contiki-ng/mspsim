@@ -1,3 +1,7 @@
+0.94
+Changes:
+- fixed notification of operating modes on the CC2420 for duty cycle calculation, etc.
+
 0.93
 Changes:
 - removed tick based component support from MSP430 core
