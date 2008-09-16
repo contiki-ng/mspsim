@@ -1,5 +1,7 @@
 0.94
 Changes:
+- fixed so that IOPorts output 1 on pins that are configured as input 
+  (with DIR) 
 - fixed notification of operating modes on the CC2420 for duty cycle calculation, etc.
 
 0.93
