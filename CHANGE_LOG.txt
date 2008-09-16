@@ -7,7 +7,8 @@ Changes:
   delays on their events...)
 - fixed RadioWrapper for backward compatibility with PacketListener
   (for the CC2420). 
- 
+- fixed ADC12 to turn off event scheduling when ADC12 is not on anymore
+- fixed xmem read/write for cli and added Memory API for flash memory.
 
 0.92
 Changes:
