@@ -111,6 +111,7 @@ public class SkyNode extends MoteIVNode {
     unit = cpu.getIOUnit("Port 1");
     if (unit instanceof IOPort) {
       port1 = (IOPort) unit;
+      port1.setPortListener(this);
     }
 
     unit = cpu.getIOUnit("Port 2");

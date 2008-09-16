@@ -1,12 +1,14 @@
 package se.sics.mspsim.platform.sky;
 
 import se.sics.mspsim.chip.CC2420;
+import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.Utils;
 
 public abstract class MoteIVNode extends GenericNode implements PortListener, USARTListener {
 
@@ -25,6 +27,13 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   public static final int CC2420_FIFO = 3;
   public static final int CC2420_CCA = 4;
 
+  public static final int SHT11_CLK_PIN = 6;
+  public static final int SHT11_DATA_PIN = 5;
+
+  public static final int SHT11_CLK = 1 << SHT11_CLK_PIN;
+  public static final int SHT11_DATA = 1 << SHT11_DATA_PIN;
+
+  
   /* P4.1 - Input: SFD from CC2420 */
   /* P4.5 - Output: VREG_EN to CC2420 */
   /* P4.2 - Output: SPI Chip Select (CS_N) */
@@ -46,7 +55,7 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   protected IOPort port5;
 
   public CC2420 radio;
-  
+  public SHT11 sht11 = new SHT11();
 
   public SkyGui gui;
 
@@ -87,6 +96,9 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
       radio.setVRegOn((data & CC2420_VREG) != 0);
       //radio.portWrite(source, data);
       flashWrite(source, data);
+    } else if (source == port1) {
+      sht11.clockPin((data & SHT11_CLK) != 0);
+      sht11.dataPin((data & SHT11_DATA) != 0);
     }
   }
   

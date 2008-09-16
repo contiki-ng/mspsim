@@ -48,6 +48,9 @@ public class SHT11 extends Chip {
 
   public final static int IDLE = 0;
   public final static int COMMAND = 1;
+
+  private final static char[] INIT_COMMAND = "CdcCD".toCharArray();
+  private int initPos = 0;
   
   
   /* Serial data pins */
@@ -62,12 +65,43 @@ public class SHT11 extends Chip {
   boolean dataHi = false;
   
   public void clockPin(boolean high) {
+    if (clockHi == high) return;
+    char c = high ? 'C' : 'c';
+    System.out.println(getName() + ": clock pin " + c);
+    if (state == IDLE) {
+      if (checkInit(c)) {
+        state = COMMAND;
+      }
+    }
     clockHi = high;
   }
   
   public void dataPin(boolean high) {
+    if (dataHi == high) return;
+    char c = high ? 'D' : 'd';
+    System.out.println(getName() + ": data pin  " + c);
+    if (state == IDLE) {
+      if (checkInit(c)) {
+        state = COMMAND;
+      }
+    }
     dataHi = high;
   }
+
+  private boolean checkInit(char c) {
+    if (INIT_COMMAND[initPos] == c) {
+      initPos++;
+      if (initPos == INIT_COMMAND.length) {
+        initPos = 0;
+        System.out.println("SHT11: COMMAND signature detected!!!");
+        return true;
+      }
+    } else {
+      initPos = 0;
+    }
+    return false;
+  }
+  
   
   public int getModeMax() {
     return 0;
