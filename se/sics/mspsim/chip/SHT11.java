@@ -64,6 +64,12 @@ public class SHT11 extends Chip {
   boolean clockHi = false;
   boolean dataHi = false;
   
+  public void reset() {
+    clockHi = true;
+    dataHi = true;
+    initPos = 0;
+  }
+  
   public void clockPin(boolean high) {
     if (clockHi == high) return;
     char c = high ? 'C' : 'c';
@@ -98,6 +104,10 @@ public class SHT11 extends Chip {
       }
     } else {
       initPos = 0;
+      // If this is a correct first char => ok!
+      if (c == INIT_COMMAND[0]) {
+        initPos = 1;
+      }
     }
     return false;
   }

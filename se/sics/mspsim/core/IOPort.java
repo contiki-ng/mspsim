@@ -76,6 +76,7 @@ public class IOPort extends IOUnit {
   private PortListener listener;
   // represents the direction register
   private int dirReg;
+  private int out;
 
   /**
    * Creates a new <code>IOPort</code> instance.
@@ -131,13 +132,22 @@ public class IOPort extends IOUnit {
     case IN:
       break;
     case OUT:
+      out = data;
       if (listener != null) {
         // Any output configured pin (pin-bit = 0) should have 1 here?! 
-	listener.portWrite(this, data | (~dirReg)&0xff);
+//        if (name.equals("1"))
+//          System.out.println(getName() + " write to IOPort via OUT reg: " + Utils.hex8(data));
+        listener.portWrite(this, out | (~dirReg)&0xff);
       }
       break;
     case DIR:
       dirReg = data;
+      if (listener != null) {
+        // Any output configured pin (pin-bit = 0) should have 1 here?! 
+//        if (name.equals("1"))
+//          System.out.println(getName() + " write to IOPort via DIR reg: " + Utils.hex8(data));
+        listener.portWrite(this, out | (~dirReg)&0xff);
+      }
       break;
       // SEL & IFG is the same but behaviour differs between p1,p2 and rest...
     case SEL:
