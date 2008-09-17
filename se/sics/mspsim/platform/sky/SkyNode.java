@@ -102,22 +102,7 @@ public class SkyNode extends MoteIVNode {
   }
 
   public void setupNodePorts(boolean loadFlash) {
-    IOUnit unit = cpu.getIOUnit("Port 5");
-    if (unit instanceof IOPort) {
-      port5 = (IOPort) unit;
-      port5.setPortListener(this);
-    }
-
-    unit = cpu.getIOUnit("Port 1");
-    if (unit instanceof IOPort) {
-      port1 = (IOPort) unit;
-      port1.setPortListener(this);
-    }
-
-    unit = cpu.getIOUnit("Port 2");
-    if (unit instanceof IOPort) {
-      port2 = (IOPort) unit;
-    }
+    super.setupNodePorts(loadFlash);
 
     IOUnit usart0 = cpu.getIOUnit("USART 0");
     if (usart0 instanceof USART) {

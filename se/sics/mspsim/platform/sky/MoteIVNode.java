@@ -3,12 +3,12 @@ package se.sics.mspsim.platform.sky;
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ELF;
-import se.sics.mspsim.util.Utils;
 
 public abstract class MoteIVNode extends GenericNode implements PortListener, USARTListener {
 
@@ -78,6 +78,27 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   public ELF getElfInfo() {
     return elf;
   }
+
+  public void setupNodePorts(boolean loadFlash) {
+    IOUnit unit = cpu.getIOUnit("Port 5");
+    if (unit instanceof IOPort) {
+      port5 = (IOPort) unit;
+      port5.setPortListener(this);
+    }
+
+    unit = cpu.getIOUnit("Port 1");
+    if (unit instanceof IOPort) {
+      port1 = (IOPort) unit;
+      port1.setPortListener(this);
+      sht11.setDataPort(port1, SHT11_DATA_PIN);
+    }
+
+    unit = cpu.getIOUnit("Port 2");
+    if (unit instanceof IOPort) {
+      port2 = (IOPort) unit;
+    }    
+  }
+
   
   public void portWrite(IOPort source, int data) {
     if (source == port5) {

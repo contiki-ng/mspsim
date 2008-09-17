@@ -43,11 +43,13 @@ package se.sics.mspsim.chip;
 
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.util.Utils;
 
 public class SHT11 extends Chip {
 
-  public final static int IDLE = 0;
-  public final static int COMMAND = 1;
+  private static final int IDLE = 0;
+  private static final int COMMAND = 1;
+  private static final int ACK_CMD = 2;
 
   private final static char[] INIT_COMMAND = "CdcCD".toCharArray();
   private int initPos = 0;
@@ -63,21 +65,51 @@ public class SHT11 extends Chip {
   
   boolean clockHi = false;
   boolean dataHi = false;
+  private int readData = 0;
+  private int readCnt = 0;
+  
+  
+  public void setDataPort(IOPort port, int bit) {
+    sdataPort = port;
+    sdataPin = bit;
+  }
   
   public void reset() {
     clockHi = true;
     dataHi = true;
     initPos = 0;
+    readCnt = 0;
+    readData = 0;
+    // Always set pin to high when not doing anything...
+    sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
   }
   
   public void clockPin(boolean high) {
     if (clockHi == high) return;
     char c = high ? 'C' : 'c';
     System.out.println(getName() + ": clock pin " + c);
-    if (state == IDLE) {
+    switch (state) {
+    case IDLE:
       if (checkInit(c)) {
         state = COMMAND;
       }
+      break;
+    case COMMAND:
+      if (c == 'C') {
+        readData = (readData << 1) | (dataHi ? 1 : 0);
+        readCnt++;
+        if (readCnt == 8) {
+          System.out.println("SHT11: read: " + Utils.hex8(readData));
+          readCnt = 0;
+          state = ACK_CMD;
+          sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
+        }
+      }
+      break;
+    case ACK_CMD:
+      sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
+      state = IDLE;
+      break;
     }
     clockHi = high;
   }
@@ -86,7 +118,8 @@ public class SHT11 extends Chip {
     if (dataHi == high) return;
     char c = high ? 'D' : 'd';
     System.out.println(getName() + ": data pin  " + c);
-    if (state == IDLE) {
+    switch (state) {
+    case IDLE:
       if (checkInit(c)) {
         state = COMMAND;
       }
