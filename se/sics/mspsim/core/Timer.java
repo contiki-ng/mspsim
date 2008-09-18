@@ -625,7 +625,7 @@ public class Timer extends IOUnit {
   // Only called by the interrupt handler
   private void updateTimers(long cycles) {
     if (mode == STOP) {
-      System.out.println("No timer running -> no interrupt can be caused -> no scheduling...");
+      if (DEBUG) System.out.println("No timer running -> no interrupt can be caused -> no scheduling...");
       return;
     }
     
