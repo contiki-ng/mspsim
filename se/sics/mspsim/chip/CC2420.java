@@ -254,7 +254,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if( (registers[REG_IOCFG1] & CCAMUX) == CCA_XOSC16M_STABLE) {
         setCCA(true);
       } else {
-        System.out.println("CC2420: CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
+        if(DEBUG) System.out.println("CC2420: CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
       }
     }
   };
@@ -400,7 +400,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         rxfifo_len++;
 
         if(rxfifo_write_pos == 128) {
-          System.out.println("Wrapped RXFIFO write pos");
+          if (DEBUG) System.out.println("Wrapped RXFIFO write pos");
           rxfifo_write_pos = 0;
         }
 
@@ -515,7 +515,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       case READ_RXFIFO:
         if(rxfifo_len == 0)
           break;
-        System.out.println("CC2420: RXFIFO READ " + rxfifo_read_pos + " => " +
+        if(DEBUG) System.out.println("CC2420: RXFIFO READ " + rxfifo_read_pos + " => " +
             (memory[RAM_RXFIFO + rxfifo_read_pos] & 0xFF) );
         source.byteReceived( (memory[RAM_RXFIFO + rxfifo_read_pos] & 0xFF) );
         rxfifo_read_pos++;
@@ -603,7 +603,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         //}
         setMode(MODE_RX_ON);
       }else{
-        System.out.println("CC2420: WARNING: SRXON when not IDLE");
+        if (DEBUG) System.out.println("CC2420: WARNING: SRXON when not IDLE");
       }
 
       break;
@@ -641,7 +641,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           setState(STATE_TX_CALIBRATE);
           setMode(MODE_TXRX_ON);
         }else{
-          System.out.println("CC2420: STXONCCA Ignored, CCA false");
+          if (DEBUG) System.out.println("CC2420: STXONCCA Ignored, CCA false");
         }
       }
       break;
@@ -781,7 +781,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if(on) {
       // 0.6ms maximum vreg startup from datasheet pg 13
       cpu.scheduleTimeEventMillis(vregEvent, 0.1);
-      System.out.println(getName() + ": Scheduling vregEvent at: cyc = " + cpu.cycles +
+      if (DEBUG) System.out.println(getName() + ": Scheduling vregEvent at: cyc = " + cpu.cycles +
          " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     }else{
       this.on = on;
