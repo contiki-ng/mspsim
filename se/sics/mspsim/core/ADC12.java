@@ -49,7 +49,7 @@ package se.sics.mspsim.core;
 
 public class ADC12 extends IOUnit {
 
-  private static final boolean DEBUG = true; //false;
+  private static final boolean DEBUG = false;
   
   public static final int ADC12CTL0 = 0x01A0;// Reset with POR
   public static final int ADC12CTL1 = 0x01A2;// Reset with POR
@@ -180,9 +180,9 @@ public class ADC12 extends IOUnit {
     default:
       if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
         adc12mctl[address - ADC12MCTL0] = value & 0xff;
-        System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " source = " + (value & 0xf));
+        if (DEBUG) System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " source = " + (value & 0xf));
         if ((value & 0x80) != 0) {
-          System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " EOS bit set");
+          if (DEBUG) System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " EOS bit set");
         }
       }
     }
