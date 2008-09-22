@@ -222,12 +222,14 @@ public class ADC12 extends IOUnit {
     return "ADC12";
   }
 
+  int smp = 0;
   private void convert() {
     // If either off or not enable conversion then just return...
     if (!adc12On || !enableConversion) return;
     // Some noice...
     ADCInput input = adcInput[adc12mctl[adc12Pos] & 0x7];
-    adc12mem[adc12Pos] = input != null ? input.nextData() : 2048 + 100 - (int) Math.random() * 200;
+    adc12mem[adc12Pos] = input != null ? input.nextData() : 2048 + 100 - smp & 255;
+    smp += 7;
     if ((adc12ie & (1 << adc12Pos)) > 0) {
       adc12ifg |= (1 << adc12Pos);
       // This should check if there already is an higher iv!
