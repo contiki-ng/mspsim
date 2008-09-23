@@ -324,7 +324,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       break;
 
     case STATE_TX_CALIBRATE:
-      setSymbolEvent(12);
+      /* 12 symbols calibration, and one byte's wait since we deliver immediately
+       * to listener when after calibration?
+       */
+      setSymbolEvent(12 + 2);
       break;
 
     case STATE_TX_PREAMBLE:
@@ -592,15 +595,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
     switch (data) {
     case REG_SNOP:
-      //System.out.println("CC2420: SNOP");
+      if (DEBUG) System.out.println("CC2420: SNOP => " + Utils.hex8(status) + " at " + cpu.cycles);
       break;
     case REG_SRXON:
       if(stateMachine == STATE_IDLE) {
         setState(STATE_RX_CALIBRATE);
         //updateActiveFrequency();
-        //if (DEBUG) {
-        //    System.out.println("CC2420: Strobe RX-ON!!!");
-        //}
+        if (DEBUG) {
+            System.out.println("CC2420: Strobe RX-ON!!!");
+        }
         setMode(MODE_RX_ON);
       }else{
         if (DEBUG) System.out.println("CC2420: WARNING: SRXON when not IDLE");
@@ -609,7 +612,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       break;
     case REG_SRFOFF:
       if (DEBUG) {
-        System.out.println("CC2420: Strobe RXTX-OFF!!!");
+        System.out.println("CC2420: Strobe RXTX-OFF!!! at " + cpu.cycles);
       }
       setState(STATE_IDLE);
       setMode(MODE_TXRX_OFF);
@@ -626,6 +629,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         setState(STATE_TX_CALIBRATE);
         // Starting up TX subsystem - indicate that we are in TX mode!
         setMode(MODE_TXRX_ON);
+        if (DEBUG) System.out.println("CC2420: Strobe STXON - transmit on! at " + cpu.cycles);
       }
       break;
     case REG_STXONCCA:
@@ -640,6 +644,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           status |= STATUS_TX_ACTIVE;
           setState(STATE_TX_CALIBRATE);
           setMode(MODE_TXRX_ON);
+          if (DEBUG) System.out.println("CC2420: Strobe STXONCCA - transmit on! at " + cpu.cycles);
         }else{
           if (DEBUG) System.out.println("CC2420: STXONCCA Ignored, CCA false");
         }
@@ -725,26 +730,28 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void shrNext() {
-    listener.receivedByte(SHR[shr_pos++]);
     if(shr_pos == 5) {
       // Set SFD high
       setSFD(true);
       setState(STATE_TX_FRAME);
-    }else{
+    } else {
+      listener.receivedByte(SHR[shr_pos++]);
       cpu.scheduleTimeEventMillis(shrEvent, SYMBOL_PERIOD * 2);
     }
   }
 
   private void txNext() {
-    listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifo_pos++] & 0xFF));
     if(txfifo_pos <= memory[RAM_TXFIFO]) {
-      // Two symbol periods to send a byte..	  
-      cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+      listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifo_pos++] & 0xFF));
+      // Two symbol periods to send a byte...
+      long time = cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+//      System.out.println("Scheduling 2 SYMB at: " + time + " getTime(now): " + cpu.getTime());
     } else {
       if (DEBUG) System.out.println("Completed Transmission.");
       status &= ~STATUS_TX_ACTIVE;
       setSFD(false);
       setState(STATE_RX_CALIBRATE);
+      setMode(MODE_RX_ON);
       txfifo_flush = true;
     }
   }
