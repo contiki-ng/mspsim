@@ -374,6 +374,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     // Received a byte from the "air"
     if(cca)
       setClear(false);
+
+    if (stateMachine == STATE_RX_WAIT) {
+      setState(STATE_RX_SFD_SEARCH);
+    }
+    
     if(stateMachine == STATE_RX_SFD_SEARCH) {
       // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
       if(data == 0) {
