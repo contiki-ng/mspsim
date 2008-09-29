@@ -55,7 +55,7 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   protected IOPort port5;
 
   public CC2420 radio;
-  public SHT11 sht11 = new SHT11();
+  public SHT11 sht11;
 
   public SkyGui gui;
 
@@ -80,6 +80,8 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   }
 
   public void setupNodePorts(boolean loadFlash) {
+    sht11 = new SHT11(cpu);
+    
     IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
       port5 = (IOPort) unit;

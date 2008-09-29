@@ -43,6 +43,8 @@ package se.sics.mspsim.chip;
 
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.Utils;
 
 public class SHT11 extends Chip {
@@ -50,10 +52,16 @@ public class SHT11 extends Chip {
   private static final int IDLE = 0;
   private static final int COMMAND = 1;
   private static final int ACK_CMD = 2;
+  private static final int MEASURE = 3;
+  private static final int WRITE_BYTE = 4;
+  private static final int ACK_WRITE = 5;
 
-  private final boolean DEBUG = false;
+  private final int CMD_MEASURE_TEMP = 0x03;
+  private final int CMD_MEASURE_HUM = 0x05;
+  
+  private final boolean DEBUG = true; //false;
 
-  private final static char[] INIT_COMMAND = "CdcCD".toCharArray();
+  private final static char[] INIT_COMMAND = "CdcCDc".toCharArray();
   private int initPos = 0;
   
   
@@ -68,26 +76,61 @@ public class SHT11 extends Chip {
   boolean clockHi = false;
   boolean dataHi = false;
   private int readData = 0;
-  private int readCnt = 0;
+  private int bitCnt = 0;
+  private int temp = 0x1020;
+  private int humid = 0;
+  private int output[] = new int[3];
+  private int writePos = 0;
+  private int writeLen = 0;
+  private int writeData = 0;
   
+  private MSP430Core cpu;
   
+  private TimeEvent measureEvent = new TimeEvent(0) {
+    public void execute(long t) {
+      if (readData == CMD_MEASURE_TEMP) {
+        output[0] = temp >> 8;
+        output[1] = temp & 0xff;
+      } else if (readData == CMD_MEASURE_HUM) {
+        output[0] = humid >> 8;
+        output[1] = humid & 0xff;
+      } else {
+        /* Something bad has happened */
+        return;
+      }
+      /* finished measuring - signal with LOW! */
+      sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
+      state = WRITE_BYTE;
+      writeData = output[0];
+      writePos = 0;
+      writeLen = 2;
+    }};
+    
+  public SHT11(MSP430Core core) {
+    cpu = core;
+  }
+    
   public void setDataPort(IOPort port, int bit) {
     sdataPort = port;
     sdataPin = bit;
   }
   
-  public void reset() {
+  public void reset(int type) {    
     clockHi = true;
     dataHi = true;
     initPos = 0;
-    readCnt = 0;
+    bitCnt = 0;
     readData = 0;
+    writePos = 0;
+    writeData = 0;
+    state = IDLE;
     // Always set pin to high when not doing anything...
     sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
   }
   
   public void clockPin(boolean high) {
     if (clockHi == high) return;
+
     char c = high ? 'C' : 'c';
     if (DEBUG) System.out.println(getName() + ": clock pin " + c);
     switch (state) {
@@ -97,21 +140,42 @@ public class SHT11 extends Chip {
       }
       break;
     case COMMAND:
-      if (c == 'C') {
+      if (c == 'c') {
         readData = (readData << 1) | (dataHi ? 1 : 0);
-        readCnt++;
-        if (readCnt == 8) {
+        bitCnt++;
+        if (bitCnt == 8) {
           System.out.println("SHT11: read: " + Utils.hex8(readData));
-          readCnt = 0;
+          bitCnt = 0;
           state = ACK_CMD;
           sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
         }
       }
       break;
     case ACK_CMD:
-      sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
-      state = IDLE;
+      if (c == 'c') {
+        sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
+        if (readData == CMD_MEASURE_HUM || readData == CMD_MEASURE_TEMP) {
+          state = MEASURE;
+          /* schedule measurement for 20 millis */
+          cpu.scheduleTimeEventMillis(measureEvent, 20);
+        }
+      }
       break;
+    case MEASURE:
+      break;
+    case WRITE_BYTE:
+      if (c == 'c') {
+        boolean hi = (writeData & 0x80) != 0;
+        sdataPort.setPinState(sdataPin, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
+        bitCnt++;
+        writeData = writeData << 1;
+        if (bitCnt == 8) {
+          // All bits are written!
+          state = ACK_WRITE;
+          System.out.println("Wrote byte: " + output[writePos]);
+          writePos++;
+        }
+      }
     }
     clockHi = high;
   }
@@ -125,6 +189,16 @@ public class SHT11 extends Chip {
       if (checkInit(c)) {
         state = COMMAND;
       }
+    case ACK_WRITE:
+      if (c == 'D') { // if D goes back high - then we are done here!!!
+        System.out.println("ACK for byte complete...");
+        if (writePos < writeLen) {
+          state = WRITE_BYTE;
+          writeData = output[writePos];
+          bitCnt = 0;
+        }
+      }
+      break;
     }
     dataHi = high;
   }
