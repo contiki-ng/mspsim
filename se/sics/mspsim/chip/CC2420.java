@@ -295,6 +295,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
       case STATE_RX_WAIT:
         setClear(true);
+        setState(STATE_RX_SFD_SEARCH);
         break;
       }
     }
@@ -321,6 +322,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
     case STATE_RX_SFD_SEARCH:
       zero_symbols = 0;
+      // RSSI valid here?
+      status |= STATUS_RSSI_VALID;
       break;
 
     case STATE_TX_CALIBRATE:
@@ -348,8 +351,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     case STATE_RX_WAIT:
       setSymbolEvent(8);
       break;
-
-
+      
+    case STATE_IDLE:
+      status &= ~STATUS_RSSI_VALID;
+      break;
     }
 
     return true;
@@ -375,9 +380,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if(cca)
       setClear(false);
 
-    if (stateMachine == STATE_RX_WAIT) {
-      setState(STATE_RX_SFD_SEARCH);
-    }
+    // Above RX_WAIT => RX_SFD_SEARCH after 8 symbols should make this work without this???
+//    if (stateMachine == STATE_RX_WAIT) {
+//      setState(STATE_RX_SFD_SEARCH);
+//    }
     
     if(stateMachine == STATE_RX_SFD_SEARCH) {
       // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
@@ -395,12 +401,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           if (DEBUG) System.out.println("CC2420: RX: Preamble/SFD Synchronized.");
           rxread = 0;
           setState(STATE_RX_FRAME);
-        }else{
+        } else {
           zero_symbols = 0;
         }
       }
 
-    }else if(stateMachine == STATE_RX_FRAME) {
+    } else if(stateMachine == STATE_RX_FRAME) {
       if(rxfifo_len == 128) {
         setRxOverflow();
       }else{		  
