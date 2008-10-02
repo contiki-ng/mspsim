@@ -1123,11 +1123,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
 			   " at " + pc);
       }
     }
-    dst &= 0xffff;
-
+    if (word) {
+      dst &= 0xffff;
+    } else {
+      dst &= 0xff;
+    }
     if (write) {
       if (dstRegMode) {
-        if (!word) dst &= 0xff;
 	writeRegister(dstRegister, dst);
       } else {
 	dstAddress &= 0xffff;
