@@ -77,6 +77,8 @@ public class IOPort extends IOUnit {
   // represents the direction register
   private int dirReg;
   private int out;
+  
+  private Timer[] timerCapture = new Timer[8];
 
   /**
    * Creates a new <code>IOPort</code> instance.
@@ -95,6 +97,10 @@ public class IOPort extends IOUnit {
     this.listener = listener;
   }
 
+  public void setTimerCapture(Timer timer, int pin) {
+    timerCapture[pin] = timer;
+  }
+  
   public int read(int address, boolean word, long cycles) {
     if (DEBUG) {
       System.out.println("Notify read: " + address);
@@ -214,6 +220,14 @@ public class IOPort extends IOUnit {
         // Maybe this is not the only place where we should flag int?
         cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
       }
+      
+      if (timerCapture[pin] != null) {
+        /* should not be pin and 0 here
+         * pin might need configration and 0 can maybe also be 1? 
+         */
+        timerCapture[pin].capture(pin, 0, state);
+      }
+      
     }
   }
 

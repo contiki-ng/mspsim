@@ -165,6 +165,7 @@ static void
 msp430_init_dco(void)
 {
     /* This code taken from the FU Berlin sources and reformatted. */
+
 #define DELTA    600
 
   unsigned int compare, oldcapture = 0;
@@ -192,7 +193,7 @@ msp430_init_dco(void)
     compare = CCR2;                     /* Get current captured SMCLK */
     compare = compare - oldcapture;     /* SMCLK difference */
     oldcapture = CCR2;                  /* Save current captured SMCLK */
-
+    
     if(DELTA == compare) {
       break;                            /* if equal, leave "while(1)" */
     } else if(DELTA < compare) {        /* DCO is too fast, slow it down */

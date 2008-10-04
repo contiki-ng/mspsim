@@ -112,6 +112,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private EventQueue cycleEventQueue = new EventQueue();
   private long nextCycleEventCycles;
+  
+  private BasicClockModule bcs;
 
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -143,7 +145,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     memIn[Timer.TAIV] = ta;
     memIn[Timer.TBIV] = tb;
 
-    BasicClockModule bcs = new BasicClockModule(this, memory, 0);
+    bcs = new BasicClockModule(this, memory, 0);
     for (int i = 0x56, n = 0x59; i < n; i++) {
       memOut[i] = bcs;
     }
@@ -224,7 +226,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
     System.out.println("Number of passive: " + passIO);
   }
 
-
+  /* returns port 1 ... 6 */
+  public IOPort getIOPort(int portID) {
+    if (portID > 0 && portID < 7) {
+     return (IOPort) passiveIOUnits[portID - 1];
+    }
+    return null;
+  }
+  
   public SFR getSFR() {
     return sfr;
   }
@@ -338,7 +347,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // update last virtual time before updating DCOfactor
     lastVTime = getTime();
     lastCyclesTime = cycles;
+    
     currentDCOFactor = 1.0 * BasicClockModule.MAX_DCO_FRQ / frequency;
+
+    System.out.println("*** DCO: MAX:" + BasicClockModule.MAX_DCO_FRQ +
+    " current: " + frequency + " DCO_FAC = " + currentDCOFactor);
     if (DEBUG)
       System.out.println("Set smclkFrq: " + smclkFrq);
   }
@@ -481,9 +494,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     cycleEventQueue.removeAll();
     vTimeEventQueue.removeAll();
 
+    bcs.reset();
     // Needs to be last since these can add events...
     resetIOUnits();
-
   }
   
   public void reset() {

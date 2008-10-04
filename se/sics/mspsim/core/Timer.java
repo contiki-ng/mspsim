@@ -154,7 +154,7 @@ public class Timer extends IOUnit {
     SRC_PORT + 0x13, SRC_ACLK, SRC_GND, SRC_VCC            // Cap 2
   };
 
-  // Input map for timer B
+  // Input map for timer B (configurable in later versions for other MSP430 versions)
   public static final int[] TIMER_Bx149 = new int[] {
     SRC_PORT + 0x47, SRC_ACLK, SRC_SMCLK, SRC_PORT + 0x47, // Timer
     SRC_PORT + 0x40, SRC_PORT + 0x40, SRC_GND, SRC_VCC,    // Cap 0
@@ -186,7 +186,7 @@ public class Timer extends IOUnit {
   private int[] tcctl = new int[7];
   private int[] tccr = new int[7];
 
-  // Support variables Max 7 compare regs... (timer b)
+  // Support variables Max 7 compare regs for now (timer b)
   private final int noCompare;
   private int[] expCompare = new int[7];
   private int[] expCapInterval = new int[7];
@@ -216,6 +216,7 @@ public class Timer extends IOUnit {
   private int lastTIV;
 
   private final int[] srcMap;
+  
   /**
    * Creates a new <code>Timer</code> instance.
    *
@@ -299,13 +300,13 @@ public class Timer extends IOUnit {
       } else {
         val &= 0xfffe;
       }
-      if (DEBUG)
+      if (DEBUG) {
         System.out.println(getName() + " Read: Timer_" + name[type] +
             " CTL: inDiv:" + inputDivider +
             " src: " + getSourceName(clockSource) +
             " IEn:" + interruptEnable + " IFG: " +
             interruptPending + " mode: " + mode);      
-      
+      }
       break;
     case TCCTL0:
     case TCCTL1:
@@ -382,7 +383,7 @@ public class Timer extends IOUnit {
 	cyclesMultiplicator = (cyclesMultiplicator * core.smclkFrq) /
 	  core.aclkFrq;
 	if (DEBUG) {
-	  System.out.println(getName() + " setting multiplicator to: " +			     cyclesMultiplicator);
+	  System.out.println(getName() + " setting multiplicator to: " + cyclesMultiplicator);
 	}
       }
 
@@ -402,7 +403,9 @@ public class Timer extends IOUnit {
         
         // Wait until full wrap before setting the IRQ flag!
         nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((0xffff - counter) & 0xffff));
-        if (DEBUG) System.out.println(getName() + " Starting timer!");
+        if (DEBUG) {
+          System.out.println(getName() + " Starting timer!");
+        }
         recalculateCompares(cycles);
       }
       mode = newMode;
@@ -445,9 +448,21 @@ public class Timer extends IOUnit {
       captureOn[index] = (data & 0x100) > 0;
       sync[index] = (data & 0x800) > 0;
       inputSel[index] = (data >> 12) & 3;
-      inputSrc[index] = srcMap[4 + index * 4 + inputSel[index]];
+      int src = inputSrc[index] = srcMap[4 + index * 4 + inputSel[index]];
       capMode[index] = (data >> 14) & 3;
 
+      /* capture a port state? */
+      if (captureOn[index] && (src & SRC_PORT) != 0) {
+        int port = src & 0xff >> 4;
+        int pin = src & 0x0f;
+        IOPort ioPort = core.getIOPort(port);
+        System.out.println(getName() + " Assigning Port: " + port + " pin: " + pin +
+            " for capture");
+        ioPort.setTimerCapture(this, pin);
+      }
+      
+      updateCounter(cycles);
+      
       triggerInterrupts(cycles);
 
       if (DEBUG) {
@@ -459,6 +474,7 @@ public class Timer extends IOUnit {
 			   " Capture: " + captureOn[index] +
 			   " IE: " + ((data & CC_IE) != 0));
       }
+      
       updateCaptures(index, cycles);
       break;
       // Write to compare register!
@@ -533,6 +549,10 @@ public class Timer extends IOUnit {
     for (int i = 0, n = hi; i < n; i++) {
       int divisor = 1;
       int frqClk = 1;
+      /* used to set next capture independent of counter when another clock is source
+       * for the capture register!
+       */
+      boolean clkSource = false;
 
       if (clockSource == SRC_SMCLK) {
 	frqClk = core.smclkFrq / inputDivider;
@@ -544,6 +564,7 @@ public class Timer extends IOUnit {
       if (captureOn[i]) {
         if (inputSrc[i] == SRC_ACLK) {
           divisor = core.aclkFrq;
+          clkSource = true;
         }
 
 	if (DEBUG) {
@@ -555,16 +576,22 @@ public class Timer extends IOUnit {
 	// clock-edge to occur - including what value the compare reg. will get
 	expCapInterval[i] = frqClk / divisor;
 	// This is not 100% correct - depending on clock mode I guess...
-	expCompare[i] = (counter + expCapInterval[i]) & 0xffff;
+	if (clkSource) {
+	  /* assume that this was capture recently */
+//	  System.out.println(">>> ACLK! fixing with expCompare!!!");
+	  expCompare[i] = (tccr[i] + expCapInterval[i]) & 0xffff;
+	} else {
+	  expCompare[i] = (counter + expCapInterval[i]) & 0xffff;
+	}
 	// This could be formulated in something other than cycles...
 	// ...??? should be multiplied with clockspeed diff also?
 	expCaptureTime[i] = cycles + (long)(expCapInterval[i] * cyclesMultiplicator);
 	if (DEBUG) {
 	  System.out.println(getName() +
 			     " Expected compare " + i +
-			     " => " + expCompare[i]);
+			     " => " + expCompare[i] + "  Diff: " + expCapInterval[i]);
 	  System.out.println(getName() +
-			     " Expected cap time: " + expCaptureTime[i]);
+			     " Expected cap time: " + expCaptureTime[i] + " cycMult: " + cyclesMultiplicator);
 	  System.out.println("Capture: " + captureOn[i]);
 	}
       }
@@ -611,12 +638,12 @@ public class Timer extends IOUnit {
     }
     
     if (DEBUG) {
-      System.out.println(getName() + ": Updating counter cycctr: " + cycctr + " divider: " + divider + " mode:" + mode + " => " + counter);
+      System.out.println(getName() + ": Updating counter cycctr: " + cycctr +
+          " divider: " + divider + " mode:" + mode + " => " + counter);
     }
    return counter;
   }
 
-    // Simplest possible - just a call each 1000 cycles (which is wrong...)
   public long ioTick(long cycles) {
     System.out.println(getName() + " UNEXPECTED CALL TO IOTICK ****");
     return 100000 + cycles;
@@ -625,7 +652,9 @@ public class Timer extends IOUnit {
   // Only called by the interrupt handler
   private void updateTimers(long cycles) {
     if (mode == STOP) {
-      if (DEBUG) System.out.println("No timer running -> no interrupt can be caused -> no scheduling...");
+      if (DEBUG) {
+        System.out.println("No timer running -> no interrupt can be caused -> no scheduling...");
+      }
       return;
     }
     
@@ -793,7 +822,7 @@ public class Timer extends IOUnit {
       return "SMCLK";
     default:
       if ((source & SRC_PORT) == SRC_PORT) {
-	return "Port " + ((source & 0x10) >> 4) + "." +
+	return "Port " + ((source & 0xf0) >> 4) + "." +
 	  (source & 0xf);
       }
     }
@@ -804,7 +833,20 @@ public class Timer extends IOUnit {
     return "Timer " + name[type];
   }
 
-
+  /**
+   * capture - perform a capture if the timer CCRx is configured for captures
+   * 
+   * @param ccrIndex - the capture register
+   * @param source - the capture source (0/1)
+   */
+  public void capture(int ccrIndex, int source, int value) {
+    if (ccrIndex < noCompare && captureOn[ccrIndex] && inputSel[ccrIndex] == source) {
+      /* This is obviously a capture! */
+      System.out.println("Capture on CCR" + ccrIndex + " !!!");
+    }
+  }
+  
+  
   // The interrupt have been serviced...
   // Some flags should be cleared (the highest priority flags)?
   public void interruptServiced(int vector) {

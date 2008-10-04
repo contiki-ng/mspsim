@@ -44,7 +44,7 @@ import se.sics.mspsim.util.Utils;
 
 public class CC2420 extends Chip implements USARTListener, RFListener {
 
-  public static final boolean DEBUG = false; //true;
+  public static final boolean DEBUG = true; //false; //true;
 
   public static final int REG_SNOP		= 0x00;
   public static final int REG_SXOSCON	        = 0x01;
@@ -913,6 +913,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   public int getModeMax() {
     return MODE_MAX;
+  }
+  
+  public String chipinfo() {
+    return " VREG_ON: " + on +
+    "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
+    "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) +
+    "\n";
   }
 
 } // CC2420

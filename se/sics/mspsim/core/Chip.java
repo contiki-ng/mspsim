@@ -103,4 +103,8 @@ public abstract class Chip {
 
   public abstract String getName();
   public abstract int getModeMax();
+  
+  public String chipinfo() {
+    return "* no info";
+  }
 }

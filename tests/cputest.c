@@ -330,6 +330,74 @@ static void testTimer() {
 
 }
 
+#define TARGET_DCO_KHZ 4096
+#define ACLK_KHZ 32
+#define ACLK_CALIB_PERIOD 8
+#define TARGET_DCO_DELTA (TARGET_DCO_KHZ / ACLK_KHZ) * ACLK_CALIB_PERIOD
+
+void set_dco_calib( int calib )
+{
+  BCSCTL1 = (BCSCTL1 & ~0x07) | ((calib >> 8) & 0x07);
+  DCOCTL = calib & 0xff;
+}
+
+uint16_t test_calib_busywait_delta( int calib )
+{
+  int8_t aclk_count = 2;
+  uint16_t dco_prev = 0;
+  uint16_t dco_curr = 0;
+  
+  set_dco_calib( calib );
+
+  while( aclk_count-- > 0 )
+    {
+      TBCCR0 = TBR + ACLK_CALIB_PERIOD; // set next interrupt
+      TBCCTL0 &= ~CCIFG; // clear pending interrupt
+      while( (TBCCTL0 & CCIFG) == 0 ); // busy wait
+      dco_prev = dco_curr;
+      dco_curr = TAR;
+    }
+  return dco_curr - dco_prev;
+}
+
+  // busyCalibrateDCO
+  // Should take about 9ms if ACLK_CALIB_PERIOD=8.
+  // DCOCTL and BCSCTL1 are calibrated when done.
+void busyCalibrateDco()
+{
+  // --- variables ---
+  int calib;
+  int step;
+  // --- calibrate ---
+
+  // --- setup ---
+
+  TACTL = TASSEL1 | MC1; // source SMCLK, continuous mode, everything else 0
+  TBCTL = TBSSEL0 | MC1; // Aclk?
+  BCSCTL1 = XT2OFF | RSEL2;
+  BCSCTL2 = 0;
+  TBCCTL0 = CM0;
+
+  // Binary search for RSEL,DCO,DCOMOD.
+  // It's okay that RSEL isn't monotonic.
+
+  for( calib=0,step=0x800; step!=0; step>>=1 )
+    {
+      // if the step is not past the target, commit it
+      printf(" step: %d\n", step); 
+      if( test_calib_busywait_delta(calib|step) <= TARGET_DCO_DELTA )
+        calib |= step;
+    }
+  
+    // if DCOx is 7 (0x0e0 in calib), then the 5-bit MODx is not useable, set it to 0
+  if( (calib & 0x0e0) == 0x0e0 )
+    calib &= ~0x01f;
+  
+  set_dco_calib( calib );
+}
+
+
+
 /*--------------------------------------------------------------------------*/
 
 int

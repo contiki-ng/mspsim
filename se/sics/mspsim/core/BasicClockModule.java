@@ -46,8 +46,8 @@ public class BasicClockModule extends IOUnit {
 
   public static final boolean DEBUG = false;
   
-  public static final int DCOCTL = 0x56;
-  public static final int BCSCTL1 = 0x57;
+  public static final int DCOCTL = 0x56; // 0x60
+  public static final int BCSCTL1 = 0x57; // 0x84 
   public static final int BCSCTL2 = 0x58;
 
   public static final int ACLK_FRQ = 32768;
@@ -60,7 +60,7 @@ public class BasicClockModule extends IOUnit {
   // Based on the scatterweb code it looks like less than
   // 5Mhz is more correct...
   public static final int MAX_DCO_FRQ = 4915200;
-  public static final int MIN_DCO_FRQ = 0;
+  public static final int MIN_DCO_FRQ = 1000;
   public static final int DCO_FACTOR = (MAX_DCO_FRQ - MIN_DCO_FRQ) / 2048;
 
 
@@ -87,12 +87,13 @@ public class BasicClockModule extends IOUnit {
   public BasicClockModule(MSP430Core core, int[] memory, int offset) {
     super(memory, offset);
     this.core = core;
-    init();
+    reset();
   }
 
-  public void init() {
-    // What should be initial values?
-    memory[DCOCTL] = 0;
+  public void reset() {
+    write(DCOCTL, 0x60, false, core.cycles);
+    write(BCSCTL1, 0x84, false, core.cycles);
+    write(BCSCTL2, 0, false, core.cycles);
   }
 
   // do nothing?
@@ -146,7 +147,7 @@ public class BasicClockModule extends IOUnit {
     // resistor selects three bits gives the highest impact on the DCO_FACTOR
     // then dcoFrq and last dcoModulator
     int newcalcDCOFrq = ((dcoFrequency << 5) + dcoModulator +
-			 (resistorSel << 8)) * DCO_FACTOR;
+			 (resistorSel << 8)) * DCO_FACTOR + MIN_DCO_FRQ;
     if (newcalcDCOFrq != calcDCOFrq) {
       calcDCOFrq = newcalcDCOFrq;
       if (DEBUG) System.out.println("BCM  DCO_Speed: " + calcDCOFrq);
