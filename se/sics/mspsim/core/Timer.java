@@ -378,14 +378,7 @@ public class Timer extends IOUnit {
       inputDivider = 1 << ((data >> 6) & 3);
       clockSource = srcMap[(data >> 8) & 3];
 
-      cyclesMultiplicator = inputDivider;
-      if (clockSource == SRC_ACLK) {
-	cyclesMultiplicator = (cyclesMultiplicator * core.smclkFrq) /
-	  core.aclkFrq;
-	if (DEBUG) {
-	  System.out.println(getName() + " setting multiplicator to: " + cyclesMultiplicator);
-	}
-      }
+      updateCyclesMultiplicator();
 
       
       if ((data & TCLR) != 0) {
@@ -526,12 +519,25 @@ public class Timer extends IOUnit {
       calculateNextEventTime(cycles);
     }
   }
-
-  private void resetCounter(long cycles) {
+  void updateCyclesMultiplicator() {
+    cyclesMultiplicator = inputDivider;
+    if (clockSource == SRC_ACLK) {
+      cyclesMultiplicator = (cyclesMultiplicator * core.smclkFrq) /
+      core.aclkFrq;
+      if (DEBUG) {
+        System.out.println(getName() + " setting multiplicator to: " + cyclesMultiplicator);
+      }
+    }
+  }
+  
+  void resetCounter(long cycles) {
     counterStart = cycles;
     // set counterACC to the last returned value (which is the same
     // as bigCounter except that it is "moduloed" to a smaller value
     counterAcc = counter;
+    updateCyclesMultiplicator();
+    if (DEBUG) 
+      System.out.println(getName() + " Counter reset at " + cycles +  " cycMul: " + cyclesMultiplicator);
   }
   
   private void setCounter(int newCtr, long cycles) {

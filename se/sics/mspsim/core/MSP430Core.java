@@ -145,7 +145,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     memIn[Timer.TAIV] = ta;
     memIn[Timer.TBIV] = tb;
 
-    bcs = new BasicClockModule(this, memory, 0);
+    bcs = new BasicClockModule(this, memory, 0, new Timer[] {ta, tb});
     for (int i = 0x56, n = 0x59; i < n; i++) {
       memOut[i] = bcs;
     }
@@ -350,8 +350,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     currentDCOFactor = 1.0 * BasicClockModule.MAX_DCO_FRQ / frequency;
 
-    System.out.println("*** DCO: MAX:" + BasicClockModule.MAX_DCO_FRQ +
-    " current: " + frequency + " DCO_FAC = " + currentDCOFactor);
+//    System.out.println("*** DCO: MAX:" + BasicClockModule.MAX_DCO_FRQ +
+//    " current: " + frequency + " DCO_FAC = " + currentDCOFactor);
     if (DEBUG)
       System.out.println("Set smclkFrq: " + smclkFrq);
   }

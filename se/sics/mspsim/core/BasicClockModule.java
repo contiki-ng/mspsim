@@ -65,6 +65,7 @@ public class BasicClockModule extends IOUnit {
 
 
   private MSP430Core core;
+  private Timer[] timers;
 
   private int dcoFrequency;
   private int dcoModulator;
@@ -84,9 +85,10 @@ public class BasicClockModule extends IOUnit {
    * Creates a new <code>BasicClockModule</code> instance.
    *
    */
-  public BasicClockModule(MSP430Core core, int[] memory, int offset) {
+  public BasicClockModule(MSP430Core core, int[] memory, int offset, Timer[] timers) {
     super(memory, offset);
     this.core = core;
+    this.timers = timers;
     reset();
   }
 
@@ -130,6 +132,7 @@ public class BasicClockModule extends IOUnit {
 			 " DivACLK:" + divAclk + " ACLKFrq: " +
 			 ACLK_FRQ / divAclk);
       core.setACLKFrq(ACLK_FRQ / divAclk);
+      updateTimers(cycles);
       break;
     case BCSCTL2:
       mclkSel = (data >> 6) & 3;
@@ -152,9 +155,18 @@ public class BasicClockModule extends IOUnit {
       calcDCOFrq = newcalcDCOFrq;
       if (DEBUG) System.out.println("BCM  DCO_Speed: " + calcDCOFrq);
       core.setDCOFrq(calcDCOFrq, calcDCOFrq / divSMclk);
+      updateTimers(cycles);
     }
   }
 
+  private void updateTimers(long cycles) {
+    if (timers != null) {
+      for(int i = 0; i < timers.length; i++) {
+        timers[i].resetCounter(cycles);
+      }
+    }
+  }
+  
   public String getName() {
     return "BasicClockModule";
   }

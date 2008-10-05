@@ -368,6 +368,7 @@ void busyCalibrateDco()
   // --- variables ---
   int calib;
   int step;
+  int tmp;
   // --- calibrate ---
 
   // --- setup ---
@@ -385,8 +386,11 @@ void busyCalibrateDco()
     {
       // if the step is not past the target, commit it
       printf(" step: %d\n", step); 
-      if( test_calib_busywait_delta(calib|step) <= TARGET_DCO_DELTA )
+      if((tmp = test_calib_busywait_delta(calib|step)) <= TARGET_DCO_DELTA ) 
+      {
         calib |= step;
+        printf(" committed: tmp = %d\n", tmp);
+      }
     }
   
     // if DCOx is 7 (0x0e0 in calib), then the 5-bit MODx is not useable, set it to 0
@@ -416,6 +420,7 @@ main(void)
   testModulo();
   testUSART();
   testTimer();
+  busyCalibrateDco();
   /*  printf("PROFILE\n"); */
   printf("EXIT\n");
   return 0;
