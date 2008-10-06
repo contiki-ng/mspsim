@@ -98,6 +98,7 @@ public class IOPort extends IOUnit {
   }
 
   public void setTimerCapture(Timer timer, int pin) {
+    System.out.println("Setting timer capture for pin: " + pin);
     timerCapture[pin] = timer;
   }
   
@@ -225,6 +226,7 @@ public class IOPort extends IOUnit {
         /* should not be pin and 0 here
          * pin might need configration and 0 can maybe also be 1? 
          */
+//        System.out.println(getName() + " Notifying timer of changed pin value");
         timerCapture[pin].capture(pin, 0, state);
       }
       

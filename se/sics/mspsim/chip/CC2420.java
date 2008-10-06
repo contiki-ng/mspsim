@@ -44,7 +44,7 @@ import se.sics.mspsim.util.Utils;
 
 public class CC2420 extends Chip implements USARTListener, RFListener {
 
-  public static final boolean DEBUG = true; //false; //true;
+  public static final boolean DEBUG = false; //true;
 
   public static final int REG_SNOP		= 0x00;
   public static final int REG_SXOSCON	        = 0x01;
@@ -445,21 +445,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   public void dataReceived(USART source, int data) {
+    if (DEBUG) {
+      System.out.println("CC2420 byte received: " + Utils.hex8(data) +
+          " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
+          " CS: " + chipSelect + " SPI state: " + state + " StateMachine: " + stateMachine);
+    }
+
     if ( (stateMachine != STATE_VREG_OFF) && chipSelect) {
 
-      /*
-      if (DEBUG) {
-    	System.out.println("State Machine: " + stateMachine);  
-        System.out.println("CC2420 byte received: " + Utils.hex8(data) +
-            " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
-            " CS: " + chipSelect + " state: " + state);
-      }
-       */
       switch(state) {
       case WAITING:
-        state = WRITE_REGISTER;
         if ((data & FLAG_READ) != 0) {
           state = READ_REGISTER;
+        } else {
+          state = WRITE_REGISTER;
         }
         if ((data & FLAG_RAM) != 0) {
           state = RAM_ACCESS;
@@ -487,11 +486,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         if (pos == 0) {
           source.byteReceived(registers[address] >> 8);
           // set the high bits
-          registers[address] = registers[address] & 0xff | (data << 8);
+          registers[address] = (registers[address] & 0xff) | (data << 8);
+          pos = 1; 
         } else {
           source.byteReceived(registers[address] & 0xff);
           // set the low bits
-          registers[address] = registers[address] & 0xff00 | data;
+          registers[address] = (registers[address] & 0xff00) | data;
           /*
           if (DEBUG) {
             System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
@@ -510,20 +510,22 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             }
           }
            */
+          /* register written - go back to wating... */
+          state = WAITING;
         }
-        pos++;
         break;
       case READ_REGISTER:
         if (pos == 0) {
           source.byteReceived(registers[address] >> 8);
+          pos = 1;
         } else {
           source.byteReceived(registers[address] & 0xff);
           if (DEBUG) {
             System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
                 + registers[address]);
           }
+          state = WAITING;
         }
-        pos++;
         return;
         //break;
       case READ_RXFIFO:
@@ -595,9 +597,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   // next data...
   private void strobe(int data) {
     // Resets, on/off of different things...
-    //if (DEBUG) {
-    //  System.out.println("CC2420: Strobe on: " + Utils.hex8(data));
-    //}
+    if (DEBUG) {
+      System.out.println("CC2420: Strobe on: " + Utils.hex8(data));
+    }
 
     if( (stateMachine == STATE_POWER_DOWN) && (data != REG_SXOSCON) ) {
       if (DEBUG) System.out.println("CC2420: Got command strobe: " + data + " in STATE_POWER_DOWN.  Ignoring.");

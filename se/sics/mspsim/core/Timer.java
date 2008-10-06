@@ -130,6 +130,12 @@ public class Timer extends IOUnit {
   public static final int CC_IE = 0x10;  // Bit 4
   public static final int CC_TRIGGER_INT = CC_IE | CC_IFG;
 
+  public static final int CM_NONE = 0;
+  public static final int CM_RISING = 1;
+  public static final int CM_FALLING = 2;
+  public static final int CM_BOTH = 3;
+
+  
   // Number of cycles passed since current counter value was set
   // useful for setting expected compare and capture times to correct time.
   // valid for timer A
@@ -438,6 +444,7 @@ public class Timer extends IOUnit {
       int index = (iAddress - TCCTL0) / 2;
       tcctl[index] = data;
       outMode[index] = (data >> 5)& 7;
+      boolean oldCapture = captureOn[index];
       captureOn[index] = (data & 0x100) > 0;
       sync[index] = (data & 0x800) > 0;
       inputSel[index] = (data >> 12) & 3;
@@ -445,8 +452,8 @@ public class Timer extends IOUnit {
       capMode[index] = (data >> 14) & 3;
 
       /* capture a port state? */
-      if (captureOn[index] && (src & SRC_PORT) != 0) {
-        int port = src & 0xff >> 4;
+      if (!oldCapture && captureOn[index] && (src & SRC_PORT) != 0) {
+        int port = (src & 0xff) >> 4;
         int pin = src & 0x0f;
         IOPort ioPort = core.getIOPort(port);
         System.out.println(getName() + " Assigning Port: " + port + " pin: " + pin +
@@ -767,6 +774,8 @@ public class Timer extends IOUnit {
   }
   
   // Can be called to generate any interrupt...
+  // TODO: check if it is ok that this also sets the flags to false or if that must
+  // be done by software (e.g. firmware)
   public void triggerInterrupts(long cycles) {
     // First check if any capture register is generating an interrupt...
     boolean trigger = false;
@@ -797,12 +806,14 @@ public class Timer extends IOUnit {
                 (i * 2) + " at cycles:" + cycles);
           }
           tIndex = i;
+          // TODO: break here if low is higher...
         }
       }
-      if (trigger) {
-        // Or if other CCR execute the normal one with correct TAIV
-        lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = tIndex * 2;
-      }
+    }
+    
+    if (trigger) {
+      // Or if other CCR execute the normal one with correct TAIV
+      lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = tIndex * 2;
     }
 
     if (!trigger) {
@@ -841,14 +852,23 @@ public class Timer extends IOUnit {
 
   /**
    * capture - perform a capture if the timer CCRx is configured for captures
-   * 
+   * Note: capture may only be called when value has changed
    * @param ccrIndex - the capture register
    * @param source - the capture source (0/1)
    */
   public void capture(int ccrIndex, int source, int value) {
     if (ccrIndex < noCompare && captureOn[ccrIndex] && inputSel[ccrIndex] == source) {
       /* This is obviously a capture! */
-      System.out.println("Capture on CCR" + ccrIndex + " !!!");
+      boolean rise = (capMode[ccrIndex] & CM_RISING) != 0;
+      boolean fall = (capMode[ccrIndex] & CM_FALLING) != 0;
+      if ((value == IOPort.PIN_HI && rise) ||
+          (value == IOPort.PIN_LOW && fall)) {
+//      System.out.println("*** Capture on CCR_" + ccrIndex + " " + " value: " +
+//            value);
+        // Set the interrupt flag...
+      tcctl[ccrIndex] |= CC_IFG;
+      triggerInterrupts(core.cycles);
+      }
     }
   }
   
