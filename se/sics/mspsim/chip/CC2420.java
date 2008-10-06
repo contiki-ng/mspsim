@@ -198,17 +198,17 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private int state = WAITING;
   private int pos;
   private int address;
-  private int shr_pos;
-  private int txfifo_pos;
-  private boolean txfifo_flush;	// TXFIFO is automatically flushed on next write
-  private int rxfifo_write_pos;
-  private int rxfifo_read_pos;
-  private int rxfifo_len;
+  private int shrPos;
+  private int txfifoPos;
+  private boolean txfifoFlush;	// TXFIFO is automatically flushed on next write
+  private int rxfifoWritePos;
+  private int rxfifoReadPos;
+  private int rxfifoLen;
   private int rxlen;
   private int rxread;
   private int zero_symbols;
   private boolean ramRead = false;
-  private boolean cca;
+  private boolean cca = false;
 
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -285,7 +285,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     public void execute(long t) {
       switch(stateMachine) {
       case STATE_RX_CALIBRATE:
-        setClear(true);
+        setCCA(true);
         setState(STATE_RX_SFD_SEARCH);
         break;
 
@@ -294,7 +294,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         break;
 
       case STATE_RX_WAIT:
-        setClear(true);
+        setCCA(true);
         setState(STATE_RX_SFD_SEARCH);
         break;
       }
@@ -312,8 +312,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       break;
 
     case STATE_POWER_DOWN:
-      rxfifo_read_pos = 0;
-      rxfifo_write_pos = 0;
+      rxfifoReadPos = 0;
+      rxfifoWritePos = 0;
       break;
 
     case STATE_RX_CALIBRATE:
@@ -334,7 +334,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       break;
 
     case STATE_TX_PREAMBLE:
-      shr_pos = 0;
+      shrPos = 0;
       SHR[0] = 0;
       SHR[1] = 0;
       SHR[2] = 0;
@@ -344,7 +344,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       break;
 
     case STATE_TX_FRAME:
-      txfifo_pos = 0;
+      txfifoPos = 0;
       txNext();
       break;
 
@@ -370,15 +370,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     setModeNames(MODE_NAMES);
     setMode(MODE_POWER_OFF);
     rxPacket = false;
-    rxfifo_read_pos = 0;
-    rxfifo_write_pos = 0;
-    cca = false;    
+    rxfifoReadPos = 0;
+    rxfifoWritePos = 0;
   }
 
   public void receivedByte(byte data) {
     // Received a byte from the "air"
     if(cca)
-      setClear(false);
+      setCCA(false);
 
     // Above RX_WAIT => RX_SFD_SEARCH after 8 symbols should make this work without this???
 //    if (stateMachine == STATE_RX_WAIT) {
@@ -407,15 +406,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       }
 
     } else if(stateMachine == STATE_RX_FRAME) {
-      if(rxfifo_len == 128) {
+      if(rxfifoLen == 128) {
         setRxOverflow();
       }else{		  
-        memory[RAM_RXFIFO + rxfifo_write_pos++] = data & 0xFF;
-        rxfifo_len++;
+        memory[RAM_RXFIFO + rxfifoWritePos++] = data & 0xFF;
+        rxfifoLen++;
 
-        if(rxfifo_write_pos == 128) {
+        if(rxfifoWritePos == 128) {
           if (DEBUG) System.out.println("Wrapped RXFIFO write pos");
-          rxfifo_write_pos = 0;
+          rxfifoWritePos = 0;
         }
 
         if(rxread == 0) {
@@ -429,9 +428,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           // In RX mode, FIFOP goes high, if threshold is higher than frame length....
 
           // Should take a RSSI value as input or use a set-RSSI value...
-          memory[RAM_RXFIFO + (rxfifo_write_pos - 2)] = (registers[REG_RSSI]) & 0xff;
+          memory[RAM_RXFIFO + (rxfifoWritePos - 2)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation
-          memory[RAM_RXFIFO + (rxfifo_write_pos -1 )] = 37 | 0x80;
+          memory[RAM_RXFIFO + (rxfifoWritePos -1 )] = 37 | 0x80;
           setFIFOP(true);
           setSFD(false);
           if (DEBUG) System.out.println("CC2420: RX: Complete.");
@@ -445,6 +444,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   public void dataReceived(USART source, int data) {
+    int oldStatus = status;
     if (DEBUG) {
       System.out.println("CC2420 byte received: " + Utils.hex8(data) +
           " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
@@ -529,21 +529,21 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         return;
         //break;
       case READ_RXFIFO:
-        if(rxfifo_len == 0)
+        if(rxfifoLen == 0)
           break;
-        if(DEBUG) System.out.println("CC2420: RXFIFO READ " + rxfifo_read_pos + " => " +
-            (memory[RAM_RXFIFO + rxfifo_read_pos] & 0xFF) );
-        source.byteReceived( (memory[RAM_RXFIFO + rxfifo_read_pos] & 0xFF) );
-        rxfifo_read_pos++;
+        if(DEBUG) System.out.println("CC2420: RXFIFO READ " + rxfifoReadPos + " => " +
+            (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
+        source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
+        rxfifoReadPos++;
         setFIFOP(false);
 
         // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
-        if(--rxfifo_len == 0)
+        if(--rxfifoLen == 0)
           setFIFO(false);
 
         // What if wrap cursor???
-        if (rxfifo_read_pos >= 128) {
-          rxfifo_read_pos = 0;
+        if (rxfifoReadPos >= 128) {
+          rxfifoReadPos = 0;
         }
         // When is this set to "false" - when is interrupt de-triggered?
         // TODO:
@@ -555,9 +555,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         }
         return;
       case WRITE_TXFIFO:
-        if(txfifo_flush) {
+        if(txfifoFlush) {
           txCursor = 0;
-          txfifo_flush = false;
+          txfifoFlush = false;
         }  
         if (DEBUG) System.out.println("Writing data: " + data + " to tx: " + txCursor);
 
@@ -589,7 +589,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         break;
       }
 
-      source.byteReceived(status);  
+      source.byteReceived(oldStatus);  
     }
   }
 
@@ -743,19 +743,19 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void shrNext() {
-    if(shr_pos == 5) {
+    if(shrPos == 5) {
       // Set SFD high
       setSFD(true);
       setState(STATE_TX_FRAME);
     } else {
-      listener.receivedByte(SHR[shr_pos++]);
+      listener.receivedByte(SHR[shrPos++]);
       cpu.scheduleTimeEventMillis(shrEvent, SYMBOL_PERIOD * 2);
     }
   }
 
   private void txNext() {
-    if(txfifo_pos <= memory[RAM_TXFIFO]) {
-      listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifo_pos++] & 0xFF));
+    if(txfifoPos <= memory[RAM_TXFIFO]) {
+      listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos++] & 0xFF));
       // Two symbol periods to send a byte...
       long time = cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
 //      System.out.println("Scheduling 2 SYMB at: " + time + " getTime(now): " + cpu.getTime());
@@ -765,7 +765,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setSFD(false);
       setState(STATE_RX_CALIBRATE);
       setMode(MODE_RX_ON);
-      txfifo_flush = true;
+      txfifoFlush = true;
     }
   }
 
@@ -857,13 +857,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   private void flushRX() {
     if (DEBUG) {
-      System.out.println("CC2420: Flushing RX len = " + rxfifo_len);
+      System.out.println("CC2420: Flushing RX len = " + rxfifoLen);
     }
     rxPacket = false;
-    rxfifo_read_pos = 0;
-    rxfifo_write_pos = 0;
-    rxfifo_len = 0;
-    setClear(true);
+    rxfifoReadPos = 0;
+    rxfifoWritePos = 0;
+    rxfifoLen = 0;
+    setCCA(true);
     setSFD(false);
     setFIFOP(false);
   }
@@ -873,25 +873,25 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     txCursor = 0;
   }
   
-  public void setClear(boolean clear) {
+  public void setCCA(boolean clear) {
     cca = clear;
-    setCCA(clear);
+    setCCAPin(clear);
     if (DEBUG) System.out.println("CC2420: CCA: " + clear);
   }
 
-  public void setSFD(boolean sfd) {
+  private void setSFD(boolean sfd) {
     if (DEBUG) System.out.println("SFD: " + sfd);
     sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
   }
 
-  public void setCCA(boolean cca) {
+  private void setCCAPin(boolean cca) {
     if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
       ccaPort.setPinState(ccaPin, cca ? 0 : 1);
     else
       ccaPort.setPinState(ccaPin, cca ? 1 : 0);
   }
 
-  public void setFIFOP(boolean fifop) {
+  private void setFIFOP(boolean fifop) {
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
     } else {
@@ -899,12 +899,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     }
   }
 
-  public void setFIFO(boolean fifo) {
+  private void setFIFO(boolean fifo) {
     fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
   }
 
   public void setRxOverflow() {
-    if (DEBUG) System.out.println("CC2420: RXFIFO Overflow! Read Pos: " + rxfifo_read_pos + " Write Pos: " + rxfifo_write_pos);
+    if (DEBUG) System.out.println("CC2420: RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
     setFIFOP(true);
     setFIFO(false);
   }
@@ -921,6 +921,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     return " VREG_ON: " + on +
     "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) +
+    "\n CCA: " + cca +
     "\n";
   }
 
