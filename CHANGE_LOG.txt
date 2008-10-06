@@ -6,6 +6,10 @@ Changes:
 - fixed status register update bug (byte/word problem)
 - improved CC2420 implementation (including RSSI_VALID flag)
 - added SHT11 implementation for Tmote Sky
+- added I/O ports -> timer capture functionality
+- added SFD capture interrupt support for CC2420
+- improved correctness of timer when reconfiguring CPU clock speed (MCLK)
+
 
 0.93
 Changes:

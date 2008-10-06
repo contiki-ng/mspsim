@@ -65,10 +65,17 @@ public class SimpleProfiler implements Profiler {
   }
 
   public void profileCall(MapEntry entry, long cycles) {
-//  System.out.println("Call at: " + Utils.hex16(reg[PC]));
     if (callStack[cSP] == null) {
       callStack[cSP] = new CallEntry();
     }
+
+//    String s = "";
+//    for (int i = 0; i < cSP; i++) {
+//      s += "  ";
+//    }
+//    System.out.println(s + "Call to: " + entry);
+    
+    
     callStack[cSP].function = entry;
     callStack[cSP].calls = 0;
     callStack[cSP++].cycles = cycles;
