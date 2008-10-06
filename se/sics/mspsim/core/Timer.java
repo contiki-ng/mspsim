@@ -72,9 +72,6 @@ import se.sics.mspsim.util.Utils;
 public class Timer extends IOUnit {
 
   public static final boolean DEBUG = false;//true;
-  public static final int TIMER_A = 0;
-  public static final int TIMER_B = 1;
-  private String[] name = new String[] {"A", "B"};
 
   public static final int TBIV = 0x011e;
   public static final int TAIV = 0x012e;
@@ -176,7 +173,8 @@ public class Timer extends IOUnit {
     "NONE", "RISING", "FALLING", "BOTH"
   };
 
-  private int type = 0;
+  private final String name;
+  private final int tiv;
   private int inputDivider = 1;
 
   // If clocked by anything other than the SubMainClock at full
@@ -237,16 +235,19 @@ public class Timer extends IOUnit {
       System.out.println("Timer: noComp:" + noCompare);
     }
     if (srcMap == TIMER_Ax149) {
-      type = TIMER_A;
+      name = "Timer A";
+      tiv = TAIV;
       timerOverflow = 0x0a;
+      ccr0Vector = TACCR0_VECTOR;
+      ccr1Vector = TACCR1_VECTOR;
     } else {
-      type = TIMER_B;
+      name = "Timer B";
+      tiv = TBIV;
       timerOverflow = 0x0e;
+      ccr0Vector = TBCCR0_VECTOR;
+      ccr1Vector = TBCCR1_VECTOR;
     }
 
-    ccr0Vector = type == TIMER_A ? TACCR0_VECTOR : TBCCR0_VECTOR;
-    ccr1Vector = type == TIMER_A ? TACCR1_VECTOR : TBCCR1_VECTOR;
-        
     reset(0);
   }
 
@@ -307,11 +308,11 @@ public class Timer extends IOUnit {
         val &= 0xfffe;
       }
       if (DEBUG) {
-        System.out.println(getName() + " Read: Timer_" + name[type] +
+        System.out.println(getName() + " Read: " +
             " CTL: inDiv:" + inputDivider +
             " src: " + getSourceName(clockSource) +
             " IEn:" + interruptEnable + " IFG: " +
-            interruptPending + " mode: " + mode);      
+            interruptPending + " mode: " + mode);
       }
       break;
     case TCCTL0:
@@ -412,7 +413,7 @@ public class Timer extends IOUnit {
       interruptEnable = (data & 0x02) > 0;
 
       if (DEBUG) {
-	System.out.println(getName() + " Write: Timer_" + name[type] +
+	System.out.println(getName() + " Write: " +
 			   " CTL: inDiv:" + inputDivider +
 			   " src: " + getSourceName(clockSource) +
 			   " IEn:" + interruptEnable + " IFG: " +
@@ -749,12 +750,12 @@ public class Timer extends IOUnit {
       return;
     }
     long time = nextTimerTrigger;
-    int smallest = -1;
+//    int smallest = -1;
     for (int i = 0; i < noCompare; i++) {
       long ct = expCaptureTime[i];
       if (ct > 0 && ct < time) {
         time = ct;
-        smallest = i;
+//        smallest = i;
       }
     }
     
@@ -813,13 +814,13 @@ public class Timer extends IOUnit {
     
     if (trigger) {
       // Or if other CCR execute the normal one with correct TAIV
-      lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = tIndex * 2;
+      lastTIV = memory[tiv] = tIndex * 2;
     }
 
     if (!trigger) {
       if (interruptEnable && interruptPending) {
         trigger = true;
-        lastTIV = memory[type == TIMER_A ? TAIV : TBIV] = timerOverflow;
+        lastTIV = memory[tiv] = timerOverflow;
       }
     }
     
@@ -829,7 +830,7 @@ public class Timer extends IOUnit {
 
   public String getSourceName(int source) {
     switch (source) {
-      case SRC_ACLK:
+    case SRC_ACLK:
       return "ACLK";
     case SRC_VCC:
       return "VCC";
@@ -847,7 +848,7 @@ public class Timer extends IOUnit {
   }
 
   public String getName() {
-    return "Timer " + name[type];
+    return name;
   }
 
   /**
