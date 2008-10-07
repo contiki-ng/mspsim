@@ -230,6 +230,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   private IOPort fifopPort = null;
   private int fifopPin;
+  /* fifoP state */
+  private boolean fifoP = false;
 
   private IOPort fifoPort = null;
   private int fifoPin;
@@ -237,7 +239,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private IOPort sfdPort = null;
   private int sfdPin;
 
-  private boolean rxPacket = false;
   private int rxLen;
   private int txCursor;
   private RFListener listener;
@@ -369,7 +370,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     this.cpu = cpu;
     setModeNames(MODE_NAMES);
     setMode(MODE_POWER_OFF);
-    rxPacket = false;
+    fifoP = false;
     rxfifoReadPos = 0;
     rxfifoWritePos = 0;
   }
@@ -437,10 +438,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           setState(STATE_RX_WAIT);
         }
       }
-
-
     }
-
   }
 
   public void dataReceived(USART source, int data) {
@@ -538,7 +536,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
         source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
         rxfifoReadPos++;
-        setFIFOP(false);
 
         // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
         if(--rxfifoLen == 0)
@@ -552,8 +549,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         // TODO:
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
-        if (rxPacket) {
-          rxPacket = false;
+        if (fifoP) {
           setFIFOP(false);
         }
         return;
@@ -790,7 +786,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if (DEBUG) System.out.println("CC2420: Oscillator Off.");
     setMode(MODE_POWER_OFF);
     // Reset state
-    rxPacket = false;
     setFIFOP(false);
   }
 
@@ -862,7 +857,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if (DEBUG) {
       System.out.println("CC2420: Flushing RX len = " + rxfifoLen);
     }
-    rxPacket = false;
     rxfifoReadPos = 0;
     rxfifoWritePos = 0;
     rxfifoLen = 0;
@@ -895,6 +889,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void setFIFOP(boolean fifop) {
+	fifoP = fifop;
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
     } else {
