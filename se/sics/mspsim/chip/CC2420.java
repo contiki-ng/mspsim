@@ -477,6 +477,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         }
         if (data < 0x0f) {
           strobe(data);
+          state = WAITING;
         }
         pos = 0;
         // Assuming that the status always is sent back???
@@ -492,7 +493,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           source.byteReceived(registers[address] & 0xff);
           // set the low bits
           registers[address] = (registers[address] & 0xff00) | data;
-          /*
+
           if (DEBUG) {
             System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
                 + registers[address]);
@@ -505,11 +506,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             			+ ((registers[address] & SFDMUX) >> SFDMUX)
             			+ " CCAMUX: " + (registers[address] & CCAMUX));
             	if( (registers[address] & CCAMUX) == CCA_CCA)
-            		setCCA(false);
+            	  setCCA(false);
             	break;
             }
           }
-           */
           /* register written - go back to wating... */
           state = WAITING;
         }
@@ -922,6 +922,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) +
     "\n CCA: " + cca +
+    "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
     "\n";
   }
 
