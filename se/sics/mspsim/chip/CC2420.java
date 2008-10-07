@@ -493,6 +493,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           source.byteReceived(registers[address] & 0xff);
           // set the low bits
           registers[address] = (registers[address] & 0xff00) | data;
+          if (address == REG_IOCFG0) {
+            setFIFOP(false);
+          }
 
           if (DEBUG) {
             System.out.println("CC2420: wrote to " + Utils.hex8(address) + " = "
@@ -505,8 +508,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             	System.out.println("CC2420: IOCFG1: SFDMUX "
             			+ ((registers[address] & SFDMUX) >> SFDMUX)
             			+ " CCAMUX: " + (registers[address] & CCAMUX));
-            	if( (registers[address] & CCAMUX) == CCA_CCA)
-            	  setCCA(false);
+//            	if( (registers[address] & CCAMUX) == CCA_CCA)
+//            	  setCCA(false);
             	break;
             }
           }
