@@ -206,6 +206,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private int rxfifoLen;
   private int rxlen;
   private int rxread;
+  private int lastPacketStart;
   private int zero_symbols;
   private boolean ramRead = false;
   private boolean cca = false;
@@ -434,10 +435,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           memory[RAM_RXFIFO + (rxfifoWritePos -1 )] = 37 | 0x80;
           setFIFOP(true);
           setSFD(false);
-          if (DEBUG) System.out.println("CC2420: RX: Complete.");
+          lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
+          if (DEBUG || true) System.out.println("CC2420: RX: Complete: packetStart: " + 
+              lastPacketStart);
           setState(STATE_RX_WAIT);
         }
       }
+    } else if (true || DEBUG) {
+      System.out.println("*** Ignoring byte from air state: " + stateMachine);
     }
   }
 
@@ -550,6 +555,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
         if (fifoP) {
+          System.out.println("*** FIFOP cleared at: " + rxfifoReadPos +
+              " lastPacketStartPos: " + lastPacketStart);
           setFIFOP(false);
         }
         return;
@@ -889,7 +896,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void setFIFOP(boolean fifop) {
-	fifoP = fifop;
+    fifoP = fifop;
+    if (DEBUG) System.out.println(getName() + " setting FIFOP to " + fifop);
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
     } else {
@@ -898,6 +906,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void setFIFO(boolean fifo) {
+    if (DEBUG) System.out.println(getName() + " setting FIFO to " + fifo);
     fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
   }
 
