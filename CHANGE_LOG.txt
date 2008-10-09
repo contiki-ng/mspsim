@@ -4,11 +4,13 @@ Changes:
   (with DIR)
 - fixed notification of operating modes on the CC2420 for duty cycle calculation, etc.
 - fixed status register update bug (byte/word problem)
-- improved CC2420 implementation (including RSSI_VALID flag)
+- improved CC2420 implementation correctness (including RSSI_VALID flag, SFD timing, etc)
+- fixed SPI bug in CC2420
 - added SHT11 implementation for Tmote Sky
 - added I/O ports -> timer capture functionality
 - added SFD capture interrupt support for CC2420
 - improved correctness of timer when reconfiguring CPU clock speed (MCLK)
+- improved interrupt handling in MSP430 core
 
 
 0.93
