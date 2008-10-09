@@ -511,7 +511,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       if (debugInterrupts) {
         if (source != null) {
-          System.out.println("### Interrupt flagged ON by " + source.getName());
+          System.out.println("### Interrupt flagged ON by " + source.getName() + " prio: " + interrupt);
         } else {
           System.out.println("### Interrupt flagged ON by <null>");
         }
@@ -528,10 +528,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
     } else {
       if (interruptSource[interrupt] == source) {
 	if (debugInterrupts) {
-	  System.out.println("### Interrupt flagged OFF by " + source.getName());
+	  System.out.println("### Interrupt flagged OFF by " + source.getName() + " prio: " + interrupt);
 	}
 	interruptSource[interrupt] = null;
+	reevaluateInterrupts();
       }
+    }
+  }
+
+  private void reevaluateInterrupts() {
+    interruptMax = -1;
+    for (int i = 0; i < interruptSource.length; i++) {
+      if (interruptSource[i] != null)
+        interruptMax = i;
     }
   }
 
@@ -544,14 +553,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // In the main-CPU loop
   public void handlePendingInterrupts() {
     // By default no int. left to process...
-    interruptMax = -1;
-
-    // Find next pending interrupt
-    for (int i = 0, n = 16; i < n; i++) {
-      if (interruptSource[i] != null)
-	interruptMax = i;
-    }
-
+    reevaluateInterrupts();
+    
     servicedInterrupt = -1;
     servicedInterruptUnit = null;
   }
@@ -625,10 +628,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
+
     // Flag off this interrupt - for now - as soon as RETI is
     // executed things might change!
-    interruptMax = -1;
-
+    reevaluateInterrupts();
+    
     if (servicedInterrupt == 15) {
 //      System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
       internalReset();

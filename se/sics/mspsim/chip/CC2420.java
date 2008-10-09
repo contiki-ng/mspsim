@@ -376,6 +376,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     rxfifoWritePos = 0;
   }
 
+  
+  /* Receive a byte from the radio medium
+   * @see se.sics.mspsim.chip.RFListener#receivedByte(byte)
+   */
   public void receivedByte(byte data) {
     // Received a byte from the "air"
     if(cca)
@@ -436,12 +440,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
-          if (DEBUG || true) System.out.println("CC2420: RX: Complete: packetStart: " + 
+          if (DEBUG) System.out.println("CC2420: RX: Complete: packetStart: " + 
               lastPacketStart);
           setState(STATE_RX_WAIT);
         }
       }
-    } else if (true || DEBUG) {
+    } else if (DEBUG) {
       System.out.println("*** Ignoring byte from air state: " + stateMachine);
     }
   }
@@ -543,8 +547,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         rxfifoReadPos++;
 
         // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
-        if(--rxfifoLen == 0)
+        if(--rxfifoLen == 0) {
+          if (DEBUG) System.out.println("Setting FIFO to low (buffer empty)");
           setFIFO(false);
+        }
 
         // What if wrap cursor???
         if (rxfifoReadPos >= 128) {
@@ -555,7 +561,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
         if (fifoP) {
-          System.out.println("*** FIFOP cleared at: " + rxfifoReadPos +
+          if (DEBUG) System.out.println("*** FIFOP cleared at: " + rxfifoReadPos +
               " lastPacketStartPos: " + lastPacketStart);
           setFIFOP(false);
         }
@@ -884,8 +890,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void setSFD(boolean sfd) {
-    if (DEBUG) System.out.println("SFD: " + sfd);
-    sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
+    if( (registers[REG_IOCFG0] & SFD_POLARITY) == SFD_POLARITY)
+      sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
+    else 
+      sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
+    
+    if (DEBUG) System.out.println("SFD: " + sfd + "  " + cpu.cycles);
   }
 
   private void setCCAPin(boolean cca) {
