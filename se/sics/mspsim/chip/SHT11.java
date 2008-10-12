@@ -129,7 +129,7 @@ public class SHT11 extends Chip {
       crc = crc8Add(crc, readData);
       crc = crc8Add(crc, output[0]);
       crc = crc8Add(crc, output[1]);
-      System.out.println("CRC: " + crc + " rcrc: " + rev8bits(crc));
+      if (DEBUG) System.out.println("CRC: " + crc + " rcrc: " + rev8bits(crc));
       output[2] = rev8bits(crc);
       
       /* finished measuring - signal with LOW! */
@@ -178,7 +178,7 @@ public class SHT11 extends Chip {
         readData = (readData << 1) | (dataHi ? 1 : 0);
         bitCnt++;
         if (bitCnt == 8) {
-          System.out.println("SHT11: read: " + Utils.hex8(readData));
+          if (DEBUG) System.out.println("SHT11: read: " + Utils.hex8(readData));
           bitCnt = 0;
           state = ACK_CMD;
           sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
