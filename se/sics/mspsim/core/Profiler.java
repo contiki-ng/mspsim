@@ -57,5 +57,8 @@ public interface Profiler {
   public void printProfile(PrintStream out, String functionNameRegexp);
 
   public void printStackTrace(PrintStream out);
+  
+  /* function call logging */
+  public void setLogger(PrintStream out);
 
 }

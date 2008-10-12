@@ -51,7 +51,7 @@ public class ProfilerCommands implements CommandBundle {
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     if (cpu != null) {
-      ch.registerCommand("profiler", new BasicCommand("show profile information",
+      ch.registerCommand("profile", new BasicCommand("show profile information",
           "[-clear] [regexp]") {
 
         @Override
@@ -92,6 +92,27 @@ public class ProfilerCommands implements CommandBundle {
           return 0;
         }
 
+      });
+
+      ch.registerCommand("printcalls", new BasicAsyncCommand("print functioncalls", "") {
+        @Override
+        public int executeCommand(CommandContext context) {
+          Profiler profiler = cpu.getProfiler();
+          if (profiler == null) {
+            context.err.println("No profiler found.");
+            return 1;
+          }
+          profiler.setLogger(context.out);
+          return 0;
+        }
+        @Override
+        public void stopCommand(CommandContext context) {
+          Profiler profiler = cpu.getProfiler();
+          if (profiler == null) {
+            context.err.println("No profiler found.");
+          }
+          profiler.setLogger(null);
+        }
       });
     }
   }

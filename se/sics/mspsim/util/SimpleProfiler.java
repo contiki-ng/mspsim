@@ -54,6 +54,7 @@ public class SimpleProfiler implements Profiler {
   private CallEntry[] callStack;
   private int cSP = 0;
   private MSP430Core cpu;
+  private PrintStream logger;
 
   public SimpleProfiler() {
     profileData = new Hashtable<MapEntry, CallEntry>();
@@ -69,18 +70,17 @@ public class SimpleProfiler implements Profiler {
       callStack[cSP] = new CallEntry();
     }
 
-//    String s = "";
-//    for (int i = 0; i < cSP; i++) {
-//      s += "  ";
-//    }
-//    System.out.println(s + "Call to: " + entry);
-    
+    if (logger != null) {
+      printSpace(logger, cSP * 2);
+      logger.println("Call to: " + entry);
+    }
     
     callStack[cSP].function = entry;
     callStack[cSP].calls = 0;
     callStack[cSP++].cycles = cycles;
   }
 
+  
   public void profileReturn(long cycles) {
     MapEntry fkn = callStack[--cSP].function;
 //     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
@@ -175,5 +175,9 @@ public class SimpleProfiler implements Profiler {
       if (diff < 0) return -1;
       return 0;
     }
+  }
+
+  public void setLogger(PrintStream out) {
+    logger = out;
   }
 }
