@@ -11,6 +11,7 @@ Changes:
 - added SFD capture interrupt support for CC2420
 - improved correctness of timer when reconfiguring CPU clock speed (MCLK)
 - improved interrupt handling in MSP430 core
+- added CLI command printcalls that prints all function calls
 
 
 0.93
