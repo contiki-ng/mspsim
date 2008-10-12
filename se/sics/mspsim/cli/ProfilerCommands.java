@@ -94,7 +94,7 @@ public class ProfilerCommands implements CommandBundle {
 
       });
 
-      ch.registerCommand("printcalls", new BasicAsyncCommand("print functioncalls", "") {
+      ch.registerCommand("printcalls", new BasicAsyncCommand("print function calls", "") {
         @Override
         public int executeCommand(CommandContext context) {
           Profiler profiler = cpu.getProfiler();
@@ -108,10 +108,9 @@ public class ProfilerCommands implements CommandBundle {
         @Override
         public void stopCommand(CommandContext context) {
           Profiler profiler = cpu.getProfiler();
-          if (profiler == null) {
-            context.err.println("No profiler found.");
+          if (profiler != null) {
+            profiler.setLogger(null);
           }
-          profiler.setLogger(null);
         }
       });
     }
