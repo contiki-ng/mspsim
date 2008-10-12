@@ -12,7 +12,7 @@ Changes:
 - improved correctness of timer when reconfiguring CPU clock speed (MCLK)
 - improved interrupt handling in MSP430 core
 - added CLI command printcalls that prints all function calls
-
+- fixed buffering of serial input in GUI to avoid freezing AWT. 
 
 0.93
 Changes:

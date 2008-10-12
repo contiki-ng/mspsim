@@ -206,14 +206,14 @@ public class SHT11 extends Chip {
         if (bitCnt == 8) {
           // All bits are written!
           state = ACK_WRITE;
-          System.out.println("Wrote byte: " + output[writePos]);
+          if (DEBUG) System.out.println("Wrote byte: " + output[writePos]);
           writePos++;
         }
       }
       break;
     case ACK_WRITE:
       if (c == 'C' && dataHi) {
-        System.out.println("*** NO ACK???");
+        if (DEBUG) System.out.println("*** NO ACK???");
         reset(0);
       }
       break;
@@ -233,7 +233,7 @@ public class SHT11 extends Chip {
       break;
     case ACK_WRITE:
       if (c == 'D') { // if D goes back high - then we are done here!!!
-        System.out.println("ACK for byte complete...");
+        if (DEBUG) System.out.println("ACK for byte complete...");
         if (writePos < writeLen) {
           state = WRITE_BYTE;
           writeData = output[writePos];
