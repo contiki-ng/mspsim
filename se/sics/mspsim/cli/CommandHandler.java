@@ -28,6 +28,13 @@ public class CommandHandler implements ActiveComponent, LineListener {
     registerCommands();
   }
 
+  private MapTable getMapTable() {
+    if (mapTable == null && registry != null) {
+      mapTable = (MapTable) registry.getComponent(MapTable.class);
+    }
+    return mapTable;
+  }
+
   // Add it to the command table (overwriting anything there)
   public void registerCommand(String cmd, Command command) {
     commands.put(cmd, command);
@@ -60,7 +67,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
         if (i == 0 && cmd instanceof AsyncCommand) {
           pid = ++pidCounter;
         }
-        commands[i] = new CommandContext(this, mapTable, commandLine, args, pid, cmd);
+        commands[i] = new CommandContext(this, getMapTable(), commandLine, args, pid, cmd);
         if (i > 0) {
           PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
           commands[i - 1].setOutput(po, err);
@@ -156,8 +163,6 @@ public class CommandHandler implements ActiveComponent, LineListener {
   }
 
   public void start() {
-    mapTable = (MapTable) registry.getComponent(MapTable.class);
-
     Object[] commandBundles = registry.getAllComponents(CommandBundle.class);
     if (commandBundles != null) {
       for (int i = 0, n = commandBundles.length; i < n; i++) {
