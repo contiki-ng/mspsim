@@ -41,7 +41,6 @@
 
 package se.sics.mspsim.platform.sky;
 import java.io.IOException;
-
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.M25P80;
@@ -55,7 +54,6 @@ import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.NetworkConnection;
 import se.sics.mspsim.util.OperatingModeStatistics;
-import se.sics.mspsim.util.Utils;
 
 /**
  * Emulation of Sky Mote
@@ -83,8 +81,8 @@ public class SkyNode extends MoteIVNode {
 
   public void setFlash(M25P80 flash) {
     this.flash = flash;
+    registry.registerComponent("xmem", flash);
   }
-
 
   // USART Listener
   public void dataReceived(USART source, int data) {
@@ -101,8 +99,8 @@ public class SkyNode extends MoteIVNode {
     return "Tmote Sky";
   }
 
-  public void setupNodePorts(boolean loadFlash) {
-    super.setupNodePorts(loadFlash);
+  public void setupNodePorts() {
+    super.setupNodePorts();
 
     IOUnit usart0 = cpu.getIOUnit("USART 0");
     if (usart0 instanceof USART) {
@@ -110,12 +108,12 @@ public class SkyNode extends MoteIVNode {
       radio.setCCAPort(port1, CC2420_CCA);
       radio.setFIFOPPort(port1, CC2420_FIFOP);
       radio.setFIFOPort(port1, CC2420_FIFO);
-      if (loadFlash) {
-        flash = new FileM25P80(cpu, flashFile);
+      if (flashFile != null) {
+        setFlash(new FileM25P80(cpu, flashFile));
       }
       ((USART) usart0).setUSARTListener(this);
       port4 = (IOPort) cpu.getIOUnit("Port 4");
-      if (port4 != null && port4 instanceof IOPort) {
+      if (port4 != null) {
         port4.setPortListener(this);
         radio.setSFDPort(port4, CC2420_SFD);
       }
@@ -128,44 +126,49 @@ public class SkyNode extends MoteIVNode {
     String fileName = config.getProperty("flashfile");
     if (fileName == null) {
       fileName = firmwareFile;
-      int ix = fileName.lastIndexOf('.');
-      if (ix > 0) {
-        fileName = fileName.substring(0, ix);
+      if (fileName != null) {
+        int ix = fileName.lastIndexOf('.');
+        if (ix > 0) {
+          fileName = fileName.substring(0, ix);
+        }
+        fileName = fileName + ".flash";
       }
-      fileName = fileName + ".flash";
     }
-    System.out.println("Using flash file: " + fileName);
+    System.out.println("Using flash file: " + (fileName == null ? "no file" : fileName));
 
     this.flashFile = fileName;
 
-    setupNodePorts(true);
+    setupNodePorts();
 
     stats.addMonitor(this);
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
 
-    network = new NetworkConnection();
-    final RadioWrapper radioWrapper = new RadioWrapper(radio);
-    radioWrapper.setPacketListener(new PacketListener() {
-      public void transmissionStarted() {
-      }
-      public void transmissionEnded(byte[] receivedData) {
-//        System.out.println("**** Sending data len = " + receivedData.length);
-//        for (int i = 0; i < receivedData.length; i++) {
-//          System.out.println("Byte: " + Utils.hex8(receivedData[i]));
-//        }
-        network.dataSent(receivedData);
-      }
-    });
-    
-    network.addPacketListener(new PacketListener() {
-      public void transmissionStarted() {
-      }
-      public void transmissionEnded(byte[] receivedData) {
-//        System.out.println("**** Receiveing data = " + receivedData.length);
-        radioWrapper.packetReceived(receivedData);
-      }
-    });
+    if (config.getPropertyAsBoolean("enableNetwork", false)) {
+      network = new NetworkConnection();
+      final RadioWrapper radioWrapper = new RadioWrapper(radio);
+      radioWrapper.setPacketListener(new PacketListener() {
+        public void transmissionStarted() {
+        }
+        public void transmissionEnded(byte[] receivedData) {
+          //        System.out.println("**** Sending data len = " + receivedData.length);
+          //        for (int i = 0; i < receivedData.length; i++) {
+          //          System.out.println("Byte: " + Utils.hex8(receivedData[i]));
+          //        }
+          network.dataSent(receivedData);
+        }
+      });
+
+      network.addPacketListener(new PacketListener() {
+        public void transmissionStarted() {
+        }
+        public void transmissionEnded(byte[] receivedData) {
+          //        System.out.println("**** Receiving data = " + receivedData.length);
+          radioWrapper.packetReceived(receivedData);
+        }
+      });
+    }
+
     // UART0 TXreg = 0x77?
 //    cpu.setBreakPoint(0x77, new CPUMonitor() {
 //      public void cpuAction(int type, int adr, int data) {
@@ -174,7 +177,7 @@ public class SkyNode extends MoteIVNode {
 //      }
 //    });
 
-    if (!config.getPropertyAsBoolean("nogui", false)) {
+    if (!config.getPropertyAsBoolean("nogui", true)) {
       gui = new SkyGui(this);
 
       // A HACK for some "graphs"!!!
@@ -185,15 +188,16 @@ public class SkyNode extends MoteIVNode {
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
       dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
     }
-    registry.registerComponent("xmem", flash);
   }
-
 
   public static void main(String[] args) throws IOException {
     SkyNode node = new SkyNode();
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
-    node.setup(config);
+    if (config.getProperty("nogui") == null) {
+      config.setProperty("nogui", "false");
+    }
+    node.setupArgs(config);
     node.start();
   }
 

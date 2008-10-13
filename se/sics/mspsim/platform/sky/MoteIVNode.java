@@ -4,7 +4,6 @@ import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
-import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.platform.GenericNode;
@@ -63,10 +62,6 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     cpu.setDebug(debug);
   }
 
-  public MSP430 getCPU() {
-    return cpu;
-  }
-  
   public void setButton(boolean hi) {
     port2.setPinState(BUTTON_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
   }
@@ -79,9 +74,9 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     return elf;
   }
 
-  public void setupNodePorts(boolean loadFlash) {
+  public void setupNodePorts() {
     sht11 = new SHT11(cpu);
-    
+
     IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
       port5 = (IOPort) unit;

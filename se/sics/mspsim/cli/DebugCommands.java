@@ -323,7 +323,7 @@ public class DebugCommands implements CommandBundle {
           public int executeCommand(final CommandContext context) {
             Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
             if (xmem == null) {
-              context.err.print("No xmem component registered");
+              context.err.println("No xmem component registered");
               return 0;
             }
             int start = context.getArgumentAsAddress(0);
@@ -359,7 +359,7 @@ public class DebugCommands implements CommandBundle {
           public int executeCommand(final CommandContext context) {
             Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
             if (xmem == null) {
-              context.err.print("No xmem component registered");
+              context.err.println("No xmem component registered");
               return 0;
             }
             int adr = context.getArgumentAsAddress(0);

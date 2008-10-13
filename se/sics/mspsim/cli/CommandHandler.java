@@ -1,41 +1,29 @@
 package se.sics.mspsim.cli;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-import java.util.Map;
-
 import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
 
-public class CommandHandler implements ActiveComponent, Runnable {
+public class CommandHandler implements ActiveComponent, LineListener {
 
   private String scriptDirectory = "scripts";
 
   private Hashtable<String, Command> commands = new Hashtable<String, Command>();
-  private boolean exit;
-  private boolean workaround = false;
 
-  private ArrayList<CommandContext[]> currentAsyncCommands = new ArrayList<CommandContext[]>();
-  private BufferedReader inReader;
-  private PrintStream out;
-  private PrintStream err;
+  protected final PrintStream out;
+  protected final PrintStream err;
   private MapTable mapTable;
   private ComponentRegistry registry;
+  private ArrayList<CommandContext[]> currentAsyncCommands = new ArrayList<CommandContext[]>();
   private int pidCounter = 0;
 
-  public CommandHandler() {
-    exit = false;
-    inReader = new BufferedReader(new InputStreamReader(System.in));
-    out = System.out;
-    err = System.err;
+  public CommandHandler(PrintStream out, PrintStream err) {
+    this.out = out;
+    this.err = err;
 
     registerCommands();
   }
@@ -43,55 +31,6 @@ public class CommandHandler implements ActiveComponent, Runnable {
   // Add it to the command table (overwriting anything there)
   public void registerCommand(String cmd, Command command) {
     commands.put(cmd, command);
-  }
-
-
-  private String readLine(BufferedReader inReader2) throws IOException {
-    if (workaround) {
-      StringBuilder str = new StringBuilder();
-      while(true) {
-        if (inReader2.ready()) {
-          int c = inReader2.read();
-          if (c == '\n') {
-            return str.toString();
-          }
-          if (c != '\r') {
-            str.append((char)c);
-          }
-        } else {
-          try {
-            Thread.sleep(500);
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException();
-          }
-        }
-      }
-    } else {
-      return inReader2.readLine();
-    }
-  }
-
-  public void run() {
-    String lastLine = null;
-    while(!exit) {
-      try {
-        out.print(">");
-        out.flush();
-        String line = readLine(inReader);//.readLine();
-        // Simple execution of last called command line when not running from terminal with history support
-        if (((char) 27 + "[A").equals(line)) {
-          line = lastLine;          
-        }
-        if (line != null && line.length() > 0) {
-          lastLine = line;
-          executeCommand(line, null);
-        }
-      } catch (IOException e) {
-        e.printStackTrace(err);
-        err.println("Command line tool exiting...");
-        exit = true;
-      }
-    }
   }
 
   public int executeCommand(String commandLine, CommandContext context) {
@@ -216,10 +155,6 @@ public class CommandHandler implements ActiveComponent, Runnable {
     this.registry = registry;
   }
 
-  public void setWorkaround(boolean w) {
-    workaround = w;
-  }
-
   public void start() {
     mapTable = (MapTable) registry.getComponent(MapTable.class);
 
@@ -229,7 +164,6 @@ public class CommandHandler implements ActiveComponent, Runnable {
         ((CommandBundle) commandBundles[i]).setupCommands(registry, this);
       }
     }
-    new Thread(this, "cmd").start();
   }
 
   private void registerCommands() {
@@ -288,12 +222,6 @@ public class CommandHandler implements ActiveComponent, Runnable {
         return 1;
       }
     });
-    registerCommand("workaround", new BasicCommand("activate workaround for Java console input bug", "") {
-      public int executeCommand(CommandContext context) {
-        workaround = true;
-        return 0;
-      }     
-    });
 
     registerCommand("ps", new BasicCommand("list current executing commands", "") {
       public int executeCommand(CommandContext context) {
@@ -348,4 +276,10 @@ public class CommandHandler implements ActiveComponent, Runnable {
     }
     return false;
   }
+
+  @Override
+  public void lineRead(String line) {
+    executeCommand(line, null);
+  }
+
 }

@@ -37,13 +37,16 @@
  */
 
 package se.sics.mspsim.platform;
-
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.URL;
 
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.cli.MiscCommands;
 import se.sics.mspsim.cli.ProfilerCommands;
+import se.sics.mspsim.cli.StreamCommandHandler;
 import se.sics.mspsim.cli.WindowCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
@@ -68,53 +71,45 @@ public abstract class GenericNode extends Chip implements Runnable {
   protected String firmwareFile = null;
   protected ELF elf;
   protected OperatingModeStatistics stats;
-  
+
+  public ComponentRegistry getRegistry() {
+    return registry;
+  }
+
+  public MSP430 getCPU() {
+    return cpu;
+  }
+
   public abstract void setupNode();
-  
-  public void setup(ArgumentManager config) throws IOException {
+
+  public void setCommandHandler(CommandHandler handler) {
+    registry.registerComponent("commandHandler", handler);
+  }
+
+  public void setupArgs(ArgumentManager config) throws IOException {
     String[] args = config.getArguments();
     if (args.length == 0) {
       System.out.println("Usage: " + getClass().getName() + " <firmware>");
       System.exit(1);
     }
+    firmwareFile = args[0];
 
-    this.config = config;
+    setup(config);
 
-    CommandHandler ch = new CommandHandler();
-    stats = new OperatingModeStatistics(cpu);
-
-    registry.registerComponent("cpu", cpu);
-    registry.registerComponent("commandHandler", ch);
-    registry.registerComponent("debugcmd", new DebugCommands());
-    registry.registerComponent("misccmd", new MiscCommands());
-    registry.registerComponent("statcmd", new StatCommands(cpu, stats));
-    registry.registerComponent("wincmd", new WindowCommands());
-    registry.registerComponent("profilecmd", new ProfilerCommands());
-    registry.registerComponent("node", this);
-    registry.registerComponent("config", config);
-
-    // Monitor execution
-    cpu.setMonitorExec(true);
-    //cpu.setDebug(true);
     int[] memory = cpu.getMemory();
-
     if (args[0].endsWith("ihex")) {
       // IHEX Reading
       IHexReader reader = new IHexReader();
-      reader.readFile(memory, firmwareFile = args[0]);
+      reader.readFile(memory, firmwareFile);
     } else {
-      loadFirmware(args[0], memory);
+      loadFirmware(firmwareFile, memory);
     }
-      
-    cpu.reset();
-    setupNode();
-
     if (args.length > 1) {
       MapTable map = new MapTable(args[1]);
       cpu.getDisAsm().setMap(map);
       registry.registerComponent("mapTable", map);
     }
-    
+
     if (!config.getPropertyAsBoolean("nogui", false)) {
       // Setup control and other UI components
       ControlUI control = new ControlUI(registry);
@@ -123,11 +118,38 @@ public abstract class GenericNode extends Chip implements Runnable {
       control.setSourceViewer(sourceViewer);
     }
 
-    registry.start();
-    
     System.out.println("-----------------------------------------------");
     System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
     System.out.println("-----------------------------------------------");
+  }
+
+  public void setup(ConfigManager config) throws IOException {
+    this.config = config;
+    registry.registerComponent("cpu", cpu);
+    registry.registerComponent("node", this);
+    registry.registerComponent("config", config);
+
+    CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
+    if (ch == null) {
+      ch = new StreamCommandHandler(System.in, System.out, System.err);
+      registry.registerComponent("commandHandler", ch);
+    }
+    stats = new OperatingModeStatistics(cpu);
+    registry.registerComponent("debugcmd", new DebugCommands());
+    registry.registerComponent("misccmd", new MiscCommands());
+    registry.registerComponent("statcmd", new StatCommands(cpu, stats));
+    registry.registerComponent("wincmd", new WindowCommands());
+    registry.registerComponent("profilecmd", new ProfilerCommands());
+
+    // Monitor execution
+    cpu.setMonitorExec(true);
+    //cpu.setDebug(true);
+      
+    setupNode();
+
+    registry.start();
+
+    cpu.reset();
   }
   
  
@@ -153,23 +175,42 @@ public abstract class GenericNode extends Chip implements Runnable {
       cpu.step();
     }
   }
-  
-  public void loadFirmware(String name, int[] memory) throws IOException {
+
+  public ELF loadFirmware(URL url, int[] memory) throws IOException {
+    DataInputStream inputStream = new DataInputStream(url.openStream());
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    byte[] firmwareData = new byte[2048];
+    int read;
+    while ((read = inputStream.read(firmwareData)) != -1) {
+      byteStream.write(firmwareData, 0, read);
+    }
+    inputStream.close();
+    ELF elf = new ELF(byteStream.toByteArray());
+    elf.readAll();
+    return loadFirmware(elf, memory);
+  }
+
+  public ELF loadFirmware(String name, int[] memory) throws IOException {
+    return loadFirmware(ELF.readELF(firmwareFile = name), memory);
+  }
+
+  public ELF loadFirmware(ELF elf, int[] memory) {
     stop();
-    elf = ELF.readELF(firmwareFile = name);
+    this.elf = elf;
     elf.loadPrograms(memory);
     MapTable map = elf.getMap();
     cpu.getDisAsm().setMap(map);
     cpu.setMap(map);
     registry.registerComponent("elf", elf);
     registry.registerComponent("mapTable", map);
+    return elf;
   }
-  
+
   // A step that will break out of breakpoints!
   public void step(int nr) {
     if (!cpu.isRunning()) {
       cpu.stepInstructions(nr);
     }
   }
-  
+
 }

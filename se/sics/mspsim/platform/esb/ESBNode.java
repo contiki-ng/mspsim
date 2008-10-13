@@ -104,12 +104,6 @@ public class ESBNode extends GenericNode implements PortListener {
     cpu.setDebug(debug);
   }
 
-
-  public MSP430 getCPU() {
-    return cpu;
-  }
-
-
   public void portWrite(IOPort source, int data) {
     //    System.out.println("ESB: Writing to port: " + data);
     if (source == port2) {
@@ -171,7 +165,7 @@ public class ESBNode extends GenericNode implements PortListener {
     stats.addMonitor(radio);
     stats.addMonitor(cpu);
     
-    if (!config.getPropertyAsBoolean("nogui", false)) {
+    if (!config.getPropertyAsBoolean("nogui", true)) {
       gui = new ESBGui(this);
 
       // A HACK for some "graphs"!!!
@@ -195,7 +189,10 @@ public class ESBNode extends GenericNode implements PortListener {
     ESBNode node = new ESBNode();
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
-    node.setup(config);
+    if (config.getProperty("nogui") == null) {
+      config.setProperty("nogui", "false");
+    }
+    node.setupArgs(config);
     node.start();
   }
 
