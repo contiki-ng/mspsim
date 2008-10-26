@@ -755,8 +755,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setState(STATE_TX_FRAME);
     } else {
       if (listener != null) {
-        listener.receivedByte(SHR[shrPos++]);        
+        listener.receivedByte(SHR[shrPos]);        
       }
+      shrPos++;
       cpu.scheduleTimeEventMillis(shrEvent, SYMBOL_PERIOD * 2);
     }
   }
@@ -764,8 +765,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private void txNext() {
     if(txfifoPos <= memory[RAM_TXFIFO]) {
       if (listener != null) {
-        listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos++] & 0xFF));
+        listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos] & 0xFF));
       }
+      txfifoPos++;
       // Two symbol periods to send a byte...
       long time = cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
 //      System.out.println("Scheduling 2 SYMB at: " + time + " getTime(now): " + cpu.getTime());

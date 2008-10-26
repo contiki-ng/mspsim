@@ -90,7 +90,7 @@ public class SkyNode extends MoteIVNode {
     flash.dataReceived(source, data);
     /* if nothing selected, just write back a random byte to these devs */
     if (!radio.getChipSelect() && !flash.getChipSelect()) {
-      source.byteReceived(0);
+//      source.byteReceived(0);
     }
   }
 
