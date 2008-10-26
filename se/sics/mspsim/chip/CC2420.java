@@ -172,6 +172,24 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   };
 
   // State Machine - Datasheet Figure 25 page 44
+  public enum RadioState {
+     VREG_OFF, // -1;
+     POWER_DOWN, // 0;
+     IDLE, // 1;
+     RX_CALIBRATE, // 2;
+     RX_SFD_SEARCH, // 3;
+     RX_WAIT, // 14;
+     RX_FRAME, // 16;
+     RX_OVERFLOW, // 17;
+     TX_CALIBRATE, // 32;
+     TX_PREAMBLE, // 34;
+     TX_FRAME, // 37;
+     TX_ACK_CALIBRATE, // 48;
+     TX_ACK_PREABLE, // 49;
+     TX_ACK, // 52;
+     TX_UNDERFLOW// 56;
+  };
+  
   public static final int STATE_VREG_OFF = -1;
   public static final int STATE_POWER_DOWN = 0;
   public static final int STATE_IDLE = 1;
@@ -198,7 +216,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   public static final int DESTINATION_ADDRESS_MODE = 0x30;
   public static final int SOURCE_ADDRESS_MODE = 0x3;
   
-  private int stateMachine = STATE_VREG_OFF;
+  private RadioState stateMachine = RadioState.VREG_OFF;
 
   // 802.15.4 symbol period in ms
   public static final double SYMBOL_PERIOD = 0.016; // 16 us
@@ -269,7 +287,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     public void execute(long t) {
       status |= STATUS_XOSC16M_STABLE;
       if(DEBUG) System.out.println("CC2420: Oscillator Stable Event.");
-      setState(STATE_IDLE);
+      setState(RadioState.IDLE);
       if( (registers[REG_IOCFG1] & CCAMUX) == CCA_XOSC16M_STABLE) {
         setCCA(true);
       } else {
@@ -284,7 +302,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           cpu.cycles + " " + getTime());
       setCCA(false);
       on = true;
-      setState(STATE_POWER_DOWN);
+      setState(RadioState.POWER_DOWN);
     }
   };
 
@@ -303,52 +321,52 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private TimeEvent symbolEvent = new TimeEvent(0) {
     public void execute(long t) {
       switch(stateMachine) {
-      case STATE_RX_CALIBRATE:
+      case RX_CALIBRATE:
         setCCA(true);
-        setState(STATE_RX_SFD_SEARCH);
+        setState(RadioState.RX_SFD_SEARCH);
         break;
 
-      case STATE_TX_CALIBRATE:
-        setState(STATE_TX_PREAMBLE);
+      case TX_CALIBRATE:
+        setState(RadioState.TX_PREAMBLE);
         break;
 
-      case STATE_RX_WAIT:
+      case RX_WAIT:
         setCCA(true);
-        setState(STATE_RX_SFD_SEARCH);
+        setState(RadioState.RX_SFD_SEARCH);
         break;
       }
     }
   };
 
-  private boolean setState(int state) {
+  private boolean setState(RadioState state) {
     //if(DEBUG) System.out.println("CC2420: State Transition from " + stateMachine + " to " + state);
     stateMachine = state;
 
     switch(stateMachine) {
 
-    case STATE_VREG_OFF:
+    case VREG_OFF:
       if (DEBUG) System.out.println("CC2420: VREG Off.");
       setMode(MODE_POWER_OFF);
       break;
 
-    case STATE_POWER_DOWN:
+    case POWER_DOWN:
       rxfifoReadPos = 0;
       rxfifoWritePos = 0;
       setMode(MODE_POWER_OFF);
       break;
 
-    case STATE_RX_CALIBRATE:
+    case RX_CALIBRATE:
       setSymbolEvent(12);
       setMode(MODE_RX_ON);
       break;
 
-    case STATE_RX_SFD_SEARCH:
+    case RX_SFD_SEARCH:
       zero_symbols = 0;
       // RSSI valid here?
       status |= STATUS_RSSI_VALID;
       break;
 
-    case STATE_TX_CALIBRATE:
+    case TX_CALIBRATE:
       /* 12 symbols calibration, and one byte's wait since we deliver immediately
        * to listener when after calibration?
        */
@@ -356,7 +374,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setMode(MODE_TXRX_ON);
       break;
 
-    case STATE_TX_PREAMBLE:
+    case TX_PREAMBLE:
       shrPos = 0;
       SHR[0] = 0;
       SHR[1] = 0;
@@ -366,16 +384,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       shrNext();
       break;
 
-    case STATE_TX_FRAME:
+    case TX_FRAME:
       txfifoPos = 0;
       txNext();
       break;
 
-    case STATE_RX_WAIT:
+    case RX_WAIT:
       setSymbolEvent(8);
       break;
       
-    case STATE_IDLE:
+    case IDLE:
       status &= ~STATUS_RSSI_VALID;
       setMode(MODE_TXRX_OFF);
       break;
@@ -408,11 +426,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setCCA(false);
 
     // Above RX_WAIT => RX_SFD_SEARCH after 8 symbols should make this work without this???
-//    if (stateMachine == STATE_RX_WAIT) {
-//      setState(STATE_RX_SFD_SEARCH);
+//    if (stateMachine == RX_WAIT) {
+//      setState(RX_SFD_SEARCH);
 //    }
     
-    if(stateMachine == STATE_RX_SFD_SEARCH) {
+    if(stateMachine == RadioState.RX_SFD_SEARCH) {
       // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
       if(data == 0) {
         // Count zero bytes
@@ -427,13 +445,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           setSFD(true);
           if (DEBUG) System.out.println("CC2420: RX: Preamble/SFD Synchronized.");
           rxread = 0;
-          setState(STATE_RX_FRAME);
+          setState(RadioState.RX_FRAME);
         } else {
           zero_symbols = 0;
         }
       }
 
-    } else if(stateMachine == STATE_RX_FRAME) {
+    } else if(stateMachine == RadioState.RX_FRAME) {
       if(rxfifoLen == 128) {
         setRxOverflow();
       }else{		  
@@ -464,7 +482,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
           if (DEBUG) System.out.println("CC2420: RX: Complete: packetStart: " + 
               lastPacketStart);
-          setState(STATE_RX_WAIT);
+          setState(RadioState.RX_WAIT);
         }
       }
     } else if (DEBUG) {
@@ -480,7 +498,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           " CS: " + chipSelect + " SPI state: " + state + " StateMachine: " + stateMachine);
     }
 
-    if ( (stateMachine != STATE_VREG_OFF) && chipSelect) {
+    if ( (stateMachine != RadioState.VREG_OFF) && chipSelect) {
 
       switch(state) {
       case WAITING:
@@ -635,8 +653,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       System.out.println("CC2420: Strobe on: " + Utils.hex8(data) + " => " + Reg.values()[data]);
     }
 
-    if( (stateMachine == STATE_POWER_DOWN) && (data != REG_SXOSCON) ) {
-      if (DEBUG) System.out.println("CC2420: Got command strobe: " + data + " in STATE_POWER_DOWN.  Ignoring.");
+    if( (stateMachine == RadioState.POWER_DOWN) && (data != REG_SXOSCON) ) {
+      if (DEBUG) System.out.println("CC2420: Got command strobe: " + data + " in POWER_DOWN.  Ignoring.");
       return;
     }
 
@@ -645,8 +663,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if (DEBUG) System.out.println("CC2420: SNOP => " + Utils.hex8(status) + " at " + cpu.cycles);
       break;
     case REG_SRXON:
-      if(stateMachine == STATE_IDLE) {
-        setState(STATE_RX_CALIBRATE);
+      if(stateMachine == RadioState.IDLE) {
+        setState(RadioState.RX_CALIBRATE);
         //updateActiveFrequency();
         if (DEBUG) {
             System.out.println("CC2420: Strobe RX-ON!!!");
@@ -660,18 +678,18 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if (DEBUG) {
         System.out.println("CC2420: Strobe RXTX-OFF!!! at " + cpu.cycles);
       }
-      setState(STATE_IDLE);
+      setState(RadioState.IDLE);
       break;
     case REG_STXON:
       // State transition valid from IDLE state or all RX states
-      if( (stateMachine == STATE_IDLE) || 
-          (stateMachine == STATE_RX_CALIBRATE) ||
-          (stateMachine == STATE_RX_SFD_SEARCH) ||
-          (stateMachine == STATE_RX_FRAME) ||
-          (stateMachine == STATE_RX_OVERFLOW) ||
-          (stateMachine == STATE_RX_WAIT)) {
+      if( (stateMachine == RadioState.IDLE) || 
+          (stateMachine == RadioState.RX_CALIBRATE) ||
+          (stateMachine == RadioState.RX_SFD_SEARCH) ||
+          (stateMachine == RadioState.RX_FRAME) ||
+          (stateMachine == RadioState.RX_OVERFLOW) ||
+          (stateMachine == RadioState.RX_WAIT)) {
         status |= STATUS_TX_ACTIVE;
-        setState(STATE_TX_CALIBRATE);
+        setState(RadioState.TX_CALIBRATE);
         // Starting up TX subsystem - indicate that we are in TX mode!
         if (DEBUG) System.out.println("CC2420: Strobe STXON - transmit on! at " + cpu.cycles);
       }
@@ -679,14 +697,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     case REG_STXONCCA:
       // Only valid from all RX states,
       // since CCA requires ??(look this up) receive symbol periods to be valid
-      if( (stateMachine == STATE_RX_CALIBRATE) ||
-          (stateMachine == STATE_RX_SFD_SEARCH) ||
-          (stateMachine == STATE_RX_FRAME) ||
-          (stateMachine == STATE_RX_OVERFLOW) ||
-          (stateMachine == STATE_RX_WAIT)) {
+      if( (stateMachine == RadioState.RX_CALIBRATE) ||
+          (stateMachine == RadioState.RX_SFD_SEARCH) ||
+          (stateMachine == RadioState.RX_FRAME) ||
+          (stateMachine == RadioState.RX_OVERFLOW) ||
+          (stateMachine == RadioState.RX_WAIT)) {
         if(cca) {
           status |= STATUS_TX_ACTIVE;
-          setState(STATE_TX_CALIBRATE);
+          setState(RadioState.TX_CALIBRATE);
           if (DEBUG) System.out.println("CC2420: Strobe STXONCCA - transmit on! at " + cpu.cycles);
         }else{
           if (DEBUG) System.out.println("CC2420: STXONCCA Ignored, CCA false");
@@ -776,7 +794,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if(shrPos == 5) {
       // Set SFD high
       setSFD(true);
-      setState(STATE_TX_FRAME);
+      setState(RadioState.TX_FRAME);
     } else {
       if (listener != null) {
         listener.receivedByte(SHR[shrPos]);        
@@ -799,7 +817,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if (DEBUG) System.out.println("Completed Transmission.");
       status &= ~STATUS_TX_ACTIVE;
       setSFD(false);
-      setState(STATE_RX_CALIBRATE);
+      setState(RadioState.RX_CALIBRATE);
       txfifoFlush = true;
     }
   }
@@ -817,7 +835,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   private void stopOscillator() {
     status &= ~STATUS_XOSC16M_STABLE;
-    setState(STATE_POWER_DOWN);
+    setState(RadioState.POWER_DOWN);
     if (DEBUG) System.out.println("CC2420: Oscillator Off.");
     // Reset state
     setFIFOP(false);
@@ -837,7 +855,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
          " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     } else {
       this.on = on;
-      setState(STATE_VREG_OFF);
+      setState(RadioState.VREG_OFF);
     }
     //this.on = on;
   }
@@ -965,6 +983,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) +
     "\n CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
+    "\n Radio State: " + stateMachine +
+    "\n SPI State: " + state +
     "\n";
   }
 
