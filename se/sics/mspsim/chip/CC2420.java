@@ -186,16 +186,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   // a flag indicating read/write
   public static final int FLAG_RAM_READ = 0x20;
 
+  public enum SpiState { WAITING, WRITE_REGISTER, READ_REGISTER, RAM_ACCESS,
+    READ_RXFIFO, WRITE_TXFIFO};
 
-  public static final int WAITING = 0;
-  public static final int WRITE_REGISTER = 1;
-  public static final int READ_REGISTER = 2;
-  public static final int RAM_ACCESS = 3;
-
-  public static final int READ_RXFIFO = 4;
-  public static final int WRITE_TXFIFO = 5;
-
-  private int state = WAITING;
+  private SpiState state = SpiState.WAITING;
   private int pos;
   private int address;
   private int shrPos;
@@ -463,12 +457,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       switch(state) {
       case WAITING:
         if ((data & FLAG_READ) != 0) {
-          state = READ_REGISTER;
+          state = SpiState.READ_REGISTER;
         } else {
-          state = WRITE_REGISTER;
+          state = SpiState.WRITE_REGISTER;
         }
         if ((data & FLAG_RAM) != 0) {
-          state = RAM_ACCESS;
+          state = SpiState.RAM_ACCESS;
           address = data & 0x7f;
         } else {
           // The register address
@@ -477,14 +471,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           if (address == REG_RXFIFO) {
             // check read/write???
             //          System.out.println("CC2420: Reading RXFIFO!!!");
-            state = READ_RXFIFO;
+            state = SpiState.READ_RXFIFO;
           } else if (address == REG_TXFIFO) {
-            state = WRITE_TXFIFO;
+            state = SpiState.WRITE_TXFIFO;
           }
         }
         if (data < 0x0f) {
           strobe(data);
-          state = WAITING;
+          state = SpiState.WAITING;
         }
         pos = 0;
         // Assuming that the status always is sent back???
@@ -521,7 +515,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             }
           }
           /* register written - go back to wating... */
-          state = WAITING;
+          state = SpiState.WAITING;
         }
         break;
       case READ_REGISTER:
@@ -534,7 +528,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             System.out.println("CC2420: read from " + Utils.hex8(address) + " = "
                 + registers[address]);
           }
-          state = WAITING;
+          state = SpiState.WAITING;
         }
         return;
         //break;
@@ -760,14 +754,18 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setSFD(true);
       setState(STATE_TX_FRAME);
     } else {
-      listener.receivedByte(SHR[shrPos++]);
+      if (listener != null) {
+        listener.receivedByte(SHR[shrPos++]);        
+      }
       cpu.scheduleTimeEventMillis(shrEvent, SYMBOL_PERIOD * 2);
     }
   }
 
   private void txNext() {
     if(txfifoPos <= memory[RAM_TXFIFO]) {
-      listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos++] & 0xFF));
+      if (listener != null) {
+        listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos++] & 0xFF));
+      }
       // Two symbol periods to send a byte...
       long time = cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
 //      System.out.println("Scheduling 2 SYMB at: " + time + " getTime(now): " + cpu.getTime());
@@ -824,14 +822,18 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   public void setChipSelect(boolean select) {
     chipSelect = select;
     if (!chipSelect) {
-      state = WAITING;
+      state = SpiState.WAITING;
     }
 
-    //if (DEBUG) {
-    //  System.out.println("CC2420: setting chipSelect: " + chipSelect);
-    //}
+    if (DEBUG) {
+      System.out.println("CC2420: setting chipSelect: " + chipSelect);
+    }
   }
 
+  public boolean getChipSelect() {
+    return chipSelect;
+  }
+  
   public void setCCAPort(IOPort port, int pin) {
     ccaPort = port;
     ccaPin = pin;

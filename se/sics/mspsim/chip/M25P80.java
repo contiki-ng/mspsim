@@ -294,6 +294,10 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     }
   }
   
+  public boolean getChipSelect() {
+    return chipSelect;
+  }
+  
   public void portWrite(IOPort source, int data) {
     // Chip select = active low...
     if (chipSelect && (data & CHIP_SELECT) != 0) {

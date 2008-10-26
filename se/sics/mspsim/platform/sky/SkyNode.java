@@ -88,6 +88,10 @@ public class SkyNode extends MoteIVNode {
   public void dataReceived(USART source, int data) {
     radio.dataReceived(source, data);
     flash.dataReceived(source, data);
+    /* if nothing selected, just write back a random byte to these devs */
+    if (!radio.getChipSelect() && !flash.getChipSelect()) {
+      source.byteReceived(0);
+    }
   }
 
   @Override
@@ -198,7 +202,9 @@ public class SkyNode extends MoteIVNode {
       config.setProperty("nogui", "false");
     }
     node.setupArgs(config);
-    node.start();
+    if (config.getProperty("stop") == null) {
+      node.start();
+    }
   }
 
 }

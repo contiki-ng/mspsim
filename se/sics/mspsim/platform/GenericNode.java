@@ -94,8 +94,6 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
     firmwareFile = args[0];
 
-    setup(config);
-
     int[] memory = cpu.getMemory();
     if (args[0].endsWith("ihex")) {
       // IHEX Reading
@@ -109,6 +107,9 @@ public abstract class GenericNode extends Chip implements Runnable {
       cpu.getDisAsm().setMap(map);
       registry.registerComponent("mapTable", map);
     }
+    
+    setup(config);
+
 
     if (!config.getPropertyAsBoolean("nogui", false)) {
       // Setup control and other UI components

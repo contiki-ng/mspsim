@@ -103,6 +103,11 @@ public abstract class Chip {
 
   public abstract String getName();
   public abstract int getModeMax();
+
+  /* By default the cs is set high */
+  public boolean getChipSelect() {
+    return true;
+  }
   
   public String chipinfo() {
     return "* no info";
