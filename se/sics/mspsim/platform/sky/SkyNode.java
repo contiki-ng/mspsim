@@ -90,7 +90,7 @@ public class SkyNode extends MoteIVNode {
     flash.dataReceived(source, data);
     /* if nothing selected, just write back a random byte to these devs */
     if (!radio.getChipSelect() && !flash.getChipSelect()) {
-//      source.byteReceived(0);
+      source.byteReceived(0);
     }
   }
 
@@ -201,10 +201,12 @@ public class SkyNode extends MoteIVNode {
     if (config.getProperty("nogui") == null) {
       config.setProperty("nogui", "false");
     }
-    node.setupArgs(config);
-    if (config.getProperty("stop") == null) {
-      node.start();
+    /* Ensure auto-run of a start script */
+    if (config.getProperty("autorun") == null) {
+      config.setProperty("autorun", "scripts/autorun.sc");
     }
+    
+    node.setupArgs(config);
   }
 
 }

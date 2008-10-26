@@ -122,6 +122,15 @@ public abstract class GenericNode extends Chip implements Runnable {
     System.out.println("-----------------------------------------------");
     System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
     System.out.println("-----------------------------------------------");
+    
+    String script = config.getProperty("autorun");
+    if (script != null) {
+      CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
+      System.out.println("Autoloading script: " + script);
+      if (ch != null) {
+        ch.lineRead("source " + script);
+      }
+    }
   }
 
   public void setup(ConfigManager config) throws IOException {
@@ -144,8 +153,7 @@ public abstract class GenericNode extends Chip implements Runnable {
 
     // Monitor execution
     cpu.setMonitorExec(true);
-    //cpu.setDebug(true);
-      
+    
     setupNode();
 
     registry.start();
@@ -206,7 +214,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("mapTable", map);
     return elf;
   }
-
+  
   // A step that will break out of breakpoints!
   public void step(int nr) {
     if (!cpu.isRunning()) {

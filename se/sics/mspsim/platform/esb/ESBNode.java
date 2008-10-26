@@ -192,8 +192,11 @@ public class ESBNode extends GenericNode implements PortListener {
     if (config.getProperty("nogui") == null) {
       config.setProperty("nogui", "false");
     }
+    /* Ensure auto-run of a start script */
+    if (config.getProperty("autorun") == null) {
+      config.setProperty("autorun", "scripts/autorun.sc");
+    }
     node.setupArgs(config);
-    node.start();
   }
 
 }

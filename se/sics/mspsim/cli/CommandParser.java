@@ -62,6 +62,10 @@ public class CommandParser {
   }
 
   public static String[][] parseLine(String line, boolean handlePipes, boolean handleRedirect) {
+    if (line.charAt(0) == '#') {
+      return null;
+    }
+    
     ArrayList<String[]> list = new ArrayList<String[]>();
     ArrayList<String> args = new ArrayList<String>();
     StringBuilder sb = null;
