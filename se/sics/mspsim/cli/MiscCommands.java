@@ -39,7 +39,6 @@
  *           $Revision$
  */
 package se.sics.mspsim.cli;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -62,17 +61,34 @@ public class MiscCommands implements CommandBundle {
   private Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
 
   public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
-    handler.registerCommand("grep", new BasicLineCommand("print lines matching the specified pattern", "<regexp>") {
+    handler.registerCommand("grep", new BasicLineCommand("print lines matching the specified pattern", "[-i] [-v] <regexp>") {
       private PrintStream out;
       private Pattern pattern;
+      private boolean isInverted = false;
+
       public int executeCommand(CommandContext context) {
+        int index = 0;
+        int flags = 0;
+        while (index + 1 < context.getArgumentCount()) {
+          if ("-i".equals(context.getArgument(index))) {
+            flags |= Pattern.CASE_INSENSITIVE;
+          } else if ("-v".equals(context.getArgument(index))) {
+            isInverted = true;
+          } else {
+            context.err.println("unknown option: " + context.getArgument(index));
+            return 1;
+          }
+          index++;
+        }
         out = context.out;
-        pattern = Pattern.compile(context.getArgument(0));
+        pattern = Pattern.compile(context.getArgument(index), flags);
         return 0;
       }
       public void lineRead(String line) {
-        if (pattern.matcher(line).find())
+        boolean isMatch = pattern.matcher(line).find();
+        if(isMatch ^ isInverted) {
           out.println(line);
+        }
       }
       public void stopCommand(CommandContext context) {
         context.exit(0);
@@ -125,7 +141,7 @@ public class MiscCommands implements CommandBundle {
     handler.registerCommand("files", new BasicCommand("list open files", "") {
       public int executeCommand(CommandContext context) {
         for (Iterator<FileTarget> iterator = fileTargets.values().iterator(); iterator.hasNext();) {
-          FileTarget type = (FileTarget) iterator.next();
+          FileTarget type = iterator.next();
           context.out.println(type.getName());
         }
         return 0;
