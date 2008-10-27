@@ -228,7 +228,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   // a flag indicating read/write
   public static final int FLAG_RAM_READ = 0x20;
 
-
   private SpiState state = SpiState.WAITING;
   private int pos;
   private int address;
@@ -243,7 +242,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private int lastPacketStart;
   private int zero_symbols;
   private boolean ramRead = false;
-  private boolean cca = true;
+
+  /* RSSI is an externally set value of the RSSI for this CC2420 */
+  /* low RSSI => CCA = true in normal mode */
+
+  private int rssi = 0;
+  private static int RSSI_OFFSET = -45; /* cc2420 datasheet */
+  /* current CCA value */
+  private boolean cca = false;
   
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -286,7 +292,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if(DEBUG) log("Oscillator Stable Event.");
       setState(RadioState.IDLE);
       if( (registers[REG_IOCFG1] & CCAMUX) == CCAMUX_XOSC16M_STABLE) {
-        setInternalCCA(true);
+        updateCCA();
       } else {
         if(DEBUG) log("CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
       }
@@ -297,7 +303,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     public void execute(long t) {
       if(DEBUG) log("VREG Started at: " + t + " cyc: " +
           cpu.cycles + " " + getTime());
-      // setCCA(false);
+      updateCCA();
       on = true;
       setState(RadioState.POWER_DOWN);
     }
@@ -319,7 +325,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     public void execute(long t) {
       switch(stateMachine) {
       case RX_CALIBRATE:
-        setCCA(cca);
         setState(RadioState.RX_SFD_SEARCH);
         break;
 
@@ -328,7 +333,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         break;
 
       case RX_WAIT:
-        setCCA(cca);
         setState(RadioState.RX_SFD_SEARCH);
         break;
       }
@@ -377,6 +381,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       zero_symbols = 0;
       // RSSI valid here?
       status |= STATUS_RSSI_VALID;
+      updateCCA();
       break;
 
     case TX_CALIBRATE:
@@ -422,9 +427,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   public void receivedByte(byte data) {
     // Received a byte from the "air"
     /* CCA not clear if normal mode */ 
-    if(cca) {
-      setCCA(false);
-    }
+//    if(cca) {
+//      setCCA(false);
+//    }
 
     // Above RX_WAIT => RX_SFD_SEARCH after 8 symbols should make this work without this???
 //    if (stateMachine == RX_WAIT) {
@@ -558,6 +563,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
             			+ " CCAMUX: " + (registers[address] & CCAMUX));
 //            	if( (registers[address] & CCAMUX) == CCA_CCA)
 //            	  setCCA(false);
+            	updateCCA();
             	break;
             }
           }
@@ -753,17 +759,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     return (registers[REG_TXCTRL] & 0x1f);
   }
 
-  private static int RSSI_OFFSET = -45; /* cc2420 datasheet */
-
   public void setRSSI(int power) {
     if (power < -128) {
       power = -128;
     }
+    rssi = power;
     registers[REG_RSSI] = power - RSSI_OFFSET;
   }
 
   public int getRSSI() {
-    return registers[REG_RSSI] + RSSI_OFFSET;
+    return rssi;
   }
 
   public int getOutputPower() {
@@ -926,12 +931,29 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     txCursor = 0;
   }
   
-  /* External API for radio mediums */
+  /* External API for radio mediums - will change to setRSSI only later...*/
   public void setCCA(boolean clear) {
-    cca = clear;
-    if (((registers[REG_IOCFG1] & CCAMUX) == CCAMUX_CCA) &&
-        stateMachine.ordinal() > RadioState.IDLE.ordinal()) {
-      setInternalCCA(clear);
+    if (clear) {
+      rssi = 0;
+    } else { 
+      rssi = 127;
+    }
+    updateCCA();
+  }
+  
+  private void updateCCA() {
+    boolean oldCCA = cca;
+    int ccaMux = (registers[REG_IOCFG1] & CCAMUX);
+
+    if (ccaMux == CCAMUX_CCA) {
+      /* TODO: implement a correct "value" of CCA rssi level? */
+      cca = (status & STATUS_RSSI_VALID) > 0 && rssi < 50;
+    } else if (ccaMux == CCAMUX_XOSC16M_STABLE) {
+      cca = (status & STATUS_XOSC16M_STABLE) > 0;
+    }
+    
+    if (cca != oldCCA) {
+      setInternalCCA(cca);
     }
   }
 
@@ -952,6 +974,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   private void setCCAPin(boolean cca) {
     if (stateMachine != RadioState.VREG_OFF) {
+      if (DEBUG) log("Setting CCA to: " + cca);
       if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
         ccaPort.setPinState(ccaPin, cca ? 0 : 1);
       else
