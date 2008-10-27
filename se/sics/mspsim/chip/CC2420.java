@@ -346,12 +346,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
     case VREG_OFF:
       if (DEBUG) System.out.println("CC2420: VREG Off.");
+      status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       setMode(MODE_POWER_OFF);
       break;
 
     case POWER_DOWN:
       rxfifoReadPos = 0;
       rxfifoWritePos = 0;
+      status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       setMode(MODE_POWER_OFF);
       break;
 
