@@ -59,7 +59,6 @@ public class LineSampleChart extends JFreeWindowDataHandler {
     return panel;
   }
 
-  @Override
   public void lineRead(String line) {
     String parts[] = line.trim().split(" ");
     dataSeries.clear();

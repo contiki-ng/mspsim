@@ -105,22 +105,8 @@ public class SkyNode extends MoteIVNode {
 
   public void setupNodePorts() {
     super.setupNodePorts();
-
-    IOUnit usart0 = cpu.getIOUnit("USART 0");
-    if (usart0 instanceof USART) {
-      radio = new CC2420(cpu);
-      radio.setCCAPort(port1, CC2420_CCA);
-      radio.setFIFOPPort(port1, CC2420_FIFOP);
-      radio.setFIFOPort(port1, CC2420_FIFO);
-      if (flashFile != null) {
-        setFlash(new FileM25P80(cpu, flashFile));
-      }
-      ((USART) usart0).setUSARTListener(this);
-      port4 = (IOPort) cpu.getIOUnit("Port 4");
-      if (port4 != null) {
-        port4.setPortListener(this);
-        radio.setSFDPort(port4, CC2420_SFD);
-      }
+    if (flashFile != null) {
+      setFlash(new FileM25P80(cpu, flashFile));
     }
   }
 

@@ -258,7 +258,6 @@ public class MiscCommands implements CommandBundle {
         return 0;
       }
 
-      @Override
       public void stopCommand(CommandContext context) {
         isRunning = false;
         context.err.println("[repeat exit: " + commandLine + ']');

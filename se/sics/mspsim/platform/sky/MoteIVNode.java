@@ -5,6 +5,7 @@ import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.PortListener;
+import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ELF;
@@ -93,6 +94,21 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     unit = cpu.getIOUnit("Port 2");
     if (unit instanceof IOPort) {
       port2 = (IOPort) unit;
+    }
+    
+    IOUnit usart0 = cpu.getIOUnit("USART 0");
+    if (usart0 instanceof USART) {
+      radio = new CC2420(cpu);
+      radio.setCCAPort(port1, CC2420_CCA);
+      radio.setFIFOPPort(port1, CC2420_FIFOP);
+      radio.setFIFOPort(port1, CC2420_FIFO);
+    
+      ((USART) usart0).setUSARTListener(this);
+      port4 = (IOPort) cpu.getIOUnit("Port 4");
+      if (port4 != null) {
+        port4.setPortListener(this);
+        radio.setSFDPort(port4, CC2420_SFD);
+      }
     }    
   }
 

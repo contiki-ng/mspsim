@@ -39,17 +39,21 @@
  *           $Revision$
  */
 package se.sics.mspsim.core;
+import java.io.PrintStream;
+
 import se.sics.mspsim.util.Utils;
 
 /**
  * @author Joakim
  *
  */
-public abstract class Chip {
+public abstract class Chip implements Loggable {
 
   private OperatingModeListener[] omListeners;
   private String[] modeNames = null;
   private int mode;
+  private PrintStream log;
+  protected boolean DEBUG = false;
   
   public void addOperatingModeListener(OperatingModeListener listener) {
     omListeners = (OperatingModeListener[]) Utils.add(OperatingModeListener.class, omListeners, listener);
@@ -112,4 +116,22 @@ public abstract class Chip {
   public String chipinfo() {
     return "* no info";
   }
+
+  /* Loggable */
+  public void clearLogStream() {
+    log = null;
+    DEBUG = false;
+  }
+
+  public void setLogStream(PrintStream out) {
+    log = out;
+    DEBUG = true;
+  }
+
+  public void log(String msg) {
+    if (log != null) {
+      log.println(getName() + ": " + msg);
+    }
+  }
+
 }

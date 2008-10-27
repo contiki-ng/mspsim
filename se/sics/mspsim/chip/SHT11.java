@@ -139,9 +139,11 @@ public class SHT11 extends Chip {
       writePos = 0;
       writeLen = 3;
     }};
-    
+
+    // TODO: super(cpu) and chip autoregister chips into the CPU.
   public SHT11(MSP430Core core) {
     cpu = core;
+    cpu.addChip(this);
   }
     
   public void setDataPort(IOPort port, int bit) {

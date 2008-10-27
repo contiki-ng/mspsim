@@ -88,7 +88,6 @@ public class LineChart extends JFreeWindowDataHandler {
     panel.add(chartPanel, BorderLayout.CENTER);
   }
  
-  @Override
   public JComponent getComponent() {
     return panel;
   }
@@ -119,7 +118,6 @@ public class LineChart extends JFreeWindowDataHandler {
   }
   
   int point = 0;
-  @Override
   public void lineRead(String line) {
     String parts[] = line.trim().split(" ");
     while (parts.length > getDataSeriesCount()) {

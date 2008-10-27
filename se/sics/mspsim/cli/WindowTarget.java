@@ -27,7 +27,6 @@ public class WindowTarget implements LineListener {
     targetName = name;
   }
 
-  @Override
   public void lineRead(final String line) {
     if (line != null && window != null) {
       SwingUtilities.invokeLater(new Runnable() {

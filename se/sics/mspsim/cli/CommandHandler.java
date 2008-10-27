@@ -282,7 +282,6 @@ public class CommandHandler implements ActiveComponent, LineListener {
     return false;
   }
 
-  @Override
   public void lineRead(String line) {
     executeCommand(line, null);
   }

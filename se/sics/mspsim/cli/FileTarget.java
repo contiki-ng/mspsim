@@ -63,7 +63,6 @@ public class FileTarget implements LineListener {
   /* (non-Javadoc)
    * @see se.sics.mspsim.cli.LineListener#lineRead(java.lang.String)
    */
-  @Override
   public void lineRead(String line) {
     if (line == null) {
       try {

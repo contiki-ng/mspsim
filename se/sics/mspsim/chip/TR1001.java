@@ -73,7 +73,6 @@ public class TR1001 extends Chip implements USARTListener {
     return MODE_MAX;
   }
 
-  @Override
   public void dataReceived(USART source, int data) {
   }
 

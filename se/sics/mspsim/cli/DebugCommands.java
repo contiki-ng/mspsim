@@ -39,9 +39,8 @@
  *           $Revision$
  */
 package se.sics.mspsim.cli;
-import javax.swing.MenuSelectionManager;
-
 import se.sics.mspsim.core.CPUMonitor;
+import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.Memory;
@@ -373,6 +372,34 @@ public class DebugCommands implements CommandBundle {
             xmem.writeByte(adr, val & 0xff);
             return 0;
           }});
+
+        ch.registerCommand("loggable", new BasicCommand("list loggable objects", "") {
+          @Override
+          public int executeCommand(CommandContext context) {
+            Chip[] chips = cpu.getChips();
+            for (int i = 0; i < chips.length; i++) {
+              context.out.println(chips[i].getName());
+            }
+            return 0;
+          }
+        });
+        
+        ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "<loggable>" ) {
+          Chip chip = null;
+          @Override
+          public int executeCommand(CommandContext context) {
+            chip = cpu.getChip(context.getArgument(0));
+            if (chip == null) {
+              context.err.println("Can not find loggable: " + context.getArgument(0));
+            }
+            chip.setLogStream(context.out);
+            return 0;
+          }
+
+          public void stopCommand(CommandContext context) {
+            chip.clearLogStream();
+          }
+        });
         
       }
     }

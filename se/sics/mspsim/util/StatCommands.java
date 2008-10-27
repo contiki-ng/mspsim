@@ -61,7 +61,6 @@ public class StatCommands implements CommandBundle {
     this.statistics = statistics;
   }
 
-  @Override
   public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
     handler.registerCommand("chipinfo", new BasicCommand("show information about specified chip",
     "[chips...]") {

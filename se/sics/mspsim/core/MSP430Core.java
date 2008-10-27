@@ -40,6 +40,8 @@
  */
 
 package se.sics.mspsim.core;
+import java.util.ArrayList;
+
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -114,6 +116,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private long nextCycleEventCycles;
   
   private BasicClockModule bcs;
+  private ArrayList<Chip> chips = new ArrayList<Chip>();
 
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -248,6 +251,32 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //     }
   }
 
+  public void addChip(Chip chip) {
+    chips.add(chip);
+  }
+
+  public Chip getChip(String name) {
+    for(Chip chip : chips) {
+      if (name.equals(chip.getName())) {
+        return chip;
+      }
+    }
+    return null;
+  }
+
+  public Chip getChip(Class<? extends Chip> type) {
+    for(Chip chip : chips) {
+      if (type.isInstance(chip)) {
+        return chip;
+      }
+    }
+    return null;
+  }
+
+  public Chip[] getChips() {
+    return (Chip[]) chips.toArray(new Chip[chips.size()]);
+  }
+  
   public void setBreakPoint(int address, CPUMonitor mon) {
     breakPoints[address] = mon;
   }

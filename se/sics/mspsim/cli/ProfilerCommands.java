@@ -105,7 +105,6 @@ public class ProfilerCommands implements CommandBundle {
           profiler.setLogger(context.out);
           return 0;
         }
-        @Override
         public void stopCommand(CommandContext context) {
           Profiler profiler = cpu.getProfiler();
           if (profiler != null) {

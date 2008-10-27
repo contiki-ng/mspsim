@@ -168,7 +168,6 @@ public class OperatingModeStatistics {
       Arrays.fill(this.lastCycles, cpu.cycles);
     }
     
-    @Override
     public int getModeMax() {
       return entry.chip.getModeMax();
     }

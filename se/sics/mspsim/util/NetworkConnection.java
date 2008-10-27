@@ -245,7 +245,6 @@ public class NetworkConnection implements Runnable {
       return socket == null;
     }
     
-    @Override
     public void run() {
       if (DEBUG) System.out.println("NetworkConnection: Started connection thread...");
       try {
