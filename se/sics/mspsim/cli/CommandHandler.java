@@ -79,22 +79,30 @@ public class CommandHandler implements ActiveComponent, LineListener {
         // TODO: Check if first command is also LineListener and set it up for input!!
       }
       // Execute when all is set-up in opposite order...
-      // TODO if error the command chain should be stopped
-      for (int i = parts.length - 1; i >= 0; i--) {
-        try {
-          int code = commands[i].getCommand().executeCommand(commands[i]);
+      int index = commands.length - 1;
+      try {
+        for (; index >= 0; index--) {
+          int code = commands[index].getCommand().executeCommand(commands[index]);
           if (code != 0) {
-            err.println("command '" + commands[i].getCommandName() + "' failed with error code " + code);
+            err.println("command '" + commands[index].getCommandName() + "' failed with error code " + code);
             error = true;
+            break;
           }
-        } catch (Exception e) {
-          err.println("Error: Command failed: " + e.getMessage());
-          e.printStackTrace(err);
-          error = true;
         }
+      } catch (Exception e) {
+        err.println("Error: Command failed: " + e.getMessage());
+        e.printStackTrace(err);
+        error = true;
       }
       if (error) {
-        // TODO close any started commands
+        // Stop any commands that have been started
+        for (index++; index < commands.length; index++) {
+          Command command = commands[index].getCommand();
+          if (command instanceof AsyncCommand && !commands[index].hasExited()) {
+            AsyncCommand ac = (AsyncCommand) command;
+            ac.stopCommand(commands[index]);
+          }
+        }
         return 1;
       } else if (pid >= 0) {
         synchronized (currentAsyncCommands) {
