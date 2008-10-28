@@ -240,7 +240,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private int rxlen;
   private int rxread;
   private int lastPacketStart;
-  private int zero_symbols;
+  private int zeroSymbols;
   private boolean ramRead = false;
 
   /* RSSI is an externally set value of the RSSI for this CC2420 */
@@ -380,7 +380,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       break;
 
     case RX_SFD_SEARCH:
-      zero_symbols = 0;
+      zeroSymbols = 0;
       // RSSI valid here?
       status |= STATUS_RSSI_VALID;
       updateCCA();
@@ -438,26 +438,26 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 //    if (stateMachine == RX_WAIT) {
 //      setState(RX_SFD_SEARCH);
 //    }
+    log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols);
+    
     
     if(stateMachine == RadioState.RX_SFD_SEARCH) {
       // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
       if(data == 0) {
         // Count zero bytes
-        zero_symbols++;
+        if (zeroSymbols < 4) zeroSymbols++;
         return;
-      }
-      // If the received byte is !zero, we have counted 4 zero bytes prior to this one,
-      // and the current received byte == 0x7A (SFD), we're in sync.
-      if(zero_symbols == 4) {
-        if(data == 0x7A) {
-          // In RX mode, SFD goes high when the SFD is received
-          setSFD(true);
-          if (DEBUG) log("RX: Preamble/SFD Synchronized.");
-          rxread = 0;
-          setState(RadioState.RX_FRAME);
-        } else {
-          zero_symbols = 0;
-        }
+      } else if(zeroSymbols == 4 && data == 0x7A) {
+        // If the received byte is !zero, we have counted 4 zero bytes prior to this one,
+        // and the current received byte == 0x7A (SFD), we're in sync.
+        // In RX mode, SFD goes high when the SFD is received
+        setSFD(true);
+        if (DEBUG) log("RX: Preamble/SFD Synchronized.");
+        rxread = 0;
+        setState(RadioState.RX_FRAME);
+      } else {
+        /* if not four zeros and 0x7A then  no zeroes... */
+        zeroSymbols = 0;
       }
 
     } else if(stateMachine == RadioState.RX_FRAME) {
@@ -744,61 +744,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     }
   }
 
-  public void updateActiveFrequency() {
-    /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
-    activeFrequency = registers[REG_FSCTRL] - 357 + 2405 - 0x4000;
-    activeChannel = (registers[REG_FSCTRL] - 357 - 0x4000)/5 + 11;
-  }
-
-  public int getActiveFrequency() {
-    return activeFrequency;
-  }
-
-  public int getActiveChannel() {
-    return activeChannel;
-  }
-
-  public int getOutputPowerIndicator() {
-    return (registers[REG_TXCTRL] & 0x1f);
-  }
-
-  public void setRSSI(int power) {
-    if (power < -128) {
-      power = -128;
-    }
-    rssi = power;
-    registers[REG_RSSI] = power - RSSI_OFFSET;
-  }
-
-  public int getRSSI() {
-    return rssi;
-  }
-
-  public int getOutputPower() {
-    /* From CC2420 datasheet */
-    int indicator = getOutputPowerIndicator();
-    if (indicator >= 31) {
-      return 0;
-    } else if (indicator >= 27) {
-      return -1;
-    } else if (indicator >= 23) {
-      return -3;
-    } else if (indicator >= 19) {
-      return -5;
-    } else if (indicator >= 15) {
-      return -7;
-    } else if (indicator >= 11) {
-      return -10;
-    } else if (indicator >= 7) {
-      return -15;
-    } else if (indicator >= 3) {
-      return -25;
-    }
-
-    /* Unknown */
-    return -100;
-  }
-
   private void shrNext() {
     if(shrPos == 5) {
       // Set SFD high
@@ -806,7 +751,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       setState(RadioState.TX_FRAME);
     } else {
       if (listener != null) {
-        listener.receivedByte(SHR[shrPos]);        
+        if (DEBUG) log("transmitting byte: " + Utils.hex8(SHR[shrPos]));
+        listener.receivedByte(SHR[shrPos]);
       }
       shrPos++;
       cpu.scheduleTimeEventMillis(shrEvent, SYMBOL_PERIOD * 2);
@@ -816,6 +762,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private void txNext() {
     if(txfifoPos <= memory[RAM_TXFIFO]) {
       if (listener != null) {
+        if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + txfifoPos] & 0xFF));
         listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos] & 0xFF));
       }
       txfifoPos++;
@@ -849,6 +796,144 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     // Reset state
     setFIFOP(false);
   }
+
+  private void flushRX() {
+    if (DEBUG) {
+      log("Flushing RX len = " + rxfifoLen);
+    }
+    rxfifoReadPos = 0;
+    rxfifoWritePos = 0;
+    rxfifoLen = 0;
+    setSFD(false);
+    setFIFOP(false);
+  }
+
+  // TODO: update any pins here?
+  private void flushTX() {
+    txCursor = 0;
+  }
+  
+  private void updateCCA() {
+    boolean oldCCA = cca;
+    int ccaMux = (registers[REG_IOCFG1] & CCAMUX);
+
+    if (ccaMux == CCAMUX_CCA) {
+      /* If RSSI is less than -95 then we have CCA / clear channel! */
+      cca = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
+    } else if (ccaMux == CCAMUX_XOSC16M_STABLE) {
+      cca = (status & STATUS_XOSC16M_STABLE) > 0;
+    }
+    
+    if (cca != oldCCA) {
+      setInternalCCA(cca);
+    }
+  }
+
+  private void setInternalCCA(boolean clear) {
+    setCCAPin(clear);
+    if (DEBUG) log("Internal CCA: " + clear);
+  }
+
+  
+  private void setSFD(boolean sfd) {
+    if( (registers[REG_IOCFG0] & SFD_POLARITY) == SFD_POLARITY)
+      sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
+    else 
+      sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
+    
+    if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
+  }
+
+  private void setCCAPin(boolean cca) {
+    if (DEBUG) log("Setting CCA to: " + cca);
+    if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
+      ccaPort.setPinState(ccaPin, cca ? 0 : 1);
+    else
+      ccaPort.setPinState(ccaPin, cca ? 1 : 0);
+  }
+
+  private void setFIFOP(boolean fifop) {
+    fifoP = fifop;
+    if (DEBUG) log(getName() + " setting FIFOP to " + fifop);
+    if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
+      fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
+    } else {
+      fifopPort.setPinState(fifopPin, fifop ? 1 : 0);
+    }
+  }
+
+  private void setRxOverflow() {
+    if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
+    setFIFOP(true);
+    setFIFO(false);
+  }
+  
+  private void setFIFO(boolean fifo) {
+    if (DEBUG) log(getName() + " setting FIFO to " + fifo);
+    fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
+  }
+  
+  /*****************************************************************************
+   *  External APIs for simulators simulating Radio medium, etc.
+   * 
+   *****************************************************************************/
+  public void updateActiveFrequency() {
+    /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
+    activeFrequency = registers[REG_FSCTRL] - 357 + 2405 - 0x4000;
+    activeChannel = (registers[REG_FSCTRL] - 357 - 0x4000)/5 + 11;
+  }
+
+  public int getActiveFrequency() {
+    return activeFrequency;
+  }
+
+  public int getActiveChannel() {
+    return activeChannel;
+  }
+
+  public int getOutputPowerIndicator() {
+    return (registers[REG_TXCTRL] & 0x1f);
+  }
+
+  public void setRSSI(int power) {
+    if (DEBUG) log("external setRSSI to: " + power);
+    if (power < -128) {
+      power = -128;
+    }
+    rssi = power;
+    registers[REG_RSSI] = power - RSSI_OFFSET;
+    updateCCA();
+  }
+
+  public int getRSSI() {
+    return rssi;
+  }
+
+  public int getOutputPower() {
+    /* From CC2420 datasheet */
+    int indicator = getOutputPowerIndicator();
+    if (indicator >= 31) {
+      return 0;
+    } else if (indicator >= 27) {
+      return -1;
+    } else if (indicator >= 23) {
+      return -3;
+    } else if (indicator >= 19) {
+      return -5;
+    } else if (indicator >= 15) {
+      return -7;
+    } else if (indicator >= 11) {
+      return -10;
+    } else if (indicator >= 7) {
+      return -15;
+    } else if (indicator >= 3) {
+      return -25;
+    }
+
+    /* Unknown */
+    return -100;
+  }
+
 
   public void setRFListener(RFListener rf) {
     listener = rf;
@@ -918,92 +1003,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     registers[register] = data;
   }
 
-  private void flushRX() {
-    if (DEBUG) {
-      log("Flushing RX len = " + rxfifoLen);
-    }
-    rxfifoReadPos = 0;
-    rxfifoWritePos = 0;
-    rxfifoLen = 0;
-    setSFD(false);
-    setFIFOP(false);
-  }
-
-  // TODO: update any pins here?
-  private void flushTX() {
-    txCursor = 0;
-  }
-  
   /* External API for radio mediums - will change to setRSSI only later...*/
   public void setCCA(boolean clear) {
-    if (clear) {
-      rssi = 0;
-    } else { 
-      rssi = 127;
-    }
-    updateCCA();
-  }
-  
-  private void updateCCA() {
-    boolean oldCCA = cca;
-    int ccaMux = (registers[REG_IOCFG1] & CCAMUX);
-
-    if (ccaMux == CCAMUX_CCA) {
-      /* TODO: implement a correct "value" of CCA rssi level? */
-      cca = (status & STATUS_RSSI_VALID) > 0 && rssi < 50;
-    } else if (ccaMux == CCAMUX_XOSC16M_STABLE) {
-      cca = (status & STATUS_XOSC16M_STABLE) > 0;
-    }
-    
-    if (cca != oldCCA) {
-      setInternalCCA(cca);
-    }
+    if (DEBUG) log("*** CCA set to: " + clear + " ignored....");
+//    if (clear) {
+//      rssi = 0;
+//    } else { 
+//      rssi = 127;
+//    }
+//    updateCCA();
   }
 
-  private void setInternalCCA(boolean clear) {
-    setCCAPin(clear);
-    if (DEBUG) log("Internal CCA: " + clear);
-  }
-
-  
-  private void setSFD(boolean sfd) {
-    if( (registers[REG_IOCFG0] & SFD_POLARITY) == SFD_POLARITY)
-      sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
-    else 
-      sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
-    
-    if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
-  }
-
-  private void setCCAPin(boolean cca) {
-    if (DEBUG) log("Setting CCA to: " + cca);
-    if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
-      ccaPort.setPinState(ccaPin, cca ? 0 : 1);
-    else
-      ccaPort.setPinState(ccaPin, cca ? 1 : 0);
-  }
-
-  private void setFIFOP(boolean fifop) {
-    fifoP = fifop;
-    if (DEBUG) log(getName() + " setting FIFOP to " + fifop);
-    if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
-      fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
-    } else {
-      fifopPort.setPinState(fifopPin, fifop ? 1 : 0);
-    }
-  }
-
-  private void setFIFO(boolean fifo) {
-    if (DEBUG) log(getName() + " setting FIFO to " + fifo);
-    fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
-  }
-
-  public void setRxOverflow() {
-    if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
-    setFIFOP(true);
-    setFIFO(false);
-  }
-
+  /*****************************************************************************
+   * Chip APIs
+   *****************************************************************************/
   public String getName() {
     return "CC2420";
   }
