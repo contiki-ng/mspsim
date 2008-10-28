@@ -338,6 +338,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       }
     }
   };
+  private boolean currentSFD;
+  private boolean currentFifo;
 
   // TODO: super(cpu) and chip autoregister chips into the CPU.
   public CC2420(MSP430Core cpu) {
@@ -361,6 +363,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
     case VREG_OFF:
       if (DEBUG) log("VREG Off.");
+      flushRX();
+      flushTX();
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       setMode(MODE_POWER_OFF);
       updateCCA();
@@ -463,7 +467,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     } else if(stateMachine == RadioState.RX_FRAME) {
       if(rxfifoLen == 128) {
         setRxOverflow();
-      }else{		  
+      } else {		  
         memory[RAM_RXFIFO + rxfifoWritePos++] = data & 0xFF;
         rxfifoLen++;
 
@@ -473,7 +477,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         }
 
         if(rxread == 0) {
-          rxlen = (int)data;
+          rxlen = data & 0xff;
           if (DEBUG) log("RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
           setFIFO(true);
@@ -610,7 +614,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         // TODO:
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
-        if (fifoP) {
+        // As long as we are in "OVERFLOW" the fifoP is not cleared.
+        if (fifoP && stateMachine != RadioState.RX_OVERFLOW) {
           if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
               " lastPacketStartPos: " + lastPacketStart);
           setFIFOP(false);
@@ -806,6 +811,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     rxfifoLen = 0;
     setSFD(false);
     setFIFOP(false);
+    setFIFO(false);
   }
 
   // TODO: update any pins here?
@@ -840,7 +846,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
     else 
       sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
-    
+    currentSFD = sfd;
     if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
   }
 
@@ -862,16 +868,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     }
   }
 
+  private void setFIFO(boolean fifo) {
+    currentFifo = fifo;
+    if (DEBUG) log(getName() + " setting FIFO to " + fifo);
+    fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
+  }
+
+  
   private void setRxOverflow() {
     if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
     setFIFOP(true);
     setFIFO(false);
+    setState(RadioState.RX_OVERFLOW);
   }
   
-  private void setFIFO(boolean fifo) {
-    if (DEBUG) log(getName() + " setting FIFO to " + fifo);
-    fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
-  }
   
   /*****************************************************************************
    *  External APIs for simulators simulating Radio medium, etc.
@@ -1028,10 +1038,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   public String chipinfo() {
     return " VREG_ON: " + on +
     "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
-    "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) +
-    "\n CCA: " + cca +
+    "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
-    "\n Radio State: " + stateMachine +
+    " FIFOP: " + fifoP + " FIFO: " + currentFifo + " SFD: " + currentSFD + 
+    "\n Radio State: " + stateMachine + " rxFifoLen: " + rxfifoLen + " rxFifoWritePos: " +
+      rxfifoWritePos + " rxFifoReadPos: " + rxfifoReadPos +
     "\n SPI State: " + state +
     "\n";
   }
