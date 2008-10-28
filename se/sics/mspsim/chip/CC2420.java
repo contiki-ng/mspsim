@@ -339,7 +339,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     }
   };
   private boolean currentSFD;
-  private boolean currentFifo;
+  private boolean currentFIFO;
   private boolean overflow = false;
 
   // TODO: super(cpu) and chip autoregister chips into the CPU.
@@ -488,9 +488,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           // In RX mode, FIFOP goes high, if threshold is higher than frame length....
 
           // Should take a RSSI value as input or use a set-RSSI value...
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 -2) & 127)] = (registers[REG_RSSI]) & 0xff;
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 -1) & 127)] = 37 | 0x80;
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | 0x80;
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
@@ -594,8 +594,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         return;
         //break;
       case READ_RXFIFO:
-        if(rxfifoLen == 0)
-          break;
+        if(rxfifoLen == 0) {
+          /* nothing to read, just return a zero */
+          source.byteReceived(0);
+          return;
+        }
         if(DEBUG) log("RXFIFO READ " + rxfifoReadPos + " => " +
             (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) + " size: " + rxfifoLen);
         source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
@@ -611,12 +614,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         if (rxfifoReadPos >= 128) {
           rxfifoReadPos = 0;
         }
-        // When is this set to "false" - when is interrupt de-triggered?
         // TODO:
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
         // As long as we are in "OVERFLOW" the fifoP is not cleared.
-        if (fifoP && !overflow) {
+        if (fifoP) {
           if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
               " lastPacketStartPos: " + lastPacketStart);
           setFIFOP(false);
@@ -656,7 +658,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         }
         break;
       }
-
       source.byteReceived(oldStatus);  
     }
   }
@@ -878,8 +879,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void setFIFO(boolean fifo) {
-    currentFifo = fifo;
     if (DEBUG) log(getName() + " setting FIFO to " + fifo);
+    currentFIFO = fifo;
     fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
   }
 
@@ -1050,7 +1051,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
-    " FIFOP: " + fifoP + " FIFO: " + currentFifo + " SFD: " + currentSFD + 
+    " FIFOP: " + fifoP + " FIFO: " + currentFIFO + " SFD: " + currentSFD + 
     "\n Radio State: " + stateMachine + " rxFifoLen: " + rxfifoLen + " rxFifoWritePos: " +
       rxfifoWritePos + " rxFifoReadPos: " + rxfifoReadPos +
     "\n SPI State: " + state +
