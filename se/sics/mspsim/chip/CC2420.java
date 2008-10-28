@@ -340,6 +340,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   };
   private boolean currentSFD;
   private boolean currentFifo;
+  private boolean overflow = false;
 
   // TODO: super(cpu) and chip autoregister chips into the CPU.
   public CC2420(MSP430Core cpu) {
@@ -351,7 +352,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     fifoP = false;
     rxfifoReadPos = 0;
     rxfifoWritePos = 0;
-    
+    overflow = false;
     cpu.addChip(this);
   }
   
@@ -487,9 +488,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           // In RX mode, FIFOP goes high, if threshold is higher than frame length....
 
           // Should take a RSSI value as input or use a set-RSSI value...
-          memory[RAM_RXFIFO + (rxfifoWritePos - 2)] = (registers[REG_RSSI]) & 0xff;
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 -2) & 127)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation
-          memory[RAM_RXFIFO + (rxfifoWritePos -1 )] = 37 | 0x80;
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 -1) & 127)] = 37 | 0x80;
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
@@ -596,7 +597,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         if(rxfifoLen == 0)
           break;
         if(DEBUG) log("RXFIFO READ " + rxfifoReadPos + " => " +
-            (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
+            (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) + " size: " + rxfifoLen);
         source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
         rxfifoReadPos++;
 
@@ -615,7 +616,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
         // As long as we are in "OVERFLOW" the fifoP is not cleared.
-        if (fifoP && stateMachine != RadioState.RX_OVERFLOW) {
+        if (fifoP && !overflow) {
           if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
               " lastPacketStartPos: " + lastPacketStart);
           setFIFOP(false);
@@ -778,7 +779,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if (DEBUG) log("Completed Transmission.");
       status &= ~STATUS_TX_ACTIVE;
       setSFD(false);
-      setState(RadioState.RX_CALIBRATE);
+      if (overflow) {
+        /* TODO: is it going back to overflow here ?=? */
+        setState(RadioState.RX_OVERFLOW);
+      } else {
+        setState(RadioState.RX_CALIBRATE);
+      }
       txfifoFlush = true;
     }
   }
@@ -812,6 +818,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     setSFD(false);
     setFIFOP(false);
     setFIFO(false);
+    overflow = false;
+    /* goto RX Calibrate */
+    setState(RadioState.RX_SFD_SEARCH);
   }
 
   // TODO: update any pins here?
@@ -879,6 +888,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
     setFIFOP(true);
     setFIFO(false);
+    overflow = true;
     setState(RadioState.RX_OVERFLOW);
   }
   
