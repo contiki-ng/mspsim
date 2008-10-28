@@ -976,13 +976,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
 
   private void setCCAPin(boolean cca) {
-    if (stateMachine != RadioState.VREG_OFF) {
-      if (DEBUG) log("Setting CCA to: " + cca);
-      if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
-        ccaPort.setPinState(ccaPin, cca ? 0 : 1);
-      else
-        ccaPort.setPinState(ccaPin, cca ? 1 : 0);
-    }
+    if (DEBUG) log("Setting CCA to: " + cca);
+    if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
+      ccaPort.setPinState(ccaPin, cca ? 0 : 1);
+    else
+      ccaPort.setPinState(ccaPin, cca ? 1 : 0);
   }
 
   private void setFIFOP(boolean fifop) {
