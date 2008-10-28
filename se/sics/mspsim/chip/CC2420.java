@@ -303,9 +303,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     public void execute(long t) {
       if(DEBUG) log("VREG Started at: " + t + " cyc: " +
           cpu.cycles + " " + getTime());
-      updateCCA();
       on = true;
       setState(RadioState.POWER_DOWN);
+      updateCCA();
     }
   };
 
@@ -363,6 +363,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if (DEBUG) log("VREG Off.");
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       setMode(MODE_POWER_OFF);
+      updateCCA();
       break;
 
     case POWER_DOWN:
@@ -370,6 +371,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       rxfifoWritePos = 0;
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       setMode(MODE_POWER_OFF);
+      updateCCA();
       break;
 
     case RX_CALIBRATE:
@@ -414,6 +416,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     case IDLE:
       status &= ~STATUS_RSSI_VALID;
       setMode(MODE_TXRX_OFF);
+      updateCCA();
       break;
     }
 
