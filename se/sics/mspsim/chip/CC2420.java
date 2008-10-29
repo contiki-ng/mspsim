@@ -357,7 +357,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
   
   private boolean setState(RadioState state) {
-    //if(DEBUG) log("State Transition from " + stateMachine + " to " + state);
+    if(DEBUG) log("State transition from " + stateMachine + " to " + state);
     stateMachine = state;
 
     switch(stateMachine) {
@@ -424,9 +424,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       updateCCA();
       break;
     }
-
     return true;
-
   }
 
   /* Receive a byte from the radio medium
@@ -443,7 +441,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 //    if (stateMachine == RX_WAIT) {
 //      setState(RX_SFD_SEARCH);
 //    }
-    log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols);
+    log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
+        ((stateMachine == RadioState.RX_SFD_SEARCH || stateMachine == RadioState.RX_FRAME) ? "" : " *** Ignored"));
     
     
     if(stateMachine == RadioState.RX_SFD_SEARCH) {
@@ -499,8 +498,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           setState(RadioState.RX_WAIT);
         }
       }
-    } else if (DEBUG) {
-      log("*** Ignoring byte from air state: " + stateMachine);
     }
   }
 
@@ -821,7 +818,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     setFIFO(false);
     overflow = false;
     /* goto RX Calibrate */
-    setState(RadioState.RX_SFD_SEARCH);
+    if( (stateMachine == RadioState.RX_CALIBRATE) ||
+        (stateMachine == RadioState.RX_SFD_SEARCH) ||
+        (stateMachine == RadioState.RX_FRAME) ||
+        (stateMachine == RadioState.RX_OVERFLOW) ||
+        (stateMachine == RadioState.RX_WAIT)) {
+      setState(RadioState.RX_SFD_SEARCH);
+    }
   }
 
   // TODO: update any pins here?
@@ -960,19 +963,18 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     listener = rf;
   }
 
-  public void setVRegOn(boolean on) {
-    if(this.on == on) return;
+  public void setVRegOn(boolean newOn) {
+    if(on == newOn) return;
 
-    if(on) {
+    if(newOn) {
       // 0.6ms maximum vreg startup from datasheet pg 13
       cpu.scheduleTimeEventMillis(vregEvent, 0.1);
       if (DEBUG) log(getName() + ": Scheduling vregEvent at: cyc = " + cpu.cycles +
          " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     } else {
-      this.on = on;
+      on = false;
       setState(RadioState.VREG_OFF);
     }
-    //this.on = on;
   }
 
   public void setChipSelect(boolean select) {

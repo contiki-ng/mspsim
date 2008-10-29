@@ -196,8 +196,10 @@ public class DebugCommands implements CommandBundle {
           MapEntry[] entries = context.getMapTable().getEntries(regExp);
           for (int i = 0; i < entries.length; i++) {
             MapEntry mapEntry = entries[i];
+            int address = mapEntry.getAddress();
             context.out.println(" " + mapEntry.getName() + " at $" +
-                Utils.hex16(mapEntry.getAddress()));
+                Utils.hex16(address) + " (" + Utils.hex8(cpu.memory[address]) +
+                  " " + Utils.hex8(cpu.memory[address + 1]) + ")");
           }
           return 0;
         }
