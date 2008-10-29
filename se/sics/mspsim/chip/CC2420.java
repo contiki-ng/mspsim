@@ -342,6 +342,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   private boolean currentFIFO;
   private boolean overflow = false;
 
+  public interface StateListener {
+    public void newState(RadioState state);
+  }
+
+  private StateListener stateListener = null;
+
+  public void setStateListener(StateListener listener) {
+    stateListener = listener;
+  }
+
+  public RadioState getState() {
+    return stateMachine;
+  }
+
   // TODO: super(cpu) and chip autoregister chips into the CPU.
   public CC2420(MSP430Core cpu) {
     registers[REG_SNOP] = 0;
@@ -424,6 +438,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       updateCCA();
       break;
     }
+
+    /* Notify state listener */
+    if (stateListener != null) {
+      stateListener.newState(stateMachine);
+    }
+
     return true;
   }
 
