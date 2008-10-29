@@ -432,26 +432,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
    */
   public void receivedByte(byte data) {
     // Received a byte from the "air"
-    /* CCA not clear if normal mode */ 
-//    if(cca) {
-//      setCCA(false);
-//    }
 
-    // Above RX_WAIT => RX_SFD_SEARCH after 8 symbols should make this work without this???
-//    if (stateMachine == RX_WAIT) {
-//      setState(RX_SFD_SEARCH);
-//    }
     log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
         ((stateMachine == RadioState.RX_SFD_SEARCH || stateMachine == RadioState.RX_FRAME) ? "" : " *** Ignored"));
-    
-    
+
     if(stateMachine == RadioState.RX_SFD_SEARCH) {
       // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
       if(data == 0) {
         // Count zero bytes
-        if (zeroSymbols < 4) zeroSymbols++;
-        return;
-      } else if(zeroSymbols == 4 && data == 0x7A) {
+        zeroSymbols++;
+      } else if(zeroSymbols >= 4 && data == 0x7A) {
         // If the received byte is !zero, we have counted 4 zero bytes prior to this one,
         // and the current received byte == 0x7A (SFD), we're in sync.
         // In RX mode, SFD goes high when the SFD is received
@@ -460,7 +450,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         rxread = 0;
         setState(RadioState.RX_FRAME);
       } else {
-        /* if not four zeros and 0x7A then  no zeroes... */
+        /* if not four zeros and 0x7A then no zeroes... */
         zeroSymbols = 0;
       }
 
@@ -468,13 +458,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       if(rxfifoLen == 128) {
         setRxOverflow();
       } else {		  
-        memory[RAM_RXFIFO + rxfifoWritePos++] = data & 0xFF;
+        memory[RAM_RXFIFO + rxfifoWritePos] = data & 0xFF;
+        rxfifoWritePos = (rxfifoWritePos + 1) & 127;
         rxfifoLen++;
-
-        if(rxfifoWritePos == 128) {
-          if (DEBUG) log("Wrapped RXFIFO write pos");
-          rxfifoWritePos = 0;
-        }
 
         if(rxread == 0) {
           rxlen = data & 0xff;
@@ -509,7 +495,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           " CS: " + chipSelect + " SPI state: " + state + " StateMachine: " + stateMachine);
     }
 
-    if ( (stateMachine != RadioState.VREG_OFF) && chipSelect) {
+    if ((stateMachine != RadioState.VREG_OFF) && chipSelect) {
 
       switch(state) {
       case WAITING:
@@ -591,31 +577,26 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         return;
         //break;
       case READ_RXFIFO:
-        if(rxfifoLen == 0) {
-          /* nothing to read, just return a zero */
-          source.byteReceived(0);
-          return;
-        }
         if(DEBUG) log("RXFIFO READ " + rxfifoReadPos + " => " +
             (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) + " size: " + rxfifoLen);
         source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
-        rxfifoReadPos++;
 
+        rxfifoReadPos = (rxfifoReadPos + 1) & 127;
+        
+        if (rxfifoLen > 0) {
+          rxfifoLen--;
+        }
         // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
-        if(--rxfifoLen == 0) {
+        if(rxfifoLen == 0) {
           if (DEBUG) log("Setting FIFO to low (buffer empty)");
           setFIFO(false);
         }
-
-        // What if wrap cursor???
-        if (rxfifoReadPos >= 128) {
-          rxfifoReadPos = 0;
-        }
+        
         // TODO:
         // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
         // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
         // As long as we are in "OVERFLOW" the fifoP is not cleared.
-        if (fifoP) {
+        if (fifoP && !overflow) {
           if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
               " lastPacketStartPos: " + lastPacketStart);
           setFIFOP(false);
@@ -632,7 +613,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         break;
       case RAM_ACCESS:
         if (pos == 0) {
-          address = address | (data << 1) & 0x180;
+          address |= (data << 1) & 0x180;
           ramRead = (data & 0x20) != 0;
           if (DEBUG) {
             log("Address: " + Utils.hex16(address) +
@@ -647,7 +628,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
                   Utils.hex8(memory[RAM_PANID]) +
                   Utils.hex8(memory[RAM_PANID + 1]));
             }
-          }else{
+          } else {
             //log("Read RAM Addr: " + address + " Data: " + memory[address]);  
             source.byteReceived(memory[address++]);
             return;
@@ -892,6 +873,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
     setFIFOP(true);
     setFIFO(false);
+    setSFD(false);
     overflow = true;
     setState(RadioState.RX_OVERFLOW);
   }
@@ -1049,7 +1031,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
   
   public String chipinfo() {
-    return " VREG_ON: " + on +
+    return " VREG_ON: " + on + " ChipSel: " + chipSelect +
     "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
