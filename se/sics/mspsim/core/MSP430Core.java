@@ -774,7 +774,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	writeRegister(SP, sp);
       }
 
-      if ((dstRegister == CG1 && ad != AM_INDEX) || dstRegister == CG2) {
+      if ((dstRegister == CG1 && ad > AM_INDEX) || dstRegister == CG2) {
 	dstRegMode = true;
 	cycles++;
       } else {
@@ -978,7 +978,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       int src = 0;
 
       // Some CGs should be handled as registry reads only...
-      if ((srcRegister == CG1 && as != AM_INDEX) || srcRegister == CG2) {
+      if ((srcRegister == CG1 && as > AM_INDEX) || srcRegister == CG2) {
 	src = CREG_VALUES[srcRegister - 2][as];
 	if (!word) {
 	  src &= 0xff;
