@@ -67,13 +67,17 @@ public class DebugCommands implements CommandBundle {
         int address = 0; 
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
+          if (baddr < 0) {
+            context.err.println("unknown symbol: " + context.getArgument(0));
+            return 1;
+          }
           cpu.setBreakPoint(address = baddr,
               new CPUMonitor() {
                 public void cpuAction(int type, int adr, int data) {
-                  context.out.println("*** Break at " + adr);
+                  context.out.println("*** Break at $" + Utils.hex16(adr));
                 }
           });
-          context.out.println("Breakpoint set at: " + baddr);
+          context.out.println("Breakpoint set at $" + Utils.hex16(baddr));
           return 0;
         }
         public void stopCommand(CommandContext context) {
@@ -88,7 +92,7 @@ public class DebugCommands implements CommandBundle {
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           if (baddr == -1) {
-            context.out.println("Error: unkown symbol:" + context.getArgument(0));            
+            context.err.println("unknown symbol: " + context.getArgument(0));            
             return -1;
           }
           if (context.getArgumentCount() > 1) {
@@ -243,10 +247,11 @@ public class DebugCommands implements CommandBundle {
             int adr = context.getArgumentAsAddress(0);
             if (adr != -1) { 
               context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.read(adr, adr >= 0x100)));
+              return 0;
             } else {
-              context.out.println("unkown symbol");  
+              context.err.println("unknown symbol: " + context.getArgument(0));
+              return 1;
             }
-            return 0;
           }
         });
         ch.registerCommand("printreg", new BasicCommand("print value of an register", "<register>") {
