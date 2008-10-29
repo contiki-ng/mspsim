@@ -126,10 +126,10 @@ public class DebugCommands implements CommandBundle {
               }
             }
           });
-          context.out.println("Watch set at: " + baddr);
+          context.out.println("Watch set at $" + Utils.hex16(baddr));
           return 0;
         }
-        
+
         public void stopCommand(CommandContext context) {
           cpu.clearBreakPoint(address);
           context.exit(0);
@@ -192,8 +192,6 @@ public class DebugCommands implements CommandBundle {
         }
       });
 
-      
-      
       ch.registerCommand("symbol", new BasicCommand("list matching symbols", "<regexp>") {
         public int executeCommand(final CommandContext context) {
           String regExp = context.getArgument(0);
