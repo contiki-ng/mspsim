@@ -226,7 +226,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[0x1A0 + i] = adc12;
       memIn[0x1A0 + i] = adc12;
     }
-    System.out.println("Number of passive: " + passIO);
+    if (DEBUG) System.out.println("Number of passive: " + passIO);
   }
 
   /* returns port 1 ... 6 */
