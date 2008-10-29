@@ -124,7 +124,7 @@ public class SkyNode extends MoteIVNode {
         fileName = fileName + ".flash";
       }
     }
-    System.out.println("Using flash file: " + (fileName == null ? "no file" : fileName));
+    if (DEBUG) System.out.println("Using flash file: " + (fileName == null ? "no file" : fileName));
 
     this.flashFile = fileName;
 
