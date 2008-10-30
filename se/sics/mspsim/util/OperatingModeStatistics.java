@@ -145,9 +145,9 @@ public class OperatingModeStatistics {
       lastValue = val;
       lastCycles = cpu.cycles;
       if (operation == OP_INVERT) {
-        return (int) (100 - 100 * valDiff / diff); 
+        return (100.0 - (100.0 * valDiff) / diff); 
       }
-      return (100.0 * valDiff / diff);
+      return (100.0 * valDiff) / diff;
     }
     
     public int getValue() {
@@ -185,7 +185,7 @@ public class OperatingModeStatistics {
       long valDiff = (val - lastValue[mode]);
       lastValue[mode] = val;
       lastCycles[mode] = cpu.cycles;
-      return (100.0 * valDiff / diff);
+      return (100.0 * valDiff) / diff;
     }
 
   }

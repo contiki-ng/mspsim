@@ -403,6 +403,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       // RSSI valid here?
       status |= STATUS_RSSI_VALID;
       updateCCA();
+      setMode(MODE_RX_ON);
       break;
 
     case TX_CALIBRATE:
@@ -430,6 +431,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
     case RX_WAIT:
       setSymbolEvent(8);
+      setMode(MODE_RX_ON);
       break;
       
     case IDLE:
@@ -784,6 +786,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
       } else {
         setState(RadioState.RX_CALIBRATE);
       }
+      /* Back to RX ON */
+      setMode(MODE_RX_ON);
       txfifoFlush = true;
     }
   }
