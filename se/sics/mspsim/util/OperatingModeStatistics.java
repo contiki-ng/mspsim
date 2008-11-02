@@ -41,9 +41,7 @@
 package se.sics.mspsim.util;
 
 import java.io.PrintStream;
-import java.util.Arrays;
 import java.util.HashMap;
-
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.OperatingModeListener;
@@ -169,8 +167,8 @@ public class OperatingModeStatistics {
       long cycles = cpu.cycles;
       for (int i = 0, n = this.lastValue.length; i < n; i++) {
         this.lastValue[i] = entry.getValue(i, cycles);
+        this.lastCycles[i] = cycles;
       }
-      Arrays.fill(this.lastCycles, cycles);
     }
     
     public int getModeMax() {
