@@ -123,19 +123,20 @@ public class OperatingModeStatistics {
 
   private class StatDataSource implements DataSource {
 
-    private StatEntry entry;
-    private int mode;
+    private final StatEntry entry;
+    private final int mode;
+    private final int operation;
     private long lastCycles;
     private long lastValue;
-    private final int operation;
     
     public StatDataSource(StatEntry entry, int mode, int operation) {
       this.entry = entry;
       this.mode = mode;
       this.operation = operation;
-      lastCycles = cpu.cycles;
+      this.lastCycles = cpu.cycles;
+      this.lastValue = entry.getValue(mode, this.lastCycles);
     }
-    
+
     // returns percentage since last call...
     public double getDoubleValue() {
       long diff = cpu.cycles - lastCycles;
@@ -149,7 +150,7 @@ public class OperatingModeStatistics {
       }
       return (100.0 * valDiff) / diff;
     }
-    
+
     public int getValue() {
       return (int) getDoubleValue();
     }
@@ -157,7 +158,7 @@ public class OperatingModeStatistics {
 
   private class StatMultiDataSource implements MultiDataSource {
 
-    private StatEntry entry;
+    private final StatEntry entry;
     private long[] lastValue;
     private long[] lastCycles;
     
@@ -165,7 +166,11 @@ public class OperatingModeStatistics {
       this.entry = entry;
       this.lastValue = new long[entry.elapsed.length];
       this.lastCycles = new long[entry.elapsed.length];
-      Arrays.fill(this.lastCycles, cpu.cycles);
+      long cycles = cpu.cycles;
+      for (int i = 0, n = this.lastValue.length; i < n; i++) {
+        this.lastValue[i] = entry.getValue(i, cycles);
+      }
+      Arrays.fill(this.lastCycles, cycles);
     }
     
     public int getModeMax() {
