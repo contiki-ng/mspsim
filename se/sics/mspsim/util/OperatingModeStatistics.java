@@ -194,13 +194,14 @@ public class OperatingModeStatistics {
   private class StatEntry implements OperatingModeListener {
     final Chip chip;
     long startTime;
-    int mode = -1;
+    int mode;
     long[] elapsed;
-    
+
     StatEntry(Chip chip) {
       this.chip = chip;
-      int max = chip.getModeMax();
-      elapsed = new long[max + 1];
+      this.elapsed = new long[chip.getModeMax() + 1];
+      this.mode = chip.getMode();
+      this.startTime = cpu.cycles;
       chip.addOperatingModeListener(this);
     }
 
@@ -210,15 +211,13 @@ public class OperatingModeStatistics {
       }
       return elapsed[mode];
     }
-    
+
     public void modeChanged(Chip source, int mode) {
-      if (this.mode != -1) {
-        elapsed[this.mode] += cpu.cycles - startTime;
-      }
+      this.elapsed[this.mode] += cpu.cycles - startTime;
       this.mode = mode;
       this.startTime = cpu.cycles;
     }
-    
+
     void printStat(PrintStream out) {
       out.println("Stat for: " + chip.getName());
       for (int i = 0; i < elapsed.length; i++) {
@@ -226,5 +225,5 @@ public class OperatingModeStatistics {
       }
     }
   }
-  
+
 }
