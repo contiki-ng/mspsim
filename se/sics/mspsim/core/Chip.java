@@ -97,9 +97,11 @@ public abstract class Chip implements Loggable {
       }
     }
     try {
-      // If it is just an int it can be parsed!
+      // If it is just an integer it can be parsed!
       int modei = Integer.parseInt(mode);
-      return modei;
+      if (modei >= 0 && modei <= getModeMax()) {
+        return modei;
+      }
     } catch (Exception e) {
     }
     return -1;
