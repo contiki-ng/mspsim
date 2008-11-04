@@ -139,13 +139,13 @@ public class StatCommands implements CommandBundle {
             String[] parts = sName.split("\\.");
             sources[i] = statistics.getDataSource(parts[0], parts[1]); 
             if (sources[i] == null) {
-              context.err.println("could not find chip / mode combination " + context.getArgument(i + 1));
+              context.err.println("could not find chip / mode combination " + sName);
               return 1;
             }
           } else {
-            sources[i] = statistics.getMultiDataSource(context.getArgument(i + 1)); 
+            sources[i] = statistics.getMultiDataSource(sName); 
             if (sources[i] == null) {
-              context.err.println("could not find chip " + context.getArgument(i + 1));
+              context.err.println("could not find chip " + sName);
               return 1;
             }
           }
