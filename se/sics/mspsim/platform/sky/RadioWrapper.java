@@ -1,10 +1,7 @@
 package se.sics.mspsim.platform.sky;
-
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.chip.RFListener;
-import se.sics.mspsim.util.Utils;
-
 
 public class RadioWrapper implements RFListener {
 
@@ -41,13 +38,11 @@ public class RadioWrapper implements RFListener {
     }
   }
 
-
   // NOTE: len is not in the packet for now...
   public void receivedByte(byte data) {
 //    System.out.println("*** RF Data :" + data + " = $" + Utils.hex8(data) + " => " +
 //        (char) data);
     if (pos == 5) {
-      //        System.out.println("**** Setting length to:" + data);
       len = data;
     }
     if (pos == 0) {

@@ -1,9 +1,10 @@
-/**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+/*
+ * Copyright (c) 2008, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are permitted provided that the following conditions
+ * are met:
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -25,83 +26,29 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * This file is part of MSPSim.
- *
- * $Id: TelosNode.java 304 2008-09-06 20:04:45Z joxe $
+ * $Id$
  *
  * -----------------------------------------------------------------
  *
- * TelosNode
+ * Main
  *
- * Author  : Joakim Eriksson
- * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date: 2008-09-06 22:04:45 +0200 (Sat, 06 Sep 2008) $
- *           $Revision: 304 $
+ * Authors : Joakim Eriksson, Niclas Finne
+ * Created : 6 nov 2008
+ * Updated : $Date$
+ *           $Revision$
  */
 
 package se.sics.mspsim.platform.sky;
 import java.io.IOException;
-import se.sics.mspsim.chip.AT45DB;
-import se.sics.mspsim.chip.FileAT45DB;
-import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.util.ArgumentManager;
 
 /**
- * Emulation of Telos Mote (old version of Sky Node)
- * 
- * TODO: Cleanup the MoteIVNode, SkyNode and TelosNode
+ *
  */
-public class TelosNode extends MoteIVNode {
-  public static final boolean DEBUG = false;
-
-  // P4.4 - Output: SPI Flash Chip Select
-  public static final int FLASH_RESET = (1<<3);
-  public static final int FLASH_CS = (1<<4);
-  
-  private AT45DB flash;
-
-  /**
-   * Creates a new <code>TelosNode</code> instance.
-   *
-   */
-  public TelosNode() {
-    setMode(MODE_LEDS_OFF);
-  }
-
-  public AT45DB getFlash() {
-    return flash;
-  }
-
-  public void setFlash(AT45DB flash) {
-    this.flash = flash;
-  }
-
-  @Override
-  protected void flashWrite(IOPort source, int data) {
-    flash.setReset((data & FLASH_RESET) == 0);
-    flash.setChipSelect((data & FLASH_CS) == 0);
-  }
-
-  // USART Listener
-  public void dataReceived(USART source, int data) {
-    radio.dataReceived(source, data);
-    flash.dataReceived(source, data);
-  }
-
-  public String getName() {
-    return "Telos";
-  }
-
-  public void setupNodePorts() {
-    super.setupNodePorts();
-    if (flashFile != null) {
-      flash = new FileAT45DB(cpu, flashFile);
-    }
-  }
+public class Main {
 
   public static void main(String[] args) throws IOException {
-    TelosNode node = new TelosNode();
+    SkyNode node = new SkyNode();
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
     if (config.getProperty("nogui") == null) {
@@ -111,6 +58,7 @@ public class TelosNode extends MoteIVNode {
     if (config.getProperty("autorun") == null) {
       config.setProperty("autorun", "scripts/autorun.sc");
     }
+    
     node.setupArgs(config);
   }
 

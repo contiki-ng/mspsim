@@ -41,19 +41,10 @@
 
 package se.sics.mspsim.platform.sky;
 import java.io.IOException;
-import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.M25P80;
-import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOUnit;
-import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.USART;
-import se.sics.mspsim.extutil.jfreechart.DataChart;
-import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
-import se.sics.mspsim.util.ArgumentManager;
-import se.sics.mspsim.util.NetworkConnection;
-import se.sics.mspsim.util.OperatingModeStatistics;
 
 /**
  * Emulation of Sky Mote
@@ -62,10 +53,7 @@ public class SkyNode extends MoteIVNode {
 
   public static final boolean DEBUG = false;
 
-  public NetworkConnection network;
-
   private M25P80 flash;
-  private String flashFile;
 
   /**
    * Creates a new <code>SkyNode</code> instance.
@@ -95,7 +83,7 @@ public class SkyNode extends MoteIVNode {
   }
 
   @Override
-  void flashWrite(IOPort source, int data) {
+  protected void flashWrite(IOPort source, int data) {
     flash.portWrite(source, data);
   }
   
@@ -110,89 +98,11 @@ public class SkyNode extends MoteIVNode {
     }
   }
 
-  public void setupNode() {
-    // create a filename for the flash file
-    // This should be possible to take from a config file later!
-    String fileName = config.getProperty("flashfile");
-    if (fileName == null) {
-      fileName = firmwareFile;
-      if (fileName != null) {
-        int ix = fileName.lastIndexOf('.');
-        if (ix > 0) {
-          fileName = fileName.substring(0, ix);
-        }
-        fileName = fileName + ".flash";
-      }
-    }
-    if (DEBUG) System.out.println("Using flash file: " + (fileName == null ? "no file" : fileName));
-
-    this.flashFile = fileName;
-
-    setupNodePorts();
-
-    stats.addMonitor(this);
-    stats.addMonitor(radio);
-    stats.addMonitor(cpu);
-
-    if (config.getPropertyAsBoolean("enableNetwork", false)) {
-      network = new NetworkConnection();
-      final RadioWrapper radioWrapper = new RadioWrapper(radio);
-      radioWrapper.setPacketListener(new PacketListener() {
-        public void transmissionStarted() {
-        }
-        public void transmissionEnded(byte[] receivedData) {
-          //        System.out.println("**** Sending data len = " + receivedData.length);
-          //        for (int i = 0; i < receivedData.length; i++) {
-          //          System.out.println("Byte: " + Utils.hex8(receivedData[i]));
-          //        }
-          network.dataSent(receivedData);
-        }
-      });
-
-      network.addPacketListener(new PacketListener() {
-        public void transmissionStarted() {
-        }
-        public void transmissionEnded(byte[] receivedData) {
-          //        System.out.println("**** Receiving data = " + receivedData.length);
-          radioWrapper.packetReceived(receivedData);
-        }
-      });
-    }
-
-    // UART0 TXreg = 0x77?
-//    cpu.setBreakPoint(0x77, new CPUMonitor() {
-//      public void cpuAction(int type, int adr, int data) {
-//        System.out.println("Write to USART0 TX: " + data + " at " +
-//            SkyNode.this.elf.getDebugInfo(SkyNode.this.cpu.readRegister(0)));
-//      }
-//    });
-
-    if (!config.getPropertyAsBoolean("nogui", true)) {
-      gui = new SkyGui(this);
-
-      // A HACK for some "graphs"!!!
-      DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
-      DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-      dataChart.addDataSource(dss, "LEDS", stats.getDataSource("Tmote Sky", 0, OperatingModeStatistics.OP_INVERT));
-      dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
-      dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
-      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
-    }
-  }
-
+  /**
+   * @deprecated Use se.sics.mspsim.platform.sky.Main instead.
+   */
   public static void main(String[] args) throws IOException {
-    SkyNode node = new SkyNode();
-    ArgumentManager config = new ArgumentManager();
-    config.handleArguments(args);
-    if (config.getProperty("nogui") == null) {
-      config.setProperty("nogui", "false");
-    }
-    /* Ensure auto-run of a start script */
-    if (config.getProperty("autorun") == null) {
-      config.setProperty("autorun", "scripts/autorun.sc");
-    }
-    
-    node.setupArgs(config);
+    Main.main(args);
   }
 
 }

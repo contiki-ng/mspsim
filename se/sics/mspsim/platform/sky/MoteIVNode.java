@@ -1,14 +1,20 @@
 package se.sics.mspsim.platform.sky;
 
 import se.sics.mspsim.chip.CC2420;
+import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
+import se.sics.mspsim.extutil.jfreechart.DataChart;
+import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.NetworkConnection;
+import se.sics.mspsim.util.OperatingModeStatistics;
 
 public abstract class MoteIVNode extends GenericNode implements PortListener, USARTListener {
 
@@ -58,6 +64,9 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   public SHT11 sht11;
 
   public SkyGui gui;
+  public NetworkConnection network;
+
+  protected String flashFile;
 
   public void setDebug(boolean debug) {
     cpu.setDebug(debug);
@@ -112,7 +121,76 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     }    
   }
 
-  
+  public void setupNode() {
+    // create a filename for the flash file
+    // This should be possible to take from a config file later!
+    String fileName = config.getProperty("flashfile");
+    if (fileName == null) {
+      fileName = firmwareFile;
+      if (fileName != null) {
+        int ix = fileName.lastIndexOf('.');
+        if (ix > 0) {
+          fileName = fileName.substring(0, ix);
+        }
+        fileName = fileName + ".flash";
+      }
+    }
+    if (DEBUG) System.out.println("Using flash file: " + (fileName == null ? "no file" : fileName));
+
+    this.flashFile = fileName;
+
+    setupNodePorts();
+
+    stats.addMonitor(this);
+    stats.addMonitor(radio);
+    stats.addMonitor(cpu);
+
+    if (config.getPropertyAsBoolean("enableNetwork", false)) {
+      network = new NetworkConnection();
+      final RadioWrapper radioWrapper = new RadioWrapper(radio);
+      radioWrapper.setPacketListener(new PacketListener() {
+        public void transmissionStarted() {
+        }
+        public void transmissionEnded(byte[] receivedData) {
+          //        System.out.println("**** Sending data len = " + receivedData.length);
+          //        for (int i = 0; i < receivedData.length; i++) {
+          //          System.out.println("Byte: " + Utils.hex8(receivedData[i]));
+          //        }
+          network.dataSent(receivedData);
+        }
+      });
+
+      network.addPacketListener(new PacketListener() {
+        public void transmissionStarted() {
+        }
+        public void transmissionEnded(byte[] receivedData) {
+          //        System.out.println("**** Receiving data = " + receivedData.length);
+          radioWrapper.packetReceived(receivedData);
+        }
+      });
+    }
+
+    // UART0 TXreg = 0x77?
+//    cpu.setBreakPoint(0x77, new CPUMonitor() {
+//      public void cpuAction(int type, int adr, int data) {
+//        System.out.println("Write to USART0 TX: " + data + " at " +
+//            SkyNode.this.elf.getDebugInfo(SkyNode.this.cpu.readRegister(0)));
+//      }
+//    });
+
+    if (!config.getPropertyAsBoolean("nogui", true)) {
+      gui = new SkyGui(this);
+
+      // A HACK for some "graphs"!!!
+      DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+      DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getName(), 0, OperatingModeStatistics.OP_INVERT));
+      dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
+      dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
+      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
+    }
+  }
+
   public void portWrite(IOPort source, int data) {
     if (source == port5) {
       redLed = (data & RED_LED) == 0;
@@ -139,7 +217,7 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   public int getModeMax() {
     return MODE_MAX;
   }
-  
-  abstract void flashWrite(IOPort source, int data);
-  
+
+  protected abstract void flashWrite(IOPort source, int data);
+
 }
