@@ -37,10 +37,10 @@
  * Created : 31 mar 2008
  * Updated : $Date:$
  *           $Revision:$
- */package se.sics.mspsim.util;
+ */
 
-import java.util.ArrayList;
-import com.sun.org.apache.xalan.internal.xsltc.runtime.Hashtable;
+package se.sics.mspsim.util;
+import java.util.Hashtable;
 
 public class NetworkPacket {
   byte[] data;
@@ -48,28 +48,29 @@ public class NetworkPacket {
     "|payloadLength:16|nextHeader:8|hopLimit:8" +
     "|sourceAddress:128|destinationAddress:128";
 
-  Hashtable fields = new Hashtable();
-  
-  private class Field {
+  Hashtable<String,Field> fields = new Hashtable<String,Field>();
+
+  private static class Field {
     String name;
     int pos;
     int size;
+
     Field(String name, int pos, int size) {
       this.name = name;
       this.pos = pos;
       this.size = size;
     }
-    
+
     public String toString() {
       return name + ":" + pos + "-" + (pos + size - 1);
     }
   }
-  
+
   public NetworkPacket(byte[] data) {
     this.data = data;
     parseData();
   }
-  
+
   private void parseData() {
     String[] parts = description.split("\\|");
     int pos = 0;
@@ -82,11 +83,11 @@ public class NetworkPacket {
       fields.put(f.name, f);
     }
   }
-  
+
   public int getLength() {
     return data.length;
   }
-  
+
   public int getIntBits(int startBit, int endBit) {
     int startByte = startBit >> 8;
     int endByte = endBit >> 8;
@@ -108,12 +109,12 @@ public class NetworkPacket {
     }
     return result;
   }
-  
+
   public int getInt(String field) {
-    Field f = (Field) fields.get(field);
+    Field f = fields.get(field);
     return getIntBits(f.pos, f.pos + f.size - 1);
   }
-  
+
   public static void main(String[] args) {
     byte data[] = new byte[] {
         0x61, 0x04, 0x00, 0x00,
@@ -133,5 +134,3 @@ public class NetworkPacket {
   }
 
 }
-
-
