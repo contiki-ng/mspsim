@@ -39,6 +39,7 @@
 package se.sics.mspsim.platform;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 
@@ -125,10 +126,13 @@ public abstract class GenericNode extends Chip implements Runnable {
     
     String script = config.getProperty("autorun");
     if (script != null) {
-      CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
-      System.out.println("Autoloading script: " + script);
-      if (ch != null) {
-        ch.lineRead("source " + script);
+      File fp = new File(script);
+      if (fp.canRead()) {
+        CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
+        System.out.println("Autoloading script: " + script);
+        if (ch != null) {
+          ch.lineRead("source " + script);
+        }
       }
     }
   }
