@@ -43,19 +43,21 @@ package se.sics.mspsim.platform.sky;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.net.URL;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
-
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.USART;
 import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.ui.WindowUtils;
 
-public class SkyGui extends JComponent implements KeyListener {
+public class SkyGui extends JComponent {
 
   /**
    * 
@@ -87,7 +89,15 @@ public class SkyGui extends JComponent implements KeyListener {
     setBackground(Color.black);
     setOpaque(true);
 
-    skyImage = new ImageIcon("images/sky.jpg");
+    URL imageURL = SkyGui.class.getResource("images/sky.jpg");
+    if (imageURL == null) {
+      imageURL = SkyGui.class.getResource("/images/sky.jpg");
+    }
+    if (imageURL != null) {
+      skyImage = new ImageIcon(imageURL);
+    } else {
+      skyImage = new ImageIcon("images/sky.jpg");
+    }
     if (skyImage.getIconWidth() == 0 || skyImage.getIconHeight() == 0) {
       // Image not found
       throw new IllegalStateException("image not found");
@@ -102,7 +112,16 @@ public class SkyGui extends JComponent implements KeyListener {
     WindowUtils.addSaveOnShutdown("SkyGui", window);
     window.setVisible(true);
 
-    window.addKeyListener(this);
+    window.addKeyListener(new KeyAdapter() {
+
+      public void keyPressed(KeyEvent key) {
+//      System.out.println("Key Pressed: " + key.getKeyChar());
+        if (key.getKeyChar() == 'd') {
+          SkyGui.this.node.setDebug(!SkyGui.this.node.getDebug());
+        }
+      }
+
+    });
 
     MouseAdapter mouseHandler = new MouseAdapter() {
 
@@ -182,19 +201,6 @@ public class SkyGui extends JComponent implements KeyListener {
       g.fillOval(LED_X, BLUE_Y, 4, 3);
     }
     g.setColor(old);
-  }
-
-  public void keyPressed(KeyEvent key) {
-//     System.out.println("Key Pressed: " + key.getKeyChar());
-    if (key.getKeyChar() == 'd') {
-      node.setDebug(!node.getDebug());
-    }
-  }
-
-  public void keyReleased(KeyEvent key) {
-  }
-
-  public void keyTyped(KeyEvent key) {
   }
 
 }

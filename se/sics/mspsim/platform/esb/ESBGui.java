@@ -43,12 +43,11 @@ package se.sics.mspsim.platform.esb;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
-import java.awt.event.MouseListener;
-
+import java.net.URL;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -56,15 +55,16 @@ import javax.sound.sampled.TargetDataLine;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
-
 import se.sics.mspsim.chip.Beeper;
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.ADC12;
+import se.sics.mspsim.core.ADCInput;
+import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.USART;
 import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.ui.WindowUtils;
 
-public class ESBGui extends JComponent implements KeyListener,
-						  MouseMotionListener,
-						  MouseListener, ADCInput {
+public class ESBGui extends JComponent implements ADCInput {
 
   private static final long serialVersionUID = -139331418649524704L;
 
@@ -95,13 +95,21 @@ public class ESBGui extends JComponent implements KeyListener,
 
   private TargetDataLine inDataLine;
 
-  public ESBGui(ESBNode node) {
-    this.node = node;
+  public ESBGui(ESBNode esbNode) {
+    this.node = esbNode;
 
     setBackground(Color.black);
     setOpaque(true);
 
-    esbImage = new ImageIcon("images/esb.jpg");
+    URL imageURL = ESBGui.class.getResource("images/esb.jpg");
+    if (imageURL == null) {
+      imageURL = ESBGui.class.getResource("/images/esb.jpg");
+    }
+    if (imageURL != null) {
+      esbImage = new ImageIcon(imageURL);
+    } else {
+      esbImage = new ImageIcon("images/esb.jpg");
+    }
     if (esbImage.getIconWidth() == 0 || esbImage.getIconHeight() == 0) {
       // Image not found
       throw new IllegalStateException("image not found");
@@ -116,9 +124,61 @@ public class ESBGui extends JComponent implements KeyListener,
     WindowUtils.addSaveOnShutdown("ESBGui", window);
     window.setVisible(true);
 
-    window.addKeyListener(this);
-    addMouseMotionListener(this);
-    addMouseListener(this);
+    window.addKeyListener(new KeyAdapter() {
+
+      public void keyPressed(KeyEvent key) {
+        if (key.getKeyChar() == 'd') {
+          node.setDebug(!node.getDebug());
+        }
+      }
+
+    });
+ 
+    MouseAdapter mouseListener = new MouseAdapter() {
+
+      public void mouseMoved(MouseEvent e) {
+        //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
+        int x = e.getX();
+        int y = e.getY();
+        node.setPIR(x > 18 && x < 80 && y > 35 && y < 100);
+        node.setVIB(x > 62 && x < 95 && y > 160 && y < 178);
+      }
+
+      // For the button sensor on the ESB nodes.
+      public void mousePressed(MouseEvent e) {
+        int x = e.getX();
+        int y = e.getY();
+        if (y > 152 && y < 168) {
+          if (x > 0 && x < 19) {
+            node.setButton(buttonDown = true);
+          } else {
+            int w = esbImage.getIconWidth();
+            if (x > w - 20 && x < w) {
+              resetDown = true;
+            }
+          }
+        }
+      }
+
+      public void mouseReleased(MouseEvent e) {
+        if (buttonDown) {
+          node.setButton(buttonDown = false);
+        } else if (resetDown) {
+          int x = e.getX();
+          int y = e.getY();
+          if (y > 152 && y < 168) {
+            int w = esbImage.getIconWidth();
+            if (x > w - 20 && x < w) {
+              node.getCPU().reset();
+            }
+          }
+          resetDown = false;
+        }
+      }
+
+    };
+    addMouseMotionListener(mouseListener);
+    addMouseListener(mouseListener);
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();
@@ -135,7 +195,6 @@ public class ESBGui extends JComponent implements KeyListener,
     
     beeper = new Beeper();
     cpu.addIOUnit(-1,0,-1,0,beeper);
-    
     
     // Just a test... TODO: remove!!!
     AudioFormat af = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
@@ -167,53 +226,7 @@ public class ESBGui extends JComponent implements KeyListener,
     return (((data[1] & 0xff) << 8) | data[0] & 0xff) >> 4;
   }
   
-  public void mouseMoved(MouseEvent e) {
-    //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
-    int x = e.getX();
-    int y = e.getY();
-    node.setPIR(x > 18 && x < 80 && y > 35 && y < 100);
-    node.setVIB(x > 62 && x < 95 && y > 160 && y < 178);
-  }
-
-  public void mouseDragged(MouseEvent e) {}
-  public void mouseClicked(MouseEvent e) {}
-  public void mouseEntered(MouseEvent e) {}
-  public void mouseExited(MouseEvent e) {}
-
-  // For the button sensor on the ESB nodes.
-  public void mousePressed(MouseEvent e) {
-    int x = e.getX();
-    int y = e.getY();
-    if (y > 152 && y < 168) {
-      if (x > 0 && x < 19) {
-	node.setButton(buttonDown = true);
-      } else {
-	int w = esbImage.getIconWidth();
-	if (x > w - 20 && x < w) {
-	  resetDown = true;
-	}
-      }
-    }
-  }
-  public void mouseReleased(MouseEvent e) {
-    if (buttonDown) {
-      node.setButton(buttonDown = false);
-    } else if (resetDown) {
-      int x = e.getX();
-      int y = e.getY();
-      if (y > 152 && y < 168) {
-	int w = esbImage.getIconWidth();
-	if (x > w - 20 && x < w) {
-	  node.getCPU().reset();
-	}
-      }
-      resetDown = false;
-    }
-  }
-
-
-
-  public void paintComponent(Graphics g) {
+  protected void paintComponent(Graphics g) {
     Color old = g.getColor();
     int w = getWidth(), h = getHeight();
     int iw = esbImage.getIconWidth(), ih = esbImage.getIconHeight();
@@ -247,18 +260,6 @@ public class ESBGui extends JComponent implements KeyListener,
       g.fillOval(YELLOW_X, LED_Y, 3, 4);
     }
     g.setColor(old);
-  }
-
-  public void keyPressed(KeyEvent key) {
-    if (key.getKeyChar() == 'd') {
-      node.setDebug(!node.getDebug());
-    }
-  }
-
-  public void keyReleased(KeyEvent key) {
-  }
-
-  public void keyTyped(KeyEvent key) {
   }
 
 }
