@@ -116,7 +116,19 @@ public abstract class GenericNode extends Chip implements Runnable {
       // Setup control and other UI components
       ControlUI control = new ControlUI(registry);
       HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
-//    sourceViewer.addSearchPath(new File("../../contiki-2.x/examples/energest-demo/"));
+      if (firmwareFile != null) {
+        // Add the firmware location to the search path
+        File fp = new File(firmwareFile).getParentFile();
+        if (fp != null) {
+          try {
+            // Get absolute path
+            fp = fp.getCanonicalFile();
+          } catch (Exception e) {
+            // Ignore
+          }
+          sourceViewer.addSearchPath(fp);
+        }
+      }
       control.setSourceViewer(sourceViewer);
     }
 
