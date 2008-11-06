@@ -40,10 +40,12 @@
  */
 
 package se.sics.mspsim.chip;
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import se.sics.mspsim.core.MSP430Core;
@@ -52,14 +54,30 @@ public class FileM25P80 extends M25P80 {
 
   private static final boolean DEBUG = true;
 
+  private String filename;
   private RandomAccessFile file;
   private FileChannel fileChannel;
   private FileLock fileLock;
+  private long pos = 0;
 
   public FileM25P80(MSP430Core cpu, String filename) {
     super(cpu);
     if (filename == null) {
       filename = "flash.bin";
+    }
+    this.filename = filename;
+  }
+
+  private boolean ensureOpen(boolean write) {
+    if (fileChannel != null) {
+      return true;
+    }
+    if (!write) {
+      File fp = new File(filename);
+      if (!fp.exists()) {
+        // File does not exist and only trying to read. Delay file creation until first write
+        return false;
+      }
     }
 
     // Open flash file for R/W
@@ -79,13 +97,21 @@ public class FileM25P80 extends M25P80 {
     }
     if (fileLock == null) {
       // Failed to open flash file
-      throw new IllegalStateException("failed to open flash file '" + filename + '\'');
+      if (write) {
+        System.err.println(getName() + ": failed to open flash file '" + filename + '\'');
+      }
+      return false;
     }
     // Set size of flash
     try {
       file.setLength(MEMORY_SIZE);
+      if (pos > 0) {
+        file.seek(pos);
+      }
+      return true;
     } catch (IOException e) {
       e.printStackTrace();
+      return false;
     }
   }
 
@@ -112,6 +138,7 @@ public class FileM25P80 extends M25P80 {
 
   private void closeFile() {
     try {
+      file = null;
       if (fileLock != null) {
         fileLock.release();
         fileLock = null;
@@ -126,15 +153,27 @@ public class FileM25P80 extends M25P80 {
   }
 
   public void seek(long pos) throws IOException {
-    file.seek(pos);
+    if (file != null) {
+      file.seek(pos);
+    }
+    this.pos = pos;
   }
 
   public int readFully(byte[] b) throws IOException {
-    return file.read(b);
+    if (file != null || ensureOpen(false)) {
+      pos += b.length;
+      return file.read(b);
+    }
+    Arrays.fill(b, (byte) 0);
+    pos += b.length;
+    return b.length;
   }
 
   public void write(byte[] b) throws IOException {
-    file.write(b);
+    if (file != null || ensureOpen(true)) {
+      file.write(b);
+    }
+    pos += b.length;
   }
 
 } // FileM25P80
