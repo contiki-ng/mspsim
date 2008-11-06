@@ -66,6 +66,8 @@ public class MSP430 extends MSP430Core {
   private MapTable map;
   private Profiler profiler;
 
+  private SimEventListener[] simEventListeners;
+
   /**
    * Creates a new <code>MSP430</code> instance.
    *
@@ -329,8 +331,18 @@ public class MSP430 extends MSP430Core {
     }
   }
 
-  public boolean setRunning(boolean running) {
-    return this.running = running;
+  public void setRunning(boolean running) {
+    if (this.running != running) {
+      this.running = running;
+      SimEventListener[] listeners = this.simEventListeners;
+      if (listeners != null) {
+        SimEvent.Type type = running ? SimEvent.Type.START : SimEvent.Type.STOP;
+        SimEvent event = new SimEvent(type);
+        for(SimEventListener l : listeners) {
+          l.simChanged(event);
+        }
+      }
+    }
   }
 
   public boolean isRunning() {
@@ -345,4 +357,12 @@ public class MSP430 extends MSP430Core {
     sleepRate = rate;
   }
 
+  public synchronized void addSimEventListener(SimEventListener l) {
+    simEventListeners = (SimEventListener[]) Utils.add(SimEventListener.class, simEventListeners, l);
+  }
+
+  public synchronized void removeSimEventListener(SimEventListener l) {
+    simEventListeners = (SimEventListener[]) Utils.remove(simEventListeners, l);
+  }
+  
 }

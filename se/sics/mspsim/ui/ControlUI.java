@@ -52,20 +52,25 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Constants;
+import se.sics.mspsim.core.SimEvent;
+import se.sics.mspsim.core.SimEventListener;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
 
-public class ControlUI extends JPanel implements ActionListener {
+public class ControlUI extends JPanel implements ActionListener, SimEventListener {
+
+  private static final long serialVersionUID = -2431892192775232653L;
 
   private static final String TITLE = "MSPSim monitor";
   private static final boolean USE_STACKUI = false;
 
   private JFrame window;
+  private JButton controlButton;
   private MSP430 cpu;
   private GenericNode node;
   private DebugUI dui;
@@ -103,9 +108,11 @@ public class ControlUI extends JPanel implements ActionListener {
     window.add(dui = new DebugUI(cpu), BorderLayout.CENTER);
 
     createButton("Debug On");
-    createButton("Stop");
+    controlButton = createButton(cpu.isRunning() ? "Stop" : "Run");
     stepAction = new AbstractAction("Single Step") {
-	public void actionPerformed(ActionEvent e) {
+      private static final long serialVersionUID = 1L;
+
+      public void actionPerformed(ActionEvent e) {
 	  ControlUI.this.node.step();
 	  dui.updateRegs();
 	  dui.repaint();
@@ -127,7 +134,7 @@ public class ControlUI extends JPanel implements ActionListener {
       };
     stepAction.putValue(Action.MNEMONIC_KEY,
 			new Integer(KeyEvent.VK_S));
-    stepAction.setEnabled(false);
+    stepAction.setEnabled(!cpu.isRunning());
 
     JButton stepButton = new JButton(stepAction);
     add(stepButton);
@@ -144,6 +151,8 @@ public class ControlUI extends JPanel implements ActionListener {
 	   "cpuStep");
     stepButton.getActionMap().put("cpuStep", stepAction);
 
+    cpu.addSimEventListener(this);
+
     WindowUtils.restoreWindowBounds("ControlUI", window);
     WindowUtils.addSaveOnShutdown("ControlUI", window);
     window.setVisible(true);
@@ -152,7 +161,6 @@ public class ControlUI extends JPanel implements ActionListener {
   public void setSourceViewer(SourceViewer viewer) {
     sourceViewer = viewer;
   }
-
 
   private JButton createButton(String text) {
     JButton jb = new JButton(text);
@@ -178,13 +186,9 @@ public class ControlUI extends JPanel implements ActionListener {
 
     } else if ("Run".equals(cmd)) {
       node.start();
-      ((JButton) ae.getSource()).setText("Stop");
-      stepAction.setEnabled(false);
       
     } else if ("Stop".equals(cmd)) {
       node.stop();
-      ((JButton) ae.getSource()).setText("Run");
-      stepAction.setEnabled(true);
       
     } else if ("Profile Dump".equals(cmd)) {
       if (cpu.getProfiler() != null) {
@@ -196,7 +200,7 @@ public class ControlUI extends JPanel implements ActionListener {
       //       cpu.step();
 //       dui.repaint();
     } else if ("Show Source".equals(cmd)) {
-      int pc = cpu.readRegister(cpu.PC);
+      int pc = cpu.readRegister(MSP430Constants.PC);
       if (elfData != null) {
 	DebugInfo dbg = elfData.getDebugInfo(pc);
 	if (dbg != null) {
@@ -217,5 +221,26 @@ public class ControlUI extends JPanel implements ActionListener {
       cpu.getProfiler().printStackTrace(System.out);
     }
     dui.updateRegs();
+  }
+
+  public void simChanged(SimEvent event) {
+    switch (event.getType()) {
+    case START:
+    case STOP:
+      java.awt.EventQueue.invokeLater(new Runnable() {
+
+        public void run() {
+          if (cpu.isRunning()) {
+            controlButton.setText("Stop");
+            stepAction.setEnabled(false);
+          } else {
+            controlButton.setText("Run");
+            stepAction.setEnabled(true);
+          }
+        }
+
+      });
+      break;
+    }
   }
 }
