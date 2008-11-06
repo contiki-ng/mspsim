@@ -49,30 +49,29 @@ import java.io.IOException;
  */
 public class FileTarget implements LineListener {
 
-  FileWriter out;
-  String name;
-  
+  private final FileWriter out;
+  private final String name;
+
   public FileTarget(String name) throws IOException {
-    out = new FileWriter(name);
+    this.out = new FileWriter(name);
     this.name = name;
   }
-  
+
   public String getName() {
     return name;
   }
+
   /* (non-Javadoc)
    * @see se.sics.mspsim.cli.LineListener#lineRead(java.lang.String)
    */
   public void lineRead(String line) {
     if (line == null) {
-      try {
-        out.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      close();
     } else {
       try {
-        out.write(line + "\n");
+        out.write(line);
+        out.write('\n');
+        out.flush();
       } catch (IOException e) {
         e.printStackTrace();
       };
@@ -83,9 +82,8 @@ public class FileTarget implements LineListener {
     try {
       out.close();
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
   }
-  
+
 }
