@@ -68,7 +68,7 @@ CPUTEST := tests/cputest.firmware
 
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware
 
-PACKAGES := ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky cli ui util chip extutil/highlight extutil/jfreechart}
+PACKAGES := ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky . cli ui util chip extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -93,7 +93,7 @@ jar:	compile JarManifest.txt
 JarManifest.txt:
 	@echo >>$@ "Manifest-Version: 1.0"
 	@echo >>$@ "Sealed: true"
-	@echo >>$@ "Main-Class: se.sics.mspsim.platform.sky.Main"
+	@echo >>$@ "Main-Class: se.sics.mspsim.Main"
 	@echo >>$@ "Class-path: lib/jfreechart-1.0.9.jar lib/jcommon-1.0.12.jar"
 
 help:
@@ -103,13 +103,13 @@ run:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.IHexReader $(ARGS) $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.Main $(ARGS) $(ESBFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ARGS) $(ESBFIRMWARE) $(MAPFILE)
 
 runsky:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.Main $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
 
 runskyprof:	compile
-	$(JAVA) -agentlib:yjpagent $(JAVAARGS) se.sics.mspsim.platform.sky.Main $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) -agentlib:yjpagent $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
 
 runtelos:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.TelosNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)

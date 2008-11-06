@@ -50,6 +50,7 @@ import se.sics.mspsim.core.USART;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.util.ArgumentManager;
 
 public class ESBNode extends GenericNode implements PortListener {
 
@@ -184,11 +185,11 @@ public class ESBNode extends GenericNode implements PortListener {
     return "ESB";
   }
 
-  /**
-   * @deprecated Use se.sics.mspsim.platform.sky.Main instead.
-   */
   public static void main(String[] args) throws IOException {
-    Main.main(args);
+    ESBNode node = new ESBNode();
+    ArgumentManager config = new ArgumentManager();
+    config.handleArguments(args);
+    node.setupArgs(config);
   }
 
 }

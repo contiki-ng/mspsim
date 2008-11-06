@@ -42,7 +42,6 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.cli.MiscCommands;
@@ -94,6 +93,14 @@ public abstract class GenericNode extends Chip implements Runnable {
       System.exit(1);
     }
     firmwareFile = args[0];
+
+    if (config.getProperty("nogui") == null) {
+      config.setProperty("nogui", "false");
+    }
+    /* Ensure auto-run of a start script */
+    if (config.getProperty("autorun") == null) {
+      config.setProperty("autorun", "scripts/autorun.sc");
+    }
 
     int[] memory = cpu.getMemory();
     if (args[0].endsWith("ihex")) {

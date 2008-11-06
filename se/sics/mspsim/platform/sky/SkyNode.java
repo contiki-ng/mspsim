@@ -45,6 +45,7 @@ import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.USART;
+import se.sics.mspsim.util.ArgumentManager;
 
 /**
  * Emulation of Sky Mote
@@ -98,11 +99,11 @@ public class SkyNode extends MoteIVNode {
     }
   }
 
-  /**
-   * @deprecated Use se.sics.mspsim.platform.sky.Main instead.
-   */
   public static void main(String[] args) throws IOException {
-    Main.main(args);
+    SkyNode node = new SkyNode();
+    ArgumentManager config = new ArgumentManager();
+    config.handleArguments(args);
+    node.setupArgs(config);
   }
 
 }

@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * This file is part of MSPSim
+ * This file is part of MSPSim.
  *
  * $Id$
  *
@@ -40,8 +40,9 @@
  *           $Revision$
  */
 
-package se.sics.mspsim.platform.esb;
+package se.sics.mspsim;
 import java.io.IOException;
+import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ArgumentManager;
 
 /**
@@ -49,16 +50,44 @@ import se.sics.mspsim.util.ArgumentManager;
  */
 public class Main {
 
+  public static GenericNode createNode(String className) {
+    try {
+      Class<? extends GenericNode> nodeClass = Class.forName(className).asSubclass(GenericNode.class);
+      return nodeClass.newInstance();
+    } catch (ClassNotFoundException e) {
+      // Can not find specified class
+    } catch (ClassCastException e) {
+      // Wrong class type
+    } catch (InstantiationException e) {
+      // Failed to instantiate
+    } catch (IllegalAccessException e) {
+      // Failed to access constructor
+    }
+    return null;
+  }
+
   public static void main(String[] args) throws IOException {
-    ESBNode node = new ESBNode();
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
-    if (config.getProperty("nogui") == null) {
-      config.setProperty("nogui", "false");
+
+    String nodeType = config.getProperty("nodeType");
+    String platform = nodeType;
+    GenericNode node;
+    if (nodeType != null) {
+      node = createNode(nodeType);
+    } else {
+      platform = config.getProperty("platform", "sky");
+      nodeType = "se.sics.mspsim.platform." + platform + '.' +
+      Character.toUpperCase(platform.charAt(0)) + platform.substring(1).toLowerCase() + "Node";
+      node = createNode(nodeType);
+      if (node == null) {
+        nodeType = "se.sics.mspsim.platform." + platform + '.' + platform.toUpperCase() + "Node";
+        node = createNode(nodeType);
+      }
     }
-    /* Ensure auto-run of a start script */
-    if (config.getProperty("autorun") == null) {
-      config.setProperty("autorun", "scripts/autorun.sc");
+    if (node == null) {
+      System.err.println("MSPSim does not yet support the platform '" + platform + '\'');
+      System.exit(1);
     }
     node.setupArgs(config);
   }

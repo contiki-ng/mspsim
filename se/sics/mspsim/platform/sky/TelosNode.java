@@ -104,13 +104,6 @@ public class TelosNode extends MoteIVNode {
     TelosNode node = new TelosNode();
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
-    if (config.getProperty("nogui") == null) {
-      config.setProperty("nogui", "false");
-    }
-    /* Ensure auto-run of a start script */
-    if (config.getProperty("autorun") == null) {
-      config.setProperty("autorun", "scripts/autorun.sc");
-    }
     node.setupArgs(config);
   }
 
