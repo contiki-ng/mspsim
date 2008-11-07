@@ -89,7 +89,8 @@ public class USART extends IOUnit {
   private int baudRate = 0;
   private int tickPerByte = 1000;
   private long nextTXReady = -1;
-
+  private int nextTXByte = -1;
+  
   private MSP430Core cpu;
   private SFR sfr;
 
@@ -138,12 +139,12 @@ public class USART extends IOUnit {
       memory[IFG1 + 1] = 0x20;
     }
     
-    nextTXReady = cpu.cycles + 1000;
-    cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+    reset(0);
   }
 
   public void reset(int type) {
     nextTXReady = cpu.cycles + 1000;
+    nextTXByte = -1;
     cpu.scheduleCycleEvent(txTrigger, nextTXReady);
   }
   
@@ -217,10 +218,6 @@ public class USART extends IOUnit {
     case UTXBUF:
       if (DEBUG) System.out.print(getName() + ": USART_UTXBUF:" + (char) data + " = " + data + "\n");
       
-      if (listener != null) {
-	listener.dataReceived(this, data);
-      }
-
       // Interruptflag not set!
       clrBitIFG(utxifg);
       utctl &= ~UTCTL_TXEMPTY;
@@ -230,6 +227,7 @@ public class USART extends IOUnit {
 
       // Schedule on cycles here...
       nextTXReady = cycles + tickPerByte;
+      nextTXByte = data;
       cpu.scheduleCycleEvent(txTrigger, nextTXReady);
 
       // We should set the "not-ready" flag here!
@@ -310,17 +308,22 @@ public class USART extends IOUnit {
   }
 
    private void handleTransmit(long cycles) {
-    setBitIFG(utxifg);
-    utctl |= UTCTL_TXEMPTY;
-    cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
+     if (listener != null && nextTXByte != -1) {
+       listener.dataReceived(this, nextTXByte);
+       nextTXByte = -1;
+     }
 
-    if (DEBUG) {
-      if (isIEBitsSet(utxifg)) {
-        System.out.println(getName() + " flagging on transmit interrupt");
-      }
-      System.out.println(getName() + " Ready to transmit next at: " + cycles);
-    }
-  }
+     setBitIFG(utxifg);
+     utctl |= UTCTL_TXEMPTY;
+     cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
+
+     if (DEBUG) {
+       if (isIEBitsSet(utxifg)) {
+         System.out.println(getName() + " flagging on transmit interrupt");
+       }
+       System.out.println(getName() + " Ready to transmit next at: " + cycles);
+     }
+   }
 
 
   public boolean isReceiveFlagCleared() {
