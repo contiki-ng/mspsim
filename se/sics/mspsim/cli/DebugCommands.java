@@ -48,6 +48,7 @@ import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.GDBStubs;
 import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.Utils;
 
@@ -378,6 +379,20 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }});
 
+        ch.registerCommand("gdbstubs", new BasicCommand("open up a gdb stubs server for GDB remote debugging", "port") {
+          private GDBStubs stubs = null;
+          public int executeCommand(CommandContext context) {
+            if (stubs != null) {
+              context.err.println("GDBStubs alread openend");
+            } else {
+              int port = context.getArgumentAsInt(0);
+              stubs = new GDBStubs();
+              stubs.setupServer(cpu, port);
+            }
+            return 0;
+          }
+        });
+        
         ch.registerCommand("loggable", new BasicCommand("list loggable objects", "") {
           @Override
           public int executeCommand(CommandContext context) {
