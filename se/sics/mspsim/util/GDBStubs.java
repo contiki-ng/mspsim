@@ -66,6 +66,8 @@ public class GDBStubs implements Runnable {
     }
   }
 
+  int[] buffer = new int[256];
+  int len;
   public void run() {
     while (true) {
       try {
@@ -76,17 +78,18 @@ public class GDBStubs implements Runnable {
 
         String cmd = "";
         boolean readCmd = false;
-        while (s != null) {
-          int c = input.read();
-          if (c == -1) return;
+        int c;
+        while (s != null && ((c = input.read()) != -1)) {
           System.out.println("GDBStubs: Read  " + c + " => " + (char) c);
           if (c == '#') {
             readCmd = false;
-            handleCmd(cmd);
+            handleCmd(cmd, buffer, len);
             cmd = "";
+            len = 0;
           }
           if (readCmd) {
             cmd += (char) c;
+            buffer[len++] = (c & 0xff);
           }
           if (c == '$') {
             readCmd = true;
@@ -98,7 +101,7 @@ public class GDBStubs implements Runnable {
     }
   }
 
-  private void handleCmd(String cmd) throws IOException {
+  private void handleCmd(String cmd, int[] cmdBytes, int cmdLen) throws IOException {
     System.out.println("cmd: " + cmd);
     char c = cmd.charAt(0);
     switch(c) {
@@ -122,15 +125,37 @@ public class GDBStubs implements Runnable {
       sendResponse(OK);
       break;
     case 'm':
+    case 'M':
+    case 'X':
       String cmd2 = cmd.substring(1);
+      String wdata[] = cmd2.split(":");
+      int cPos = cmd.indexOf(':');
+      if (cPos > 0) {
+        /* only until length in first part */
+        cmd2 = wdata[0];
+      }
       String parts[] = cmd2.split(",");
       int addr = Integer.decode("0x" + parts[0]);
       int len = Integer.decode("0x" + parts[1]);
       String data = "";
-      for (int i = 0; i < len; i++) {
-        data += Utils.hex8(cpu.memory[addr++] & 0xff);
+      if (c =='m') {
+        System.out.println("Returning memory from: " + addr + " len = " + len);
+        /* This might be wrong - which is the correct byte order? */
+        for (int i = 0; i < len; i++) {
+          data += Utils.hex8(cpu.memory[addr++] & 0xff);
+        }
+        sendResponse(data);
+      } else {
+        System.out.println("Writing to memory at: " + addr + " len = " + len +
+            " with: " + ((wdata.length > 1) ? wdata[1] : ""));
+        cPos++;
+        for (int i = 0; i < len; i++) {
+          System.out.println("Writing: " + cmdBytes[cPos] + " to " + addr + " cpos=" + cPos);
+          cpu.write(addr++, cmdBytes[cPos++], false);
+        }
+        sendResponse(OK);
       }
-      sendResponse(data);
+      break;
     }
   }
 
