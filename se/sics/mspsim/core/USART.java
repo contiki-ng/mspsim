@@ -222,16 +222,17 @@ public class USART extends IOUnit {
       clrBitIFG(utxifg);
       utctl &= ~UTCTL_TXEMPTY;
       utxbuf = data;
+      /* should the interrupt be flagged off here ? - or only the flags */
       if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
       cpu.flagInterrupt(transmitInterrupt, this, false);
 
-      // Schedule on cycles here...
-      nextTXReady = cycles + tickPerByte;
+      // Schedule on cycles here
+      // TODO: adding 3 extra cycles here seems to give
+      // slightly better timing in some test...
+      nextTXReady = cycles + tickPerByte + 3;
       nextTXByte = data;
       cpu.scheduleCycleEvent(txTrigger, nextTXReady);
 
-      // We should set the "not-ready" flag here!
-      // When should the reception interrupt be received!?
       break;
     }
   }
