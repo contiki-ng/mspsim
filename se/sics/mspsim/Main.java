@@ -86,7 +86,7 @@ public class Main {
       }
     }
     if (node == null) {
-      System.err.println("MSPSim does not yet support the platform '" + platform + '\'');
+      System.err.println("MSPSim does not currently support the platform '" + platform + "'.");
       System.exit(1);
     }
     node.setupArgs(config);

@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
@@ -101,7 +102,20 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
     /* Ensure auto-run of a start script */
     if (config.getProperty("autorun") == null) {
-      config.setProperty("autorun", "scripts/autorun.sc");
+      File fp = new File("scripts/autorun.sc");
+      if (fp.exists()) {
+        config.setProperty("autorun", "scripts/autorun.sc");
+      } else {
+        try {
+          File dir = new File(GenericNode.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+          fp = new File(dir, "scripts/autorun.sc");
+          if (fp.exists()) {
+            config.setProperty("autorun", fp.getAbsolutePath());
+          }
+        } catch (URISyntaxException e) {
+          // Failed to find auto run script
+        }
+      }
     }
 
     int[] memory = cpu.getMemory();
@@ -146,9 +160,10 @@ public abstract class GenericNode extends Chip implements Runnable {
       File fp = new File(script);
       if (fp.canRead()) {
         CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
+        script = script.replace('\\', '/');
         System.out.println("Autoloading script: " + script);
         if (ch != null) {
-          ch.lineRead("source " + script);
+          ch.lineRead("source \"" + script + '"');
         }
       }
     }
