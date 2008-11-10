@@ -94,7 +94,7 @@ public class ProfilerCommands implements CommandBundle {
 
       });
 
-      ch.registerCommand("printcalls", new BasicAsyncCommand("print function calls", "") {
+      ch.registerCommand("logcalls", new BasicAsyncCommand("log function calls", "") {
         @Override
         public int executeCommand(CommandContext context) {
           Profiler profiler = cpu.getProfiler();

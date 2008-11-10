@@ -64,6 +64,8 @@ import se.sics.mspsim.util.StatCommands;
 
 public abstract class GenericNode extends Chip implements Runnable {
 
+  private static final String PROMPT = "MSPSim>";
+
   protected ConfigManager config;
 
   protected ComponentRegistry registry = new ComponentRegistry();
@@ -139,10 +141,6 @@ public abstract class GenericNode extends Chip implements Runnable {
       control.setSourceViewer(sourceViewer);
     }
 
-    System.out.println("-----------------------------------------------");
-    System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
-    System.out.println("-----------------------------------------------");
-    
     String script = config.getProperty("autorun");
     if (script != null) {
       File fp = new File(script);
@@ -154,6 +152,11 @@ public abstract class GenericNode extends Chip implements Runnable {
         }
       }
     }
+    System.out.println("-----------------------------------------------");
+    System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
+    System.out.println("-----------------------------------------------");
+    System.out.print(PROMPT);
+    System.out.flush();
   }
 
   public void setup(ConfigManager config) throws IOException {
@@ -164,7 +167,7 @@ public abstract class GenericNode extends Chip implements Runnable {
 
     CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
     if (ch == null) {
-      ch = new StreamCommandHandler(System.in, System.out, System.err);
+      ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
       registry.registerComponent("commandHandler", ch);
     }
     stats = new OperatingModeStatistics(cpu);
@@ -187,9 +190,7 @@ public abstract class GenericNode extends Chip implements Runnable {
  
   public void run() {
     if (!cpu.isRunning()) {
-      System.out.println("Starting new CPU thread...");
       cpu.cpuloop();
-      System.out.println("Stopping CPU thread...");
     }
   }
   public void start() {

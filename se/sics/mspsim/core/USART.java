@@ -292,7 +292,7 @@ public class USART extends IOUnit {
     if (baudRate == 0) baudRate = 1;
     // Is this correct??? Is it the DCO or smclkFRQ we should have here???
     tickPerByte = (8 * cpu.smclkFrq) / baudRate;
-    if (DEBUG) {
+    if (DEBUG || true) {
       System.out.println(getName() +  " Ticks per byte: " + tickPerByte);
     }
   }

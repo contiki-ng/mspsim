@@ -54,9 +54,11 @@ public class StreamCommandHandler extends CommandHandler implements Runnable {
   private BufferedReader inReader;
   private boolean workaround = false;
   private boolean exit;
+  private String prompt;
 
-  public StreamCommandHandler(InputStream in, PrintStream out, PrintStream err) {
+  public StreamCommandHandler(InputStream in, PrintStream out, PrintStream err, String prompt) {
     super(out, err);
+    this.prompt = prompt;
     this.exit = false;
     this.inReader = new BufferedReader(new InputStreamReader(in));
     registerCommand("workaround", new BasicCommand("activate workaround for Java console input bug", "") {
@@ -105,7 +107,7 @@ public class StreamCommandHandler extends CommandHandler implements Runnable {
     String lastLine = null;
     while(!exit) {
       try {
-        out.print(">");
+        out.print(prompt);
         out.flush();
         String line = readLine(inReader);//.readLine();
         // Simple execution of last called command line when not running from terminal with history support
