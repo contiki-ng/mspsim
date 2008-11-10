@@ -88,7 +88,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private int interruptMax = -1;
   // Op/instruction represents the last executed OP / instruction
   private int op;
-  int instruction;
+  public int instruction;
   int servicedInterrupt = -1;
   IOUnit servicedInterruptUnit = null;
 
