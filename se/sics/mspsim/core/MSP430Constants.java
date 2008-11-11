@@ -43,7 +43,7 @@ package se.sics.mspsim.core;
 
 public interface MSP430Constants {
 
-  public static final String VERSION = "0.94";
+  public static final String VERSION = "0.95";
 
   public static final int RESET_PUC = 0;
   public static final int RESET_POR = 1;

@@ -1,3 +1,16 @@
+0.95
+- initial GDB stubs implementation (only for memory access)
+- CLI command for setting up gdbstubs server (gdbstubs PORT)
+- fixed USART timing to be more correct
+- added Ant build script
+- cleanup of CLI and platforms
+- fixed statistics to be more correct
+- added SimEvent for notications of start/stop of emulator
+- CORE: bugfix in read/write SR - made it impossible to turn of interrupts
+- improved CC2420 support including correct overflow handling and better
+  handling of VREG_OFF
+- added logging on/off from CLI and support for loggin CC2420
+
 0.94
 Changes:
 - fixed so that IOPorts output 1 on pins that are configured as input 
