@@ -10,10 +10,11 @@
 - improved CC2420 support including correct overflow handling and better
   handling of VREG_OFF
 - added logging on/off from CLI and support for loggin CC2420
+- added CLI commands tee and trig.
 
 0.94
 Changes:
-- fixed so that IOPorts output 1 on pins that are configured as input 
+- fixed so that IOPorts output 1 on pins that are configured as input
   (with DIR)
 - fixed notification of operating modes on the CC2420 for duty cycle calculation, etc.
 - fixed status register update bug (byte/word problem)
@@ -25,7 +26,7 @@ Changes:
 - improved correctness of timer when reconfiguring CPU clock speed (MCLK)
 - improved interrupt handling in MSP430 core
 - added CLI command printcalls that prints all function calls
-- fixed buffering of serial input in GUI to avoid freezing AWT. 
+- fixed buffering of serial input in GUI to avoid freezing AWT.
 
 0.93
 Changes:
@@ -35,7 +36,7 @@ Changes:
   scheduled back in time (causing other subsystems to get
   delays on their events...)
 - fixed RadioWrapper for backward compatibility with PacketListener
-  (for the CC2420). 
+  (for the CC2420).
 - fixed ADC12 to turn off event scheduling when ADC12 is not on anymore
 - fixed xmem read/write for cli and added Memory API for flash memory.
 

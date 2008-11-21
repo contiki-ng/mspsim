@@ -48,9 +48,6 @@ import java.io.PrintStream;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.regex.Pattern;
-
-import com.sun.xml.internal.bind.CycleRecoverable.Context;
-
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ComponentRegistry;
