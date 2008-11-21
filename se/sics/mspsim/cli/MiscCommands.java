@@ -48,6 +48,9 @@ import java.io.PrintStream;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.regex.Pattern;
+
+import com.sun.xml.internal.bind.CycleRecoverable.Context;
+
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ComponentRegistry;
@@ -97,30 +100,10 @@ public class MiscCommands implements CommandBundle {
 
     // TODO: this should also be "registered" as a "sink".
     // probably this should be handled using ">" instead!
-    handler.registerCommand(">", new BasicLineCommand(null, "<filename>") {
-      FileTarget ft;
-      public int executeCommand(CommandContext context) {
-        String fileName = context.getArgument(0);
-        ft = fileTargets.get(fileName);
-        if (ft == null) {
-          try {
-//            System.out.println("Creating new file target: " + fileName);
-            ft = new FileTarget(fileName);
-            fileTargets.put(fileName, ft);
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-        }
-        return 0;
-      }
-      public void lineRead(String line) {
-        ft.lineRead(line);
-      }
-      public void stopCommand(CommandContext context) {
-        // Should this do anything?
-        // Probably depending on the ft's config
-      }
-    });
+    handler.registerCommand(">", new FileTargetCommand(fileTargets,
+        null, "<filename>", false));
+    handler.registerCommand("tee", new FileTargetCommand(fileTargets,
+        "redirect to file and std-out", "<filename>", true));
 
     handler.registerCommand("fclose", new BasicCommand("close the specified file", "<filename>") {
       public int executeCommand(CommandContext context) {
@@ -174,6 +157,7 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("quit", new BasicCommand("exit MSPSim", "") {
       public int executeCommand(CommandContext context) {
+        /* TODO: flush all files, etc.... */
         System.exit(0);
         return 0;
       }
@@ -214,7 +198,7 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    
+
     handler.registerCommand("repeat", new BasicAsyncCommand("repeat the specified command line", "[-t delay] [-c count] <command line>") {
 
       private MSP430 cpu;
@@ -282,6 +266,27 @@ public class MiscCommands implements CommandBundle {
     });
 
     handler.registerCommand("exec", new ExecCommand());
+
+    handler.registerCommand("trig", new BasicLineCommand("trigg command when input match regexp", "<command>") {
+      String command = null;
+      CommandContext context;
+      public int executeCommand(CommandContext context) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
+          if (i > 0) sb.append(' ');
+          sb.append(context.getArgument(i));
+        }
+        command = sb.toString();
+        this.context = context;
+        return 0;
+      }
+      public void lineRead(String line) {
+        context.executeCommand(command);
+      }
+      public void stopCommand(CommandContext context) {
+      }
+    });
+
   }
 
 }
