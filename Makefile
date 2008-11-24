@@ -46,7 +46,7 @@ endif
 # Arguments
 ###############################################################
 
-CLASSPATH=.$(SEPARATOR)lib/jfreechart-1.0.9.jar$(SEPARATOR)lib/jcommon-1.0.12.jar
+CLASSPATH=.$(SEPARATOR)lib/jfreechart-1.0.11.jar$(SEPARATOR)lib/jcommon-1.0.14.jar
 CCARGS=-deprecation -classpath "${CLASSPATH}"
 
 JAVAARGS=-classpath "${CLASSPATH}"
@@ -66,10 +66,10 @@ endif
 
 CPUTEST := tests/cputest.firmware
 
-SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc} 
-BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS} 
+SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
+BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS}
 
-PACKAGES := ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky . cli ui util chip extutil/highlight extutil/jfreechart}
+PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky cli ui util chip extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -134,7 +134,7 @@ mtest:	compile $(CPUTEST)
 ###############################################################
 
 source:
-	zip -9 mspsim-source-`date '+%F'`.zip Makefile $(BINARY) *.java $(addsuffix /*.java,$(PACKAGES)) tests/Makefile tests/*.c tests/*.h lib/*.*
+	zip -9 mspsim-source-`date '+%F'`.zip Makefile $(BINARY) $(addsuffix /*.java,$(PACKAGES)) tests/Makefile tests/*.c tests/*.h lib/*.*
 
 
 ###############################################################
