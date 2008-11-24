@@ -66,7 +66,8 @@ endif
 
 CPUTEST := tests/cputest.firmware
 
-BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware
+SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc} 
+BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS} 
 
 PACKAGES := ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky . cli ui util chip extutil/highlight extutil/jfreechart}
 
