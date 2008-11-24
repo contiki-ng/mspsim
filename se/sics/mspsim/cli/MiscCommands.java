@@ -40,6 +40,7 @@
  */
 package se.sics.mspsim.cli;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -174,27 +175,29 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("source", new BasicCommand("run script", "<filename>") {
       public int executeCommand(CommandContext context) {
-        FileInputStream infs = null;
-        try {
-          infs = new FileInputStream(context.getArgument(0));
-        } catch (FileNotFoundException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
+        File fp = new File(context.getArgument(0));
+        if (!fp.canRead()) {
+          context.err.println("could not find the script file '" + context.getArgument(0) + "'.");
+          return 1;
         }
-        BufferedReader input = new BufferedReader(new InputStreamReader(infs));
-        String line = null;
         try {
-          while ((line = input.readLine()) != null) {
-            context.executeCommand(line);
+          FileInputStream infs = new FileInputStream(fp);
+          BufferedReader input = new BufferedReader(new InputStreamReader(infs));
+          try {
+            String line;
+            while ((line = input.readLine()) != null) {
+              context.executeCommand(line);
+            }
+          } finally {
+            input.close();
           }
         } catch (IOException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
+          e.printStackTrace(context.err);
+          return 1;
         }
         return 0;
       }
     });
-
 
     handler.registerCommand("repeat", new BasicAsyncCommand("repeat the specified command line", "[-t delay] [-c count] <command line>") {
 
