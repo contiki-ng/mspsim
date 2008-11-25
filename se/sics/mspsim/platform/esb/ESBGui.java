@@ -47,6 +47,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.net.URL;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -134,8 +135,7 @@ public class ESBGui extends JComponent implements ADCInput {
 
     });
  
-    MouseAdapter mouseListener = new MouseAdapter() {
-
+    addMouseMotionListener(new MouseMotionAdapter() {
       public void mouseMoved(MouseEvent e) {
         //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
         int x = e.getX();
@@ -143,7 +143,8 @@ public class ESBGui extends JComponent implements ADCInput {
         node.setPIR(x > 18 && x < 80 && y > 35 && y < 100);
         node.setVIB(x > 62 && x < 95 && y > 160 && y < 178);
       }
-
+    });
+    addMouseListener(new MouseAdapter() {
       // For the button sensor on the ESB nodes.
       public void mousePressed(MouseEvent e) {
         int x = e.getX();
@@ -175,10 +176,7 @@ public class ESBGui extends JComponent implements ADCInput {
           resetDown = false;
         }
       }
-
-    };
-    addMouseMotionListener(mouseListener);
-    addMouseListener(mouseListener);
+    });
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();

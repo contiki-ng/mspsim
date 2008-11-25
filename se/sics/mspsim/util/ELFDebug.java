@@ -234,7 +234,7 @@ public class ELFDebug {
         } else {
           currentFile = stab.data;
 
-          if (currentFile != null && !currentFile.isEmpty()) {
+          if (currentFile != null && currentFile.length() > 0) {
             if (currentPath == null) {
               sourceFiles.add(currentFile);
             } else {
