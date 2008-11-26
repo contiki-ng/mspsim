@@ -42,7 +42,6 @@ package se.sics.mspsim.cli;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -91,8 +90,25 @@ public class MiscCommands implements CommandBundle {
           out.println(line);
         }
       }
-      public void stopCommand(CommandContext context) {
-        context.exit(0);
+    });
+
+    handler.registerCommand("timestamp", new BasicLineCommand("print lines with timestamp prefixed", "") {
+      private PrintStream out;
+      private MSP430 cpu;
+      long startTime;
+
+      public int executeCommand(CommandContext context) {
+        cpu = (MSP430) registry.getComponent(MSP430.class);
+        if (cpu == null) {
+          context.err.println("could not access the CPU.");
+          return 1;
+        }
+        out = context.out;
+        startTime = System.currentTimeMillis() - (long)cpu.getTimeMillis();
+        return 0;
+      }
+      public void lineRead(String line) {
+        out.println(Long.toString(startTime + (long)cpu.getTimeMillis()) + ' ' + line);
       }
     });
 
@@ -282,8 +298,6 @@ public class MiscCommands implements CommandBundle {
       }
       public void lineRead(String line) {
         context.executeCommand(command);
-      }
-      public void stopCommand(CommandContext context) {
       }
     });
 

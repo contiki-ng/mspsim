@@ -50,4 +50,8 @@ public abstract class BasicLineCommand extends BasicAsyncCommand implements
   public BasicLineCommand(String cmdHelp, String argHelp) {
     super(cmdHelp, argHelp);
   }
+
+  public void stopCommand(CommandContext context) {
+    context.exit(0);
+  }
 }
