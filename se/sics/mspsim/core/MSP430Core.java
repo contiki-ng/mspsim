@@ -598,7 +598,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       address &= 0xffff;
       val = memory[address] & 0xff;
       if (word) {
-	val |= (memory[(address + 1) & 0xffff] << 8);
+        val |= (memory[(address + 1) & 0xffff] << 8);
+        if ((address & 1) != 0) {
+          System.out.println("**** Illegal read - misaligned word from: " +
+              Utils.hex16(address) + " at " + Utils.hex16(reg[PC]));
+        }
       }
     }
     if (breakPoints[address] != null) {
@@ -620,7 +624,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // TODO: add check for Flash / RAM!
       memory[dstAddress] = dst & 0xff;
       if (word) {
-	memory[dstAddress + 1] = (dst >> 8) & 0xff;
+        memory[dstAddress + 1] = (dst >> 8) & 0xff;
+        if ((dstAddress & 1) != 0) {
+           System.out.println("**** Illegal write - misaligned word to: " +
+               Utils.hex16(dstAddress) + " at " + Utils.hex16(reg[PC]));
+        }
       }
     }
   }
@@ -785,6 +793,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  cycles++;
 	  break;
 	case AM_INDEX:
+	  // TODO: needs to handle if SR is used!
 	  dstAddress = readRegisterCG(dstRegister, ad) +
 	    memory[pc] + (memory[pc + 1] << 8);
 
@@ -812,12 +821,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
           }
           break;
 	}
-//	case AM_IND_AUTOINC:
-//	  dstAddress = readRegister(dstRegister);
-//	  writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
-//	  cycles += 3;
-//	  break;
-//	}
       }
 
 
@@ -1035,6 +1038,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	// PC Could have changed above!
 	pc = readRegister(PC);
 	if (dstRegister == 2) {
+	  /* absolute mode */
 	  dstAddress = memory[pc] + (memory[pc + 1] << 8);
 	} else {
 	  // CG here???
@@ -1112,8 +1116,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	sr = readRegister(SR);
 	sr = (sr & ~(CARRY | OVERFLOW)) | (dst >= src ? CARRY : 0);
 
-	tmp = dst - src;
-
+	tmp = (dst - src);
+	
 	if (((src ^ tmp) & b) == 0 && (((src ^ dst) & b) != 0)) {
 	  sr |= OVERFLOW;
 	}

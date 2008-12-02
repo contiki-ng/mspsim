@@ -105,7 +105,7 @@ public interface MSP430Constants {
   };
 
   public static final String[] REGISTER_NAMES = {
-    "PC", "SP", "SR", "CG1", "CG2"  
+    "PC", "SP", "SR", "CG1", "CG2"
   };
 
   public static final int PC = 0;
