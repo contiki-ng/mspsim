@@ -145,6 +145,7 @@ public class USART extends IOUnit {
   public void reset(int type) {
     nextTXReady = cpu.cycles + 1000;
     nextTXByte = -1;
+    clrBitIFG(utxifg | urxifg);
     cpu.scheduleCycleEvent(txTrigger, nextTXReady);
   }
   
