@@ -13,7 +13,6 @@
 ###############################################################
 CC=javac
 JAVA=java
-JAVACC=javacc
 JAR=jar
 RM=rm -f
 CP=cp
@@ -95,7 +94,7 @@ JarManifest.txt:
 	@echo >>$@ "Manifest-Version: 1.0"
 	@echo >>$@ "Sealed: true"
 	@echo >>$@ "Main-Class: se.sics.mspsim.Main"
-	@echo >>$@ "Class-path: lib/jfreechart-1.0.9.jar lib/jcommon-1.0.12.jar"
+	@echo >>$@ "Class-path: lib/jfreechart-1.0.11.jar lib/jcommon-1.0.14.jar"
 
 help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
