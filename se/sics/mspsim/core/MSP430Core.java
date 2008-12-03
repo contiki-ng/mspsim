@@ -651,7 +651,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (throwIfWarn) {
       throw new IllegalStateException(message);
     } else {
-      System.out.println(message);
+      if (DEBUG) {
+        System.out.println(message);
+      }
     }
   }
 
