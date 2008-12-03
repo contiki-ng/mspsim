@@ -261,6 +261,7 @@ public class USART extends IOUnit {
     case UTXBUF:
       return utxbuf;
     case URXBUF:
+      int tmp = urxbuf;
       // When byte is read - the interruptflag is cleared!
       // and error status should also be cleared later...
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
@@ -270,7 +271,7 @@ public class USART extends IOUnit {
       if (listener != null) {
         listener.stateChanged(USARTListener.RXFLAG_CLEARED);
       }
-      return urxbuf;
+      return tmp;
     }
     return 0;
   }
