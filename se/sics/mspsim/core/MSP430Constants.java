@@ -45,6 +45,9 @@ public interface MSP430Constants {
 
   public static final String VERSION = "0.95";
 
+  public static final int MISALIGNED_READ = 0;
+  public static final int MISALIGNED_WRITE = 1;
+  
   public static final int RESET_PUC = 0;
   public static final int RESET_POR = 1;
   

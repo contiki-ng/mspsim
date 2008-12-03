@@ -117,6 +117,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   private BasicClockModule bcs;
   private ArrayList<Chip> chips = new ArrayList<Chip>();
+  private boolean throwIfWarn;
 
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -528,6 +529,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     resetIOUnits();
   }
   
+  public void setThrowIfWarning(boolean t) {
+    throwIfWarn = t;
+  }
+  
   public void reset() {
     flagInterrupt(15, null, true);
   }
@@ -600,12 +605,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (word) {
         val |= (memory[(address + 1) & 0xffff] << 8);
         if ((address & 1) != 0) {
-          if (true) {
-            throw new IllegalStateException("**** Illegal read - misaligned word from: " +
-              Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]));
-          }
-          System.out.println("**** Illegal read - misaligned word from: " +
-              Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]));
+          printWarning(MISALIGNED_READ, address);
         }
       }
     }
@@ -614,7 +614,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
     return val;
   }
-
+  
   public void write(int dstAddress, int dst, boolean word) {
     if (breakPoints[dstAddress] != null) {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
@@ -630,14 +630,28 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (word) {
         memory[dstAddress + 1] = (dst >> 8) & 0xff;
         if ((dstAddress & 1) != 0) {
-          if (true) {
-            throw new IllegalStateException("**** Illegal write - misaligned word to: " +
-                Utils.hex16(dstAddress) + " at $" + Utils.hex16(reg[PC]));
-          }
-           System.out.println("**** Illegal write - misaligned word to: " +
-               Utils.hex16(dstAddress) + " at $" + Utils.hex16(reg[PC]));
+          printWarning(MISALIGNED_WRITE, dstAddress);
         }
       }
+    }
+  }
+
+  void printWarning(int type, int address) {
+    String message = "";
+    switch(type) {
+    case MISALIGNED_READ:
+      message = "**** Illegal read - misaligned word from: " +
+      Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+      break;
+    case MISALIGNED_WRITE:
+      message = "**** Illegal write - misaligned word to: " +
+      Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+      break;
+    } 
+    if (throwIfWarn) {
+      throw new IllegalStateException(message);
+    } else {
+      System.out.println(message);
     }
   }
 
