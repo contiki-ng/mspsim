@@ -113,4 +113,9 @@ public class Test implements USARTListener {
     }
 
   }
+
+  public void stateChanged(int state) {
+    // TODO Auto-generated method stub
+    
+  }
 }

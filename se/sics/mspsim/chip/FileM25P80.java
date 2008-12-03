@@ -176,4 +176,8 @@ public class FileM25P80 extends M25P80 {
     pos += b.length;
   }
 
+  public void stateChanged(int state) {
+    // TODO Auto-generated method stub
+  }
+
 } // FileM25P80

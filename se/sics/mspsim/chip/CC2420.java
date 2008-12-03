@@ -1065,5 +1065,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     "\n SPI State: " + state +
     "\n";
   }
+
+  public void stateChanged(int state) {
+    // TODO Auto-generated method stub
+    
+  }
   
 } // CC2420

@@ -76,4 +76,7 @@ public class TR1001 extends Chip implements USARTListener {
   public void dataReceived(USART source, int data) {
   }
 
+  public void stateChanged(int state) {
+  }
+
 }

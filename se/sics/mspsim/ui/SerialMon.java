@@ -42,11 +42,8 @@
 package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.ArrayList;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -73,30 +70,9 @@ public class SerialMon implements KeyListener, USARTListener {
   private int rPos = 0;
   private int bsize = 0;
   
-  private ActionListener bufferTimer = new ActionListener() {
-    public void actionPerformed(ActionEvent evt) {
-      if (bsize > 0)  {
-        if (usart.isReceiveFlagCleared()) {
-          usart.byteReceived(buffer[rPos]);
-          rPos = (rPos + 1) % BUFFER_SIZE;
-          if (bsize == 20) {
-            statusLabel.setText(keyBuffer.toString());
-          }
-          bsize--;
-        }
-      } else {
-        timer.stop();
-      }
-    }
-  };
-  
-  private javax.swing.Timer timer = new javax.swing.Timer(100, bufferTimer);
   private int lines = 1;
   private boolean isUpdatePending = false;
-  private StringBuilder keyBuffer = new StringBuilder();
-  
-  
-  
+  private StringBuilder keyBuffer = new StringBuilder();  
 
   public SerialMon(USART usart, String name) {
     this.name = name;
@@ -174,9 +150,6 @@ public class SerialMon implements KeyListener, USARTListener {
       buffer[wPos] = (byte) (c & 0xff);
       wPos = (wPos + 1) % BUFFER_SIZE;
       bsize++;
-      if (!timer.isRunning()) {
-        timer.start();
-      }
     }
 
     if (bsize < BUFFER_SIZE) {
@@ -195,4 +168,16 @@ public class SerialMon implements KeyListener, USARTListener {
     }
   }
 
+  public void stateChanged(int state) {
+    if (state == USARTListener.RXFLAG_CLEARED && bsize > 0)  {
+      if (usart.isReceiveFlagCleared()) {
+        usart.byteReceived(buffer[rPos]);
+        rPos = (rPos + 1) % BUFFER_SIZE;
+        if (bsize == 20) {
+          statusLabel.setText(keyBuffer.toString());
+        }
+        bsize--;
+      }
+    }
+  }
 }

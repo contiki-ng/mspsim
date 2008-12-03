@@ -140,4 +140,9 @@ public class FileAT45DB extends AT45DB {
     file.write(b);
   }
 
+  public void stateChanged(int state) {
+    // TODO Auto-generated method stub
+    
+  }
+
 } // FileAT45DB

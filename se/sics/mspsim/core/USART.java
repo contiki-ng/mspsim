@@ -267,6 +267,9 @@ public class USART extends IOUnit {
         System.out.println(getName() + " clearing rx interrupt flag");
       }
       clrBitIFG(urxifg);
+      if (listener != null) {
+        listener.stateChanged(USARTListener.RXFLAG_CLEARED);
+      }
       return urxbuf;
     }
     return 0;

@@ -106,4 +106,9 @@ public class SkyNode extends MoteIVNode {
     node.setupArgs(config);
   }
 
+  public void stateChanged(int state) {
+    // TODO Auto-generated method stub
+    
+  }
+
 }
