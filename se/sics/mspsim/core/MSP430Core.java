@@ -600,8 +600,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (word) {
         val |= (memory[(address + 1) & 0xffff] << 8);
         if ((address & 1) != 0) {
+          if (true) {
+            throw new IllegalStateException("**** Illegal read - misaligned word from: " +
+              Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]));
+          }
           System.out.println("**** Illegal read - misaligned word from: " +
-              Utils.hex16(address) + " at " + Utils.hex16(reg[PC]));
+              Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]));
         }
       }
     }
@@ -626,8 +630,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (word) {
         memory[dstAddress + 1] = (dst >> 8) & 0xff;
         if ((dstAddress & 1) != 0) {
+          if (true) {
+            throw new IllegalStateException("**** Illegal write - misaligned word to: " +
+                Utils.hex16(dstAddress) + " at $" + Utils.hex16(reg[PC]));
+          }
            System.out.println("**** Illegal write - misaligned word to: " +
-               Utils.hex16(dstAddress) + " at " + Utils.hex16(reg[PC]));
+               Utils.hex16(dstAddress) + " at $" + Utils.hex16(reg[PC]));
         }
       }
     }

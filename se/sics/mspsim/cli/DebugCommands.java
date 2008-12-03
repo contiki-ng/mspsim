@@ -208,6 +208,20 @@ public class DebugCommands implements CommandBundle {
         }
       });
       
+      ch.registerCommand("line", new BasicCommand("print line number of address/symbol", "<addres or symbol>") {
+        public int executeCommand(final CommandContext context) {
+          int adr = context.getArgumentAsAddress(0);
+          DebugInfo di = elf.getDebugInfo(adr);
+          if (di != null) {
+            di.getLine();
+            context.out.println("" + di.getFile() + ": " + di.getLine());
+          } else {
+            context.err.println("No line number found for: " + context.getArgument(0));
+          }
+          return 0;
+        }
+      });      
+      
       if (node != null) {
         ch.registerCommand("stop", new BasicCommand("stop the CPU", "") {
           public int executeCommand(CommandContext context) {
