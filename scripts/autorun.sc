@@ -3,4 +3,4 @@
 #exec rm log.txt
 #log CC2420 >log.txt
 #printcalls >log.txt
-#start
+start
