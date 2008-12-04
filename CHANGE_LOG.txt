@@ -1,3 +1,7 @@
+0.96
+- added warning on unaligned write/read
+
+
 0.95
 - initial GDB stubs implementation (only for memory access)
 - CLI command for setting up gdbstubs server (gdbstubs PORT)

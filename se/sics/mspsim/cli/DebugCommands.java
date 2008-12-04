@@ -56,11 +56,14 @@ public class DebugCommands implements CommandBundle {
   private long lastCall = 0;
   private long lastWall = 0;
   private ComponentRegistry registry;
+
+  private ELF getELF() {
+    return (ELF) registry.getComponent(ELF.class);
+  }
   
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     this.registry = registry;
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
-    final ELF elf = (ELF) registry.getComponent(ELF.class);
     final GenericNode node = (GenericNode) registry.getComponent("node");
     if (cpu != null) {
       ch.registerCommand("break", new BasicAsyncCommand("add a breakpoint to a given address or symbol",
@@ -110,7 +113,7 @@ public class DebugCommands implements CommandBundle {
               if (mode == 0 || mode == 2) {
                 int pc = cpu.readRegister(0);
                 String adrStr = getSymOrAddr(context, adr);
-                String pcStr = getSymOrAddrELF(elf, pc);
+                String pcStr = getSymOrAddrELF(getELF(), pc);
                 String op = "op";
                 if (type == MEMORY_READ) {
                   op = "Read";
@@ -160,7 +163,7 @@ public class DebugCommands implements CommandBundle {
               if (mode == 0) {
                 int pc = cpu.readRegister(0);
                 String adrStr = getRegisterName(register);
-                String pcStr = getSymOrAddrELF(elf, pc);
+                String pcStr = getSymOrAddrELF(getELF(), pc);
                 context.out.println("*** Write from " + pcStr +
                     ": " + adrStr + " = " + data);
               } else {
@@ -211,10 +214,10 @@ public class DebugCommands implements CommandBundle {
       ch.registerCommand("line", new BasicCommand("print line number of address/symbol", "<addres or symbol>") {
         public int executeCommand(final CommandContext context) {
           int adr = context.getArgumentAsAddress(0);
-          DebugInfo di = elf.getDebugInfo(adr);
+          DebugInfo di = getELF().getDebugInfo(adr);
           if (di != null) {
             di.getLine();
-            context.out.println("" + di.getFile() + ": " + di.getLine());
+            context.out.println(di);
           } else {
             context.err.println("No line number found for: " + context.getArgument(0));
           }

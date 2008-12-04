@@ -117,7 +117,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   private BasicClockModule bcs;
   private ArrayList<Chip> chips = new ArrayList<Chip>();
-  private boolean throwIfWarn;
+  private WarningMode warningMode = WarningMode.PRINT;
 
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -529,8 +529,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     resetIOUnits();
   }
   
-  public void setThrowIfWarning(boolean t) {
-    throwIfWarn = t;
+  public void setWarningMode(WarningMode mode) {
+    warningMode = mode;
   }
   
   public void reset() {
@@ -648,10 +648,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
       break;
     } 
-    if (throwIfWarn) {
+    if (warningMode == WarningMode.EXCEPTION) {
       throw new IllegalStateException(message);
     } else {
-      if (DEBUG) {
+      if (warningMode == WarningMode.PRINT) {
         System.out.println(message);
       }
     }
@@ -982,12 +982,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	jump = true;
 	break;
       default:
-	System.out.println("Not implemented instruction: " +
-			   Utils.binary16(instruction));
+        System.out.println("Not implemented instruction: " +
+            Utils.binary16(instruction));
       }
       // Perform the Jump
       if (jump) {
-	writeRegister(PC, pc + jmpOffset);
+        writeRegister(PC, pc + jmpOffset);
       }
       break;
     default:
@@ -1006,11 +1006,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       // Some CGs should be handled as registry reads only...
       if ((srcRegister == CG1 && as > AM_INDEX) || srcRegister == CG2) {
-	src = CREG_VALUES[srcRegister - 2][as];
-	if (!word) {
-	  src &= 0xff;
-	}
-	cycles += dstRegMode ? 1 : 4;
+        src = CREG_VALUES[srcRegister - 2][as];
+        if (!word) {
+          src &= 0xff;
+        }
+        cycles += dstRegMode ? 1 : 4;
       } else {
 	switch(as) {
 	  // Operand in register!
@@ -1059,21 +1059,21 @@ public class MSP430Core extends Chip implements MSP430Constants {
           }
         }
       } else {
-	// PC Could have changed above!
-	pc = readRegister(PC);
-	if (dstRegister == 2) {
-	  /* absolute mode */
-	  dstAddress = memory[pc] + (memory[pc + 1] << 8);
-	} else {
-	  // CG here???
-	  dstAddress = readRegister(dstRegister)
-	    + memory[pc] + (memory[pc + 1] << 8);
-	}
+        // PC Could have changed above!
+        pc = readRegister(PC);
+        if (dstRegister == 2) {
+          /* absolute mode */
+          dstAddress = memory[pc] + (memory[pc + 1] << 8);
+        } else {
+          // CG here - probably not!???
+          dstAddress = readRegister(dstRegister)
+          + memory[pc] + (memory[pc + 1] << 8);
+        }
 
-	if (op != MOV)
-	  dst = read(dstAddress, word);
-	pc += 2;
-	incRegister(PC, 2);
+        if (op != MOV)
+          dst = read(dstAddress, word);
+        pc += 2;
+        incRegister(PC, 2);
       }
 
       // **** Perform the read...
