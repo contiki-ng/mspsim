@@ -41,7 +41,7 @@
 
 package se.sics.mspsim.core;
 
-public class USART extends IOUnit {
+public class USART extends IOUnit implements SFRModule {
 
   public static final boolean DEBUG = false;//true;
 
@@ -68,19 +68,21 @@ public class USART extends IOUnit {
 
   private int uartID = 0;
 
-  public static final int USART0_RCV_VEC = 9;
-  public static final int USART0_TRS_VEC = 8;
-  public static final int USART1_RCV_VEC = 3;
-  public static final int USART1_TRS_VEC = 2;
+  public static final int USART0_RX_VEC = 9;
+  public static final int USART0_TX_VEC = 8;
+  public static final int USART0_RX_BIT = 6;
+  public static final int USART0_TX_BIT = 7;
+  
+  public static final int USART1_RX_VEC = 3;
+  public static final int USART1_TX_VEC = 2;
+  public static final int USART1_RX_BIT = 4;
+  public static final int USART1_TX_BIT = 5;
 
   // Flags.
   public static final int UTCTL_TXEMPTY = 0x01;
-
+  
 
   private USARTListener listener;
-
-  private int receiveInterrupt = 0;
-  private int transmitInterrupt = 0;
 
   private int utxifg;
   private int urxifg;
@@ -101,8 +103,12 @@ public class USART extends IOUnit {
   private int ubr0;
   private int ubr1;
   private int urxbuf;
-
   private int utxbuf;
+  private int txbit;
+  
+  private boolean txEnabled = false;
+  private boolean rxEnabled = false;
+  private boolean spiMode = false;
   
   private TimeEvent txTrigger = new TimeEvent(0) {
     public void execute(long t) {
@@ -126,17 +132,17 @@ public class USART extends IOUnit {
     // Initialize - transmit = ok...
     // and set which interrupts are used
     if (uartID == 0) {
-      receiveInterrupt = USART0_RCV_VEC;
-      transmitInterrupt = USART0_TRS_VEC;
+      sfr.registerSFDModule(0, USART0_RX_BIT, this, USART0_RX_VEC);
+      sfr.registerSFDModule(0, USART0_TX_BIT, this, USART0_TX_VEC);
       utxifg = UTXIFG0;
       urxifg = URXIFG0;
-      memory[IFG1] = 0x82;
+      txbit = USART0_TX_BIT;
     } else {
-      receiveInterrupt = USART1_RCV_VEC;
-      transmitInterrupt = USART1_TRS_VEC;
+      sfr.registerSFDModule(1, USART1_RX_BIT, this, USART1_RX_VEC);
+      sfr.registerSFDModule(1, USART1_TX_BIT, this, USART1_TX_VEC);
       utxifg = UTXIFG1;
       urxifg = URXIFG1;
-      memory[IFG1 + 1] = 0x20;
+      txbit = USART1_TX_BIT;
     }
     
     reset(0);
@@ -146,7 +152,20 @@ public class USART extends IOUnit {
     nextTXReady = cpu.cycles + 1000;
     nextTXByte = -1;
     clrBitIFG(utxifg | urxifg);
+    utctl |= UTCTL_TXEMPTY;
     cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+    txEnabled = false;
+    rxEnabled = false;
+  }
+
+  public void enableChanged(int reg, int bit, boolean enabled) {
+    System.out.println("enableChanged: " + reg + " bit: " + bit +
+        " enabled = " + enabled + " txBit: " + txbit);
+    if (bit == txbit) {
+      txEnabled = enabled;
+    } else {
+      rxEnabled = enabled;
+    }
   }
   
   private void setBitIFG(int bits) {
@@ -182,6 +201,7 @@ public class USART extends IOUnit {
     switch (address) {
     case UCTL:
       uctl = data;
+      spiMode = (data & 0x04) > 0;
       if (DEBUG) System.out.println(getName() + " write to UCTL " + data);
       break;
     case UTCTL:
@@ -218,22 +238,24 @@ public class USART extends IOUnit {
       break;
     case UTXBUF:
       if (DEBUG) System.out.print(getName() + ": USART_UTXBUF:" + (char) data + " = " + data + "\n");
-      
-      // Interruptflag not set!
-      clrBitIFG(utxifg);
-      utctl &= ~UTCTL_TXEMPTY;
+      if (txEnabled || (spiMode && rxEnabled)) {
+        // Interruptflag not set!
+        clrBitIFG(utxifg);
+        utctl &= ~UTCTL_TXEMPTY;
+        /* should the interrupt be flagged off here ? - or only the flags */
+        if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
+        //      cpu.flagInterrupt(transmitInterrupt, this, false);
+
+        // Schedule on cycles here
+        // TODO: adding 3 extra cycles here seems to give
+        // slightly better timing in some test...
+        nextTXReady = cycles + tickPerByte + 3;
+        nextTXByte = data;
+        cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+      } else {
+        System.out.println("Ignoring UTXBUF data since TX not active...");
+      }
       utxbuf = data;
-      /* should the interrupt be flagged off here ? - or only the flags */
-      if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
-      cpu.flagInterrupt(transmitInterrupt, this, false);
-
-      // Schedule on cycles here
-      // TODO: adding 3 extra cycles here seems to give
-      // slightly better timing in some test...
-      nextTXReady = cycles + tickPerByte + 3;
-      nextTXByte = data;
-      cpu.scheduleCycleEvent(txTrigger, nextTXReady);
-
       break;
     }
   }
@@ -319,9 +341,8 @@ public class USART extends IOUnit {
        nextTXByte = -1;
      }
 
-     setBitIFG(utxifg);
      utctl |= UTCTL_TXEMPTY;
-     cpu.flagInterrupt(transmitInterrupt, this, isIEBitsSet(utxifg));
+     setBitIFG(utxifg);
 
      if (DEBUG) {
        if (isIEBitsSet(utxifg)) {
@@ -340,6 +361,8 @@ public class USART extends IOUnit {
   // This needs to be complemented with a method for checking if the USART
   // is ready for next byte (readyForReceive) that respects the current speed
   public void byteReceived(int b) {
+    if (!rxEnabled) return;
+    
     if (MSP430Constants.DEBUGGING_LEVEL > 0) {
       System.out.println(getName() + " byteReceived: " + b);
     }
@@ -350,10 +373,8 @@ public class USART extends IOUnit {
     // Check if the IE flag is enabled! - same as the IFlag to indicate!
     if (isIEBitsSet(urxifg)) {
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-        System.out.println(getName() + " flagging receive interrupt: " +
-			   receiveInterrupt);
+        System.out.println(getName() + " flagging receive interrupt ");
       }
-      cpu.flagInterrupt(receiveInterrupt, this, true);
     }
   }
 }

@@ -83,14 +83,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private SFR sfr;
 
     // From the possible interrupt sources - to be able to indicate is serviced.
-  private IOUnit interruptSource[] = new IOUnit[16];
+  private InterruptHandler interruptSource[] = new IOUnit[16];
 
   private int interruptMax = -1;
   // Op/instruction represents the last executed OP / instruction
   private int op;
   public int instruction;
   int servicedInterrupt = -1;
-  IOUnit servicedInterruptUnit = null;
+  InterruptHandler servicedInterruptUnit = null;
 
   private boolean interruptsEnabled = false;
   private boolean cpuOff = false;
@@ -539,7 +539,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // Indicate that we have an interrupt now!
   // We should only get same IOUnit for same interrupt level
-  public void flagInterrupt(int interrupt, IOUnit source, boolean triggerIR) {
+  public void flagInterrupt(int interrupt, InterruptHandler source,
+      boolean triggerIR) {
     if (triggerIR) {
       interruptSource[interrupt] = source;
 

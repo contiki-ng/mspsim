@@ -65,6 +65,9 @@ public class SFR extends IOUnit {
   private int[] memory;
   private MSP430Core cpu;
 
+  private SFRModule[] sfrModule = new SFRModule[16];
+  private int[] irqVector = new int[16];
+  
   public SFR(MSP430Core cpu, int[] memory) {
     super(memory, 0);
     this.cpu = cpu;
@@ -72,12 +75,24 @@ public class SFR extends IOUnit {
   }
 
   public void reset(int type) {
+    ie1 = 0;
+    ie2 = 0;
+    ifg1 = 0;
+    ifg2 = 0;
+    me1 = 0;
+    me2 = 0;
   }
 
-  public boolean needsTick() {
-    return false;
+  /* reg = 0/1
+   * bit = 0-7 (LSB-MSB)
+   * module = the module that will be "called"
+   */
+  public void registerSFDModule(int reg, int bit, SFRModule module, int irqVec) {
+    int pos = reg * 8 + bit;
+    sfrModule[pos] = module;
+    irqVector[pos] = irqVec;
   }
-
+  
   // write
   // write a value to the IO unit
   public void write(int address, int value, boolean word,
@@ -85,23 +100,16 @@ public class SFR extends IOUnit {
     if (DEBUG ) System.out.println(getName() + " write to: " + address + " = " + value);
     switch (address) {
     case IE1:
-      ie1 = value;
-      break;
     case IE2:
-      ie2 = value;
+      updateIE(address - IE1, value);
       break;
     case IFG1:
-      ifg1 = value;
-      break;
     case IFG2:
-      ifg2 = value;
+      updateIFG(address - IFG1, value);
       break;
     case ME1:
-      me1 = value;
-      break;
     case ME2:
-      me2 = value;
-      break;
+      updateME(address - ME1, value);
     default:
       memory[address] = value;
     }
@@ -129,14 +137,88 @@ public class SFR extends IOUnit {
     }
   }
 
+  private void updateIE(int pos, int value) {
+    int oldVal = pos == 0 ? ie1 : ie2;
+    int change = oldVal ^ value;
+    if (pos == 0) {
+      ie1 = value;
+    } else {
+      ie2 = value;
+    }
+    updateIRQ(pos, change);
+  }
+
+  private void updateIFG(int pos, int value) {
+    int oldVal = pos == 0 ? ifg1 : ifg2;
+    int change = oldVal ^ value;
+    if (pos == 0) {
+      ifg1 = value;
+    } else {
+      ifg2 = value;
+    }
+    updateIRQ(pos, change);
+  }
+
+  private void updateME(int pos, int value) {
+    int oldVal = pos == 0 ? me1 : me2;
+    int change = oldVal ^ value;
+    if (pos == 0) {
+      me1 = value;
+    } else {
+      me2 = value;
+    }
+    int reg = pos;
+    pos = pos * 8;
+    for (int i = 0; i < 8; i++) {
+      if ((change & 1) == 1)  {
+        if (sfrModule[pos] != null) {
+          if (DEBUG) System.out.println("Calling enable changed on module: " +
+              sfrModule[pos].getName() + " enabled = " + (value & 1) + " bit " + i);
+          sfrModule[pos].enableChanged(reg, i, (value & 1) > 0);
+        }
+      }
+      change = change >> 1;
+      value = value >> 1;
+      pos++;
+    }
+  }
+  
+  private void updateIRQ(int pos, int change) {
+    int ifg = pos == 0 ? ifg1 : ifg2;
+    int ie = pos == 0 ? ie1 : ie2;
+    pos = pos * 8;
+    for (int i = 0; i < 8; i++) {
+      if ((change & 1) == 1)  {
+        if (sfrModule[pos] != null) {
+          /* interrupt goes directly to the module responsible */
+          if (DEBUG) System.out.println("SFR: flagging interrupt: " +
+              sfrModule[pos].getName() + " " + (ie & ifg & 1));
+          cpu.flagInterrupt(irqVector[pos], sfrModule[pos], (ie & ifg & 1) > 0);
+        }
+      }
+      pos++;
+      change = change >> 1;
+      ifg = ifg >> 1;
+      ie = ie >> 1;
+    }
+  }
+  
   public void setBitIFG(int index, int bits) {
-    if (index == 0) ifg1 |= bits;
-    else ifg2 |= bits;
+    int value = index == 0 ? ifg1 : ifg2;
+    int after = value | bits;
+    int change = value ^ after;
+    if (index == 0) ifg1 = after;
+    else ifg2 = after;
+    updateIRQ(index, change);
   }
 
   public void clrBitIFG(int index, int bits) {
-    if (index == 0) ifg1 &= ~bits;
-    else ifg2 &= ~bits;
+    int value = index == 0 ? ifg1 : ifg2;
+    int after = value & ~bits;
+    int change = value ^ after;
+    if (index == 0) ifg1 = after;
+    else ifg2 = after;
+    updateIRQ(index, change);
   }
 
   public boolean isIEBitsSet(int index, int flags) {
@@ -149,6 +231,7 @@ public class SFR extends IOUnit {
     else return ifg2;
   }
 
+  /* nothing should go here */
   public void interruptServiced(int vector) {
   }
 

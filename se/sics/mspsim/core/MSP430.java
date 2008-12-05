@@ -220,6 +220,7 @@ public class MSP430 extends MSP430Core {
 
     boolean emuOP = false;
     if (maxCycles > 0) {
+      /* max one emulated instruction or maxCycles if in LPM */
       while (cycles < maxCycles && !(emuOP = emulateOP(maxCycles))) {
       }
     } else {

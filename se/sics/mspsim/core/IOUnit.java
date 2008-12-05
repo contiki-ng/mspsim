@@ -41,7 +41,7 @@
 
 package se.sics.mspsim.core;
 
-public abstract class IOUnit {
+public abstract class IOUnit implements InterruptHandler {
 
   int[] memory;
   int offset;
@@ -54,20 +54,6 @@ public abstract class IOUnit {
   public void reset(int type) {
   }
   
-  public boolean needsTick() {
-    return true;
-  }
-
-  // Default implementation assumes notify write and read on all
-  // addresses (should be optimized for each unit)
-  public boolean needsWrite(int address) {
-    return true;
-  }
-
-  public boolean needsRead(int address) {
-    return true;
-  }
-
   // Should return the cycle it wants the next tick...
   public long ioTick(long cycles) {
     return cycles + 1000000;
@@ -81,10 +67,6 @@ public abstract class IOUnit {
   // read
   // read a value from the IO unit
   public abstract int read(int address, boolean word, long cycles);
-
-  // We should add "Interrupt serviced..." to indicate that its latest
-  // Interrupt was serviced...
-  public abstract void interruptServiced(int vector);
 
   // Utility function for converting 16 bits data to correct return
   // value depending on address alignment and word/byte mode
