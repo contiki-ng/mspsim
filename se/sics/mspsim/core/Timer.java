@@ -220,6 +220,8 @@ public class Timer extends IOUnit {
   private int lastTIV;
 
   private final int[] srcMap;
+
+  private long triggerTime;
   
   /**
    * Creates a new <code>Timer</code> instance.
@@ -488,6 +490,7 @@ public class Timer extends IOUnit {
     case TCCR6:
       // update of compare register
       index = (iAddress - TCCR0) / 2;
+      updateCounter(cycles);
       if (index == 0) {
         // Reset the counter to bring it down to a smaller value...
         // Check if up or updwn and reset if counter too high...
@@ -497,7 +500,6 @@ public class Timer extends IOUnit {
         resetCounter(cycles);
       }
       tccr[index] = data;
-      updateCounter(cycles);
 
       int diff = data - counter;
       if (diff < 0) {
@@ -511,12 +513,12 @@ public class Timer extends IOUnit {
 			   Utils.hex16(counter) + " diff: " + Utils.hex16(diff));
       }
       // Use the counterPassed information to compensate the expected capture/compare time!!!
-      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff) - counterPassed;      
-//      if (counterPassed > 0) {
-//        System.out.println(getName() + " Comp: " + counterPassed + " cycl: " + cycles + " TR: " +
-//            counter + " CCR" + index + " = " + data + " diff = " + diff + " cycMul: " + cyclesMultiplicator + " expCyc: " +
-//            expCaptureTime[index]);
-//      }
+      expCaptureTime[index] = cycles + (long)(cyclesMultiplicator * diff + 1) - counterPassed;
+      if (DEBUG && counterPassed > 0) {
+        System.out.println(getName() + " Comp: " + counterPassed + " cycl: " + cycles + " TR: " +
+            counter + " CCR" + index + " = " + data + " diff = " + diff + " cycMul: " + cyclesMultiplicator + " expCyc: " +
+            expCaptureTime[index]);
+      }
       counterPassed = 0;
       if (DEBUG) {
 	System.out.println(getName() + " Cycles: " + cycles + " expCap[" + index + "]: " + expCaptureTime[index] + " ctr:" + counter +
@@ -539,7 +541,7 @@ public class Timer extends IOUnit {
   }
   
   void resetCounter(long cycles) {
-    counterStart = cycles;
+    counterStart = cycles - counterPassed;
     // set counterACC to the last returned value (which is the same
     // as bigCounter except that it is "moduloed" to a smaller value
     counterAcc = counter;
@@ -634,8 +636,6 @@ public class Timer extends IOUnit {
     counterPassed = (int) (divider * (tick - (long) (tick)));
     long bigCounter = (long) (tick + counterAcc);
     
-    //System.out.println("BigStart: " + bigCounterStart + " C:" + cycles + " bigCounter: " + bigCounter);
-    
     switch (mode) {
     case CONTIN:
       counter = (int) (bigCounter & 0xffff);
@@ -651,6 +651,9 @@ public class Timer extends IOUnit {
       }
     }
     
+//    System.out.println("CounterStart: " + counterStart + " C:" + cycles + " bigCounter: " + bigCounter +
+//        " counter" + counter);
+
     if (DEBUG) {
       System.out.println(getName() + ": Updating counter cycctr: " + cycctr +
           " divider: " + divider + " mode:" + mode + " => " + counter);
@@ -672,6 +675,8 @@ public class Timer extends IOUnit {
       return;
     }
     
+    updateCounter(cycles);
+    
     if (cycles >= nextTimerTrigger) {
       interruptPending = true;
       // This should be updated whenever clockspeed changes...
@@ -684,7 +689,7 @@ public class Timer extends IOUnit {
     // System.out.println("Checking capture register [ioTick]: " + cycles);
     for (int i = 0, n = noCompare; i < n; i++) { 
       if (expCaptureTime[i] != -1 && cycles >= expCaptureTime[i]) {
-        if (DEBUG) {
+        if (DEBUG || i < 2) {
           System.out.println(getName() + (captureOn[i] ? " CAPTURE: " : " COMPARE: ") + i +
                              " Cycles: " + cycles + " expCap: " +
                              expCaptureTime[i] +
@@ -740,6 +745,10 @@ public class Timer extends IOUnit {
           diff += 0x10000;
         }
         expCaptureTime[i] = cycles + (long) (diff * cyclesMultiplicator);
+        if (i == 0) {
+          System.out.println("Updating capture time for CCR0: " + expCaptureTime[0] + 
+              " cyc: " + cycles);
+        }
       }
     }
   }
@@ -783,18 +792,28 @@ public class Timer extends IOUnit {
     
     int tIndex = 0;
     for (int i = 0, n = noCompare; i < n; i++) {
+      // check for both IFG and IE
       boolean newTrigger = (tcctl[i] & CC_TRIGGER_INT) == CC_TRIGGER_INT;
       trigger = trigger | newTrigger;
 
       // This only triggers interrupts - reading TIV clears!??!
       if (i == 0) {
         // Execute the interrupt vector... the high-pri one...
-//        System.out.println(getName() +">>>> Trigger IRQ for CCR0");
+        if (DEBUG) {
+          System.out.println(getName() +"  >>>> Trigger IRQ for CCR0: " + tccr[0] +
+              " TAR: " + counter + " cycles: " + cycles + " expCap: " + expCaptureTime[0]);
+        }
+        if (counter != tccr[0]) {
+          System.out.print("***** WARNING!!! CTR Err ");
+          System.out.println(getName() +"  >>>> Trigger IRQ for CCR0: " + tccr[0] +
+              " TAR: " + counter + " cycles: " + cycles + " expCap: " + expCaptureTime[0]);
+        }
         core.flagInterrupt(ccr0Vector, this, trigger);
         // Trigger this!
         // This is handled by its own vector!!!
         if (trigger) {
           lastTIV = 0;
+          triggerTime = cycles;
           return;
         }
       } else {
@@ -803,8 +822,9 @@ public class Timer extends IOUnit {
         // If so, which TIV would be the correct one?
         if (newTrigger) {
           if (DEBUG) {
-            System.out.println(getName() + " triggering interrupt TIV: " +
-                (i * 2) + " at cycles:" + cycles);
+            System.out.println(getName() + " >>>> Triggering IRQ for CCR" + i +
+                " at cycles:" + cycles + " CCR" + i + ": " + tccr[i] + " TAR: " +
+                counter);
           }
           tIndex = i;
           // TODO: break here if low is higher...
@@ -815,6 +835,18 @@ public class Timer extends IOUnit {
     if (trigger) {
       // Or if other CCR execute the normal one with correct TAIV
       lastTIV = memory[tiv] = tIndex * 2;
+      triggerTime = cycles;
+      if (DEBUG) System.out.println(getName() +
+          " >>>> Triggering IRQ for CCR" + tIndex +
+          " at cycles:" + cycles + " CCR" + tIndex + ": " + tccr[tIndex] + " TAR: " +
+          counter);
+      if (counter != tccr[tIndex]) {
+        System.out.print("***** WARNING!!!  CTR Err ");
+        System.out.println(getName() +
+            " >>>> Triggering IRQ for CCR" + tIndex +
+            " at cycles:" + cycles + " CCR" + tIndex + ": " + tccr[tIndex] + " TAR: " +
+            counter);
+      }
     }
 
     if (!trigger) {
@@ -874,7 +906,7 @@ public class Timer extends IOUnit {
   }
   
   
-  // The interrupt have been serviced...
+  // The interrupt has been serviced...
   // Some flags should be cleared (the highest priority flags)?
   public void interruptServiced(int vector) {
     if (vector == ccr0Vector) {
@@ -882,9 +914,11 @@ public class Timer extends IOUnit {
       core.flagInterrupt(ccr0Vector, this, false);
       // Remove the flag also...
       tcctl[0] &= ~CC_IFG;
+      System.out.println(getName() + " >>>> CCR0 flag set to false");
     }
-    if (MSP430Core.debugInterrupts) {
-      System.out.println("interrupt Serviced...");
+    if (MSP430Core.debugInterrupts || true) {
+      System.out.println(getName() + " >>>> interrupt Serviced " + lastTIV + 
+          " at cycles: " + core.cycles + " servicing delay: " + (core.cycles - triggerTime));
     }
   }
 
