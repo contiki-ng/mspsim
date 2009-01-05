@@ -213,7 +213,7 @@ public class Timer extends IOUnit {
   private TimeEvent timerTrigger = new TimeEvent(0) {
     public void execute(long t) {
 //      System.out.println(getName() + " **** executing update timers at " + t + " cycles=" + core.cycles);
-      updateTimers(t);
+      updateTimers(core.cycles);
     }
   };
   
@@ -360,13 +360,12 @@ public class Timer extends IOUnit {
       triggerInterrupts(cycles);
     }
     if (lastTIV / 2 < noCompare) {
-      if (DEBUG) {
-	System.out.println(getName() + " Clearing TIV/Comparex2: " + lastTIV);
+      if (DEBUG || true) {
+	System.out.println(getName() + " Clearing IFG for CCR" + (lastTIV/2));
       }
       // Clear interrupt flags!
       tcctl[lastTIV / 2] &= ~CC_IFG;
       triggerInterrupts(cycles);
-      //      memory[offset + TCCTL0 + lastTIV] &= ~CC_IFG;
     }
   }
 
@@ -689,12 +688,12 @@ public class Timer extends IOUnit {
     // System.out.println("Checking capture register [ioTick]: " + cycles);
     for (int i = 0, n = noCompare; i < n; i++) { 
       if (expCaptureTime[i] != -1 && cycles >= expCaptureTime[i]) {
-        if (DEBUG || i < 2) {
+        if (DEBUG || true) {
           System.out.println(getName() + (captureOn[i] ? " CAPTURE: " : " COMPARE: ") + i +
                              " Cycles: " + cycles + " expCap: " +
                              expCaptureTime[i] +
                              " => ExpCR: " + Utils.hex16(expCompare[i]) +
-                             " TR: " + Utils.hex16(updateCounter(cycles)));
+                             " TR: " + counter + " CCR" + i + ": " + tccr[i]);
         }
         // Set the interrupt flag...
         tcctl[i] |= CC_IFG;
@@ -737,6 +736,7 @@ public class Timer extends IOUnit {
   }
   
   private void recalculateCompares(long cycles) {
+    System.out.println("**** RECALCULATE COMPARES !!! ****");
     for (int i = 0; i < expCaptureTime.length; i++) {
       if (expCaptureTime[i] != 0) {
         int diff = tccr[i] - counter;
@@ -803,7 +803,7 @@ public class Timer extends IOUnit {
           System.out.println(getName() +"  >>>> Trigger IRQ for CCR0: " + tccr[0] +
               " TAR: " + counter + " cycles: " + cycles + " expCap: " + expCaptureTime[0]);
         }
-        if (counter != tccr[0]) {
+        if (counter != tccr[0] && trigger) {
           System.out.print("***** WARNING!!! CTR Err ");
           System.out.println(getName() +"  >>>> Trigger IRQ for CCR0: " + tccr[0] +
               " TAR: " + counter + " cycles: " + cycles + " expCap: " + expCaptureTime[0]);
@@ -827,7 +827,8 @@ public class Timer extends IOUnit {
                 counter);
           }
           tIndex = i;
-          // TODO: break here if low is higher...
+          // Lower numbers are higher priority
+          break;
         }
       }
     }
@@ -845,7 +846,7 @@ public class Timer extends IOUnit {
         System.out.println(getName() +
             " >>>> Triggering IRQ for CCR" + tIndex +
             " at cycles:" + cycles + " CCR" + tIndex + ": " + tccr[tIndex] + " TAR: " +
-            counter);
+            counter + " expCap: " + expCaptureTime[tIndex]);
       }
     }
 
@@ -920,6 +921,7 @@ public class Timer extends IOUnit {
       System.out.println(getName() + " >>>> interrupt Serviced " + lastTIV + 
           " at cycles: " + core.cycles + " servicing delay: " + (core.cycles - triggerTime));
     }
+    triggerInterrupts(core.cycles);
   }
 
   public int getModeMax() {
