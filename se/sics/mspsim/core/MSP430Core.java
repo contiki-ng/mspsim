@@ -119,6 +119,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private ArrayList<Chip> chips = new ArrayList<Chip>();
   private WarningMode warningMode = WarningMode.PRINT;
 
+  /* statistics for interrupts */
+  private long[] lastInterruptTime = new long[16];
+  private long[] interruptTime = new long[16];
+  private long[] interruptCount = new long[16];
+
   public MSP430Core(int type) {
     // Ignore type for now...
     setModeNames(MODE_NAMES);
@@ -511,10 +516,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
       passiveIOUnits[i].reset(RESET_POR);
     }
   }
-
+  
   private void internalReset() {
     for (int i = 0, n = 16; i < n; i++) {
       interruptSource[i] = null;
+      interruptTime[i] = 0;
+      interruptCount[i] = 0;
     }
     servicedInterruptUnit = null;
     servicedInterrupt = -1;
@@ -531,6 +538,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   public void setWarningMode(WarningMode mode) {
     warningMode = mode;
+  }
+
+  public long[] getInterruptCount() {
+    return interruptCount;
+  }
+  
+  public long[] getInterruptTime() {
+    return interruptTime;
   }
   
   public void reset() {
@@ -588,6 +603,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // In the main-CPU loop
   public void handlePendingInterrupts() {
     // By default no int. left to process...
+    if (servicedInterrupt == 5 ||
+        servicedInterrupt == 6) {
+      System.out.println("## Interrupt ended at: " + cycles +
+          " elapsed: " + (cycles - lastInterruptTime[servicedInterrupt]));
+    }
+    if (servicedInterrupt > -1) {
+      interruptTime[servicedInterrupt] += cycles - lastInterruptTime[servicedInterrupt];
+      interruptCount[servicedInterrupt]++;
+    }
+    
     reevaluateInterrupts();
     
     servicedInterrupt = -1;
@@ -690,6 +715,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
+
+    lastInterruptTime[servicedInterrupt] = cycles;
 
     // Flag off this interrupt - for now - as soon as RETI is
     // executed things might change!

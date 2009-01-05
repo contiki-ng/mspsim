@@ -53,8 +53,6 @@ public class ProfilerCommands implements CommandBundle {
     if (cpu != null) {
       ch.registerCommand("profile", new BasicCommand("show profile information",
           "[-clear] [regexp]") {
-
-        @Override
         public int executeCommand(final CommandContext context) {
           Profiler profiler = cpu.getProfiler();
           if (profiler == null) {
@@ -77,11 +75,9 @@ public class ProfilerCommands implements CommandBundle {
           profiler.printProfile(context.out, namematch);
           return 0;
         }
-
       });
-      ch.registerCommand("stacktrace", new BasicCommand("show stack trace", "") {
 
-        @Override
+      ch.registerCommand("stacktrace", new BasicCommand("show stack trace", "") {
         public int executeCommand(CommandContext context) {
           Profiler profiler = cpu.getProfiler();
           if (profiler == null) {
@@ -94,6 +90,23 @@ public class ProfilerCommands implements CommandBundle {
 
       });
 
+      ch.registerCommand("irqprofile", new BasicCommand("show interrupt profile", "") {
+        public int executeCommand(CommandContext context) {
+          long[] time = cpu.getInterruptTime();
+          long[] ctr = cpu.getInterruptCount();
+          context.out.println("Interrupt statistics");
+          context.out.println("Vector\tAvg\tCount");
+          
+          for (int i = 0; i < ctr.length; i++) {
+            long avg = ctr[i] != 0 ? (time[i] / ctr[i]) : 0;
+            context.out.println(i + "\t" + avg + "\t" + ctr[i]);
+          }
+          return 0;
+        }
+
+      });
+
+      
       ch.registerCommand("logcalls", new BasicAsyncCommand("log function calls", "") {
         @Override
         public int executeCommand(CommandContext context) {

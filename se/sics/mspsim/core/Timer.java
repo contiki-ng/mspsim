@@ -693,7 +693,8 @@ public class Timer extends IOUnit {
                              " Cycles: " + cycles + " expCap: " +
                              expCaptureTime[i] +
                              " => ExpCR: " + Utils.hex16(expCompare[i]) +
-                             " TR: " + counter + " CCR" + i + ": " + tccr[i]);
+                             " TR: " + counter + " CCR" + i + ": " + tccr[i] + " pass: " +
+                             counterPassed);
         }
         // Set the interrupt flag...
         tcctl[i] |= CC_IFG;
