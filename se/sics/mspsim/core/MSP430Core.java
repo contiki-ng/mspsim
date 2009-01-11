@@ -603,11 +603,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // In the main-CPU loop
   public void handlePendingInterrupts() {
     // By default no int. left to process...
-    if (servicedInterrupt == 5 ||
-        servicedInterrupt == 6) {
-      System.out.println("## Interrupt ended at: " + cycles +
-          " elapsed: " + (cycles - lastInterruptTime[servicedInterrupt]));
-    }
     if (servicedInterrupt > -1) {
       interruptTime[servicedInterrupt] += cycles - lastInterruptTime[servicedInterrupt];
       interruptCount[servicedInterrupt]++;
