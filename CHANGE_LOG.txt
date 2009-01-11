@@ -1,6 +1,8 @@
 0.96
 - added warning on unaligned write/read
-
+- fixed bug in timer system causing severe delays when several CCR/Compare
+  interrupts was trigger simultaneously
+- added profiling of interrupts
 
 0.95
 - initial GDB stubs implementation (only for memory access)
