@@ -159,7 +159,7 @@ public class USART extends IOUnit implements SFRModule {
   }
 
   public void enableChanged(int reg, int bit, boolean enabled) {
-    System.out.println("enableChanged: " + reg + " bit: " + bit +
+    if (DEBUG) System.out.println("enableChanged: " + reg + " bit: " + bit +
         " enabled = " + enabled + " txBit: " + txbit);
     if (bit == txbit) {
       txEnabled = enabled;

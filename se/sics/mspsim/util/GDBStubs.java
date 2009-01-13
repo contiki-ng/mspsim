@@ -83,6 +83,8 @@ public class GDBStubs implements Runnable {
           System.out.println("GDBStubs: Read  " + c + " => " + (char) c);
           if (c == '#') {
             readCmd = false;
+            /* ack the message */
+            output.write('+');
             handleCmd(cmd, buffer, len);
             cmd = "";
             len = 0;
@@ -168,7 +170,6 @@ public class GDBStubs implements Runnable {
   }
 
   public void sendResponse(String resp) throws IOException {
-    output.write('+');
     output.write('$');
     int cs = 0;
     if (resp != null) {
