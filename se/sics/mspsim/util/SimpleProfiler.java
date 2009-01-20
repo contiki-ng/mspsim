@@ -103,6 +103,12 @@ public class SimpleProfiler implements Profiler, EventListener {
       }
       ce.cycles += elapsed;
       ce.calls++;
+
+      if (logger != null) {
+        printSpace(logger, cSP * 2);
+        logger.println("return from: " + ce.function + " elapsed time: " + elapsed);
+      }
+    
     }
   }
 
