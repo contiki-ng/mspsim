@@ -329,6 +329,7 @@ public class MSP430 extends MSP430Core {
     /* When we got the map table we can also profile! */
     if (profiler == null) {
       this.profiler = new SimpleProfiler();
+      this.profiler.setCPU(this);
     }
   }
 

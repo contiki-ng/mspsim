@@ -40,6 +40,9 @@
  */
 
 package se.sics.mspsim.util;
+import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.EventListener;
+import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
 import java.io.PrintStream;
@@ -48,9 +51,12 @@ import java.util.Hashtable;
 import java.util.regex.Pattern;
 
 
-public class SimpleProfiler implements Profiler {
+public class SimpleProfiler implements Profiler, EventListener {
 
   private Hashtable<MapEntry,CallEntry> profileData;
+  private Hashtable<String, TagEntry> tagProfiles;
+  private Hashtable<String, TagEntry> startTags;
+  private Hashtable<String, TagEntry> endTags;
   private CallEntry[] callStack;
   private int cSP = 0;
   private MSP430Core cpu;
@@ -58,6 +64,9 @@ public class SimpleProfiler implements Profiler {
 
   public SimpleProfiler() {
     profileData = new Hashtable<MapEntry, CallEntry>();
+    tagProfiles = new Hashtable<String, TagEntry>();
+    startTags = new Hashtable<String, TagEntry>();
+    endTags = new Hashtable<String, TagEntry>();
     callStack = new CallEntry[2048];
   }
 
@@ -113,7 +122,7 @@ public class SimpleProfiler implements Profiler {
       }
     }
   }
-
+  
   public void printProfile(PrintStream out) {
     printProfile(out, null);
   }
@@ -163,7 +172,7 @@ public class SimpleProfiler implements Profiler {
       out.println("  " + callStack[cSP - i - 1].function.getInfo());
     }
   }
-
+  
   private static class CallEntry implements Comparable<CallEntry> {
     MapEntry function;
     long cycles;
@@ -177,7 +186,88 @@ public class SimpleProfiler implements Profiler {
     }
   }
 
+  private static class TagEntry implements Comparable<TagEntry> {
+    String tag;
+    long cycles;
+    long lastCycles;
+    int calls;
+
+    public int compareTo(TagEntry o) {
+      long diff = o.cycles - cycles;
+      if (diff > 0) return 1;
+      if (diff < 0) return -1;
+      return 0;
+    }
+  }
+
+  
+  
   public void setLogger(PrintStream out) {
     logger = out;
+  }
+  
+  /* 
+   * Tag profiling.
+   */
+  public void measureStart(String tag) {
+    TagEntry tagEntry = tagProfiles.get(tag);
+    if (tagEntry == null) {
+      tagEntry = new TagEntry();
+      tagEntry.tag = tag;
+      tagProfiles.put(tag, tagEntry);
+    }
+    /* only the first occurrence of event will set the lastCycles */
+    if (tagEntry.lastCycles == 0) {
+      tagEntry.lastCycles = cpu.cycles;
+    }
+  }
+  
+  public void measureEnd(String tag) {
+    TagEntry tagEntry = tagProfiles.get(tag);
+    if (tagEntry != null) {
+      if (tagEntry.lastCycles != 0) {
+        tagEntry.calls++;
+        tagEntry.cycles += cpu.cycles - tagEntry.lastCycles;
+        tagEntry.lastCycles = 0;
+      }
+    }
+  }
+  
+  public void printTagProfile(PrintStream out) {
+    TagEntry[] entries = tagProfiles.values().toArray(new TagEntry[tagProfiles.size()]);
+    Arrays.sort(entries);
+    for (int i = 0; i < entries.length; i++) {
+      TagEntry entry = entries[i];
+      System.out.println(entry.tag + "\t" + entry.calls + "\t" + entry.cycles);
+    }
+  }
+
+  public void addProfileTag(String tag, Chip chip, String start,
+      Chip chip2, String end) {
+    System.out.println("Add profile: " + tag +
+        " start: " + start + " end: " + end);
+    TagEntry tagEntry = new TagEntry();
+    tagEntry.tag = tag;
+    startTags.put(start, tagEntry);
+    endTags.put(end, tagEntry);
+    tagProfiles.put(tag, tagEntry);
+    chip.setEventListener(this);
+    chip2.setEventListener(this);
+  }
+
+  public void event(EventSource source, String event, Object data) {
+    TagEntry tagEntry = null;
+    if ((tagEntry = startTags.get(event)) != null) {
+      /* only the first occurrence of event will set the lastCycles */
+      if (tagEntry.lastCycles == 0) {
+        tagEntry.lastCycles = cpu.cycles;
+      }
+    } else if ((tagEntry = endTags.get(event)) != null) {
+      if (tagEntry.lastCycles != 0) {
+        tagEntry.calls++;
+        tagEntry.cycles += cpu.cycles - tagEntry.lastCycles;
+        tagEntry.lastCycles = 0;
+      }      
+    }
   }
 }

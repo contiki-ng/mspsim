@@ -47,9 +47,11 @@ import se.sics.mspsim.util.Utils;
  * @author Joakim
  *
  */
-public abstract class Chip implements Loggable {
+public abstract class Chip implements Loggable, EventSource {
 
   private OperatingModeListener[] omListeners;
+  private EventListener eventListener;
+  protected boolean sendEvents = false;
   private String[] modeNames = null;
   private int mode;
   private PrintStream log;
@@ -83,6 +85,18 @@ public abstract class Chip implements Loggable {
     modeNames = names;
   }
 
+  
+  public void setEventListener(EventListener e) {
+    eventListener = e;
+    sendEvents = true;
+  }
+  
+  protected void sendEvent(String event, Object data) {
+    if (eventListener != null) {
+      eventListener.event(this, event, data);
+    }
+  }
+  
   public String getModeName(int index) {
     if (modeNames == null) {
       return null;

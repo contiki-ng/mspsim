@@ -53,11 +53,6 @@ public abstract class IOUnit implements InterruptHandler {
 
   public void reset(int type) {
   }
-  
-  // Should return the cycle it wants the next tick...
-  public long ioTick(long cycles) {
-    return cycles + 1000000;
-  }
 
   // write
   // write a value to the IO unit

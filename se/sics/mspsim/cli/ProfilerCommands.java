@@ -39,9 +39,13 @@
  */
 
 package se.sics.mspsim.cli;
+import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.EventListener;
+import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.Profiler;
 import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.SimpleProfiler;
 
 /**
  *
@@ -105,6 +109,56 @@ public class ProfilerCommands implements CommandBundle {
         }
 
       });
+      
+      ch.registerCommand("logevents", new BasicAsyncCommand("log events", "") {
+        Chip chip;
+        public int executeCommand(CommandContext context) {
+          chip = cpu.getChip(context.getArgument(0));
+          if (chip == null) {
+            context.err.println("Can not find chip: " + context.getArgument(0));
+          }
+          chip.setEventListener(new EventListener() {
+            public void event(EventSource source, String event, Object data) {
+              System.out.println("Event:" + source.getName() + ":" + event);
+            }            
+          });
+          return 0;
+        }
+        public void stopCommand(CommandContext context) {
+          chip.setEventListener(null);
+        }
+      });
+
+      ch.registerCommand("tagprof", new BasicCommand("profile between two events", "") {
+        public int executeCommand(CommandContext context) {
+          String event1 = context.getArgument(0);
+          String event2 = context.getArgument(1);
+          String chip1[] = event1.split("\\.");
+          String chip2[] = event2.split("\\.");
+          Chip chipE1 = cpu.getChip(chip1[0]);
+          if (chipE1 == null) {
+            context.err.println("Can not find chip: " + chip1[0]);
+          }
+          Chip chipE2 = cpu.getChip(chip2[0]);
+          if (chipE2 == null) {
+            context.err.println("Can not find chip: " + chip2[0]);
+          }
+          Profiler profiler = cpu.getProfiler();
+          SimpleProfiler sprof = (SimpleProfiler) profiler;
+          sprof.addProfileTag(context.getArgument(2), chipE1, chip1[1],
+              chipE2, chip2[1]);
+          return 0;
+        }
+      });      
+
+      ch.registerCommand("printtags", new BasicCommand("print tags profile", "") {
+        public int executeCommand(CommandContext context) {
+          Profiler profiler = cpu.getProfiler();
+          SimpleProfiler sprof = (SimpleProfiler) profiler;
+          sprof.printTagProfile(context.out);
+          return 0;
+        }
+      });      
 
       
       ch.registerCommand("logcalls", new BasicAsyncCommand("log function calls", "") {

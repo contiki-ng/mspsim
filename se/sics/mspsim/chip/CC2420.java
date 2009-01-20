@@ -628,10 +628,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
         if(txfifoFlush) {
           txCursor = 0;
           txfifoFlush = false;
-        }  
+        }
         if (DEBUG) log("Writing data: " + data + " to tx: " + txCursor);
 
         memory[RAM_TXFIFO + txCursor++] = data & 0xff;
+        if (sendEvents) {
+          sendEvent("WRITE_TXFIFO", null);
+        }
         break;
       case RAM_ACCESS:
         if (pos == 0) {
@@ -707,6 +710,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           (stateMachine == RadioState.RX_WAIT)) {
         status |= STATUS_TX_ACTIVE;
         setState(RadioState.TX_CALIBRATE);
+        if (sendEvents) {
+          sendEvent("STXON", null);
+        }
         // Starting up TX subsystem - indicate that we are in TX mode!
         if (DEBUG) log("Strobe STXON - transmit on! at " + cpu.cycles);
       }
@@ -719,6 +725,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
           (stateMachine == RadioState.RX_FRAME) ||
           (stateMachine == RadioState.RX_OVERFLOW) ||
           (stateMachine == RadioState.RX_WAIT)) {
+        
+        if (sendEvents) {
+          sendEvent("STXON_CCA", null);
+        }
+        
         if(cca) {
           status |= STATUS_TX_ACTIVE;
           setState(RadioState.TX_CALIBRATE);

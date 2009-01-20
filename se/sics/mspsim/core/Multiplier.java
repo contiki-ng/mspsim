@@ -80,10 +80,6 @@ public class Multiplier extends IOUnit {
     this.core = core;
   }
 
-  public boolean needsTick() {
-    return false;
-  }
-
   public int read(int address, boolean word, long cycles) {
     switch (address) {
     case MPY:

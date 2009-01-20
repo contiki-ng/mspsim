@@ -45,6 +45,7 @@ Run the default example on the Sky node emulator by typing:
 - Emulates some external hardware such as TR1001 and CC2420.
 - Command Line Interface, CLI, for setting up breakpoints and output
   to files or windows.
+- GDB remote debugging support (initial)
 
 * What is emulated of the MSP430
 - CPU (instruction level simulation)
