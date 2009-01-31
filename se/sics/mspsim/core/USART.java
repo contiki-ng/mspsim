@@ -335,22 +335,26 @@ public class USART extends IOUnit implements SFRModule {
     cpu.flagInterrupt(vector, this, false);
   }
 
-   private void handleTransmit(long cycles) {
-     if (listener != null && nextTXByte != -1) {
-       listener.dataReceived(this, nextTXByte);
-       nextTXByte = -1;
-     }
+  private void handleTransmit(long cycles) {
+    if (cpu.getMode() >= MSP430Core.MODE_LPM3) {
+      System.out.println(getName() + " Warning: USART transmission during LPM!!! " + nextTXByte);
+    }
 
-     utctl |= UTCTL_TXEMPTY;
-     setBitIFG(utxifg);
+    if (listener != null && nextTXByte != -1) {
+      listener.dataReceived(this, nextTXByte);
+      nextTXByte = -1;
+    }
+    
+    utctl |= UTCTL_TXEMPTY;
+    setBitIFG(utxifg);
 
-     if (DEBUG) {
-       if (isIEBitsSet(utxifg)) {
-         System.out.println(getName() + " flagging on transmit interrupt");
-       }
-       System.out.println(getName() + " Ready to transmit next at: " + cycles);
-     }
-   }
+    if (DEBUG) {
+      if (isIEBitsSet(utxifg)) {
+        System.out.println(getName() + " flagging on transmit interrupt");
+      }
+      System.out.println(getName() + " Ready to transmit next at: " + cycles);
+    }
+  }
 
 
   public boolean isReceiveFlagCleared() {
