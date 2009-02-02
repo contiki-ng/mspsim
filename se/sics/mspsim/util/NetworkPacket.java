@@ -40,11 +40,14 @@
  */
 
 package se.sics.mspsim.util;
+import java.util.Enumeration;
 import java.util.Hashtable;
 
 public class NetworkPacket {
   byte[] data;
-  String description = "version:4|trafficClass:8|flowLabel:20" +
+  String description;
+  public static final String IPv6 = 
+    "version:4=6|trafficClass:8|flowLabel:20" +
     "|payloadLength:16|nextHeader:8|hopLimit:8" +
     "|sourceAddress:128|destinationAddress:128";
 
@@ -54,6 +57,8 @@ public class NetworkPacket {
     String name;
     int pos;
     int size;
+    int mask = 0;
+    int value = 0;
 
     Field(String name, int pos, int size) {
       this.name = name;
@@ -61,34 +66,79 @@ public class NetworkPacket {
       this.size = size;
     }
 
+    public void setMatchMask(int mask, int value) {
+      this.mask = mask;
+      this.value = value;
+    }
+    
     public String toString() {
-      return name + ":" + pos + "-" + (pos + size - 1);
+      return name + ":" + pos + "-" + (pos + size - 1) + 
+      (mask != 0 ? "=" + value : "");
     }
   }
 
-  public NetworkPacket(byte[] data) {
-    this.data = data;
-    parseData();
+
+  public NetworkPacket(String pattern) {
+      description = pattern;      
+      String[] parts = description.split("\\|");
+      int pos = 0;
+      for (int i = 0; i < parts.length; i++) {
+        String field[] = parts[i].split(":");
+        String val = field[1];
+        String matchVal = null;
+        if (val.indexOf('=') > 0) {
+          String[] match = val.split("=");
+          val = match[0];
+          matchVal = match[1];
+        }
+        int size = Integer.parseInt(val);
+        Field f = new Field(field[0], pos, size);
+        if (matchVal != null) {
+          int mask = Integer.parseInt(matchVal);
+          f.setMatchMask(mask, mask);
+        }
+        pos += size;
+        System.out.println("Adding field: " + f);
+        fields.put(f.name, f);
+      }
   }
 
-  private void parseData() {
-    String[] parts = description.split("\\|");
-    int pos = 0;
-    for (int i = 0; i < parts.length; i++) {
-      String field[] = parts[i].split(":");
-      int size = Integer.parseInt(field[1]);
-      Field f = new Field(field[0], pos, size);
-      pos += size;
-      System.out.println("Adding field: " + f);
-      fields.put(f.name, f);
+
+  NetworkPacket(String pattern, Hashtable<String, Field> fields) {
+    this.description = pattern;
+    this.fields = fields;
+  }
+  
+  public boolean matches(byte[] data) {
+    for (Enumeration<Field> iterator = fields.elements(); iterator.hasMoreElements();) {
+      Field f = iterator.nextElement();
+      if (f.mask != 0) {
+        int val = getIntBits(data, f.pos, f.pos + f.size - 1);
+        if ((val & f.mask) != f.value) {
+          return false;
+        } else {
+          System.out.println("Field: " + f.name + " matches");
+        }
+      }
     }
+    return true;
+  }
+  
+  /* create a network packet based on a packet with description */
+  public NetworkPacket parseData(byte[] data) {
+    if (matches(data)) {
+      NetworkPacket np = new NetworkPacket(description, fields);
+      np.data = data;
+      return np;
+    }
+    return null;
   }
 
   public int getLength() {
     return data.length;
   }
 
-  public int getIntBits(int startBit, int endBit) {
+  public int getIntBits(byte[] data, int startBit, int endBit) {
     int startByte = startBit >> 8;
     int endByte = endBit >> 8;
     startBit = startBit & 7;
@@ -112,7 +162,7 @@ public class NetworkPacket {
 
   public int getInt(String field) {
     Field f = fields.get(field);
-    return getIntBits(f.pos, f.pos + f.size - 1);
+    return getIntBits(data, f.pos, f.pos + f.size - 1);
   }
 
   public static void main(String[] args) {
@@ -128,8 +178,9 @@ public class NetworkPacket {
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
     };
-    NetworkPacket np = new NetworkPacket(data);
-    System.out.println("Version: " + np.getIntBits(0, 3));
+    NetworkPacket np = new NetworkPacket(IPv6);
+    np = np.parseData(data);
+    System.out.println("Version: " + np.getIntBits(np.data, 0, 3));
     System.out.println("Version: " + np.getInt("version"));
   }
 
