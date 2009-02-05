@@ -1066,6 +1066,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
   }
   
   public String chipinfo() {
+    updateActiveFrequency();
     return " VREG_ON: " + on + " ChipSel: " + chipSelect +
     "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
