@@ -1074,6 +1074,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
     "\n Radio State: " + stateMachine + " rxFifoLen: " + rxfifoLen + " rxFifoWritePos: " +
       rxfifoWritePos + " rxFifoReadPos: " + rxfifoReadPos +
     "\n SPI State: " + state +
+    "\n Channel: " + activeChannel +
     "\n";
   }
 
