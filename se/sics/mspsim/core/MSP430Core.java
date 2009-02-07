@@ -79,7 +79,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // For notify read... -> which will happen before actual read!
   public IOUnit[] memIn = new IOUnit[MAX_MEM_IO];
 
-  private IOUnit[] passiveIOUnits;
+  private IOUnit[] ioUnits;
   private SFR sfr;
 
     // From the possible interrupt sources - to be able to indicate is serviced.
@@ -128,9 +128,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Ignore type for now...
     setModeNames(MODE_NAMES);
     int passIO = 0;
-    // Passive IOUnits (no tick) - should likely be placed in a hashtable?
+    // IOUnits should likely be placed in a hashtable?
     // Maybe for debugging purposes...
-    passiveIOUnits = new IOUnit[PORTS + 6];
+    ioUnits = new IOUnit[PORTS + 7];
 
     Timer ta = new Timer(this, Timer.TIMER_Ax149, memory, 0x160);
     Timer tb = new Timer(this, Timer.TIMER_Bx149, memory, 0x180);
@@ -179,47 +179,49 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     
     // Add port 1,2 with interrupt capability!
-    passiveIOUnits[0] = new IOPort(this, "1", 4, memory, 0x20);
-    passiveIOUnits[1] = new IOPort(this, "2", 1, memory, 0x28);
+    ioUnits[0] = new IOPort(this, "1", 4, memory, 0x20);
+    ioUnits[1] = new IOPort(this, "2", 1, memory, 0x28);
     for (int i = 0, n = 8; i < n; i++) {
-      memOut[0x20 + i] = passiveIOUnits[0];
-      memOut[0x28 + i] = passiveIOUnits[1];
+      memOut[0x20 + i] = ioUnits[0];
+      memOut[0x28 + i] = ioUnits[1];
     }
 
     // Add port 3,4 & 5,6
     for (int i = 0, n = 2; i < n; i++) {
-      passiveIOUnits[i + 2] = new IOPort(this, "" + (3 + i), 0,
+      ioUnits[i + 2] = new IOPort(this, "" + (3 + i), 0,
 					 memory, 0x18 + i * 4);
-      memOut[0x18 + i * 4] = passiveIOUnits[i + 2];
-      memOut[0x19 + i * 4] = passiveIOUnits[i + 2];
-      memOut[0x1a + i * 4] = passiveIOUnits[i + 2];
-      memOut[0x1b + i * 4] = passiveIOUnits[i + 2];
+      memOut[0x18 + i * 4] = ioUnits[i + 2];
+      memOut[0x19 + i * 4] = ioUnits[i + 2];
+      memOut[0x1a + i * 4] = ioUnits[i + 2];
+      memOut[0x1b + i * 4] = ioUnits[i + 2];
 
-      passiveIOUnits[i + 4] = new IOPort(this, "" + (5 + i), 0,
+      ioUnits[i + 4] = new IOPort(this, "" + (5 + i), 0,
 					 memory, 0x30 + i * 4);
 
-      memOut[0x30 + i * 4] = passiveIOUnits[i + 4];
-      memOut[0x31 + i * 4] = passiveIOUnits[i + 4];
-      memOut[0x32 + i * 4] = passiveIOUnits[i + 4];
-      memOut[0x33 + i * 4] = passiveIOUnits[i + 4];
+      memOut[0x30 + i * 4] = ioUnits[i + 4];
+      memOut[0x31 + i * 4] = ioUnits[i + 4];
+      memOut[0x32 + i * 4] = ioUnits[i + 4];
+      memOut[0x33 + i * 4] = ioUnits[i + 4];
     }
     passIO = 6;
     
     // Basic clock syst.
-    passiveIOUnits[passIO++] = bcs;
+    ioUnits[passIO++] = bcs;
 
     // Usarts
-    passiveIOUnits[passIO++] = usart0;
-    passiveIOUnits[passIO++] = usart1;
+    ioUnits[passIO++] = usart0;
+    ioUnits[passIO++] = usart1;
 
     
     // Add the timers
-    passiveIOUnits[passIO++] = ta;
-    passiveIOUnits[passIO++] = tb;
+    ioUnits[passIO++] = ta;
+    ioUnits[passIO++] = tb;
 
     ADC12 adc12 = new ADC12(this);
-    passiveIOUnits[passIO++] = adc12;
+    ioUnits[passIO++] = adc12;
 
+    ioUnits[passIO++] = sfr;
+    
     for (int i = 0, n = 16; i < n; i++) {
       memOut[0x80 + i] = adc12;
       memIn[0x80 + i] = adc12;
@@ -238,7 +240,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   /* returns port 1 ... 6 */
   public IOPort getIOPort(int portID) {
     if (portID > 0 && portID < 7) {
-     return (IOPort) passiveIOUnits[portID - 1];
+     return (IOPort) ioUnits[portID - 1];
     }
     return null;
   }
@@ -503,17 +505,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
-    for (int i = 0, n = passiveIOUnits.length; i < n; i++) {
-      if (name.equals(passiveIOUnits[i].getName())) {
-	return passiveIOUnits[i];
+    for (int i = 0, n = ioUnits.length; i < n; i++) {
+      if (name.equals(ioUnits[i].getName())) {
+	return ioUnits[i];
       }
     }
     return null;
   }
 
   private void resetIOUnits() {
-    for (int i = 0, n = passiveIOUnits.length; i < n; i++) {
-      passiveIOUnits[i].reset(RESET_POR);
+    for (int i = 0, n = ioUnits.length; i < n; i++) {
+      ioUnits[i].reset(RESET_POR);
     }
   }
   
@@ -637,6 +639,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   public void write(int dstAddress, int dst, boolean word) {
+    // TODO: optimize memory usage by tagging memory's higher bits. 
     if (breakPoints[dstAddress] != null) {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
     }

@@ -51,6 +51,12 @@ public interface MSP430Constants {
   public static final int MISALIGNED_READ = 0;
   public static final int MISALIGNED_WRITE = 1;
 
+  /* memory tags - not used yet*/
+  public static final int READ_MONITOR = 0x1000;
+  public static final int WRITE_MONITOR = 0x2000;
+  public static final int EXEC_MONITOR = 0x4000;
+  public static final int MEM_FLASH = 0x100;
+  public static final int MEM_IO = 0x200;
   
   public static final int RESET_PUC = 0;
   public static final int RESET_POR = 1;

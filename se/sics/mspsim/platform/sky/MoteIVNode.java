@@ -1,6 +1,7 @@
 package se.sics.mspsim.platform.sky;
 
 import se.sics.mspsim.chip.CC2420;
+import se.sics.mspsim.chip.DS2411;
 import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
@@ -24,6 +25,8 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
   public static final int MODE_LEDS_3 = 3;
   public static final int MODE_MAX = MODE_LEDS_3;
   // Port 2.
+  public static final int DS2411_DATA_PIN = 4;
+  public static final int DS2411_DATA = 1 << DS2411_DATA_PIN;
   public static final int BUTTON_PIN = 7;
 
   /* P1.0 - Input: FIFOP from CC2420 */
@@ -62,6 +65,7 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
 
   public CC2420 radio;
   public SHT11 sht11;
+  public DS2411 ds2411;
 
   public SkyGui gui;
   public NetworkConnection network;
@@ -86,6 +90,7 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
 
   public void setupNodePorts() {
     sht11 = new SHT11(cpu);
+    ds2411 = new DS2411(cpu);
 
     IOUnit unit = cpu.getIOUnit("Port 5");
     if (unit instanceof IOPort) {
@@ -103,6 +108,8 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     unit = cpu.getIOUnit("Port 2");
     if (unit instanceof IOPort) {
       port2 = (IOPort) unit;
+      ds2411.setDataPort(port2, DS2411_DATA_PIN);
+      port2.setPortListener(this);
     }
     
     IOUnit usart0 = cpu.getIOUnit("USART 0");
@@ -211,6 +218,8 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     } else if (source == port1) {
       sht11.clockPin((data & SHT11_CLK) != 0);
       sht11.dataPin((data & SHT11_DATA) != 0);
+    } else if (source == port2) {
+      ds2411.dataPin((data & DS2411_DATA) != 0);
     }
   }
   
