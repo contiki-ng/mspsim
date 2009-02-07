@@ -88,6 +88,10 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
     return elf;
   }
 
+  public void setNodeID(int id) {
+    ds2411.setMACID(0, 0, 0, (id >> 8) & 0xff, id & 0xff, id & 0xff);
+  }
+  
   public void setupNodePorts() {
     sht11 = new SHT11(cpu);
     ds2411 = new DS2411(cpu);

@@ -71,6 +71,7 @@ public class DS2411 extends Chip {
   private int writePos = 0;
   /* max 10 bytes to write back */
   private int[] writeBuf = new int[10];
+  private int[] macID = new int[]{0, 1, 2, 3, 4, 5};
   
   private TimeEvent stateEvent = new TimeEvent(0) {
     public void execute(long t) {
@@ -137,12 +138,12 @@ public class DS2411 extends Chip {
     if (cmd == CMD_READ_ROM) {
       /* 48 bits = 6 bytes */
       writeBuf[0] = 0x01; /* family */
-      writeBuf[1] = 0x01;
-      writeBuf[2] = 0x02;
-      writeBuf[3] = 0x03;
-      writeBuf[4] = 0x04;
-      writeBuf[5] = 0x05;
-      writeBuf[6] = 0x06;
+      writeBuf[1] = macID[0];
+      writeBuf[2] = macID[1];
+      writeBuf[3] = macID[2];
+      writeBuf[4] = macID[3];
+      writeBuf[5] = macID[4];
+      writeBuf[6] = macID[5];
       writeBuf[7] = crc8(writeBuf, 7); /* the crc */
       writeLen = 1 + 6 + 1;
     }
@@ -223,5 +224,14 @@ public class DS2411 extends Chip {
         }
       }
     }
+  }
+
+  public void setMACID(int i, int j, int k, int l, int m, int n) {
+    macID[0] = i;
+    macID[1] = j;
+    macID[2] = k;
+    macID[3] = l;
+    macID[4] = m;
+    macID[5] = n;    
   }
 }
