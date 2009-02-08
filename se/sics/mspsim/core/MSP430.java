@@ -40,6 +40,8 @@
  */
 
 package se.sics.mspsim.core;
+import java.io.PrintStream;
+
 import se.sics.mspsim.util.*;
 
 public class MSP430 extends MSP430Core {
@@ -75,6 +77,7 @@ public class MSP430 extends MSP430Core {
   public MSP430(int type) {
     super(type);
     disAsm = new DisAsm();
+    addChip(this);
   }
 
   public double getCPUPercent() {
@@ -312,6 +315,13 @@ public class MSP430 extends MSP430Core {
     }
   }
 
+  void generateTrace() {
+    PrintStream out = getLogStream();
+    if (profiler != null && out != null) {
+      profiler.printStackTrace(out);
+    }
+  }
+  
   public boolean getDebug() {
     return debug;
   }

@@ -139,6 +139,10 @@ public abstract class Chip implements Loggable, EventSource {
     DEBUG = false;
   }
 
+  public PrintStream getLogStream() {
+    return log;
+  }
+  
   public void setLogStream(PrintStream out) {
     log = out;
     DEBUG = true;

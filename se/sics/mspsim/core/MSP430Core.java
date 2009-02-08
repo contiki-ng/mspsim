@@ -677,10 +677,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
     } else {
       if (warningMode == WarningMode.PRINT) {
         System.out.println(message);
+        generateTrace();
       }
     }
   }
 
+  void generateTrace() {
+    /* overide if a stack trace or other additional warning info should
+     * be printed */ 
+  }
 
   private int serviceInterrupt(int pc) {
     int pcBefore = pc;
