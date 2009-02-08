@@ -1,3 +1,10 @@
+0.97
+- added stack trace for misalignment warnings if MSP430 Core is in log mode
+- added MSP430 Core as a loggable
+- added emulation of DS2411 for generating MAC addresses
+- added warning when UART is transmitting while in LPM3
+- added profiling of events and added event system
+
 0.96
 - added warning on unaligned write/read
 - fixed bug in timer system causing severe delays when several CCR/Compare
