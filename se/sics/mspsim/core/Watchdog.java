@@ -87,12 +87,10 @@ public class Watchdog extends IOUnit {
     this.cpu = cpu;
   }
    
-  @Override
   public String getName() {
     return "Watchdog";
   }
 
-  @Override
   public void interruptServiced(int vector) {
     cpu.flagInterrupt(RESET_VECTOR, this, false);
   }

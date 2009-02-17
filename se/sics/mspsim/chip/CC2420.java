@@ -779,9 +779,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener {
 
   private void txNext() {
     if(txfifoPos <= memory[RAM_TXFIFO]) {
+      if (txfifoPos > 0x7f) {
+        log("Warning: packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
+      }
       if (listener != null) {
-        if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + txfifoPos] & 0xFF));
-        listener.receivedByte((byte)(memory[RAM_TXFIFO + txfifoPos] & 0xFF));
+        if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
+        listener.receivedByte((byte)(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
       }
       txfifoPos++;
       // Two symbol periods to send a byte...
