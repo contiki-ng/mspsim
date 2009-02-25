@@ -48,6 +48,10 @@ import java.io.PrintStream;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.regex.Pattern;
+
+import se.sics.mspsim.chip.RFListener;
+import se.sics.mspsim.chip.RFSource;
+import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ComponentRegistry;
@@ -188,6 +192,8 @@ public class MiscCommands implements CommandBundle {
         return 0;
       }
     });
+    
+    
 
     handler.registerCommand("source", new BasicCommand("run script", "<filename>") {
       public int executeCommand(CommandContext context) {
@@ -301,6 +307,39 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
+    handler.registerCommand("rflistener", new BasicLineCommand("an rflisteer", "[input|output] <rf-chip>") {
+      String command = null;
+      CommandContext context;
+      RFListener listener;
+      final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+      public int executeCommand(CommandContext ctx) {
+        this.context = ctx;
+        String inout = context.getArgument(0);
+        Chip chip = cpu.getChip(context.getArgument(1));
+        if ("output".equals(inout)) {
+          if (chip instanceof RFSource) {
+             ((RFSource)chip).setRFListener(new RFListener(){
+              public void receivedByte(byte data) {
+                context.out.println("" + data);
+              }
+             });
+          }
+        } else if ("input".equals(inout)){
+          listener = (RFListener) chip;
+        } else {
+          context.err.println("Error: illegal type: " + inout);
+        }
+        return 0;
+      }
+      public void lineRead(String line) {
+        if (listener != null) {
+          context.out.println("Should send bytes to radio: " + line);
+        }
+      }
+    });
+
+        
+    
   }
 
 }
