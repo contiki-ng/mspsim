@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007, 2008, 2009 Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ package se.sics.mspsim.chip;
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.util.Utils;
 
-public class CC2420 extends Chip implements USARTListener, RFListener {
+public class CC2420 extends Chip implements USARTListener, RFListener, RFSource {
 
   public enum Reg {
     SNOP, SXOSCON, STXCAL, SRXON, /* 0x00 */
