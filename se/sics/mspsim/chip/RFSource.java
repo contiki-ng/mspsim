@@ -31,15 +31,14 @@
  *
  * -----------------------------------------------------------------
  *
- * CC2420
+ * RFSource
  *
  * Author  : Joakim Eriksson
- * Created : Sep 06 22:00:00 2008
+ * Created : Feb 2009
  *
  */
 package se.sics.mspsim.chip;
 
-public interface RFListener {
-  // A byte has been received via the "air"
-  public void receivedByte(byte data);
+public interface RFSource {
+  void setRFListener(RFListener listener);
 }
