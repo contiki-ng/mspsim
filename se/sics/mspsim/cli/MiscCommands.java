@@ -321,7 +321,7 @@ public class MiscCommands implements CommandBundle {
           if (chip instanceof RFSource) {
              ((RFSource)chip).setRFListener(new RFListener(){
               public void receivedByte(byte data) {
-                context.out.println("" + data);
+                context.out.println("" + Utils.hex8(data));
               }
              });
           }
