@@ -55,6 +55,7 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.Utils;
 
 /**
  * @author joakim
@@ -333,7 +334,12 @@ public class MiscCommands implements CommandBundle {
       }
       public void lineRead(String line) {
         if (listener != null) {
+          byte[] data = Utils.hexconv(line);
           context.out.println("Should send bytes to radio: " + line);
+          for (int i = 0; i < data.length; i++) {
+            //context.out.println("Byte " + i + " = " + ((int) data[i] & 0xff));
+            listener.receivedByte(data[i]);
+          }
         }
       }
     });
