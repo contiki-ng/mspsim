@@ -182,35 +182,36 @@ public class Utils {
 
   /* converts hexa-decimal data in a string to an array of bytes */
   public static byte[] hexconv(String line) {
-    if (line != null) {
-      byte[] data = new byte[line.length() / 2]; 
-      int hpos = 0;
-      int totVal = 0;
-      int dataPos = 0;
-      for (int i = 0, n = line.length(); i < n; i++) {
-        int val = line.charAt(i);
-        if (val >= '0' && val <= '9') {
-          val = val - '0';
-        } else if (val >= 'a' && val <= 'f') {
-          val = val + 10 - 'a';  
-        } else if (val >= 'A' && val <= 'F'){
-          val = val + 10 - 'A';  
-        } else {
-          throw new IllegalArgumentException("Illegal format of string to convert: " + line);
-        }
-        
-        if (hpos == 0) {
-          totVal = val << 4;
-          hpos++;
-        } else {
-          totVal = totVal + val;
-          hpos = 0;
-          data[dataPos++] = (byte) (totVal & 0xff);
-        }
-      }
-      return data;
+    if (line == null) {
+      return null;
     }
-    return null;
+    byte[] data = new byte[line.length() / 2]; 
+    int hpos = 0;
+    int totVal = 0;
+    int dataPos = 0;
+    for (int i = 0, n = line.length(); i < n; i++) {
+      int val = line.charAt(i);
+      if (val >= '0' && val <= '9') {
+        val = val - '0';
+      } else if (val >= 'a' && val <= 'f') {
+        val = val + 10 - 'a';  
+      } else if (val >= 'A' && val <= 'F'){
+        val = val + 10 - 'A';  
+      } else {
+        // Not a hexa-decimal format
+        return null;
+      }
+
+      if (hpos == 0) {
+        totVal = val << 4;
+        hpos++;
+      } else {
+        totVal = totVal + val;
+        hpos = 0;
+        data[dataPos++] = (byte) (totVal & 0xff);
+      }
+    }
+    return data;
   }
 
 //  public static void main(String[] args) {
