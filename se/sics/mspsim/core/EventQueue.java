@@ -131,6 +131,8 @@ public class EventQueue {
 
       // No longer scheduled!
       tmp.scheduledIn = null;
+
+      eventCount--;
     }
 
     if (first != null) {
@@ -138,7 +140,6 @@ public class EventQueue {
     } else {
       nextTime = 0;
     }
-    eventCount--;
     return tmp;
   }
 
