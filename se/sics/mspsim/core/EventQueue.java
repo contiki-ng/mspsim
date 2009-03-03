@@ -128,6 +128,9 @@ public class EventQueue {
       first = tmp.nextEvent;
       // Unlink.
       tmp.nextEvent = null;
+
+      // No longer scheduled!
+      tmp.scheduledIn = null;
     }
 
     if (first != null) {
@@ -135,8 +138,6 @@ public class EventQueue {
     } else {
       nextTime = 0;
     }
-    // No longer scheduled!
-    tmp.scheduledIn = null;
     eventCount--;
     return tmp;
   }
