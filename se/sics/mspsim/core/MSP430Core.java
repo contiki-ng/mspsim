@@ -934,6 +934,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  memory[sp] = dst & 0xff;
 	  memory[sp + 1] = 0;
 	}
+	/* if REG or INDIRECT AUTOINC then add 2 cycles, otherwise 1 */
+	cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
 	write = false;
 	updateStatus = false;
 	break;
@@ -947,6 +949,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	memory[sp + 1] = pc >> 8;
 	writeRegister(PC, dst);
 
+	/* Additional cycles: REG => 3, AM_IND_AUTO => 2, other => 1 */
+	cycles += (ad == AM_REG) ? 3 : (ad == AM_IND_AUTOINC) ? 2 : 1;
+	
 	write = false;
 	updateStatus = false;
 	break;
@@ -1052,6 +1057,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    src &= 0xff;
 	  }
 	  cycles += dstRegMode ? 1 : 4;
+	  /* add cycle if destination register = PC */
+          if (dstRegister == PC) cycles++;
 	  break;
 	case AM_INDEX:
 	  // Indexed if reg != PC & CG1/CG2 - will PC be incremented?
@@ -1068,14 +1075,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  break;
 	case AM_IND_AUTOINC:
 	  if (srcRegister == PC) {
+	    /* PC is always handled as word */
 	    srcAddress = readRegister(PC);
 	    pc += 2;
 	    incRegister(PC, 2);
-	    cycles += 3;
+            cycles += dstRegMode ? 2 : 5;
 	  } else {
 	    srcAddress = readRegister(srcRegister);
 	    incRegister(srcRegister, word ? 2 : 1);
 	    cycles += dstRegMode ? 2 : 5;
+	  }
+	  /* If destination register is PC another cycle is consumed */
+	  if (dstRegister == PC) {
+	    cycles++;
 	  }
 	  break;
 	}
