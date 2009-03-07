@@ -315,8 +315,7 @@ public class MSP430 extends MSP430Core {
     }
   }
 
-  void generateTrace() {
-    PrintStream out = getLogStream();
+  public void generateTrace(PrintStream out) {
     if (profiler != null && out != null) {
       profiler.printStackTrace(out);
     }

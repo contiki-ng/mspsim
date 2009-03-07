@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007, 2008, 2009, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
  */
 
 package se.sics.mspsim.core;
+import java.io.PrintStream;
 import java.util.ArrayList;
 
 import se.sics.mspsim.util.Utils;
@@ -117,8 +118,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   private BasicClockModule bcs;
   private ArrayList<Chip> chips = new ArrayList<Chip>();
-  private WarningMode warningMode = WarningMode.PRINT;
 
+  private EmulationLogger logger;
+  
   /* statistics for interrupts */
   private long[] lastInterruptTime = new long[16];
   private long[] interruptTime = new long[16];
@@ -247,16 +249,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   public SFR getSFR() {
     return sfr;
-  }
-
-  public void addIOUnit(int loReadMem, int hiReadMem,
-			int loWriteMem, int hiWriteMem,
-			IOUnit unit) {
-    // Not implemented yet... IS it needed?
-//     if (loReadMem != -1) {
-//       for (int i = lo, n = hiMem; i < n; i++) {
-//       }
-//     }
   }
 
   public void addChip(Chip chip) {
@@ -538,8 +530,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     resetIOUnits();
   }
   
-  public void setWarningMode(WarningMode mode) {
-    warningMode = mode;
+  public void setLogger(EmulationLogger logger) {
+    this.logger = logger;
+  }
+  
+  public void setWarningMode(EmulationLogger.WarningMode mode) {
+    logger.setWarningMode(mode);
   }
 
   public long[] getInterruptCount() {
@@ -671,18 +667,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       message = "**** Illegal write - misaligned word to: " +
       Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
       break;
-    } 
-    if (warningMode == WarningMode.EXCEPTION) {
-      throw new IllegalStateException(message);
-    } else {
-      if (warningMode == WarningMode.PRINT) {
-        System.out.println(message);
-        generateTrace();
-      }
     }
+    logger.warning(this, message);
   }
 
-  void generateTrace() {
+  public void generateTrace(PrintStream out) {
     /* overide if a stack trace or other additional warning info should
      * be printed */ 
   }

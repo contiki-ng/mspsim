@@ -43,14 +43,11 @@ package se.sics.mspsim.core;
 
 public interface MSP430Constants {
 
-  public static final String VERSION = "0.96";
-
-  /* warning mode for CPU errors such as unaligned word access */
-  public enum WarningMode {SILENT, PRINT, EXCEPTION};
+  public static final String VERSION = "0.97";
 
   public static final int MISALIGNED_READ = 0;
   public static final int MISALIGNED_WRITE = 1;
-
+  
   /* memory tags - not used yet*/
   public static final int READ_MONITOR = 0x1000;
   public static final int WRITE_MONITOR = 0x2000;
