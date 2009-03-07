@@ -613,7 +613,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   // Read method that handles read from IO units!
-  public int read(int address, boolean word) {
+  public int read(int address, boolean word) throws EmulationException {
     int val = 0;
     // Only word reads at 0x1fe which is highest address...
     if (address < 0x1ff && memIn[address] != null) {
@@ -634,7 +634,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return val;
   }
   
-  public void write(int dstAddress, int dst, boolean word) {
+  public void write(int dstAddress, int dst, boolean word) throws EmulationException {
     // TODO: optimize memory usage by tagging memory's higher bits. 
     if (breakPoints[dstAddress] != null) {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
@@ -656,7 +656,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
   }
 
-  void printWarning(int type, int address) {
+  void printWarning(int type, int address) throws EmulationException {
     String message = "";
     switch(type) {
     case MISALIGNED_READ:
@@ -742,7 +742,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   /* returns true if any instruction was emulated - false if CpuOff */
-  public boolean emulateOP(long maxCycles) {
+  public boolean emulateOP(long maxCycles) throws EmulationException {
     //System.out.println("CYCLES BEFORE: " + cycles);
     int pc = readRegister(PC);
     long startCycles = cycles;

@@ -41,6 +41,7 @@
 package se.sics.mspsim.cli;
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.Memory;
@@ -243,7 +244,11 @@ public class DebugCommands implements CommandBundle {
           public int executeCommand(CommandContext context) {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
             long cyc = cpu.cycles;
-            node.step(nr);
+            try {
+              node.step(nr); 
+            } catch (Exception e) {
+              e.printStackTrace(context.out);
+            }
             context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)) +
                 " in " + (cpu.cycles - cyc) + " cycles (" + cpu.cycles + ")");
             return 0;
@@ -261,8 +266,12 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("print", new BasicCommand("print value of an address or symbol", "<address or symbol>") {
           public int executeCommand(CommandContext context) {
             int adr = context.getArgumentAsAddress(0);
-            if (adr != -1) { 
-              context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.read(adr, adr >= 0x100)));
+            if (adr != -1) {
+              try {
+                context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.read(adr, adr >= 0x100)));
+              } catch (Exception e) {
+                e.printStackTrace(context.out);
+              }
               return 0;
             } else {
               context.err.println("unknown symbol: " + context.getArgument(0));
@@ -334,7 +343,11 @@ public class DebugCommands implements CommandBundle {
             int adr = context.getArgumentAsAddress(0);
             int val = context.getArgumentAsInt(1);
             boolean word = val > 0xff;
-            cpu.write(adr, val, word);
+            try {
+              cpu.write(adr, val, word);
+            } catch (EmulationException e) {
+              e.printStackTrace(context.out);
+            }
             return 0;
           }});
         

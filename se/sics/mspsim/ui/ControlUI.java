@@ -113,7 +113,11 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
       private static final long serialVersionUID = 1L;
 
       public void actionPerformed(ActionEvent e) {
-	  ControlUI.this.node.step();
+          try {
+            ControlUI.this.node.step();
+          } catch (Exception e2) {
+            e2.printStackTrace();
+          }
 	  dui.updateRegs();
 	  dui.repaint();
 	  if (elfData != null && sourceViewer != null

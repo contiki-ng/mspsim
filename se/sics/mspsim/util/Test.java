@@ -107,7 +107,11 @@ public class Test implements USARTListener {
 
       // Create the "tester"
       new Test(cpu);
-      cpu.cpuloop();
+      try {
+        cpu.cpuloop();        
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     } catch (IOException ioe) {
       ioe.printStackTrace();
     }

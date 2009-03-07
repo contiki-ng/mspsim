@@ -50,6 +50,8 @@ import se.sics.mspsim.cli.ProfilerCommands;
 import se.sics.mspsim.cli.StreamCommandHandler;
 import se.sics.mspsim.cli.WindowCommands;
 import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.EmulationException;
+import se.sics.mspsim.core.EmulationLogger;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
@@ -57,6 +59,7 @@ import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
+import se.sics.mspsim.util.DefaultEmulationLogger;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
@@ -176,10 +179,16 @@ public abstract class GenericNode extends Chip implements Runnable {
 
   public void setup(ConfigManager config) throws IOException {
     this.config = config;
+    EmulationLogger logger = (EmulationLogger) registry.getComponent("logger");
+    if (logger == null) {
+      logger= new DefaultEmulationLogger(cpu, System.out);
+      registry.registerComponent("logger", logger);
+    }
     registry.registerComponent("cpu", cpu);
     registry.registerComponent("node", this);
     registry.registerComponent("config", config);
-
+    cpu.setLogger(logger);
+    
     CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
     if (ch == null) {
       ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
@@ -205,9 +214,15 @@ public abstract class GenericNode extends Chip implements Runnable {
  
   public void run() {
     if (!cpu.isRunning()) {
-      cpu.cpuloop();
+      try {
+        cpu.cpuloop(); 
+      } catch (Exception e) {
+        /* what should we do here */
+        e.printStackTrace();
+      }
     }
   }
+  
   public void start() {
     if (!cpu.isRunning()) {
       new Thread(this).start();
@@ -218,7 +233,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     cpu.setRunning(false);
   }
   
-  public void step() {
+  public void step() throws EmulationException {
     if (!cpu.isRunning()) {
       cpu.step();
     }
@@ -255,7 +270,7 @@ public abstract class GenericNode extends Chip implements Runnable {
   }
   
   // A step that will break out of breakpoints!
-  public void step(int nr) {
+  public void step(int nr) throws EmulationException {
     if (!cpu.isRunning()) {
       cpu.stepInstructions(nr);
     }

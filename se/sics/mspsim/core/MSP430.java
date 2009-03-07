@@ -88,7 +88,7 @@ public class MSP430 extends MSP430Core {
     return disAsm;
   }
 
-  public void cpuloop() {
+  public void cpuloop() throws EmulationException {
     if (isRunning()) {
       throw new IllegalStateException("already running");
     }
@@ -98,7 +98,7 @@ public class MSP430 extends MSP430Core {
     run();
   }
 
-  private void run() {
+  private void run() throws EmulationException {
     while (isRunning()) {
       // -------------------------------------------------------------------
       // Debug information
@@ -154,11 +154,11 @@ public class MSP430 extends MSP430Core {
     }
   }
 
-  public long step() {
+  public long step() throws EmulationException {
     return step(0);
   }
 
-  public long stepInstructions(int count) {
+  public long stepInstructions(int count) throws EmulationException {
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
@@ -204,7 +204,7 @@ public class MSP430 extends MSP430Core {
   /* 
    * Perform a single step (even if in LPM) but no longer than to maxCycles + 1 instr
    */
-  public long step(long maxCycles) {
+  public long step(long maxCycles) throws EmulationException {
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }

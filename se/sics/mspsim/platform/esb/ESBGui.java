@@ -192,7 +192,6 @@ public class ESBGui extends JComponent implements ADCInput {
     }
     
     beeper = new Beeper();
-    cpu.addIOUnit(-1,0,-1,0,beeper);
     
     // Just a test... TODO: remove!!!
     AudioFormat af = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);

@@ -45,6 +45,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.MSP430Core;
 
 public class GDBStubs implements Runnable {
@@ -99,11 +100,14 @@ public class GDBStubs implements Runnable {
         }
       } catch (IOException e) {
         e.printStackTrace();
+      } catch (EmulationException e) {
+        e.printStackTrace();
       }
     }
   }
 
-  private void handleCmd(String cmd, int[] cmdBytes, int cmdLen) throws IOException {
+  private void handleCmd(String cmd, int[] cmdBytes, int cmdLen) throws IOException, 
+  EmulationException {
     System.out.println("cmd: " + cmd);
     char c = cmd.charAt(0);
     switch(c) {
