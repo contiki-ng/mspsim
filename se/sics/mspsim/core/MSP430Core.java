@@ -857,12 +857,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
             dstAddress = readRegister(PC);
             pc += 2;
             writeRegister(PC, pc);
-            cycles += 5;
           } else {
             dstAddress = readRegister(dstRegister);
             writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
-            cycles += 3;
           }
+          cycles += 3;
           break;
 	}
       }
@@ -927,6 +926,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
 	write = false;
 	updateStatus = false;
+        System.out.println("Cycles on PUSH: " + (cycles - startCycles));
+
 	break;
       case CALL:
 	// store current PC on stack... (current PC points to next instr.)
@@ -954,10 +955,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	write = false;
 	updateStatus = false;
 
+	cycles += 4;
+	
 	if (debugInterrupts) {
 	  System.out.println("### RETI at " + pc + " => " + reg[PC] +
 			     " SP after: " + reg[SP]);
-	}
+	}        
 
 	// This assumes that all interrupts will get back using RETI!
 	handlePendingInterrupts();

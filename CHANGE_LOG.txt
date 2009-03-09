@@ -1,4 +1,5 @@
 0.97
+- fixed some cycle timing bugs of instruction set execution
 - added stack trace for misalignment warnings if MSP430 Core is in log mode
 - added MSP430 Core as a loggable
 - added emulation of DS2411 for generating MAC addresses
