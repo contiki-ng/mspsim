@@ -926,8 +926,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
 	write = false;
 	updateStatus = false;
-        System.out.println("Cycles on PUSH: " + (cycles - startCycles));
-
 	break;
       case CALL:
 	// store current PC on stack... (current PC points to next instr.)
