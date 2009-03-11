@@ -106,7 +106,6 @@ public class Watchdog extends IOUnit {
     return 0;
   }
 
-  @Override
   public void write(int address, int value, boolean word, long cycles) {
     if (address == WDTCTL) {
       if ((value >> 8) == 0x5a) {

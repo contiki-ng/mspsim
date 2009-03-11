@@ -63,7 +63,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public CPUMonitor[] regWriteMonitors = new CPUMonitor[16];
   public CPUMonitor[] regReadMonitors = new CPUMonitor[16];
-
+  
   // For breakpoints, etc... how should memory monitors be implemented?
   // Maybe monitors should have a "next" pointer...? or just have a [][]?
   public CPUMonitor[] breakPoints = new CPUMonitor[MAX_MEM];
@@ -121,11 +121,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private EmulationLogger logger;
   
-  /* statistics for interrupts */
-  private long[] lastInterruptTime = new long[16];
-  private long[] interruptTime = new long[16];
-  private long[] interruptCount = new long[16];
+  Profiler profiler;
 
+  
   public MSP430Core(int type) {
     // Ignore type for now...
     setModeNames(MODE_NAMES);
@@ -239,6 +237,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (DEBUG) System.out.println("Number of passive: " + passIO);
   }
 
+  public Profiler getProfiler() {
+    return profiler;
+  }
+
+  public void setProfiler(Profiler prof) {
+    profiler = prof;
+  }
+  
   /* returns port 1 ... 6 */
   public IOPort getIOPort(int portID) {
     if (portID > 0 && portID < 7) {
@@ -514,8 +520,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private void internalReset() {
     for (int i = 0, n = 16; i < n; i++) {
       interruptSource[i] = null;
-      interruptTime[i] = 0;
-      interruptCount[i] = 0;
     }
     servicedInterruptUnit = null;
     servicedInterrupt = -1;
@@ -528,6 +532,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     bcs.reset();
     // Needs to be last since these can add events...
     resetIOUnits();
+    
   }
   
   public void setLogger(EmulationLogger logger) {
@@ -536,14 +541,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   public void setWarningMode(EmulationLogger.WarningMode mode) {
     logger.setWarningMode(mode);
-  }
-
-  public long[] getInterruptCount() {
-    return interruptCount;
-  }
-  
-  public long[] getInterruptTime() {
-    return interruptTime;
   }
   
   public void reset() {
@@ -601,10 +598,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // In the main-CPU loop
   public void handlePendingInterrupts() {
     // By default no int. left to process...
-    if (servicedInterrupt > -1) {
-      interruptTime[servicedInterrupt] += cycles - lastInterruptTime[servicedInterrupt];
-      interruptCount[servicedInterrupt]++;
-    }
     
     reevaluateInterrupts();
     
@@ -682,6 +675,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int sp = spBefore;
     int sr = readRegister(SR);
 
+    if (profiler != null) {
+      profiler.profileInterrupt(interruptMax, cycles);
+    }
+    
     // Only store stuff on irq except reset... - not sure if this is correct...
     // TODO: Check what to do if reset is called!
     if (interruptMax < 15) {
@@ -707,8 +704,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
-
-    lastInterruptTime[servicedInterrupt] = cycles;
 
     // Flag off this interrupt - for now - as soon as RETI is
     // executed things might change!
@@ -959,7 +954,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  System.out.println("### RETI at " + pc + " => " + reg[PC] +
 			     " SP after: " + reg[SP]);
 	}        
-
+	if (profiler != null) {
+	  profiler.profileRETI(cycles);
+	}
+	
 	// This assumes that all interrupts will get back using RETI!
 	handlePendingInterrupts();
 

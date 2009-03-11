@@ -94,21 +94,21 @@ public class ProfilerCommands implements CommandBundle {
 
       });
 
-      ch.registerCommand("irqprofile", new BasicCommand("show interrupt profile", "") {
-        public int executeCommand(CommandContext context) {
-          long[] time = cpu.getInterruptTime();
-          long[] ctr = cpu.getInterruptCount();
-          context.out.println("Interrupt statistics");
-          context.out.println("Vector\tAvg\tCount");
-          
-          for (int i = 0; i < ctr.length; i++) {
-            long avg = ctr[i] != 0 ? (time[i] / ctr[i]) : 0;
-            context.out.println(i + "\t" + avg + "\t" + ctr[i]);
-          }
-          return 0;
-        }
-
-      });
+//      ch.registerCommand("irqprofile", new BasicCommand("show interrupt profile", "") {
+//        public int executeCommand(CommandContext context) {
+//          long[] time = cpu.getInterruptTime();
+//          long[] ctr = cpu.getInterruptCount();
+//          context.out.println("Interrupt statistics");
+//          context.out.println("Vector\tAvg\tCount");
+//          
+//          for (int i = 0; i < ctr.length; i++) {
+//            long avg = ctr[i] != 0 ? (time[i] / ctr[i]) : 0;
+//            context.out.println(i + "\t" + avg + "\t" + ctr[i]);
+//          }
+//          return 0;
+//        }
+//
+//      });
       
       ch.registerCommand("logevents", new BasicAsyncCommand("log events", "") {
         Chip chip;

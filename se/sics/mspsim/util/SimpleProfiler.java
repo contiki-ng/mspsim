@@ -62,12 +62,20 @@ public class SimpleProfiler implements Profiler, EventListener {
   private MSP430Core cpu;
   private PrintStream logger;
 
+  /* statistics for interrupts */
+  private long[] lastInterruptTime = new long[16];
+  private long[] interruptTime = new long[16];
+  private long[] interruptCount = new long[16];
+  private int servicedInterrupt;
+  private int interruptLevel;
+  
   public SimpleProfiler() {
     profileData = new Hashtable<MapEntry, CallEntry>();
     tagProfiles = new Hashtable<String, TagEntry>();
     startTags = new Hashtable<String, TagEntry>();
     endTags = new Hashtable<String, TagEntry>();
     callStack = new CallEntry[2048];
+    servicedInterrupt = -1;
   }
 
   public void setCPU(MSP430Core cpu) {
@@ -80,6 +88,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
 
     if (logger != null) {
+      if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
       printSpace(logger, cSP * 2);
       logger.println("Call to: " + entry);
     }
@@ -105,13 +114,38 @@ public class SimpleProfiler implements Profiler, EventListener {
       ce.calls++;
 
       if (logger != null) {
-        printSpace(logger, cSP * 2);
+        if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
+        printSpace(logger, cSP * 2 - interruptLevel);
         logger.println("return from: " + ce.function + " elapsed time: " + elapsed);
-      }
-    
+      }  
     }
   }
 
+  public void profileInterrupt(int vector, long cycles) {
+    servicedInterrupt = vector;
+    lastInterruptTime[servicedInterrupt] = cycles;
+    interruptLevel = cSP * 2;
+    if (logger != null) {
+      logger.println("----- Interrupt vector " + vector + " start execution -----");
+    }
+  }
+  
+  public void profileRETI(long cycles) {
+    if (servicedInterrupt > -1) {
+      interruptTime[servicedInterrupt] += cycles - lastInterruptTime[servicedInterrupt];
+      interruptCount[servicedInterrupt]++;
+    }
+
+    if (logger != null) {
+      logger.println("----- Interrupt vector " + servicedInterrupt + " returned - elapsed: " +
+          (cycles - lastInterruptTime[servicedInterrupt]));
+      interruptLevel = 0;
+    }
+    
+    /* what if interrupt from interrupt ? */
+    servicedInterrupt = -1;
+  }
+  
   public void clearProfile() {
     if (profileData != null) {
       CallEntry[] entries =
@@ -127,8 +161,7 @@ public class SimpleProfiler implements Profiler, EventListener {
         }
       }
     }
-  }
-  
+  }  
   public void printProfile(PrintStream out) {
     printProfile(out, null);
   }
@@ -163,6 +196,14 @@ public class SimpleProfiler implements Profiler, EventListener {
           out.println(cyclesS);
         }
       }
+    }
+    out.println("********** Profile IRQ **************************");
+    out.println("Vector          Average    Calls  Tot.Cycles");
+    for (int i = 0; i < 16; i++) {
+        out.print((i < 10 ? "0" : "") + i + "               ");
+        out.printf("%4d ",(interruptCount[i] > 0 ? (interruptTime[i] / interruptCount[i]):0));
+        out.printf("%8d   %8d",interruptCount[i],interruptTime[i]);
+        out.println();
     }
   }
 

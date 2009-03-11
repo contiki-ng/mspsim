@@ -49,7 +49,9 @@ public interface Profiler {
 
   public void profileCall(MapEntry entry, long cycles);
   public void profileReturn(long cycles);
-
+  public void profileInterrupt(int vector, long cycles);
+  public void profileRETI(long cycles);
+  
   public void clearProfile();
 
   public void printProfile(PrintStream out);

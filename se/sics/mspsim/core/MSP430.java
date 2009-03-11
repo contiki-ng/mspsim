@@ -66,7 +66,6 @@ public class MSP430 extends MSP430Core {
   private long instCtr = 0;
   private DisAsm disAsm;
   private MapTable map;
-  private Profiler profiler;
 
   private SimEventListener[] simEventListeners;
 
@@ -329,16 +328,12 @@ public class MSP430 extends MSP430Core {
     debug = db;
   }
 
-  public Profiler getProfiler() {
-    return profiler;
-  }
-
   public void setMap(MapTable map) {
     this.map = map;
     /* When we got the map table we can also profile! */
     if (profiler == null) {
-      this.profiler = new SimpleProfiler();
-      this.profiler.setCPU(this);
+      setProfiler(new SimpleProfiler());
+      profiler.setCPU(this);
     }
   }
 
