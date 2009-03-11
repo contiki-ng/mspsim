@@ -47,21 +47,23 @@ import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
 import java.io.PrintStream;
 import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 
 public class SimpleProfiler implements Profiler, EventListener {
 
-  private Hashtable<MapEntry,CallEntry> profileData;
-  private Hashtable<String, TagEntry> tagProfiles;
-  private Hashtable<String, TagEntry> startTags;
-  private Hashtable<String, TagEntry> endTags;
+  private HashMap<MapEntry,CallEntry> profileData;
+  private HashMap<String, TagEntry> tagProfiles;
+  private HashMap<String, TagEntry> startTags;
+  private HashMap<String, TagEntry> endTags;
+  private HashMap<String, String> ignoreFunctions;
   private CallEntry[] callStack;
   private int cSP = 0;
   private MSP430Core cpu;
   private PrintStream logger;
-
+  private boolean hideIRQ = false;
+  
   /* statistics for interrupts */
   private long[] lastInterruptTime = new long[16];
   private long[] interruptTime = new long[16];
@@ -70,10 +72,11 @@ public class SimpleProfiler implements Profiler, EventListener {
   private int interruptLevel;
   
   public SimpleProfiler() {
-    profileData = new Hashtable<MapEntry, CallEntry>();
-    tagProfiles = new Hashtable<String, TagEntry>();
-    startTags = new Hashtable<String, TagEntry>();
-    endTags = new Hashtable<String, TagEntry>();
+    profileData = new HashMap<MapEntry, CallEntry>();
+    tagProfiles = new HashMap<String, TagEntry>();
+    startTags = new HashMap<String, TagEntry>();
+    endTags = new HashMap<String, TagEntry>();
+    ignoreFunctions = new HashMap<String, String>();
     callStack = new CallEntry[2048];
     servicedInterrupt = -1;
   }
@@ -82,15 +85,25 @@ public class SimpleProfiler implements Profiler, EventListener {
     this.cpu = cpu;
   }
 
+  public void setHideIRQ(boolean hide) {
+    hideIRQ = hide;
+  }
+  
+  public void addIgnoreFunction(String function) {
+   ignoreFunctions.put(function, function);
+  }
+  
   public void profileCall(MapEntry entry, long cycles) {
     if (callStack[cSP] == null) {
       callStack[cSP] = new CallEntry();
     }
 
     if (logger != null) {
-      if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
-      printSpace(logger, cSP * 2);
-      logger.println("Call to: " + entry);
+      if (!hideIRQ || servicedInterrupt == -1) {
+        if (servicedInterrupt >= 0) logger.printf("[%2d] ", servicedInterrupt);
+        printSpace(logger, cSP * 2 - interruptLevel);
+        logger.println("Call to: " + entry);
+      }
     }
     
     callStack[cSP].function = entry;
@@ -114,10 +127,12 @@ public class SimpleProfiler implements Profiler, EventListener {
       ce.calls++;
 
       if (logger != null) {
-        if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
-        printSpace(logger, cSP * 2 - interruptLevel);
-        logger.println("return from: " + ce.function + " elapsed time: " + elapsed);
-      }  
+        if (!hideIRQ || servicedInterrupt == -1) {
+          if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
+          printSpace(logger, cSP * 2 - interruptLevel);
+          logger.println("return from: " + ce.function + " elapsed time: " + elapsed);
+        }
+      }
     }
   }
 
@@ -125,7 +140,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     servicedInterrupt = vector;
     lastInterruptTime[servicedInterrupt] = cycles;
     interruptLevel = cSP * 2;
-    if (logger != null) {
+    if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + vector + " start execution -----");
     }
   }
@@ -136,7 +151,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       interruptCount[servicedInterrupt]++;
     }
 
-    if (logger != null) {
+    if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + servicedInterrupt + " returned - elapsed: " +
           (cycles - lastInterruptTime[servicedInterrupt]));
       interruptLevel = 0;

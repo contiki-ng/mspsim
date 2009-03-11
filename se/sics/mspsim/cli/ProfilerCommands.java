@@ -162,7 +162,6 @@ public class ProfilerCommands implements CommandBundle {
 
       
       ch.registerCommand("logcalls", new BasicAsyncCommand("log function calls", "") {
-        @Override
         public int executeCommand(CommandContext context) {
           Profiler profiler = cpu.getProfiler();
           if (profiler == null) {
@@ -178,6 +177,27 @@ public class ProfilerCommands implements CommandBundle {
             profiler.setLogger(null);
           }
         }
+      });
+      
+      ch.registerCommand("profiler", new BasicCommand("configure profiler",
+          "<command> <arguments>") {
+            public int executeCommand(CommandContext context) {
+              // TODO: add more API's to the Profiler???
+              SimpleProfiler profiler = (SimpleProfiler) cpu.getProfiler();
+              if (profiler == null) {
+                context.err.println("No profiler found.");
+                return 1;
+              }
+              String cmd = context.getArgument(0);
+              if ("hide".equals(cmd)) {
+                for (int j = 1, n = context.getArgumentCount(); j < n; j++) {
+                  profiler.addIgnoreFunction(context.getArgument(j));
+                }
+              } else if ("hideirq".equals(cmd)) {
+                profiler.setHideIRQ(context.getArgument(1).equals("1"));
+              }
+              return 0;
+            }
       });
     }
   }
