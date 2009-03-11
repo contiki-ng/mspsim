@@ -70,6 +70,7 @@ public class SimpleProfiler implements Profiler, EventListener {
   private long[] interruptCount = new long[16];
   private int servicedInterrupt;
   private int interruptLevel;
+  private boolean newIRQ;
   
   public SimpleProfiler() {
     profileData = new HashMap<MapEntry, CallEntry>();
@@ -97,27 +98,38 @@ public class SimpleProfiler implements Profiler, EventListener {
     if (callStack[cSP] == null) {
       callStack[cSP] = new CallEntry();
     }
-
+    int hide = 0;
     if (logger != null) {
-      if (!hideIRQ || servicedInterrupt == -1) {
+      /* hide this if last call was to be hidden */
+      hide = (cSP == 0 || newIRQ) ? 0 : callStack[cSP - 1].hide;
+      /* increase level of "hide" if last was hidden */
+      if (hide > 0) hide++;
+      if ((!hideIRQ || servicedInterrupt == -1) && hide == 0) {
         if (servicedInterrupt >= 0) logger.printf("[%2d] ", servicedInterrupt);
         printSpace(logger, cSP * 2 - interruptLevel);
         logger.println("Call to: " + entry);
+        if (ignoreFunctions.get(entry.getName()) != null) {
+          hide = 1;
+        }
       }
     }
-    
-    callStack[cSP].function = entry;
-    callStack[cSP].calls = 0;
-    callStack[cSP++].cycles = cycles;
+
+    CallEntry ce = callStack[cSP++];
+    ce.function = entry;
+    ce.calls = 0;
+    ce.cycles = cycles;
+    ce.hide = hide;
+    newIRQ = false;
   }
 
   
   public void profileReturn(long cycles) {
-    MapEntry fkn = callStack[--cSP].function;
+    CallEntry cspEntry = callStack[--cSP];
+    MapEntry fkn = cspEntry.function;
 //     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
 
-    long elapsed = cycles - callStack[cSP].cycles;
-    if (callStack[cSP].calls >= 0) {
+    long elapsed = cycles - cspEntry.cycles;
+    if (cspEntry.calls >= 0) {
       CallEntry ce = profileData.get(fkn);
       if (ce == null) {
 	profileData.put(fkn, ce = new CallEntry());
@@ -127,19 +139,21 @@ public class SimpleProfiler implements Profiler, EventListener {
       ce.calls++;
 
       if (logger != null) {
-        if (!hideIRQ || servicedInterrupt == -1) {
+        if ((cspEntry.hide <= 1) && (!hideIRQ || servicedInterrupt == -1)) {
           if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
           printSpace(logger, cSP * 2 - interruptLevel);
           logger.println("return from: " + ce.function + " elapsed time: " + elapsed);
         }
       }
     }
+    newIRQ = false;
   }
 
   public void profileInterrupt(int vector, long cycles) {
     servicedInterrupt = vector;
     lastInterruptTime[servicedInterrupt] = cycles;
     interruptLevel = cSP * 2;
+    newIRQ = true;
     if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + vector + " start execution -----");
     }
@@ -150,7 +164,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       interruptTime[servicedInterrupt] += cycles - lastInterruptTime[servicedInterrupt];
       interruptCount[servicedInterrupt]++;
     }
-
+    newIRQ = false;
     if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + servicedInterrupt + " returned - elapsed: " +
           (cycles - lastInterruptTime[servicedInterrupt]));
@@ -239,6 +253,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     MapEntry function;
     long cycles;
     int calls;
+    int hide;
 
     public int compareTo(CallEntry o) {
       long diff = o.cycles - cycles;
