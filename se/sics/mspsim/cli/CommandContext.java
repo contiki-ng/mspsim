@@ -174,6 +174,11 @@ public class CommandContext {
     }
   }
 
+  public boolean getArgumentAsBoolean(int index) {
+    String v = getArgument(index);
+    return "true".equalsIgnoreCase(v) || "1".equals(v);
+  }
+
   public int executeCommand(String command) {
     return commandHandler.executeCommand(command, this);
   }

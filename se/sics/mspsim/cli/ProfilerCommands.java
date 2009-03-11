@@ -194,7 +194,7 @@ public class ProfilerCommands implements CommandBundle {
                   profiler.addIgnoreFunction(context.getArgument(j));
                 }
               } else if ("hideirq".equals(cmd)) {
-                profiler.setHideIRQ(context.getArgument(1).equals("1"));
+                profiler.setHideIRQ(context.getArgumentAsBoolean(1));
               }
               return 0;
             }
