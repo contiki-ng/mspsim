@@ -203,11 +203,11 @@ public class ADC12 extends IOUnit {
       if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
         return adc12mctl[address - ADC12MCTL0];
       } else if (address >= ADC12MEM0) {
-        int reg = address - ADC12MEM0;
+        int reg = (address - ADC12MEM0) / 2;
         // Clear ifg!
         adc12ifg &= ~(1 << reg);
 //        System.out.println("Read ADCMEM" + (reg / 2));        
-        if (adc12iv == reg + 6) {
+        if (adc12iv == reg * 2 + 6) {
           core.flagInterrupt(adc12Vector, this, false);
           adc12iv = 0;
 //          System.out.println("** de-Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
