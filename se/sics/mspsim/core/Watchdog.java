@@ -97,7 +97,8 @@ public class Watchdog extends IOUnit {
 
   private void triggerWDT(long time) {
     // Here the WDT triggered!!!
-    System.out.println("WDT trigger - should reset?!?!");
+    System.out.println("WDT trigger - will reset node!");
+    cpu.generateTrace(System.out);
     cpu.flagInterrupt(RESET_VECTOR, this, true);
   }
   
