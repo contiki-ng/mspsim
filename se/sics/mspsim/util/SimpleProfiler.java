@@ -107,7 +107,8 @@ public class SimpleProfiler implements Profiler, EventListener {
       if ((!hideIRQ || servicedInterrupt == -1) && hide == 0) {
         if (servicedInterrupt >= 0) logger.printf("[%2d] ", servicedInterrupt);
         printSpace(logger, cSP * 2 - interruptLevel);
-        logger.println("Call to: " + entry);
+        logger.println("Call to $" + Utils.hex16(entry.getAddress()) +
+                       ": " + entry.getInfo());
         if (ignoreFunctions.get(entry.getName()) != null) {
           hide = 1;
         }
@@ -122,7 +123,6 @@ public class SimpleProfiler implements Profiler, EventListener {
     newIRQ = false;
   }
 
-  
   public void profileReturn(long cycles) {
     CallEntry cspEntry = callStack[--cSP];
     MapEntry fkn = cspEntry.function;
@@ -132,8 +132,8 @@ public class SimpleProfiler implements Profiler, EventListener {
     if (cspEntry.calls >= 0) {
       CallEntry ce = profileData.get(fkn);
       if (ce == null) {
-	profileData.put(fkn, ce = new CallEntry());
-	ce.function = fkn;
+        profileData.put(fkn, ce = new CallEntry());
+        ce.function = fkn;
       }
       ce.cycles += elapsed;
       ce.calls++;
@@ -142,7 +142,7 @@ public class SimpleProfiler implements Profiler, EventListener {
         if ((cspEntry.hide <= 1) && (!hideIRQ || servicedInterrupt == -1)) {
           if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
           printSpace(logger, cSP * 2 - interruptLevel);
-          logger.println("return from: " + ce.function + " elapsed time: " + elapsed);
+          logger.println("return from " + ce.function.getInfo() + " elapsed: " + elapsed);
         }
       }
     }
