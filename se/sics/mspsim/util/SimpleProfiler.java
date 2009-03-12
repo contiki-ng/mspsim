@@ -168,8 +168,8 @@ public class SimpleProfiler implements Profiler, EventListener {
     if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + servicedInterrupt + " returned - elapsed: " +
           (cycles - lastInterruptTime[servicedInterrupt]));
-      interruptLevel = 0;
     }
+    interruptLevel = 0;
     
     /* what if interrupt from interrupt ? */
     servicedInterrupt = -1;
