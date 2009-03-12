@@ -23,7 +23,6 @@ public class ComponentRegistry {
     return null;
   }
   
-  @SuppressWarnings("unchecked")
   public synchronized Object[] getAllComponents(String name) {
     ArrayList<Object> list = new ArrayList<Object>();
     for (int i = 0, n = components.size(); i < n; i++) {
