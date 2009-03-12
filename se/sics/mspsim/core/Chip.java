@@ -54,6 +54,7 @@ public abstract class Chip implements Loggable, EventSource {
   protected boolean sendEvents = false;
   private String[] modeNames = null;
   private int mode;
+  protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
   
@@ -154,4 +155,8 @@ public abstract class Chip implements Loggable, EventSource {
     }
   }
 
+  public void setEmulationLogger(EmulationLogger logger) {
+    this.logger = logger;
+  }
+  
 }

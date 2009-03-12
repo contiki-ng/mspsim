@@ -187,7 +187,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("cpu", cpu);
     registry.registerComponent("node", this);
     registry.registerComponent("config", config);
-    cpu.setLogger(logger);
+    cpu.setEmulationLogger(logger);
     
     CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
     if (ch == null) {

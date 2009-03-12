@@ -42,7 +42,6 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
-
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -119,10 +118,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private BasicClockModule bcs;
   private ArrayList<Chip> chips = new ArrayList<Chip>();
 
-  private EmulationLogger logger;
-  
   Profiler profiler;
-
   
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -259,6 +255,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public void addChip(Chip chip) {
     chips.add(chip);
+    chip.setEmulationLogger(logger);
   }
 
   public Chip getChip(String name) {
@@ -280,7 +277,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public Chip[] getChips() {
-    return (Chip[]) chips.toArray(new Chip[chips.size()]);
+    return chips.toArray(new Chip[chips.size()]);
   }
   
   public void setBreakPoint(int address, CPUMonitor mon) {
@@ -534,13 +531,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
     resetIOUnits();
     
   }
-  
-  public void setLogger(EmulationLogger logger) {
-    this.logger = logger;
-  }
-  
+
   public void setWarningMode(EmulationLogger.WarningMode mode) {
-    logger.setWarningMode(mode);
+    if (logger != null) {
+      logger.setWarningMode(mode);
+    }
   }
   
   public void reset() {
@@ -650,22 +645,24 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   void printWarning(int type, int address) throws EmulationException {
-    String message = "";
+    String message = null;
     switch(type) {
     case MISALIGNED_READ:
-      message = "**** Illegal read - misaligned word from: " +
+      message = "**** Illegal read - misaligned word from $" +
       Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
       break;
     case MISALIGNED_WRITE:
-      message = "**** Illegal write - misaligned word to: " +
+      message = "**** Illegal write - misaligned word to $" +
       Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
       break;
     }
-    logger.warning(this, message);
+    if (logger != null && message != null) {
+      logger.warning(this, message);
+    }
   }
 
   public void generateTrace(PrintStream out) {
-    /* overide if a stack trace or other additional warning info should
+    /* Override if a stack trace or other additional warning info should
      * be printed */ 
   }
 
@@ -1265,4 +1262,5 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public int getModeMax() {
     return MODE_MAX;
   }
+
 }

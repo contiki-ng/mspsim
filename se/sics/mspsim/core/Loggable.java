@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  *
  * This file is part of MSPSim.
- * 
+ *
  */
 package se.sics.mspsim.core;
 import java.io.PrintStream;
@@ -37,7 +37,8 @@ import java.io.PrintStream;
  */
 public interface Loggable {
 
+  public void setEmulationLogger(EmulationLogger log);
   public void setLogStream(PrintStream out);
   public void clearLogStream();
-  
+
 }
