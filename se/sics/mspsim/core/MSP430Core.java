@@ -52,6 +52,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public static final boolean DEBUG = false;
   public static final boolean debugInterrupts = false;
 
+  public static final boolean EXCEPTION_ON_BAD_OPERATION = true;
+
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;
   public static final int MAX_MEM_IO = 0x200;
@@ -1221,8 +1223,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	write = true;
 	break;
       default:
-	System.out.println("DoubleOperand not implemented: " + op +
-			   " at " + pc);
+	System.out.println("DoubleOperand not implemented: " + op + " at " + pc);
+	if (EXCEPTION_ON_BAD_OPERATION) {
+	  EmulationException ex = new EmulationException("Bad operation: " + op + " at " + pc);
+	  ex.initCause(new Throwable("" + pc));
+	  throw ex;
+	}
       }
     }
     if (word) {
