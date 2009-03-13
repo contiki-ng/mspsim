@@ -631,7 +631,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         }
         if (DEBUG) log("Writing data: " + data + " to tx: " + txCursor);
 
-        memory[RAM_TXFIFO + txCursor++] = data & 0xff;
+        if(txCursor == 0 && (data & 0xff) > 127) {
+          logger.warning(this, "CC2420: Warning - packet size too large");
+        }
+        memory[RAM_TXFIFO + txCursor] = data & 0xff;
+        txCursor = (txCursor + 1) & 127;
+        if (txCursor == 0) {
+          logger.warning(this, "CC2420: Warning - TX Cursor wrapped");
+        } 
         if (sendEvents) {
           sendEvent("WRITE_TXFIFO", null);
         }
