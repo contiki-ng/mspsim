@@ -1,0 +1,128 @@
+package se.sics.mspsim.net;
+
+import java.io.PrintStream;
+
+public class IEEE802154Packet extends AbstractPacket {
+
+  public static final int SHORT_ADDRESS = 2;
+  public static final int LONG_ADDRESS = 3;
+  
+  private int type = 0;
+  private int security = 0;
+  private int pending = 0;
+  private int ackRequired = 0;
+  private int panCompression = 0;
+  private int destAddrMode;
+  private int frameVersion;
+  private int srcAddrMode;
+  private byte seqNumber;
+  private int destPanID;
+  private long destAddr;
+  private long srcAddr;
+  private int srcPanID;
+  private int payloadLen;
+  private boolean valid;
+  private byte[] payload;
+  
+  public byte[] getDataField(String name) {
+    return null;
+  }
+
+  public int getIntField(String name) {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  public byte[] getPayload() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  public int getSize() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  public void printPacket(PrintStream out) {
+    out.printf("802.15.4 from %4x/", srcPanID);
+    printAddress(out, srcAddrMode, srcAddr);
+    out.printf(" to %4x/", destPanID);
+    printAddress(out, destAddrMode, destAddr);
+    out.printf(" seqNo: %d len: %d\n", seqNumber, payloadLen);
+  }
+
+  public void setPacketData(byte[] data, int len) {
+    valid = false;
+    type = data[0] & 7;
+    security = (data[0] >> 3) & 1;
+    pending = (data[0] >> 4) & 1;
+    ackRequired = (data[0] >> 5) & 1;
+    panCompression  = (data[0]>> 6) & 1;
+    destAddrMode = (data[1] >> 2) & 3;
+    frameVersion = (data[1] >> 4) & 3;
+    srcAddrMode = (data[1] >> 6) & 3;
+    seqNumber = data[2];
+
+    int pos = 3;
+    if (destAddrMode > 0) {
+      destPanID = (data[pos] & 0xff) + ((data[pos + 1] & 0xff) << 8);
+      pos += 2;
+      if (destAddrMode == SHORT_ADDRESS) {
+        destAddr = (data[pos] & 0xff) + ((data[pos + 1] & 0xff) << 8);
+        pos += 2;
+      } else if (destAddrMode == LONG_ADDRESS) {
+        destAddr = data[pos] + ((data[pos + 1] & 0xffL) << 8) +
+        ((data[pos + 2] & 0xffL) << 16) + ((data[pos + 3] & 0xffL) << 24) +
+        ((data[pos + 4] & 0xffL) << 32) + ((data[pos + 5] & 0xffL)<< 40) +
+        ((data[pos + 6] & 0xffL) << 48) + ((data[pos + 7] & 0xffL) << 56);
+        pos += 8;
+      }
+    }
+
+    if (srcAddrMode > 0) {
+      if (panCompression == 0){
+        srcPanID = (data[pos] & 0xff) + ((data[pos + 1] & 0xff) << 8);
+        pos += 2;
+      } else {
+        srcPanID = destPanID;
+      }
+      if (srcAddrMode == SHORT_ADDRESS) {
+        srcAddr = (data[pos] & 0xff) + ((data[pos + 1] & 0xff) << 8);
+        pos += 2;
+      } else if (srcAddrMode == LONG_ADDRESS) {
+        srcAddr = data[pos] + ((data[pos + 1] & 0xffL) << 8) +
+          ((data[pos + 2] & 0xffL) << 16) + ((data[pos + 3] & 0xffL) << 24) +
+          ((data[pos + 4] & 0xffL) << 32) + ((data[pos + 5] & 0xffL)<< 40) +
+          ((data[pos + 6] & 0xffL) << 48) + ((data[pos + 7] & 0xffL) << 56);
+        pos += 8;
+      }
+    }
+    
+    payloadLen = len - pos;
+
+    payload = new byte[payloadLen];
+    System.arraycopy(data, pos, payload, 0, payloadLen);
+    valid = true;
+    
+    notifyPacketHandlers(payload, payloadLen);
+    
+//    System.out.println("Type: " + type + " secure: " + security +
+//          " ack: " + ackRequired + " panComp: " + panCompression +
+//          " dst: " + destAddrMode + " src: " + srcAddrMode +
+//          " seq: " + seqNumber + " payloadLen: " + payloadLen);
+//    System.out.printf(" SrcPAN: %4x SrcAdr: ", srcPanID);
+//    printAddress(System.out, srcAddrMode, srcAddr);
+//    System.out.printf(" Dst PAN: %4x DstAdr: ", destPanID);
+//    printAddress(System.out, destAddrMode, destAddr);
+//    System.out.println("");
+  }
+
+  private void printAddress(PrintStream out, int type, long addr) {
+    if (type == SHORT_ADDRESS) {
+      out.printf("%04x", addr & 0xffff);
+    } else if (type == LONG_ADDRESS) {
+      out.printf("%016x", addr);
+    }
+  }
+  
+}

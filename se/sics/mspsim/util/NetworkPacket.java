@@ -138,7 +138,7 @@ public class NetworkPacket {
     return data.length;
   }
 
-  public int getIntBits(byte[] data, int startBit, int endBit) {
+  public static int getIntBits(byte[] data, int startBit, int endBit) {
     int startByte = startBit >> 8;
     int endByte = endBit >> 8;
     startBit = startBit & 7;
