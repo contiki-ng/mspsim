@@ -42,11 +42,10 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
-
 import se.sics.mspsim.chip.RFListener;
 
 public class CC2420Packet extends AbstractPacket implements RFListener {
-  
+
   private static final int SFD_SEARCH = 1;
   private static final int LEN = 2;
   private static final int PACKET = 3;  
@@ -54,8 +53,7 @@ public class CC2420Packet extends AbstractPacket implements RFListener {
   private static final byte[] PREAMBLE = {0, 0, 0, 0, 0x7a};
   private int len;
   private byte[] payload;
-  private boolean valid = false;
-  
+    
   public byte[] getDataField(String name) {
     return null;
   }
@@ -100,6 +98,12 @@ public class CC2420Packet extends AbstractPacket implements RFListener {
     }
   }
 
+  public void clear() {
+    pos = 0;
+    mode = SFD_SEARCH;
+    valid = false;
+  }
+  
   byte[] packetBuffer = new byte[256];
   int mode = SFD_SEARCH;
   int pos;

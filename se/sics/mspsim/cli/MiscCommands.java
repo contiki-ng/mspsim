@@ -54,6 +54,8 @@ import se.sics.mspsim.chip.RFSource;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
+import se.sics.mspsim.net.CC2420Packet;
+import se.sics.mspsim.net.IEEE802154Packet;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 
@@ -307,9 +309,31 @@ public class MiscCommands implements CommandBundle {
         context.executeCommand(command);
       }
     });
+    handler.registerCommand("rfanalyzer", new BasicLineCommand("blaha", "blaha") {
+      CC2420Packet listener;
+      CommandContext context;
+      public int executeCommand(CommandContext context) {
+        this.context = context;
+        listener = new CC2420Packet();
+        listener.addInnerPacketHandler(new IEEE802154Packet());
+        return 0;
+      }
+      public void lineRead(String line) {
+        if (listener != null) {
+          byte[] data = Utils.hexconv(line);
+          for (int i = 0; i < data.length; i++) {
+            //context.out.println("Byte " + i + " = " + ((int) data[i] & 0xff));
+            listener.receivedByte(data[i]);
+            if (listener.validPacket()) {
+              listener.printPacketStack(context.out);
+              listener.clear();
+            }
+          }
+        }
+      }
+    });
 
     handler.registerCommand("rflistener", new BasicLineCommand("an rflisteer", "[input|output] <rf-chip>") {
-      String command = null;
       CommandContext context;
       RFListener listener;
       final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
@@ -344,7 +368,6 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-        
     
   }
 

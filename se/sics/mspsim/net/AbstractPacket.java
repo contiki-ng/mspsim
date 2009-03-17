@@ -6,11 +6,20 @@ import java.util.ArrayList;
 public abstract class AbstractPacket implements Packet {
 
   ArrayList<AbstractPacket> packetHandlers = new ArrayList<AbstractPacket>();
+  boolean valid = false;
   
   public void addInnerPacketHandler(AbstractPacket packet) {
     packetHandlers.add(packet);
   }
 
+  public boolean validPacket() {
+    return valid;
+  }
+  
+  public void clear() {
+    valid = false;
+  }
+  
   public void notifyPacketHandlers(byte[] payload, int len) {    
     for (int i = 0; i < packetHandlers.size(); i++) {
       try {

@@ -121,8 +121,7 @@ public class IEEE802154Packet extends AbstractPacket {
     if (type == SHORT_ADDRESS) {
       out.printf("%04x", addr & 0xffff);
     } else if (type == LONG_ADDRESS) {
-      out.printf("%016x", addr);
+      out.printf("%04x:%04x:%04x:%04x", (addr >> 48) & 0xffff, (addr >> 32) & 0xffff, (addr >> 16) & 0xffff, addr & 0xffff);
     }
   }
-  
 }
