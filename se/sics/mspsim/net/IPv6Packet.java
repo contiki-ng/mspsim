@@ -80,7 +80,7 @@ public class IPv6Packet extends AbstractPacket {
     out.printf(" NxHdr: %d", nextHeader);
   }
 
-  private void printAddress(PrintStream out, long hi, long lo) {
+  public static void printAddress(PrintStream out, long hi, long lo) {
     out.printf("%04x:%04x:%04x:%04x:", (hi >> 48) & 0xffff, 
         (hi >> 32) & 0xffff, (hi >> 16) & 0xffff, hi & 0xffff);
     out.printf("%04x:%04x:%04x:%04x", (lo >> 48) & 0xffff,

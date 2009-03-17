@@ -371,8 +371,6 @@ public class MiscCommands implements CommandBundle {
         }
       }
     });
-
-    
   }
 
 }
