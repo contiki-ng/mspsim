@@ -55,6 +55,7 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.net.CC2420Packet;
+import se.sics.mspsim.net.HC01Packet;
 import se.sics.mspsim.net.IEEE802154Packet;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
@@ -309,13 +310,16 @@ public class MiscCommands implements CommandBundle {
         context.executeCommand(command);
       }
     });
-    handler.registerCommand("rfanalyzer", new BasicLineCommand("blaha", "blaha") {
+    handler.registerCommand("rfanalyzer", new BasicLineCommand("analyze radio packets", "") {
       CC2420Packet listener;
       CommandContext context;
       public int executeCommand(CommandContext context) {
         this.context = context;
         listener = new CC2420Packet();
-        listener.addInnerPacketHandler(new IEEE802154Packet());
+        IEEE802154Packet ieeePacket = new IEEE802154Packet();
+        listener.addInnerPacketHandler(ieeePacket);
+        HC01Packet pan = new HC01Packet();
+        ieeePacket.addInnerPacketHandler(pan);
         return 0;
       }
       public void lineRead(String line) {

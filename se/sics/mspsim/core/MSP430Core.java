@@ -42,12 +42,17 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
+
+import se.sics.mspsim.util.MapEntry;
+import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.Utils;
 
 /**
  * The CPU of the MSP430
  */
 public class MSP430Core extends Chip implements MSP430Constants {
+
+  public static final int RETURN = 0x4130;
 
   public static final boolean DEBUG = false;
   public static final boolean debugInterrupts = false;
@@ -74,6 +79,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public int memory[] = new int[MAX_MEM];
   public long cycles = 0;
   public long cpuCycles = 0;
+  MapTable map;
 
   // Most HW needs only notify write and clocking, others need also read...
   // For notify write...
@@ -531,7 +537,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     bcs.reset();
     // Needs to be last since these can add events...
     resetIOUnits();
-    
+  
+    profiler.clearProfile();
   }
 
   public void setWarningMode(EmulationLogger.WarningMode mode) {
@@ -921,8 +928,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	write = false;
 	updateStatus = false;
 	break;
-      case CALL:
-	// store current PC on stack... (current PC points to next instr.)
+      case CALL:        
+        // store current PC on stack... (current PC points to next instr.)
 	sp = readRegister(SP) - 2;
 	writeRegister(SP, sp);
 
@@ -933,6 +940,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
 	/* Additional cycles: REG => 3, AM_IND_AUTO => 2, other => 1 */
 	cycles += (ad == AM_REG) ? 3 : (ad == AM_IND_AUTOINC) ? 2 : 1;
+
+        /* profiler will be called during calls */
+        if (profiler != null) {
+          MapEntry function = map.getEntry(dst);
+          if (function == null) {
+            function = getFunction(map, dst);
+          }
+          profiler.profileCall(function, cpuCycles);
+        }
 	
 	write = false;
 	updateStatus = false;
@@ -1127,6 +1143,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	dst = src;
 	write = true;
 	updateStatus = false;
+	
+	if (instruction == RETURN && profiler != null) {
+	    profiler.profileReturn(cpuCycles);
+	}
+	
 	break;
 	// FIX THIS!!! - make SUB a separate operation so that
 	// it is clear that overflow flag is correct...
@@ -1269,4 +1290,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return MODE_MAX;
   }
 
+  MapEntry getFunction(MapTable map, int address) {
+    MapEntry function = new MapEntry(MapEntry.TYPE.function, address,
+        "fkn at $" + Utils.hex16(address), null, true);
+    map.setEntry(function);
+    return function;
+  }
 }

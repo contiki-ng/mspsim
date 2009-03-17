@@ -65,7 +65,6 @@ public class MSP430 extends MSP430Core {
 
   private long instCtr = 0;
   private DisAsm disAsm;
-  private MapTable map;
 
   private SimEventListener[] simEventListeners;
 
@@ -92,7 +91,7 @@ public class MSP430 extends MSP430Core {
       throw new IllegalStateException("already running");
     }
     setRunning(true);
-    // ??? - power-up reset should be executed?!
+    // ??? - power-up  should be executed?!
     time = System.currentTimeMillis();
     run();
   }
@@ -120,19 +119,6 @@ public class MSP430 extends MSP430Core {
 
 	if (execCounter != null) {
 	  execCounter[reg[PC]]++;
-	}
-
-	if (profiler != null) {
-	  if ((instruction & 0xff80) == CALL) {
-	    /* The profiling should only be made on actual cpuCycles */
-	    MapEntry function = map.getEntry(reg[PC]);
-	    if (function == null) {
-	      function = getFunction(map, reg[PC]);
-	    }
-	    profiler.profileCall(function, cpuCycles);
-	  } else if (instruction == RETURN) {
-	    profiler.profileReturn(cpuCycles);
-	  }
 	}
       }
 
@@ -181,19 +167,6 @@ public class MSP430 extends MSP430Core {
         if (execCounter != null) {
           execCounter[reg[PC]]++;
         }
-
-        if (profiler != null) {
-          if ((instruction & 0xff80) == CALL) {
-            /* The profiling should only be made on actual cpuCycles */
-            MapEntry function = map.getEntry(reg[PC]);
-            if (function == null) {
-              function = getFunction(map, reg[PC]);
-            }
-            profiler.profileCall(function, cpuCycles);
-          } else if (instruction == RETURN) {
-            profiler.profileReturn(cpuCycles);
-          }
-        }
       }
     }
     setRunning(false);
@@ -240,30 +213,9 @@ public class MSP430 extends MSP430Core {
       if (execCounter != null) {
 	execCounter[reg[PC]]++;
       }
-
-      if (profiler != null) {
-	if ((instruction & 0xff80) == CALL) {
-	  /* The profiling should only be made on actual cpuCycles */
-	  MapEntry function = map.getEntry(reg[PC]);
-	  if (function == null) {
-	    function = getFunction(map, reg[PC]);
-	  }
-	  profiler.profileCall(function, cpuCycles);
-	} else if (instruction == RETURN) {
-	  profiler.profileReturn(cpuCycles);
-	}
-      }
     }
-
     return cycles;
 }
-
-  private MapEntry getFunction(MapTable map, int address) {
-    MapEntry function = new MapEntry(MapEntry.TYPE.function, address,
-        "fkn at $" + Utils.hex16(address), null, true);
-    map.setEntry(function);
-    return function;
-  }
 
   public void stop() {
     setRunning(false);
