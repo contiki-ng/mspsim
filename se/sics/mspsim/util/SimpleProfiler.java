@@ -78,7 +78,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     startTags = new HashMap<String, TagEntry>();
     endTags = new HashMap<String, TagEntry>();
     ignoreFunctions = new HashMap<String, String>();
-    callStack = new CallEntry[2048];
+    callStack = new CallEntry[64];
     servicedInterrupt = -1;
   }
 
@@ -95,6 +95,11 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
   
   public void profileCall(MapEntry entry, long cycles) {
+    if (cSP == callStack.length) {
+      CallEntry[] tmp = new CallEntry[cSP + 64];
+      System.arraycopy(callStack, 0, tmp, 0, cSP);
+      callStack = tmp;
+    }
     if (callStack[cSP] == null) {
       callStack[cSP] = new CallEntry();
     }
