@@ -77,7 +77,7 @@ public class HC01Packet extends IPv6Packet {
      hopLimit = 64;
      break;
    case IPHC_TTL_255:
-     hopLimit = (byte) 0xff;
+     hopLimit = 0xff;
      break;
    case IPHC_TTL_I:
      hopLimit = data[pos++];
@@ -198,8 +198,8 @@ public class HC01Packet extends IPv6Packet {
        System.out.println("TTL: " + hopLimit);
        System.out.print("Src Addr: ");
        printAddress(System.out, sourceAddressHi, sourceAddressLo);
-       System.out.print("Dest Addr: ");
-       printAddress(System.out, sourceAddressHi, sourceAddressLo);
+       System.out.print(" Dest Addr: ");
+       printAddress(System.out, destAddressHi, destAddressLo);
        System.out.println();
  }
   

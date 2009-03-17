@@ -52,8 +52,8 @@ public class IPv6Packet extends AbstractPacket {
   int version;
   int trafficClass;
   int flowLabel;
-  byte nextHeader;
-  byte hopLimit;
+  int nextHeader;
+  int hopLimit;
   long sourceAddressHi;
   long sourceAddressLo;
   long destAddressHi;
