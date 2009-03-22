@@ -79,7 +79,7 @@ public abstract class AbstractPacket implements Packet {
   public void notifyPacketHandlers(byte[] payload, int len) {    
     for (int i = 0; i < packetHandlers.size(); i++) {
       try {
-        packetHandlers.get(i).setPacketData(payload, len);        
+        packetHandlers.get(i).setPacketData(this, payload, len);        
       } catch (Exception e) {
       }
     }

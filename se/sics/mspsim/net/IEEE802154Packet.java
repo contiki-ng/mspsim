@@ -61,9 +61,6 @@ public class IEEE802154Packet extends AbstractPacket {
   private long destAddr;
   private long srcAddr;
   private int srcPanID;
-  private int payloadLen;
-  private boolean valid;
-  private byte[] payload;
   
   public byte[] getDataField(String name) {
     return null;
@@ -87,7 +84,7 @@ public class IEEE802154Packet extends AbstractPacket {
     out.printf(" seqNo: %d len: %d\n", seqNumber, payloadLen);
   }
 
-  public void setPacketData(byte[] data, int len) {
+  public void setPacketData(Packet container, byte[] data, int len) {
     valid = false;
     type = data[0] & 7;
     security = (data[0] >> 3) & 1;
@@ -139,7 +136,7 @@ public class IEEE802154Packet extends AbstractPacket {
 //    System.out.println("Type: " + type + " secure: " + security +
 //          " ack: " + ackRequired + " panComp: " + panCompression +
 //          " dst: " + destAddrMode + " src: " + srcAddrMode +
-//          " seq: " + seqNumber + " payloadLen: " + payloadLen);
+//          " seq: " + seqNumber + " Len: " + payloadLen);
 //    System.out.printf(" SrcPAN: %4x SrcAdr: ", srcPanID);
 //    printAddress(System.out, srcAddrMode, srcAddr);
 //    System.out.printf(" Dst PAN: %4x DstAdr: ", destPanID);

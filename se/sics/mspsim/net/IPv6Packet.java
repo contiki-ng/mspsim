@@ -77,7 +77,7 @@ public class IPv6Packet extends AbstractPacket {
     printAddress(out, sourceAddressHi, sourceAddressLo);
     out.print(" to ");
     printAddress(out, destAddressHi, destAddressLo);
-    out.printf(" NxHdr: %d", nextHeader);
+    out.printf(" NxHdr: %d\n", nextHeader);
   }
 
   public static void printAddress(PrintStream out, long hi, long lo) {
@@ -88,7 +88,7 @@ public class IPv6Packet extends AbstractPacket {
   }
 
   
-  public void setPacketData(byte[] data, int len) {
+  public void setPacketData(Packet container, byte[] data, int len) {
     version = (data[0] & 0xff) >> 4;
     if (version != 6) {
       return;
@@ -113,5 +113,50 @@ public class IPv6Packet extends AbstractPacket {
     ((data[pos + 6] & 0xffL) << 48) + ((data[pos + 7] & 0xffL) << 56);
     return lval;
   }
+
+  /* not yet working checksum code... */
+  public int upperLayerHeaderChecksum() {
+    /* First sum pseudoheader. */
+    /* IP protocol and length fields. This addition cannot carry. */
+    int sum = payloadLen + nextHeader;
+    /* Sum IP source and destination addresses. */
+    sum = checkSum(sum, sourceAddressHi);
+    sum = checkSum(sum, sourceAddressLo);
+    sum = checkSum(sum, destAddressHi);
+    sum = checkSum(sum, destAddressLo);
+
+    /* Sum upper layer header and data is done separately.... */
+    /* -- needs to get hold of uncompressed payload for that ... */
+
+    return sum;
+  }
   
+  public static int checkSum(int sum, long data) {
+    int roll = 48;
+    for (int i = 0; i < 4; i++) {
+      int dsum = (int) ((data >> roll) & 0xffff);
+      System.out.print("Summing: " + sum + " + " + dsum + " = ");
+      sum = (sum + dsum) & 0xffff;
+      if (sum < dsum) sum++;
+      System.out.println(sum);
+      roll = roll - 16;
+    }
+    return sum;
+  }
+
+  public static int checkSum(int sum, byte[] data, int size) {
+    for (int i = 0; i < size; i+= 2) {
+      int dsum = ((data[i] & 0xff) << 8) | (data[i + 1] & 0xff);
+      sum = (sum + dsum) & 0xffff;
+      if (sum < dsum) sum++;
+    }
+    /* final byte - if any*/
+    if ((size & 1) > 0) {
+      int dsum = ((data[size - 1] & 0xff) << 8);
+      sum = (sum + dsum) & 0xffff;
+      if (sum < dsum) sum++;
+    }
+    return sum;
+  }
+
 }

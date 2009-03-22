@@ -72,7 +72,7 @@ public class CC2420Packet extends AbstractPacket implements RFListener {
 
   /* should this be the interface??? or only RF_LIST ???*/
   /* maybe this is default and CC2420 is "special" */
-  public void setPacketData(byte[] data, int plen) {
+  public void setPacketData(Packet container, byte[] data, int plen) {
     if (data.length > PREAMBLE.length) {
       int pos = 0;
       for (int i = 0; i < PREAMBLE.length; i++) {
@@ -129,7 +129,7 @@ public class CC2420Packet extends AbstractPacket implements RFListener {
     case PACKET:
       if (pos == packetLen + PREAMBLE.length + 1) {
         /* the packet is in!!! */
-        setPacketData(packetBuffer, pos);
+        setPacketData(this, packetBuffer, pos);
         mode = SFD_SEARCH;
       }
       break;
@@ -138,14 +138,23 @@ public class CC2420Packet extends AbstractPacket implements RFListener {
 
   public void printPacket(PrintStream out) {
     if (valid) {
-      out.println("CC2420 | len:" + len + "|");
+      out.print("CC2420 | len:" + len + " | ");
+      for (int i = 0; i < len; i++) {
+        out.printf("%02x", payload[i] & 0xff);
+        if ((i & 3) == 3) {
+          out.print(" ");
+        }
+      }
+      out.println();
     }
   }
 
   
   public static void main(String[] args) {
     CC2420Packet p = new CC2420Packet();
-    p.addInnerPacketHandler(new IEEE802154Packet());
+    IEEE802154Packet p2 = new IEEE802154Packet();
+    p.addInnerPacketHandler(p2);
+    p2.addInnerPacketHandler(new HC01Packet());
     int[] data = new int[] {0,0,0,0,0x7a,48,
         0x41, 0xCC, 0x74, 0xCD, 0xAB, 0x55, 0x44, 0x33,
         0xFE, 0xFF, 0x22, 0x11, 0x02, 0x16, 0x15, 0x14,

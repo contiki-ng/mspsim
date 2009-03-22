@@ -45,7 +45,7 @@ import java.io.PrintStream;
 
 public interface Packet {
   
-  public void setPacketData(byte[] data, int len);
+  public void setPacketData(Packet packet, byte[] data, int len);
   
   /**
    * @return size of packet in bytes
