@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2008, Swedish Institute of Computer Science.
+ * Copyright (c) 2009, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@
  *
  * -----------------------------------------------------------------
  *
- * Packet
  *
  * Author  : Joakim Eriksson
  * Created :  mar 2009
@@ -41,16 +40,60 @@
 
 package se.sics.mspsim.net;
 
-import java.io.PrintStream;
+import se.sics.mspsim.chip.RFListener;
 
-public interface Packet {
+public class CC2420PacketHandler extends AbstractPacketHandler implements RFListener {
+
+  private static final int SFD_SEARCH = 1;
+  private static final int LEN = 2;
+  private static final int PACKET = 3;  
   
-  /**
-   * @return payload of the packet
-   */
-  public byte[] getPayload();
-  void setPayloadPacket(Packet packet);
-  void setContainerPacket(Packet packet);
-  public void printPacket(PrintStream out);
+  private static final byte[] PREAMBLE = {0, 0, 0, 0, 0x7a};
   
+  byte[] packetBuffer = new byte[256];
+  int mode = SFD_SEARCH;
+  int pos;
+  int packetLen;
+  int sfdSearch = 0;
+  
+  public void receivedByte(byte data) {
+    packetBuffer[pos++] = data;
+    switch (mode) {
+    case SFD_SEARCH:
+      if (sfdSearch < 4 && data == 0)
+        sfdSearch++;
+      if (sfdSearch == 4 && data == 0x7a) {
+        mode = LEN;
+        sfdSearch = 0;
+      }
+      break;
+    case LEN:
+      mode = PACKET;
+      packetLen = data & 0xff;
+      System.out.println("Packet len: " + packetLen);
+      break;
+    case PACKET:
+      if (pos == packetLen + PREAMBLE.length + 1) {
+        /* the packet is in!!! */
+        CC2420Packet packet = new CC2420Packet();
+        packet.setPayload(packetBuffer, PREAMBLE.length + 1, packetLen);
+        dispatch(-1, packet);
+        System.out.println("Packet received");
+        packet.printPacket(System.out);
+        /* this is a packet that has passed the stack! */
+        mode = SFD_SEARCH;
+        pos = 0;
+      }
+      break;
+    }
+  }
+
+  
+  public void packetReceived(Packet container) {
+    // Never any packets received here...
+  }
+
+  public void sendPacket(Packet payload) {
+    // give to radio!!!
+  }
 }

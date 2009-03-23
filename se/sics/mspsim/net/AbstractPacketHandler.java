@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2008, Swedish Institute of Computer Science.
+ * Copyright (c) 2009, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@
  *
  * -----------------------------------------------------------------
  *
- * Packet
  *
  * Author  : Joakim Eriksson
  * Created :  mar 2009
@@ -41,16 +40,46 @@
 
 package se.sics.mspsim.net;
 
-import java.io.PrintStream;
+import java.util.ArrayList;
 
-public interface Packet {
+public abstract class AbstractPacketHandler implements PacketHandler {
+
+  ArrayList<PacketHandlerDispatch> upperLayers =
+    new ArrayList<PacketHandlerDispatch>();
+  PacketHandler lowerLayer;
   
-  /**
-   * @return payload of the packet
-   */
-  public byte[] getPayload();
-  void setPayloadPacket(Packet packet);
-  void setContainerPacket(Packet packet);
-  public void printPacket(PrintStream out);
+  public void addUpperLayerHandler(int protoID, PacketHandler handler) {
+    PacketHandlerDispatch layer = new PacketHandlerDispatch();
+    layer.dispatch = protoID;
+    layer.packetHandler = handler;
+    upperLayers.add(layer);
+  }
+
+  public void setLowerLayerHandler(PacketHandler handler) {
+   lowerLayer = handler;
+  }
+
+  void dispatch(int dispatch, Packet container) {
+    byte[] payload = container.getPayload();
+    if (dispatch != -1) {
+      for (int i = 0; i < upperLayers.size(); i++) {
+        if (upperLayers.get(i).dispatch == dispatch) {
+          upperLayers.get(i).packetHandler.packetReceived(container);
+          return;
+        }
+      }
+      System.out.println("**** no dispatch handler for " + dispatch + " found...");
+    } else if (upperLayers.size() > 0){
+      upperLayers.get(0).packetHandler.packetReceived(container);
+    }
+  }
   
+  public abstract void packetReceived(Packet container);
+
+  public abstract void sendPacket(Packet payload);
+
+  private static class PacketHandlerDispatch {
+    int dispatch;
+    PacketHandler packetHandler;
+  }
 }

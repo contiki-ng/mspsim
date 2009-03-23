@@ -41,55 +41,29 @@
 
 package se.sics.mspsim.net;
 
-import java.io.PrintStream;
-import java.util.ArrayList;
-
 public abstract class AbstractPacket implements Packet {
 
   byte[] payload;
   int payloadLen;
   
-  ArrayList<AbstractPacket> packetHandlers = new ArrayList<AbstractPacket>();
-  boolean valid = false;
-  
-  public void addInnerPacketHandler(AbstractPacket packet) {
-    packetHandlers.add(packet);
-  }
-
-  public boolean validPacket() {
-    return valid;
-  }
-  
-  public void clear() {
-    valid = false;
-  }
+  Packet containerPacket;
+  Packet payloadPacket;
   
   public byte[] getPayload() {
     return payload;
+  }
+  
+  public void setPayloadPacket(Packet packet) {
+    payloadPacket = packet;
+  }
+
+  public void setContainerPacket(Packet packet) {
+    containerPacket = packet;
   }
   
   void setPayload(byte[] data, int startPos, int len) {
     payloadLen = len;
     payload = new byte[payloadLen];
     System.arraycopy(data, startPos, payload, 0, payloadLen);
-    valid = true;
-    notifyPacketHandlers(payload, payloadLen);
-  }
-  
-  public void notifyPacketHandlers(byte[] payload, int len) {    
-    for (int i = 0; i < packetHandlers.size(); i++) {
-      try {
-        packetHandlers.get(i).setPacketData(this, payload, len);        
-      } catch (Exception e) {
-      }
-    }
-  }
-  
-  public void printPacketStack(PrintStream out) {
-    printPacket(out);
-    for (int i = 0; i < packetHandlers.size(); i++) {
-      /* only the valid packets should print anything... */
-      packetHandlers.get(i).printPacketStack(out);
-    }
-  }
+  }    
 }

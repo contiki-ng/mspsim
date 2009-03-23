@@ -49,6 +49,8 @@ import java.io.PrintStream;
  */
 public class IPv6Packet extends AbstractPacket {
 
+  public static final int ICMP6_DISPATCH = 58;
+  
   int version;
   int trafficClass;
   int flowLabel;
@@ -59,25 +61,15 @@ public class IPv6Packet extends AbstractPacket {
   long destAddressHi;
   long destAddressLo;
 
-  public byte[] getDataField(String name) {
-    return null;
-  }
-
-  public int getIntField(String name) {
-    return 0;
-  }
-
-  public int getSize() {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
   public void printPacket(PrintStream out) {
     out.printf("IPv6: from ");
     printAddress(out, sourceAddressHi, sourceAddressLo);
     out.print(" to ");
     printAddress(out, destAddressHi, destAddressLo);
     out.printf(" NxHdr: %d\n", nextHeader);
+    if (payloadPacket != null) {
+      payloadPacket.printPacket(out);
+    }
   }
 
   public static void printAddress(PrintStream out, long hi, long lo) {

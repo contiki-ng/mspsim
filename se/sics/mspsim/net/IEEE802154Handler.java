@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2008, Swedish Institute of Computer Science.
+ * Copyright (c) 2009, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@
  *
  * -----------------------------------------------------------------
  *
- * Packet
  *
  * Author  : Joakim Eriksson
  * Created :  mar 2009
@@ -41,16 +40,18 @@
 
 package se.sics.mspsim.net;
 
-import java.io.PrintStream;
+public class IEEE802154Handler extends AbstractPacketHandler {
+  /* create a 802.15.4 packet with the given packet as payload, and
+   * deliver to the lower layer handler */
+  public void sendPacket(Packet payload) {
+  }
 
-public interface Packet {
-  
-  /**
-   * @return payload of the packet
+  /* create a 802.15.4 packet of the bytes and "dispatch" to the
+   * next handler
    */
-  public byte[] getPayload();
-  void setPayloadPacket(Packet packet);
-  void setContainerPacket(Packet packet);
-  public void printPacket(PrintStream out);
-  
+  public void packetReceived(Packet packet) {
+    IEEE802154Packet newPacket = new IEEE802154Packet(packet);
+    /* no dispatch at this level ?! */
+    dispatch(-1, newPacket);
+  }
 }

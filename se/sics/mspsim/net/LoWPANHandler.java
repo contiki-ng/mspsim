@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2008, Swedish Institute of Computer Science.
+ * Copyright (c) 2009, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,26 +31,24 @@
  *
  * -----------------------------------------------------------------
  *
- * Packet
  *
  * Author  : Joakim Eriksson
  * Created :  mar 2009
  * Updated : $Date:$
  *           $Revision:$
  */
-
 package se.sics.mspsim.net;
 
-import java.io.PrintStream;
+public class LoWPANHandler extends AbstractPacketHandler {
 
-public interface Packet {
-  
-  /**
-   * @return payload of the packet
-   */
-  public byte[] getPayload();
-  void setPayloadPacket(Packet packet);
-  void setContainerPacket(Packet packet);
-  public void printPacket(PrintStream out);
-  
+  public void packetReceived(Packet container) {
+    LoWPANPacket packet = new LoWPANPacket(container.getPayload());
+    container.setPayloadPacket(packet);
+    packet.containerPacket = container;
+    dispatch(packet.dispatch, packet);
+  }
+
+  public void sendPacket(Packet payload) {
+  }
+
 }

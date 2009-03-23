@@ -62,30 +62,26 @@ public class IEEE802154Packet extends AbstractPacket {
   private long srcAddr;
   private int srcPanID;
   
-  public byte[] getDataField(String name) {
-    return null;
+  public IEEE802154Packet(Packet container) {
+    byte[] payload = container.getPayload();
+    setPacketData(container, payload, payload.length);
   }
-
-  public int getIntField(String name) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  public int getSize() {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
+  
   public void printPacket(PrintStream out) {
     out.printf("802.15.4 from %4x/", srcPanID);
     printAddress(out, srcAddrMode, srcAddr);
     out.printf(" to %4x/", destPanID);
     printAddress(out, destAddrMode, destAddr);
     out.printf(" seqNo: %d len: %d\n", seqNumber, payloadLen);
+    if (payloadPacket != null) {
+      payloadPacket.printPacket(out);
+    }
   }
 
   public void setPacketData(Packet container, byte[] data, int len) {
-    valid = false;
+    container.setPayloadPacket(this);
+    containerPacket = container;
+    
     type = data[0] & 7;
     security = (data[0] >> 3) & 1;
     pending = (data[0] >> 4) & 1;
@@ -130,18 +126,7 @@ public class IEEE802154Packet extends AbstractPacket {
         pos += 8;
       }
     }
-
-    setPayload(data, pos, len - pos);    
-    
-//    System.out.println("Type: " + type + " secure: " + security +
-//          " ack: " + ackRequired + " panComp: " + panCompression +
-//          " dst: " + destAddrMode + " src: " + srcAddrMode +
-//          " seq: " + seqNumber + " Len: " + payloadLen);
-//    System.out.printf(" SrcPAN: %4x SrcAdr: ", srcPanID);
-//    printAddress(System.out, srcAddrMode, srcAddr);
-//    System.out.printf(" Dst PAN: %4x DstAdr: ", destPanID);
-//    printAddress(System.out, destAddrMode, destAddr);
-//    System.out.println("");
+    setPayload(data, pos, len - pos);
   }
 
   private void printAddress(PrintStream out, int type, long addr) {

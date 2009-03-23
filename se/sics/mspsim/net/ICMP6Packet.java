@@ -26,18 +26,6 @@ public class ICMP6Packet extends AbstractPacket {
   
   IPv6Packet ip;
   
-  public byte[] getDataField(String name) {
-    return null;
-  }
-
-  public int getIntField(String name) {
-    return 0;
-  }
-
-  public int getSize() {
-    return 0;
-  }
-
   public void printPacket(PrintStream out) {
     String typeS = "" + type;
     if (type >= 128) {
@@ -46,14 +34,13 @@ public class ICMP6Packet extends AbstractPacket {
         typeS = TYPE_NAME[tS];
       }
     }
-    
-    
     out.printf("ICMPv6 Type: %d (%s) Code: %d Chk: %04x \n", type, typeS,
         code, checksum);
+
+    /* ICMP can not have payload ?! */  
   }
 
   public void setPacketData(Packet packet, byte[] data, int len) {
-    valid = false;
     if (packet instanceof IPv6Packet) {
       ip = (IPv6Packet) packet;
       
@@ -61,7 +48,6 @@ public class ICMP6Packet extends AbstractPacket {
       type = data[0] & 0xff;
       code = data[1] & 0xff;
       checksum = ((data[2] & 0xff) << 8) | data[3] & 0xff;
-      valid = true;
       /* test the checksum ... */
 //      int sum = ip.upperLayerHeaderChecksum();
 //      System.out.printf("*** My Checksum: %04x", 

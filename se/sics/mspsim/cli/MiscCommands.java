@@ -55,8 +55,14 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.net.CC2420Packet;
-import se.sics.mspsim.net.HC01Packet;
+import se.sics.mspsim.net.CC2420PacketHandler;
+import se.sics.mspsim.net.HC01PacketHandler;
+import se.sics.mspsim.net.ICMP6Packet;
+import se.sics.mspsim.net.ICMP6PacketHandler;
+import se.sics.mspsim.net.IEEE802154Handler;
 import se.sics.mspsim.net.IEEE802154Packet;
+import se.sics.mspsim.net.IPv6Packet;
+import se.sics.mspsim.net.LoWPANHandler;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 
@@ -311,15 +317,21 @@ public class MiscCommands implements CommandBundle {
       }
     });
     handler.registerCommand("rfanalyzer", new BasicLineCommand("analyze radio packets", "") {
-      CC2420Packet listener;
+      CC2420PacketHandler listener;
       CommandContext context;
       public int executeCommand(CommandContext context) {
         this.context = context;
-        listener = new CC2420Packet();
-        IEEE802154Packet ieeePacket = new IEEE802154Packet();
-        listener.addInnerPacketHandler(ieeePacket);
-        HC01Packet pan = new HC01Packet();
-        ieeePacket.addInnerPacketHandler(pan);
+        listener = new CC2420PacketHandler();
+        IEEE802154Handler ieeeHandler = new IEEE802154Handler();
+        listener.addUpperLayerHandler(0, ieeeHandler);
+        LoWPANHandler lowpanHandler = new LoWPANHandler();
+        ieeeHandler.addUpperLayerHandler(0, lowpanHandler);
+        HC01PacketHandler hc01Handler = new HC01PacketHandler();
+        
+        lowpanHandler.addUpperLayerHandler(0x03, hc01Handler);
+        hc01Handler.addUpperLayerHandler(IPv6Packet.ICMP6_DISPATCH,
+            new ICMP6PacketHandler());
+        
         return 0;
       }
       public void lineRead(String line) {
@@ -327,11 +339,8 @@ public class MiscCommands implements CommandBundle {
           byte[] data = Utils.hexconv(line);
           for (int i = 0; i < data.length; i++) {
             //context.out.println("Byte " + i + " = " + ((int) data[i] & 0xff));
+            // Currently it will autoprint when packet is ready...
             listener.receivedByte(data[i]);
-            if (listener.validPacket()) {
-              listener.printPacketStack(context.out);
-              listener.clear();
-            }
           }
         }
       }
