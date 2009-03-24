@@ -150,8 +150,7 @@ public class IEEE802154Packet extends AbstractPacket {
         pos += 8;
       }
     }
-    /* two bytes in the end that are not included in payload! */
-    setPayload(data, pos, len - pos - 2);
+    setPayload(data, pos, len - pos);
   }
 
   private void printAddress(PrintStream out, int type, long addr) {
