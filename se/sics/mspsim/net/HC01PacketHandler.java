@@ -77,7 +77,7 @@ public class HC01PacketHandler extends AbstractPacketHandler {
   private static class AddrContext {
     int used;
     int number;
-    long prefix;
+    byte[] prefix = new byte[8];
   }
 
   private AddrContext[] contexts = new AddrContext[4];
@@ -90,7 +90,7 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     contexts[3] = new AddrContext();
 
     for (int i = 0; i < contexts.length; i++) {
-      contexts[i].prefix = 0xaaaa000000000000L | ((i + 1)<< 8) | i + 1;
+      java.util.Arrays.fill(contexts[i].prefix, (byte)(i + 1));
     }
   }
 
@@ -165,11 +165,11 @@ public class HC01PacketHandler extends AbstractPacketHandler {
             return;
           }
           /* set hi address as prefix from context */
-          packet.sourceAddressHi = context.prefix;
+          System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
           /* infer IID from L2 address */
 
           /* should figure out a way to get the link layer address here!!! */
-          packet.sourceAddressLo = 0;
+          // packet.sourceAddressLo = 0;
           break;
         case IPHC_SAM_16:
           if((data[pos] & 0x80) == 0) {
@@ -179,15 +179,18 @@ public class HC01PacketHandler extends AbstractPacketHandler {
               return;
             }
             /* set hi address as prefix from context */
-            packet.sourceAddressHi = context.prefix;
+            System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
             /* copy 6 NULL bytes then 2 last bytes of IID */
-            packet.sourceAddressLo = (data[pos] & 0xff) << 8+ data[pos + 1];
+            java.util.Arrays.fill(packet.sourceAddress, 8, 16, (byte)0);
+            packet.sourceAddress[14] = data[pos];
+            packet.sourceAddress[15] = data[pos + 1];
             pos += 2;
           } else {
             /* [ignore] multicast address check the 9-bit group-id is known */
-            packet.sourceAddressHi = (0xff << 56) + 
-            ((((data[pos] & 0xff) >> 1) & 0x0F) << 48);
-            packet.sourceAddressLo = data[pos + 1] & 0xff;
+            java.util.Arrays.fill(packet.sourceAddress, 0, 16, (byte)0);
+            packet.sourceAddress[0] = (byte)0xff; 
+            packet.sourceAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
+            packet.sourceAddress[15] = data[pos + 1];
             pos += 2;
           }
           break;
@@ -197,17 +200,15 @@ public class HC01PacketHandler extends AbstractPacketHandler {
             return;
           }
           /* copy prefix from context */
-          packet.sourceAddressHi = context.prefix;
+          System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
           /* copy IID from packet */
-          packet.sourceAddressLo = IPv6Packet.getLong(data, pos);
+          System.arraycopy(data, pos, packet.sourceAddress, 8, 8);
           pos += 8;
           break;
         case IPHC_SAM_I:
           /* copy whole address from packet */
-          packet.sourceAddressHi = IPv6Packet.getLong(data, pos);
-          pos += 8;
-          packet.sourceAddressLo = IPv6Packet.getLong(data, pos);
-          pos += 8;
+          System.arraycopy(data, pos, packet.sourceAddress, 0, 16);
+          pos += 16;
           break;
         }
 
@@ -221,10 +222,10 @@ public class HC01PacketHandler extends AbstractPacketHandler {
             return;
           }
           /* copy prefix from context */
-          packet.destAddressHi = context.prefix;
+          System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
           /* infer IID from L2 address */
           /* figure out a way to pick this up from link-layer !!! */
-          packet.destAddressLo = 0;
+          // TODO: get low from config
           break;
         case IPHC_DAM_16:
           if((data[pos] & 0x80) == 0) {
@@ -233,15 +234,17 @@ public class HC01PacketHandler extends AbstractPacketHandler {
               System.out.println("sicslowpan uncompress_hdr: error context not found\n");
               return;
             }
-            packet.destAddressHi = context.prefix;
+            System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
             /* copy 6 NULL bytes then 2 last bytes of IID */
-            packet.destAddressLo = ((data[pos] & 0xff) << 8) + data[pos + 1] & 0xff;
+            packet.destAddress[14] = data[pos];
+            packet.destAddress[15] = data[pos + 1];
             pos += 2;
           } else {
-            /* multicast address check the 9-bit group-id is known */
-            packet.sourceAddressHi = (0xff << 56) + 
-            ((((data[pos] & 0xff) >> 1) & 0x0F) << 48);
-            packet.sourceAddressLo = data[pos + 1] & 0xff;
+            /* [ignore] multicast address check the 9-bit group-id is known */
+            java.util.Arrays.fill(packet.destAddress, 0, 16, (byte)0);
+            packet.destAddress[0] = (byte)0xff; 
+            packet.destAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
+            packet.destAddress[15] = data[pos + 1];
             pos += 2;
           }
           break;
@@ -251,17 +254,15 @@ public class HC01PacketHandler extends AbstractPacketHandler {
             return;
           }
           /* copy prefix from context */
-          packet.destAddressHi = context.prefix;
+          System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
           /* copy IID from packet */
-          packet.destAddressLo = IPv6Packet.getLong(data, pos);
+          System.arraycopy(data, pos, packet.destAddress, 8, 8);
           pos += 8;
           break;
         case IPHC_DAM_I:
           /* copy whole address from packet */
-          packet.destAddressHi = IPv6Packet.getLong(data, pos);
-          pos += 8;
-          packet.destAddressLo = IPv6Packet.getLong(data, pos);
-          pos += 8;
+          System.arraycopy(data, pos, packet.destAddress, 0, 16);
+          pos += 16;
           break;
         }
 
@@ -311,13 +312,10 @@ public class HC01PacketHandler extends AbstractPacketHandler {
 
         System.out.println("TTL: " + packet.hopLimit);
         System.out.print("Src Addr: ");
-        IPv6Packet.printAddress(System.out, packet.sourceAddressHi,
-            packet.sourceAddressLo);
+        IPv6Packet.printAddress(System.out, packet.sourceAddress);
         System.out.print(" Dest Addr: ");
-        IPv6Packet.printAddress(System.out, packet.destAddressHi,
-            packet.destAddressLo);
+        IPv6Packet.printAddress(System.out, packet.destAddress);
         System.out.println();
-        
         // packet.setPayload(data, 40, ???);
   }
 

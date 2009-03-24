@@ -56,30 +56,31 @@ public class IPv6Packet extends AbstractPacket {
   int flowLabel;
   int nextHeader;
   int hopLimit;
-  long sourceAddressHi;
-  long sourceAddressLo;
-  long destAddressHi;
-  long destAddressLo;
+  byte[] sourceAddress = new byte[16];
+  byte[] destAddress = new byte[16];
 
   public void printPacket(PrintStream out) {
     out.printf("IPv6: from ");
-    printAddress(out, sourceAddressHi, sourceAddressLo);
+    printAddress(out, sourceAddress);
     out.print(" to ");
-    printAddress(out, destAddressHi, destAddressLo);
+    printAddress(out, destAddress);
     out.printf(" NxHdr: %d\n", nextHeader);
     if (payloadPacket != null) {
       payloadPacket.printPacket(out);
     }
   }
 
-  public static void printAddress(PrintStream out, long hi, long lo) {
-    out.printf("%04x:%04x:%04x:%04x:", (hi >> 48) & 0xffff, 
-        (hi >> 32) & 0xffff, (hi >> 16) & 0xffff, hi & 0xffff);
-    out.printf("%04x:%04x:%04x:%04x", (lo >> 48) & 0xffff,
-        (lo >> 32) & 0xffff, (lo >> 16) & 0xffff, lo & 0xffff);
+  public static void printAddress(PrintStream out, byte[] address) {
+    for (int i = 0; i < 16; i+=2) {
+      out.printf("%04x", (((address[i] & 0xff) << 8) | address[i + 1] & 0xff));
+      if (i < 14) {
+        out.print(":");
+      }
+    }
+    out.println();
   }
 
-  
+  /* this is for setting raw packet data */
   public void setPacketData(Packet container, byte[] data, int len) {
     version = (data[0] & 0xff) >> 4;
     if (version != 6) {
@@ -91,10 +92,8 @@ public class IPv6Packet extends AbstractPacket {
     payloadLen = ((data[4] & 0xff) << 8) + data[5];
     nextHeader = data[6];
     hopLimit = data[7];
-    sourceAddressHi = getLong(data, 8);
-    sourceAddressLo = getLong(data, 16);
-    destAddressHi = getLong(data, 24);
-    destAddressLo = getLong(data, 32);
+    System.arraycopy(data, 8, sourceAddress, 0, 16);
+    System.arraycopy(data, 24, destAddress, 0, 16);
     setPayload(data, 40, payloadLen);
   }
 
@@ -112,10 +111,8 @@ public class IPv6Packet extends AbstractPacket {
     /* IP protocol and length fields. This addition cannot carry. */
     int sum = payloadLen + nextHeader;
     /* Sum IP source and destination addresses. */
-    sum = checkSum(sum, sourceAddressHi);
-    sum = checkSum(sum, sourceAddressLo);
-    sum = checkSum(sum, destAddressHi);
-    sum = checkSum(sum, destAddressLo);
+    sum = checkSum(sum, sourceAddress, 16);
+    sum = checkSum(sum, destAddress, 16);
 
     /* Sum upper layer header and data is done separately.... */
     /* -- needs to get hold of uncompressed payload for that ... */
@@ -123,19 +120,6 @@ public class IPv6Packet extends AbstractPacket {
     return sum;
   }
   
-  public static int checkSum(int sum, long data) {
-    int roll = 48;
-    for (int i = 0; i < 4; i++) {
-      int dsum = (int) ((data >> roll) & 0xffff);
-      System.out.print("Summing: " + sum + " + " + dsum + " = ");
-      sum = (sum + dsum) & 0xffff;
-      if (sum < dsum) sum++;
-      System.out.println(sum);
-      roll = roll - 16;
-    }
-    return sum;
-  }
-
   public static int checkSum(int sum, byte[] data, int size) {
     for (int i = 0; i < size; i+= 2) {
       int dsum = ((data[i] & 0xff) << 8) | (data[i + 1] & 0xff);
