@@ -76,7 +76,7 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
       if (pos == packetLen + PREAMBLE.length + 1) {
         /* the packet is in!!! */
         CC2420Packet packet = new CC2420Packet();
-        packet.setPayload(packetBuffer, PREAMBLE.length + 1, packetLen);
+        packet.setPayload(packetBuffer, PREAMBLE.length + 1, packetLen - 2);
         dispatch(-1, packet);
         System.out.println("Packet received");
         packet.printPacket(System.out);

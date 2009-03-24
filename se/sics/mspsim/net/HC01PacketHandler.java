@@ -208,15 +208,15 @@ public class HC01PacketHandler extends AbstractPacketHandler {
         /* set hi address as prefix from context */
         System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
         /* copy 6 NULL bytes then 2 last bytes of IID */
-        java.util.Arrays.fill(packet.sourceAddress, 8, 16, (byte)0);
+        java.util.Arrays.fill(packet.sourceAddress, 8, 14, (byte)0);
         packet.sourceAddress[14] = data[pos];
         packet.sourceAddress[15] = data[pos + 1];
         pos += 2;
       } else {
         /* [ignore] multicast address check the 9-bit group-id is known */
         java.util.Arrays.fill(packet.sourceAddress, 0, 16, (byte)0);
-        packet.sourceAddress[0] = (byte)0xff; 
-        packet.sourceAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
+        packet.sourceAddress[0] = (byte)0xff;
+        packet.sourceAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0f);
         packet.sourceAddress[15] = data[pos + 1];
         pos += 2;
       }
@@ -269,6 +269,7 @@ public class HC01PacketHandler extends AbstractPacketHandler {
         pos += 2;
       } else {
         /* [ignore] multicast address check the 9-bit group-id is known */
+        System.out.println("*** Multicast address!!! HC01");
         java.util.Arrays.fill(packet.destAddress, 0, 16, (byte)0);
         packet.destAddress[0] = (byte)0xff; 
         packet.destAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);

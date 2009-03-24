@@ -48,6 +48,7 @@ public class IEEE802154Packet extends AbstractPacket {
   public static final int SHORT_ADDRESS = 2;
   public static final int LONG_ADDRESS = 3;
   
+  // TODO: remove long addresses...
   private int type = 0;
   private int security = 0;
   private int pending = 0;
@@ -149,7 +150,8 @@ public class IEEE802154Packet extends AbstractPacket {
         pos += 8;
       }
     }
-    setPayload(data, pos, len - pos);
+    /* two bytes in the end that are not included in payload! */
+    setPayload(data, pos, len - pos - 2);
   }
 
   private void printAddress(PrintStream out, int type, long addr) {
