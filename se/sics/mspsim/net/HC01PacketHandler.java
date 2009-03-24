@@ -89,9 +89,16 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     contexts[2] = new AddrContext();
     contexts[3] = new AddrContext();
 
-    for (int i = 0; i < contexts.length; i++) {
-      java.util.Arrays.fill(contexts[i].prefix, (byte)(i + 1));
-    }
+    contexts[0].used = 1;
+    contexts[0].number = 0;
+    contexts[0].prefix[0] = (byte) 0xfe;
+    contexts[0].prefix[1] = (byte) 0x80;
+
+    contexts[1].used = 1;
+    contexts[1].number = 1;
+    contexts[1].prefix[0] = (byte) 0xaa;
+    contexts[1].prefix[1] = (byte) 0xaa;
+    
   }
 
   public void packetReceived(Packet container) {
@@ -105,6 +112,27 @@ public class HC01PacketHandler extends AbstractPacketHandler {
 
   public void sendPacket(Packet payload) {
   }
+  
+  private byte[] getLinkSourceAddress(AbstractPacket packet) {
+    while (packet != null && !(packet instanceof IEEE802154Packet))
+      packet = (AbstractPacket) packet.containerPacket;
+    if (packet != null) {
+      IEEE802154Packet ieeePacket = (IEEE802154Packet) packet;
+      return ieeePacket.getSourceAddress();
+    }
+    return null;
+  }
+
+  private byte[] getLinkDestinationAddress(AbstractPacket packet) {
+    while (packet != null && !(packet instanceof IEEE802154Packet))
+      packet = (AbstractPacket) packet.containerPacket;
+    if (packet != null) {
+      IEEE802154Packet ieeePacket = (IEEE802154Packet) packet;
+      return ieeePacket.getDestinationAddress();
+    }
+    return null;
+  }
+
   
   public void setPacketData(IPv6Packet packet, byte[] data, int len) {
     /* first two is ... */
@@ -157,166 +185,166 @@ public class HC01PacketHandler extends AbstractPacketHandler {
 
     /* 0, 1, 2, 3 as source address ??? */
     int srcAddress = (data[1] & 0x30) >> 4;
-        AddrContext context = lookupContext(srcAddress);
-        switch (data[1] & 0xc0) {
-        case IPHC_SAM_0:
-          if(context == null) {
-            System.out.println("sicslowpan uncompress_hdr: error context not found\n");
-            return;
-          }
-          /* set hi address as prefix from context */
-          System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
-          /* infer IID from L2 address */
-
-          /* should figure out a way to get the link layer address here!!! */
-          // packet.sourceAddressLo = 0;
-          break;
-        case IPHC_SAM_16:
-          if((data[pos] & 0x80) == 0) {
-            /* unicast address */
-            if(context == null) {
-              System.out.println("sicslowpan uncompress_hdr: error context not found\n");
-              return;
-            }
-            /* set hi address as prefix from context */
-            System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
-            /* copy 6 NULL bytes then 2 last bytes of IID */
-            java.util.Arrays.fill(packet.sourceAddress, 8, 16, (byte)0);
-            packet.sourceAddress[14] = data[pos];
-            packet.sourceAddress[15] = data[pos + 1];
-            pos += 2;
-          } else {
-            /* [ignore] multicast address check the 9-bit group-id is known */
-            java.util.Arrays.fill(packet.sourceAddress, 0, 16, (byte)0);
-            packet.sourceAddress[0] = (byte)0xff; 
-            packet.sourceAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
-            packet.sourceAddress[15] = data[pos + 1];
-            pos += 2;
-          }
-          break;
-        case IPHC_SAM_64:
-          if(context == null) {
-            System.out.println("sicslowpan uncompress_hdr: error context not found\n");
-            return;
-          }
-          /* copy prefix from context */
-          System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
-          /* copy IID from packet */
-          System.arraycopy(data, pos, packet.sourceAddress, 8, 8);
-          pos += 8;
-          break;
-        case IPHC_SAM_I:
-          /* copy whole address from packet */
-          System.arraycopy(data, pos, packet.sourceAddress, 0, 16);
-          pos += 16;
-          break;
+    AddrContext context = lookupContext(srcAddress);
+    switch (data[1] & 0xc0) {
+    case IPHC_SAM_0:
+      if(context == null) {
+        System.out.println("sicslowpan uncompress_hdr: error context not found\n");
+        return;
+      }
+      /* set hi address as prefix from context */
+      System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
+      /* infer IID from L2 address */
+      byte[] linkAddress = getLinkSourceAddress(packet);
+      System.arraycopy(linkAddress, 0, packet.sourceAddress, 8, 8);
+      break;
+    case IPHC_SAM_16:
+      if((data[pos] & 0x80) == 0) {
+        /* unicast address */
+        if(context == null) {
+          System.out.println("sicslowpan uncompress_hdr: error context not found\n");
+          return;
         }
+        /* set hi address as prefix from context */
+        System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
+        /* copy 6 NULL bytes then 2 last bytes of IID */
+        java.util.Arrays.fill(packet.sourceAddress, 8, 16, (byte)0);
+        packet.sourceAddress[14] = data[pos];
+        packet.sourceAddress[15] = data[pos + 1];
+        pos += 2;
+      } else {
+        /* [ignore] multicast address check the 9-bit group-id is known */
+        java.util.Arrays.fill(packet.sourceAddress, 0, 16, (byte)0);
+        packet.sourceAddress[0] = (byte)0xff; 
+        packet.sourceAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
+        packet.sourceAddress[15] = data[pos + 1];
+        pos += 2;
+      }
+      break;
+    case IPHC_SAM_64:
+      if(context == null) {
+        System.out.println("sicslowpan uncompress_hdr: error context not found\n");
+        return;
+      }
+      /* copy prefix from context */
+      System.arraycopy(context.prefix, 0, packet.sourceAddress, 0, 8);
+      /* copy IID from packet */
+      System.arraycopy(data, pos, packet.sourceAddress, 8, 8);
+      pos += 8;
+      break;
+    case IPHC_SAM_I:
+      /* copy whole address from packet */
+      System.arraycopy(data, pos, packet.sourceAddress, 0, 16);
+      pos += 16;
+      break;
+    }
 
-        /* Destination address */
-        context = lookupContext(data[2] & 0x03);
+    /* Destination address */
+    context = lookupContext(data[2] & 0x03);
 
-        switch(data[1] & 0x0C) {
-        case IPHC_DAM_0:
-          if(context == null) {
-            System.out.println("sicslowpan uncompress_hdr: error context not found\n");
-            return;
-          }
-          /* copy prefix from context */
-          System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
-          /* infer IID from L2 address */
-          /* figure out a way to pick this up from link-layer !!! */
-          // TODO: get low from config
-          break;
-        case IPHC_DAM_16:
-          if((data[pos] & 0x80) == 0) {
-            /* unicast address */
-            if(context == null) {
-              System.out.println("sicslowpan uncompress_hdr: error context not found\n");
-              return;
-            }
-            System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
-            /* copy 6 NULL bytes then 2 last bytes of IID */
-            packet.destAddress[14] = data[pos];
-            packet.destAddress[15] = data[pos + 1];
-            pos += 2;
-          } else {
-            /* [ignore] multicast address check the 9-bit group-id is known */
-            java.util.Arrays.fill(packet.destAddress, 0, 16, (byte)0);
-            packet.destAddress[0] = (byte)0xff; 
-            packet.destAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
-            packet.destAddress[15] = data[pos + 1];
-            pos += 2;
-          }
-          break;
-        case IPHC_DAM_64:
-          if(context == null) {
-            System.out.println("sicslowpan uncompress_hdr: error context not found\n");
-            return;
-          }
-          /* copy prefix from context */
-          System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
-          /* copy IID from packet */
-          System.arraycopy(data, pos, packet.destAddress, 8, 8);
-          pos += 8;
-          break;
-        case IPHC_DAM_I:
-          /* copy whole address from packet */
-          System.arraycopy(data, pos, packet.destAddress, 0, 16);
-          pos += 16;
-          break;
+    switch(data[1] & 0x0C) {
+    case IPHC_DAM_0:
+      if(context == null) {
+        System.out.println("sicslowpan uncompress_hdr: error context not found\n");
+        return;
+      }
+      /* copy prefix from context */
+      System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
+      /* infer IID from L2 address */
+      /* figure out a way to pick this up from link-layer !!! */
+      byte[] destAddress = getLinkDestinationAddress(packet);
+      System.arraycopy(destAddress, 0, packet.destAddress, 8, 8);
+      break;
+    case IPHC_DAM_16:
+      if((data[pos] & 0x80) == 0) {
+        /* unicast address */
+        if(context == null) {
+          System.out.println("sicslowpan uncompress_hdr: error context not found\n");
+          return;
         }
+        System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
+        /* copy 6 NULL bytes then 2 last bytes of IID */
+        packet.destAddress[14] = data[pos];
+        packet.destAddress[15] = data[pos + 1];
+        pos += 2;
+      } else {
+        /* [ignore] multicast address check the 9-bit group-id is known */
+        java.util.Arrays.fill(packet.destAddress, 0, 16, (byte)0);
+        packet.destAddress[0] = (byte)0xff; 
+        packet.destAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
+        packet.destAddress[15] = data[pos + 1];
+        pos += 2;
+      }
+      break;
+    case IPHC_DAM_64:
+      if(context == null) {
+        System.out.println("sicslowpan uncompress_hdr: error context not found\n");
+        return;
+      }
+      /* copy prefix from context */
+      System.arraycopy(context.prefix, 0, packet.destAddress, 0, 8);
+      /* copy IID from packet */
+      System.arraycopy(data, pos, packet.destAddress, 8, 8);
+      pos += 8;
+      break;
+    case IPHC_DAM_I:
+      /* copy whole address from packet */
+      System.arraycopy(data, pos, packet.destAddress, 0, 16);
+      pos += 16;
+      break;
+    }
 
-        if ((data[0] & 0x20) != 0) {
-          /* The next header is compressed, NHC is following */
-          if ((data[pos] & 0xfc) == NHC_UDP_ID) {
-            packet.nextHeader = PROTO_UDP;
-            int srcPort = 0;
-            int destPort = 0;
-            int checkSum = 0;
-            switch(data[pos] & 0xff) {
-            case NHC_UDP_C:
-              /* 1 byte for NHC, 1 byte for ports, 2 bytes chksum */
-              srcPort = UDP_PORT_MIN + (data[pos + 1] >> 4);
-              destPort = UDP_PORT_MIN + (data[pos + 1] & 0x0F);
-              checkSum = (data[pos + 2] << 8) + data[pos + 3];
-              pos += 4;
-              break;
-            case NHC_UDP_I:
-              /* 1 byte for NHC, 4 byte for ports, 2 bytes chksum */
-              srcPort = ((data[pos + 1] & 0xff)<< 8) + (data[pos + 2] & 0xff);
-              destPort = ((data[pos + 3] & 0xff)<< 8) + (data[pos + 4] & 0xff);
-              checkSum = ((data[pos + 5] & 0xff)<< 8) + (data[pos + 6] & 0xff);
-              pos += 7;
-              break;
-            default:
-              System.out.println("sicslowpan uncompress_hdr: error unsupported UDP compression\n");
-            return;
-            }
-            System.out.println("DestPort: " + destPort);
-            System.out.println("SourcePort: " + srcPort);
-            System.out.println("Checksum: " + srcPort);
-          }
+    if ((data[0] & 0x20) != 0) {
+      /* The next header is compressed, NHC is following */
+      if ((data[pos] & 0xfc) == NHC_UDP_ID) {
+        packet.nextHeader = PROTO_UDP;
+        int srcPort = 0;
+        int destPort = 0;
+        int checkSum = 0;
+        switch(data[pos] & 0xff) {
+        case NHC_UDP_C:
+          /* 1 byte for NHC, 1 byte for ports, 2 bytes chksum */
+          srcPort = UDP_PORT_MIN + (data[pos + 1] >> 4);
+          destPort = UDP_PORT_MIN + (data[pos + 1] & 0x0F);
+          checkSum = (data[pos + 2] << 8) + data[pos + 3];
+          pos += 4;
+          break;
+        case NHC_UDP_I:
+          /* 1 byte for NHC, 4 byte for ports, 2 bytes chksum */
+          srcPort = ((data[pos + 1] & 0xff)<< 8) + (data[pos + 2] & 0xff);
+          destPort = ((data[pos + 3] & 0xff)<< 8) + (data[pos + 4] & 0xff);
+          checkSum = ((data[pos + 5] & 0xff)<< 8) + (data[pos + 6] & 0xff);
+          pos += 7;
+          break;
+        default:
+          System.out.println("sicslowpan uncompress_hdr: error unsupported UDP compression\n");
+        return;
         }
+        System.out.println("DestPort: " + destPort);
+        System.out.println("SourcePort: " + srcPort);
+        System.out.println("Checksum: " + srcPort);
+      }
+    }
 
-        boolean frag = false;
-        /* fragment handling ... */
-        if (!frag) {
-          /* this does not handle the UDP header compression yet... */
-          int plen = len - pos;
-          packet.setPayload(data, pos, plen);
-        } else {
-        }
-        
-        System.out.println("Encoding 0: " + Utils.hex8(data[0]) +
-            " Encoding 1: " + Utils.hex8(data[1]));
+    boolean frag = false;
+    /* fragment handling ... */
+    if (!frag) {
+      /* this does not handle the UDP header compression yet... */
+      int plen = len - pos;
+      packet.setPayload(data, pos, plen);
+    } else {
+    }
 
-        System.out.println("TTL: " + packet.hopLimit);
-        System.out.print("Src Addr: ");
-        IPv6Packet.printAddress(System.out, packet.sourceAddress);
-        System.out.print(" Dest Addr: ");
-        IPv6Packet.printAddress(System.out, packet.destAddress);
-        System.out.println();
-        // packet.setPayload(data, 40, ???);
+    System.out.println("Encoding 0: " + Utils.hex8(data[0]) +
+        " Encoding 1: " + Utils.hex8(data[1]));
+
+    System.out.println("TTL: " + packet.hopLimit);
+    System.out.print("Src Addr: ");
+    IPv6Packet.printAddress(System.out, packet.sourceAddress);
+    System.out.print(" Dest Addr: ");
+    IPv6Packet.printAddress(System.out, packet.destAddress);
+    System.out.println();
+    // packet.setPayload(data, 40, ???);
   }
 
   private AddrContext lookupContext(int index) {

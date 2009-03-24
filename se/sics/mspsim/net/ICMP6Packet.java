@@ -48,10 +48,12 @@ public class ICMP6Packet extends AbstractPacket {
       type = data[0] & 0xff;
       code = data[1] & 0xff;
       checksum = ((data[2] & 0xff) << 8) | data[3] & 0xff;
-      /* test the checksum ... */
-//      int sum = ip.upperLayerHeaderChecksum();
-//      System.out.printf("*** My Checksum: %04x", 
-//          IPv6Packet.checkSum(sum, data, len));
+      /* test the checksum ... - set checksum to zero*/
+      data[2] = 0;
+      data[3] = 0;
+      int sum = ip.upperLayerHeaderChecksum();
+      System.out.printf("*** Checksum: %04x == My Checksum: %04x", 
+          checksum, IPv6Packet.checkSum(sum, data, len));
       
     }
   }

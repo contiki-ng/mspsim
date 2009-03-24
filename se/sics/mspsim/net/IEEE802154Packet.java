@@ -60,11 +60,21 @@ public class IEEE802154Packet extends AbstractPacket {
   private int destPanID;
   private long destAddr;
   private long srcAddr;
+  private byte[] destAddress = new byte[8];
+  private byte[] sourceAddress = new byte[8];
   private int srcPanID;
   
   public IEEE802154Packet(Packet container) {
     byte[] payload = container.getPayload();
     setPacketData(container, payload, payload.length);
+  }
+
+  public byte[] getDestinationAddress() {
+    return destAddress;
+  }
+  
+  public byte[] getSourceAddress() {
+    return sourceAddress; 
   }
   
   public void printPacket(PrintStream out) {
@@ -98,12 +108,19 @@ public class IEEE802154Packet extends AbstractPacket {
       pos += 2;
       if (destAddrMode == SHORT_ADDRESS) {
         destAddr = (data[pos] & 0xff) + ((data[pos + 1] & 0xff) << 8);
+        destAddress[1] = data[pos];
+        destAddress[0] = data[pos + 1];
         pos += 2;
       } else if (destAddrMode == LONG_ADDRESS) {
         destAddr = data[pos] + ((data[pos + 1] & 0xffL) << 8) +
         ((data[pos + 2] & 0xffL) << 16) + ((data[pos + 3] & 0xffL) << 24) +
         ((data[pos + 4] & 0xffL) << 32) + ((data[pos + 5] & 0xffL)<< 40) +
         ((data[pos + 6] & 0xffL) << 48) + ((data[pos + 7] & 0xffL) << 56);
+
+        for (int i = 0; i < 8; i++) {
+          destAddress[i] = data[pos + 7 - i];          
+        }
+
         pos += 8;
       }
     }
@@ -117,12 +134,18 @@ public class IEEE802154Packet extends AbstractPacket {
       }
       if (srcAddrMode == SHORT_ADDRESS) {
         srcAddr = (data[pos] & 0xff) + ((data[pos + 1] & 0xff) << 8);
+        sourceAddress[1] = data[pos];
+        sourceAddress[0] = data[pos + 1];        
         pos += 2;
       } else if (srcAddrMode == LONG_ADDRESS) {
         srcAddr = data[pos] + ((data[pos + 1] & 0xffL) << 8) +
           ((data[pos + 2] & 0xffL) << 16) + ((data[pos + 3] & 0xffL) << 24) +
           ((data[pos + 4] & 0xffL) << 32) + ((data[pos + 5] & 0xffL)<< 40) +
           ((data[pos + 6] & 0xffL) << 48) + ((data[pos + 7] & 0xffL) << 56);
+
+        for (int i = 0; i < 8; i++) {
+          sourceAddress[i] = data[pos + 7 - i];          
+        }
         pos += 8;
       }
     }
