@@ -61,15 +61,15 @@ public class DebugCommands implements CommandBundle {
   private ELF getELF() {
     return (ELF) registry.getComponent(ELF.class);
   }
-  
+
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     this.registry = registry;
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     final GenericNode node = (GenericNode) registry.getComponent("node");
     if (cpu != null) {
       ch.registerCommand("break", new BasicAsyncCommand("add a breakpoint to a given address or symbol",
-          "<address or symbol>") { 
-        int address = 0; 
+          "<address or symbol>") {
+        int address = 0;
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           if (baddr < 0) {
@@ -97,7 +97,7 @@ public class DebugCommands implements CommandBundle {
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           if (baddr == -1) {
-            context.err.println("unknown symbol: " + context.getArgument(0));            
+            context.err.println("unknown symbol: " + context.getArgument(0));
             return -1;
           }
           if (context.getArgumentCount() > 1) {
@@ -175,7 +175,7 @@ public class DebugCommands implements CommandBundle {
           context.out.println("Watch set for register " + getRegisterName(register));
           return 0;
         }
-        
+
         public void stopCommand(CommandContext context) {
           cpu.clearBreakPoint(register);
         }
@@ -211,7 +211,7 @@ public class DebugCommands implements CommandBundle {
           return 0;
         }
       });
-      
+
       ch.registerCommand("line", new BasicCommand("print line number of address/symbol", "<addres or symbol>") {
         public int executeCommand(final CommandContext context) {
           int adr = context.getArgumentAsAddress(0);
@@ -224,8 +224,8 @@ public class DebugCommands implements CommandBundle {
           }
           return 0;
         }
-      });      
-      
+      });
+
       if (node != null) {
         ch.registerCommand("stop", new BasicCommand("stop the CPU", "") {
           public int executeCommand(CommandContext context) {
@@ -245,7 +245,7 @@ public class DebugCommands implements CommandBundle {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
             long cyc = cpu.cycles;
             try {
-              node.step(nr); 
+              node.step(nr);
             } catch (Exception e) {
               e.printStackTrace(context.out);
             }
@@ -299,14 +299,16 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("time", new BasicCommand("print the elapse time and cycles", "") {
           public int executeCommand(CommandContext context) {
             long time = ((long)(cpu.getTimeMillis()));
+	    long wallDiff = System.currentTimeMillis() - lastWall;
             context.out.println("Emulated time elapsed: " + time + "(ms)  since last: " + (time - lastCall) + " ms" + " wallTime: " +
-                (System.currentTimeMillis() - lastWall) + " ms");
+				wallDiff + " ms speed factor: " +
+				(wallDiff == 0 ? "N/A" : "" + (time - lastCall) / wallDiff));
             lastCall = time;
             lastWall = System.currentTimeMillis();
             return 0;
           }
         });
-        
+
         ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_emtries> [type]") {
           public int executeCommand(final CommandContext context) {
             int start = context.getArgumentAsAddress(0);
@@ -350,9 +352,9 @@ public class DebugCommands implements CommandBundle {
             }
             return 0;
           }});
-        
+
         /******************************************************
-         * handle external memory (flash, etc). 
+         * handle external memory (flash, etc).
          ******************************************************/
         ch.registerCommand("xmem", new BasicCommand("dump flash memory", "<start address> <num_emtries> [type]") {
           public int executeCommand(final CommandContext context) {
@@ -389,7 +391,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        
+
         ch.registerCommand("xset", new BasicCommand("set memory", "<address> <value> [type]") {
           public int executeCommand(final CommandContext context) {
             Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
@@ -422,7 +424,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        
+
         ch.registerCommand("loggable", new BasicCommand("list loggable objects", "") {
           @Override
           public int executeCommand(CommandContext context) {
@@ -433,7 +435,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        
+
         ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "<loggable>" ) {
           Chip chip = null;
           @Override
@@ -450,7 +452,7 @@ public class DebugCommands implements CommandBundle {
             chip.clearLogStream();
           }
         });
-        
+
       }
     }
   }
