@@ -127,6 +127,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private ArrayList<Chip> chips = new ArrayList<Chip>();
 
   Profiler profiler;
+  private Flash flash;
   
   public MSP430Core(int type) {
     // Ignore type for now...
@@ -148,6 +149,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
     Watchdog wdt = new Watchdog(this);
     memOut[0x120] = wdt;
     memIn[0x120] = wdt;
+
+    /* TODO: this range is only valid for the F1611 series (Sky, etc) */
+    flash = new Flash(this, memory,
+        new FlashRange(0x4000, 0x10000, 512, 64),
+        new FlashRange(0x1000, 0x01100, 128, 64));
+    for (int i = 0x128; i < 0x12e; i++) {
+      memOut[i] = flash;
+      memIn[i] = flash;
+    }
     
     sfr = new SFR(this, memory);
     for (int i = 0, n = 0x10; i < n; i++) {
@@ -617,6 +627,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       val = memIn[address].read(address, word, cycles);
     } else {
       address &= 0xffff;
+
+      if (flash.addressInFlash(address)) {
+        flash.notifyRead(address);
+      }
+
       val = memory[address] & 0xff;
       if (word) {
         val |= (memory[(address + 1) & 0xffff] << 8);
@@ -632,7 +647,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   public void write(int dstAddress, int dst, boolean word) throws EmulationException {
-    // TODO: optimize memory usage by tagging memory's higher bits. 
+    // TODO: optimize memory usage by tagging memory's higher bits.
+    // will also affect below flash write stuff!!!
     if (breakPoints[dstAddress] != null) {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
     }
@@ -640,9 +656,21 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Only word writes at 0x1fe which is highest address...
     if (dstAddress < 0x1ff && memOut[dstAddress] != null) {
       if (!word) dst &= 0xff;
-      memOut[dstAddress].write(dstAddress, dst, word, cycles);
+      memOut[dstAddress].write(dstAddress, dst, word, cycles);      
+      //    } else {
+      //      // TODO: add check for Flash / RAM!
+      //      memory[dstAddress] = dst & 0xff;
+      //      if (word) {
+      //        memory[dstAddress + 1] = (dst >> 8) & 0xff;
+      //        if ((dstAddress & 1) != 0) {
+      //          printWarning(MISALIGNED_WRITE, dstAddress);
+      //        }
+      //      }
+      // check for Flash
+    } else if (flash.addressInFlash(dstAddress)) {
+      flash.flashWrite(dstAddress, dst, word);
     } else {
-      // TODO: add check for Flash / RAM!
+      // assume RAM
       memory[dstAddress] = dst & 0xff;
       if (word) {
         memory[dstAddress + 1] = (dst >> 8) & 0xff;
@@ -683,6 +711,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     if (profiler != null) {
       profiler.profileInterrupt(interruptMax, cycles);
+    }
+        
+    if (flash.blocksCPU()) {
+      /* TODO: how should this error/warning be handled ?? */
+      throw new IllegalStateException(
+          "Got interrupt while flash controller blocks CPU. CPU CRASHED.");
     }
     
     // Only store stuff on irq except reset... - not sure if this is correct...
@@ -763,7 +797,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
 
     /* Did not execute any instructions */
-    if (cpuOff) {
+    if (cpuOff || flash.blocksCPU()) {
       //       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
       // nextEventCycles must exist, otherwise CPU can not wake up!?
       if (maxCycles >= 0 && maxCycles < nextEventCycles) {
