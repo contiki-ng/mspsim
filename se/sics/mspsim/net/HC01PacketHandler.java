@@ -305,9 +305,9 @@ public class HC01PacketHandler extends AbstractPacketHandler {
         switch(data[pos] & 0xff) {
         case NHC_UDP_C:
           /* 1 byte for NHC, 1 byte for ports, 2 bytes chksum */
-          srcPort = UDP_PORT_MIN + (data[pos + 1] >> 4);
+          srcPort = UDP_PORT_MIN + ((data[pos + 1] & 0xff) >> 4);
           destPort = UDP_PORT_MIN + (data[pos + 1] & 0x0F);
-          checkSum = (data[pos + 2] << 8) + data[pos + 3];
+          checkSum = ((data[pos + 2] & 0xff) << 8) + (data[pos + 3] & 0xff);
           pos += 4;
           break;
         case NHC_UDP_I:

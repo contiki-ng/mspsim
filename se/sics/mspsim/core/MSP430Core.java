@@ -891,7 +891,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	// Indicate write to memory!!
 	write = true;
 	// Set the next carry!
-	writeRegister(SR, (readRegister(SR) & ~CARRY) | nxtCarry);
+	writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
 	break;
       case SWPB:
 	int tmp = dst;
@@ -906,13 +906,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  dst = (dst & 0x80) | (dst >> 1);
 	}
 	write = true;
-	writeRegister(SR, (readRegister(SR) & ~CARRY) | nxtCarry);
+	writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
 	break;
       case SXT:
-	// Extend Sign (bit 8-15 => same as bit 7)
-	dst = (dst & 0x80) > 0 ? dst | 0xff00 : dst & 0x7f;
-	write = true;
-	break;
+        // Extend Sign (bit 8-15 => same as bit 7)
+        sr = readRegister(SR);
+        dst = (dst & 0x80) > 0 ? dst | 0xff00 : dst & 0x7f;
+        write = true;
+        sr = sr & ~(CARRY | OVERFLOW);
+        if (dst != 0) {
+          sr |= CARRY;
+        }
+        writeRegister(SR, sr);
+        break;
       case PUSH:
 	if (word) {
 	  // Put lo & hi on stack!
@@ -1028,6 +1034,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (jump) {
         writeRegister(PC, pc + jmpOffset);
       }
+      updateStatus = false;
       break;
     default:
       // ---------------------------------------------------------------
@@ -1236,13 +1243,28 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	updateStatus = false;
 	break;
       case XOR: // XOR
-	dst = src ^ dst;
-	write = true;
-	break;
+        sr = readRegister(SR);
+        sr = sr & ~(CARRY | OVERFLOW);
+        if ((src & (word ? 0x8000 : 0x80)) != 0 && (dst & (word ? 0x8000 : 0x80)) != 0) {
+          sr |= OVERFLOW;
+        }
+        dst = src ^ dst;
+        if (dst != 0) {
+          sr |= CARRY;
+        }
+        write = true;
+        writeRegister(SR, sr);
+        break;
       case AND: // AND
-	dst = src & dst;
-	write = true;
-	break;
+        sr = readRegister(SR);
+        sr = sr & ~(CARRY | OVERFLOW);
+        dst = src & dst;
+        if (dst != 0) {
+          sr |= CARRY;
+        }
+        write = true;
+        writeRegister(SR, sr);
+        break;
       default:
 	System.out.println("DoubleOperand not implemented: " + op + " at " + pc);
 	if (EXCEPTION_ON_BAD_OPERATION) {
