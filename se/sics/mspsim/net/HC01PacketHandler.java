@@ -197,6 +197,8 @@ public class HC01PacketHandler extends AbstractPacketHandler {
       /* infer IID from L2 address */
       byte[] linkAddress = getLinkSourceAddress(packet);
       System.arraycopy(linkAddress, 0, packet.sourceAddress, 8, 8);
+      /* TODO: clean autoconf stuff up */
+      packet.sourceAddress[8] ^= 0x02;
       break;
     case IPHC_SAM_16:
       if((data[pos] & 0x80) == 0) {
@@ -254,6 +256,8 @@ public class HC01PacketHandler extends AbstractPacketHandler {
       /* figure out a way to pick this up from link-layer !!! */
       byte[] destAddress = getLinkDestinationAddress(packet);
       System.arraycopy(destAddress, 0, packet.destAddress, 8, 8);
+      /* cleanup autoconf stuff later ... */
+      packet.destAddress[8] ^= 0x02;
       break;
     case IPHC_DAM_16:
       if((data[pos] & 0x80) == 0) {

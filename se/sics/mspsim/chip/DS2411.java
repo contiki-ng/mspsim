@@ -71,7 +71,7 @@ public class DS2411 extends Chip {
   private int writePos = 0;
   /* max 10 bytes to write back */
   private int[] writeBuf = new int[10];
-  private int[] macID = new int[]{0, 1, 2, 3, 4, 5};
+  private int[] macID = new int[]{1, 2, 3, 4, 5, 6};
   
   private TimeEvent stateEvent = new TimeEvent(0) {
     public void execute(long t) {
