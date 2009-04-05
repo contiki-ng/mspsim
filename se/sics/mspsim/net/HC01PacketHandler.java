@@ -34,6 +34,8 @@
  * AbstractPacket
  *
  * Author  : Joakim Eriksson
+ * Original Authors (Contiki Code): 
+ * 
  * Created : mar 2009
  * Updated : $Date:$
  *           $Revision:$
@@ -41,9 +43,19 @@
 
 package se.sics.mspsim.net;
 
+import org.jfree.util.ArrayUtilities;
+
 import se.sics.mspsim.util.Utils;
+import sun.java2d.SunGraphicsEnvironment.TTFilter;
 
 public class HC01PacketHandler extends AbstractPacketHandler {
+  /*
+   * Values of fields within the IPHC encoding first byte
+   * (C stands for compressed and I for inline)
+   */
+  public final static int IPHC_TC_C = 0x80;
+  public final static int IPHC_VF_C = 0x40;
+  public final static int IPHC_NH_C = 0x20;  
   public final static int IPHC_TTL_1 =  0x08;
   public final static int IPHC_TTL_64 = 0x10;
   public final static int IPHC_TTL_255 = 0x18;
@@ -63,21 +75,35 @@ public class HC01PacketHandler extends AbstractPacketHandler {
   public final static int NHC_UDP_C =  0xFB;
   public final static int NHC_UDP_I = 0xF8;
 
+  /* Link local context number */
+  public final static int IPHC_ADDR_CONTEXT_LL = 0;
+  /* 16-bit multicast addresses compression */
+  public final static int IPHC_MCAST_RANGE = 0xA0;
+  
   /* Min and Max compressible UDP ports */
   public final static int UDP_PORT_MIN = 0xF0B0;
   public final static int UDP_PORT_MAX = 0xF0BF;   /* F0B0 + 15 */
   
   public static final int HC01_DISPATCH = 0x03;
 
+  /* move these to IPv6 Packet !! */
   public final static int PROTO_ICMP  = 1;
   public final static int PROTO_TCP   = 6;
   public final static int PROTO_UDP   = 17;
   public final static int PROTO_ICMP6 = 58;
-
+  
   private static class AddrContext {
     int used;
     int number;
     byte[] prefix = new byte[8];
+    
+    public boolean matchPrefix(byte[] address) {
+      for (int i = 0; i < prefix.length; i++) {
+        if (prefix[i] != address[i])
+          return false;
+      }
+      return true;
+    }
   }
 
   private AddrContext[] contexts = new AddrContext[4];
@@ -101,6 +127,49 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     
   }
 
+
+  /**
+   * \brief check whether we can compress the IID in
+   * address to 16 bits.
+   * This is used for unicast addresses only, and is true
+   * if first 49 bits of IID are 0
+   * @return 
+   */
+  private boolean is16bitCompressable(byte[] address) {
+    return ((address[8] | address[9] | address[10] | address[11] |
+        address[12] | address[13]) == 0) &&
+        (address[14] & 0x80) == 0;
+  }
+     
+  /**
+   * \brief check whether the 9-bit group-id of the
+   * compressed multicast address is known. It is true
+   * if the 9-bit group is the all nodes or all routers
+   * group.
+   * \param a is typed u8_t *
+   */
+//  #define sicslowpan_is_mcast_addr_decompressable(a) \
+//     (((*a & 0x01) == 0) &&                           \
+//      ((*(a + 1) == 0x01) || (*(a + 1) == 0x02)))
+
+  /**
+   * \brief check whether the 112-bit group-id of the
+   * multicast address is mappable to a 9-bit group-id
+   * It is true if the group is the all nodes or all
+   * routers group.
+  */
+//  #define sicslowpan_is_mcast_addr_compressable(a) \
+//    ((((a)->u16[1]) == 0) &&                       \
+//     (((a)->u16[2]) == 0) &&                       \
+//     (((a)->u16[3]) == 0) &&                       \
+//     (((a)->u16[4]) == 0) &&                       \
+//     (((a)->u16[5]) == 0) &&                       \
+//     (((a)->u16[6]) == 0) &&                       \
+//     (((a)->u8[14]) == 0) &&                       \
+//     ((((a)->u8[15]) == 1) || (((a)->u8[15]) == 2)))
+  
+  
+  
   public void packetReceived(Packet container) {
     byte[] payload = container.getPayload();
     IPv6Packet packet = new IPv6Packet();
@@ -110,6 +179,8 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     dispatch(packet.nextHeader, packet);
   }
 
+  /* this is used for sending packets! */
+  /* we need lots of more info here !!! target, reply-of-packet, etc */
   public void sendPacket(Packet payload) {
   }
   
@@ -133,6 +204,133 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     return null;
   }
 
+  /* HC01 header compression from 40 bytes to less... */
+  public byte[] getPacketData(IPv6Packet packet) {
+    int enc1 = 0, enc2 = 0;
+    byte[] data = new byte[40];
+    int pos = 3;
+    
+    if (packet.flowLabel == 0) {
+      /* compress version and flow label! */
+      enc1 |= IPHC_VF_C;
+    }
+    if (packet.trafficClass == 0) {
+      enc1 |=  IPHC_TC_C;
+    }
+
+    /* write version and flow if needed */ 
+    if ((enc1 & IPHC_VF_C) == 0) {
+      pos += packet.writeVFlow(data, pos);
+    }
+    /* write traffic class if needed */
+    if ((enc1 & IPHC_TC_C) == 0) {
+      data[pos++] = (byte) (packet.trafficClass & 0xff);
+    }
+    
+    /* Note that the payload length is always compressed */
+
+    /* TODO: compress UDP!!! */
+    data[pos++] = (byte) (packet.nextHeader & 0xff);
+
+    switch (packet.hopLimit) {
+    case 1:
+      enc1 |= IPHC_TTL_1;
+      break;
+    case 64:
+      enc1 |= IPHC_TTL_64;
+      break;
+    case 255:
+      enc1 |= IPHC_TTL_255;
+      break;
+    default:
+      data[pos++] = (byte) (packet.hopLimit & 0xff);
+    }
+    
+    int context;
+    if ((context = lookupContext(packet.sourceAddress)) != -1) {
+      /* elide the prefix */
+      enc2 |= context << 4;
+      if (packet.isSourceMACBased()) {
+        /* elide the IID */
+        enc2 |= IPHC_SAM_0;
+      } else if (is16bitCompressable(packet.sourceAddress)){
+        enc2 |= IPHC_SAM_16;
+        data[pos++] = packet.sourceAddress[14];
+        data[pos++] = packet.sourceAddress[15];
+      } else {
+        enc2 |= IPHC_SAM_64;
+        System.arraycopy(packet.sourceAddress, 8, data, pos, 8);
+        pos += 8;
+      }
+    } else {
+      enc2 |= IPHC_SAM_I;
+      System.arraycopy(packet.sourceAddress, 0, data, pos, 16);
+      pos += 16;
+    }
+    
+    /* destination  compression */
+    if(packet.isMulticastDestination()) {
+      /* Address is multicast, try to compress */
+      if(isMulticastCompressable(packet.destAddress)) {
+        enc2 |= IPHC_DAM_16;
+        /* 3 first bits = 101 */
+        data[pos] = (byte) IPHC_MCAST_RANGE;
+        /* bits 3-6 = scope = bits 8-11 in 128 bits address */
+        data[pos++] |= (packet.destAddress[1] & 0x0F) << 1;
+        /*
+         * bits 7 - 15 = 9-bit group
+         * We just copy the last byte because it works
+         * with currently supported groups
+         */
+        data[pos++] = packet.destAddress[15];
+      } else {
+        /* send the full address */
+        enc2 |= IPHC_DAM_I;
+        System.arraycopy(packet.destAddress, 0, data, pos, 16);
+        pos += 16;
+      }
+    } else {
+      /* Address is unicast, try to compress */
+      if((context = lookupContext(packet.destAddress)) != -1) {
+        /* elide the prefix */        
+        enc2 |= context;
+        if(packet.isDestinationMACBased()) {
+          /* elide the IID */
+          enc2 |= IPHC_DAM_0;
+        } else {
+          if(is16bitCompressable(packet.destAddress)) {
+            /* compress IID to 16 bits */
+            enc2 |= IPHC_DAM_16;
+            data[pos++] = packet.destAddress[14];
+            data[pos++] = packet.destAddress[15];
+          } else {
+            /* do not compress IID */
+            enc2 |= IPHC_DAM_64;
+            System.arraycopy(data, pos, packet.destAddress, 8, 8);
+            pos += 8;
+          }
+        }
+      } else {
+        /* send the full address */
+        enc2 |= IPHC_DAM_I;
+        System.arraycopy(data, pos, packet.destAddress, 0, 16);
+        pos += 16;
+      }
+    }
+    
+   // uncomp_hdr_len = UIP_IPH_LEN;
+   // TODO: add udp header compression!!! 
+    
+    data[0] = HC01_DISPATCH;
+    data[1] = (byte) (enc1 & 0xff);
+    data[2] = (byte) (enc2 & 0xff);
+    
+    System.out.println("HC01 Header compression: size " + pos);
+    
+    byte[] dataPacket = new byte[pos];
+    System.arraycopy(data, 0, dataPacket, 0, pos);
+    return dataPacket;
+  }
   
   public void setPacketData(IPv6Packet packet, byte[] data, int len) {
     /* first two is ... */
@@ -273,11 +471,11 @@ public class HC01PacketHandler extends AbstractPacketHandler {
         pos += 2;
       } else {
         /* [ignore] multicast address check the 9-bit group-id is known */
-        System.out.println("*** Multicast address!!! HC01");
+        System.out.println("*** Multicast address!!! HC01: " + data[pos] + "," + data[pos + 1]);
         java.util.Arrays.fill(packet.destAddress, 0, 16, (byte)0);
-        packet.destAddress[0] = (byte)0xff; 
+        packet.destAddress[0] = (byte) 0xff; 
         packet.destAddress[1] = (byte)(((data[pos] & 0xff) >> 1) & 0x0F);
-        packet.destAddress[15] = data[pos + 1];
+        packet.destAddress[15] = (byte) (data[pos + 1] & 0xff);
         pos += 2;
       }
       break;
@@ -302,6 +500,7 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     if ((data[0] & 0x20) != 0) {
       /* The next header is compressed, NHC is following */
       if ((data[pos] & 0xfc) == NHC_UDP_ID) {
+        System.out.println("HC01: Next header UDP!");
         packet.nextHeader = PROTO_UDP;
         int srcPort = 0;
         int destPort = 0;
@@ -351,10 +550,24 @@ public class HC01PacketHandler extends AbstractPacketHandler {
     System.out.println();
     // packet.setPayload(data, 40, ???);
   }
-
+  
+  private boolean isMulticastCompressable(byte[] address) {
+    return false;
+  }
+  
+  
   private AddrContext lookupContext(int index) {
     if (index < contexts.length)
       return contexts[index];
     return null;
+  }
+  
+  private int lookupContext(byte[] address) {
+    for (int i = 0; i < contexts.length; i++) {
+      if (contexts[i] != null && contexts[i].matchPrefix(address)) {
+        return i;
+      }
+    }
+    return -1;
   }
 }

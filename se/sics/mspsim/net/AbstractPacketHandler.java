@@ -59,6 +59,7 @@ public abstract class AbstractPacketHandler implements PacketHandler {
    lowerLayer = handler;
   }
 
+  /* incoming packets ... */
   void dispatch(int dispatch, Packet container) {
     byte[] payload = container.getPayload();
     if (dispatch != -1) {

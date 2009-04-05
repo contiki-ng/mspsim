@@ -135,4 +135,27 @@ public class IPv6Packet extends AbstractPacket {
     return sum;
   }
 
+  public int writeVFlow(byte[] data, int pos) {
+    data[pos++] = (byte) (0x60 | (flowLabel >> 16) & 0x0f);
+    data[pos++] = (byte)((flowLabel >> 8) & 0xff);
+    data[pos++] = (byte) (flowLabel & 0xff);
+    return 3;
+  }
+
+  public boolean isSourceMACBased() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  public boolean isMulticastDestination() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  /* how can we check this before we know the MAC address??? */
+  public boolean isDestinationMACBased() {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
 }

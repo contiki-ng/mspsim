@@ -61,9 +61,33 @@ public abstract class AbstractPacket implements Packet {
     containerPacket = packet;
   }
   
+  public AbstractPacket createReply() {
+    return null;
+  }
+  
   void setPayload(byte[] data, int startPos, int len) {
     payloadLen = len;
     payload = new byte[payloadLen];
     System.arraycopy(data, startPos, payload, 0, payloadLen);
-  }    
+  }
+
+  static int get32(byte[] data, int pos) {
+    if (data.length > pos + 3)
+    return ((data[pos] & 0xff) << 24) | ((data[pos++] & 0xff) << 16) |
+        ((data[pos] & 0xff) << 8) | (data[pos + 1] & 0xff);
+    return 0;
+  }
+  
+  static int get16(byte[] data, int pos) {
+    if (data.length > pos + 1)
+      return ((data[pos] & 0xff) << 8) | data[pos + 1] & 0xff;
+    return 0;
+  }
+
+  static byte[] getAddress(byte[] data, int pos) {
+    byte[] targetAddress = new byte[16];
+    System.arraycopy(data, pos, targetAddress, 0, 16);
+    return targetAddress;
+  }
+  
 }
