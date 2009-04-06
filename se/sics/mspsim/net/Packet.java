@@ -49,8 +49,13 @@ public interface Packet {
    * @return payload of the packet
    */
   public byte[] getPayload();
+  public byte[] getSourceAddress();
+  public byte[] getDestinationAddress();
   void setPayloadPacket(Packet packet);
   void setContainerPacket(Packet packet);
+  Packet getPayloadPacket();
+  Packet getContainerPacket();
+  
   public void printPacket(PrintStream out);
   
 }

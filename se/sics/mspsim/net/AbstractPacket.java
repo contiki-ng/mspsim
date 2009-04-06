@@ -53,13 +53,36 @@ public abstract class AbstractPacket implements Packet {
     return payload;
   }
   
+  public byte[] getSourceAddress() {
+    return null;
+  }
+
+  public byte[] getDestinationAddress() {
+    return null;
+  }
+
   public void setPayloadPacket(Packet packet) {
     payloadPacket = packet;
+    if (packet.getContainerPacket() != this) {
+      packet.setContainerPacket(this);
+    }
   }
 
   public void setContainerPacket(Packet packet) {
     containerPacket = packet;
+    if (packet.getPayloadPacket() != this) {
+      packet.setPayloadPacket(this);
+    }
   }
+
+  public Packet getPayloadPacket() {
+    return payloadPacket;
+  }
+
+  public Packet getContainerPacket() {
+    return containerPacket;
+  }
+
   
   public AbstractPacket createReply() {
     return null;

@@ -24,6 +24,8 @@ public class ICMP6PacketHandler extends AbstractPacketHandler {
       ipp.flowLabel = 0;
       ipp.setPayloadPacket(p);
       ipp.nextHeader = IPv6Packet.ICMP6_DISPATCH;
+      
+      
       // ipp.destAddress = ???;
       break;
     }

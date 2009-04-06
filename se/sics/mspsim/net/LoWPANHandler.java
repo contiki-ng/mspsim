@@ -49,6 +49,12 @@ public class LoWPANHandler extends AbstractPacketHandler {
   }
 
   public void sendPacket(Packet payload) {
+    /* LoWPANHandler is for IP over 802.15.4 */
+  
+    if (payload instanceof IPv6Packet) {
+      // Assume HC01 compression for now...
+      IEEE802154Packet p = new IEEE802154Packet();
+    }
   }
 
 }

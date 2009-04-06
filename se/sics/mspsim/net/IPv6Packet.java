@@ -59,6 +59,19 @@ public class IPv6Packet extends AbstractPacket {
   byte[] sourceAddress = new byte[16];
   byte[] destAddress = new byte[16];
 
+  public IPv6Packet() {
+    version = 6;
+    flowLabel = 0;
+  }
+  
+  public byte[] getSourceAddress() {
+    return sourceAddress;
+  }
+  
+  public byte[] getDestinationAddress() {
+    return destAddress;
+  }
+  
   public void printPacket(PrintStream out) {
     out.printf("IPv6: from ");
     printAddress(out, sourceAddress);
@@ -121,7 +134,7 @@ public class IPv6Packet extends AbstractPacket {
   }
   
   public static int checkSum(int sum, byte[] data, int size) {
-    for (int i = 0; i < size; i+= 2) {
+    for (int i = 0; i < size - 1; i+= 2) {
       int dsum = ((data[i] & 0xff) << 8) | (data[i + 1] & 0xff);
       sum = (sum + dsum) & 0xffff;
       if (sum < dsum) sum++;
@@ -142,9 +155,20 @@ public class IPv6Packet extends AbstractPacket {
     return 3;
   }
 
-  public boolean isSourceMACBased() {
-    // TODO Auto-generated method stub
+  public static boolean isMACBased(byte[] address, byte[] macAddress) {
+    if (address[8] == (macAddress[0] ^ 0x02)) {
+      for (int i = 1; i < macAddress.length; i++) {
+        if (address[8 + i] != macAddress[i]) 
+          return false;
+      }
+      return true;
+    }
     return false;
+  }
+  
+  public boolean isSourceMACBased() {
+    byte[] macAddress = containerPacket.getSourceAddress();
+    return isMACBased(sourceAddress, macAddress);
   }
 
   public boolean isMulticastDestination() {
@@ -154,8 +178,8 @@ public class IPv6Packet extends AbstractPacket {
 
   /* how can we check this before we know the MAC address??? */
   public boolean isDestinationMACBased() {
-    // TODO Auto-generated method stub
-    return false;
+    byte[] macAddress = containerPacket.getDestinationAddress();
+    return isMACBased(destAddress, macAddress);
   }
 
 }

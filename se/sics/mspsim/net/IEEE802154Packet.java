@@ -70,9 +70,25 @@ public class IEEE802154Packet extends AbstractPacket {
     setPacketData(container, payload, payload.length);
   }
 
+  public IEEE802154Packet() {
+  }
+
   public byte[] getDestinationAddress() {
     return destAddress;
   }
+
+  public void setDestinationAddress(byte[] destAddress) {
+    for (int i = 0; i < destAddress.length; i++) {
+      this.destAddress[i] = destAddress[i];
+    }
+  }
+
+  public void setSourceAddress(byte[] srcAddress) {
+    for (int i = 0; i < srcAddress.length; i++) {
+      this.sourceAddress[i] = srcAddress[i];
+    }
+  }
+
   
   public byte[] getSourceAddress() {
     return sourceAddress; 

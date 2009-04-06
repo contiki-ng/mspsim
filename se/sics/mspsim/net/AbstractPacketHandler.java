@@ -43,11 +43,15 @@ package se.sics.mspsim.net;
 import java.util.ArrayList;
 
 public abstract class AbstractPacketHandler implements PacketHandler {
-
+  
   ArrayList<PacketHandlerDispatch> upperLayers =
     new ArrayList<PacketHandlerDispatch>();
   PacketHandler lowerLayer;
   
+  public PacketHandler getLowerLayerHandler() {
+    return lowerLayer;
+  }
+
   public void addUpperLayerHandler(int protoID, PacketHandler handler) {
     PacketHandlerDispatch layer = new PacketHandlerDispatch();
     layer.dispatch = protoID;
