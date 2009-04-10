@@ -42,6 +42,7 @@ package se.sics.mspsim.cli;
 
 import java.util.Hashtable;
 
+import se.sics.mspsim.ui.WindowUtils;
 import se.sics.mspsim.util.ComponentRegistry;
 
 public class WindowCommands implements CommandBundle {
@@ -83,6 +84,12 @@ public class WindowCommands implements CommandBundle {
           context.err.println("Could not find the window " + name);
           return 1;
         }
+      }
+    });
+    handler.registerCommand("wclear", new BasicCommand("resets stored window positions", "") {
+      public int executeCommand(CommandContext context) {
+        WindowUtils.clearState();
+        return 0;
       }
     });
   }
