@@ -246,7 +246,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   /* RSSI is an externally set value of the RSSI for this CC2420 */
   /* low RSSI => CCA = true in normal mode */
 
-  private int rssi = 0;
+  private int rssi = -100;
   private static int RSSI_OFFSET = -45; /* cc2420 datasheet */
   /* current CCA value */
   private boolean cca = false;

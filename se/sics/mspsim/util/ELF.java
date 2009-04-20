@@ -42,17 +42,22 @@
 package se.sics.mspsim.util;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 public class ELF {
 
-  public static final int EI_NIDENT = 16;
-  public static final int EI_ENCODING = 5;
-
+  private static final int EI_NIDENT = 16;
+  private static final int EI_ENCODING = 5;
+  private static final int[] MAGIC = new int[] {0x7f, 'E', 'L', 'F'};
+  
   public static final boolean DEBUG = false;
-
+  
+  
   boolean encMSB = true;
   int type;
   int machine;
@@ -87,14 +92,44 @@ public class ELF {
     pos = 0;
   }
 
-  public void readHeader() {
+  /* check if the file exists and is an ELF file */
+  public static boolean isELF(File file) {
+    InputStream input = null;
+    try {
+      input = new FileInputStream(file);
+      for (int i = 0; i < MAGIC.length; i++) {
+        if (MAGIC[i] != input.read()) {
+          return false;
+        }
+      }
+    } catch(IOException ioe) {
+      // ignore...
+    } finally {
+      if (input != null) {
+        try {
+          input.close();
+        } catch (Exception e) {
+        }
+      }
+    }
+    return true;
+  }
+  
+  private void readHeader() throws ELFException {
+    for (int i = 0; i < MAGIC.length; i++) {
+      if (elfData[i] != (byte) (MAGIC[i] & 0xff)) {
+        throw new ELFException("Not an elf file");
+      }
+    }
+    
     if (elfData[EI_ENCODING] == 2) {
       encMSB = true;
     } else if (elfData[EI_ENCODING] == 1) {
       encMSB = false;
     } else {
-      System.out.println("ERROR: Wroing encoding???");
+      throw new ELFException("Illegal encoding: " + elfData[EI_ENCODING]);
     }
+    
     pos += 16;
     type = readElf16();
     machine = readElf16();
@@ -128,7 +163,7 @@ public class ELF {
     }
   }
 
-  public ELFSection readSectionHeader() {
+  private ELFSection readSectionHeader() {
     ELFSection sec = new ELFSection();
     sec.name = readElf32();
     sec.type = readElf32();
@@ -144,7 +179,7 @@ public class ELF {
     return sec;
   }
 
-  public ELFProgram readProgramHeader() {
+  private ELFProgram readProgramHeader() {
     ELFProgram pHeader = new ELFProgram();
     pHeader.type = readElf32();
     pHeader.offset = readElf32();
@@ -243,7 +278,7 @@ public class ELF {
     }
   }
 
-  public void readAll() {
+  public void readAll() throws ELFException {
     readHeader();
     readPrograms();
     readSections();
