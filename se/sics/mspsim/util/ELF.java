@@ -103,7 +103,8 @@ public class ELF {
         }
       }
     } catch(IOException ioe) {
-      // ignore...
+      // ignore and return false - this is not an elf.
+      return false;
     } finally {
       if (input != null) {
         try {
