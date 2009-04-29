@@ -161,15 +161,15 @@ public class Multiplier extends IOUnit {
         op2 = op2 > 0x8000 ? op2 - 0x10000 : op2;
       }
       
-      long res = op1 * op2;
+      long res = (long) op1 * (long) op2;
       if (DEBUG) System.out.println("O1:" + op1 + " * " + op2 + " = " + res);
 
       if (signed) {
         sumext = res < 0 ? 0xffff : 0;
       }
       
-      if (accumulating) { 
-        res += (resHi << 16) + resLo;
+      if (accumulating) {
+        res += ((long) resHi << 16) + resLo;
         if (!signed && res > 0xffffffff) {
           sumext = 1;
         }
