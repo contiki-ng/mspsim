@@ -67,6 +67,8 @@ public class SFR extends IOUnit {
 
   private SFRModule[] sfrModule = new SFRModule[16];
   private int[] irqVector = new int[16];
+  private boolean[] irqTriggered = new boolean[16];
+  private int[] irqTriggeredPos = new int[16];
   
   public SFR(MSP430Core cpu, int[] memory) {
     super(memory, 0);
@@ -81,6 +83,9 @@ public class SFR extends IOUnit {
     ifg2 = 0;
     me1 = 0;
     me2 = 0;
+    for (int i = 0; i < irqTriggered.length; i++) {
+      irqTriggered[i] = false;
+    }
   }
 
   /* reg = 0/1
@@ -189,11 +194,17 @@ public class SFR extends IOUnit {
     pos = pos * 8;
     for (int i = 0; i < 8; i++) {
       if ((change & 1) == 1)  {
-        if (sfrModule[pos] != null) {
+        if (sfrModule[pos] != null && !irqTriggered[irqVector[pos]]) {
           /* interrupt goes directly to the module responsible */
           if (DEBUG) System.out.println("SFR: flagging interrupt: " +
-              sfrModule[pos].getName() + " " + (ie & ifg & 1));
-          cpu.flagInterrupt(irqVector[pos], sfrModule[pos], (ie & ifg & 1) > 0);
+              sfrModule[pos].getName() + " pos: " + pos + " " + (ie & ifg & 1) + " chg: " + change);
+          if ((ie & ifg & 1) > 0) {
+            int vector = irqVector[pos];
+            irqTriggered[vector] = true;
+            irqTriggeredPos[vector] = pos;
+            cpu.flagInterrupt(irqVector[pos], this, true);
+          }
+          //          cpu.flagInterrupt(irqVector[pos], sfrModule[pos], (ie & ifg & 1) > 0);
         }
       }
       pos++;
@@ -231,8 +242,20 @@ public class SFR extends IOUnit {
     else return ifg2;
   }
 
-  /* nothing should go here */
   public void interruptServiced(int vector) {
+    irqTriggered[vector] = false;
+    /* clear the bits that correspond to this vector! */
+    int pos = irqTriggeredPos[vector];
+    int bit = pos & 7;
+    if (pos > 8) {
+      ifg1 &= ~(1 << bit);
+    } else {
+      ifg2 &= ~(1 << bit);
+    }
+    cpu.flagInterrupt(vector, this, false);
+    if (sfrModule[pos] != null) {
+      sfrModule[pos].interruptServiced(vector);
+    }
   }
 
   public String getName() {

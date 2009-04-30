@@ -330,6 +330,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     reg[r] = value;
     if (r == SR) {
       boolean oldCpuOff = cpuOff;
+//      if (((value & GIE) == GIE) != interruptsEnabled) {
+//        System.out.println("InterruptEnabled changed: " + !interruptsEnabled);
+//      }
       interruptsEnabled = ((value & GIE) == GIE);
       cpuOff = ((value & CPUOFF) == CPUOFF);
       if (cpuOff != oldCpuOff) {
@@ -568,7 +571,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (triggerIR) {
       interruptSource[interrupt] = source;
 
-      if (debugInterrupts) {
+      if (debugInterrupts ) {
         if (source != null) {
           System.out.println("### Interrupt flagged ON by " + source.getName() + " prio: " + interrupt);
         } else {
@@ -1351,5 +1354,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
         "fkn at $" + Utils.hex16(address), null, true);
     map.setEntry(function);
     return function;
+  }
+
+  public int getPC() {
+    return reg[PC];
   }
 }

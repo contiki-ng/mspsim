@@ -86,6 +86,7 @@ public class USART extends IOUnit implements SFRModule {
 
   private int utxifg;
   private int urxifg;
+  private int rxVector;
 
   private int clockSource = 0;
   private int baudRate = 0;
@@ -137,19 +138,21 @@ public class USART extends IOUnit implements SFRModule {
       utxifg = UTXIFG0;
       urxifg = URXIFG0;
       txbit = USART0_TX_BIT;
+      rxVector = USART0_RX_VEC;
     } else {
       sfr.registerSFDModule(1, USART1_RX_BIT, this, USART1_RX_VEC);
       sfr.registerSFDModule(1, USART1_TX_BIT, this, USART1_TX_VEC);
       utxifg = UTXIFG1;
       urxifg = URXIFG1;
       txbit = USART1_TX_BIT;
+      rxVector = USART1_RX_VEC;
     }
     
     reset(0);
   }
 
   public void reset(int type) {
-    nextTXReady = cpu.cycles + 1000;
+    nextTXReady = cpu.cycles + 100;
     nextTXByte = -1;
     clrBitIFG(utxifg | urxifg);
     utctl |= UTCTL_TXEMPTY;
@@ -287,7 +290,7 @@ public class USART extends IOUnit implements SFRModule {
       // When byte is read - the interruptflag is cleared!
       // and error status should also be cleared later...
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-        System.out.println(getName() + " clearing rx interrupt flag");
+        System.out.println(getName() + " clearing rx interrupt flag " + cpu.getPC());
       }
       clrBitIFG(urxifg);
       if (listener != null) {
@@ -332,7 +335,8 @@ public class USART extends IOUnit implements SFRModule {
   // We should add "Interrupt serviced..." to indicate that its latest
   // Interrupt was serviced...
   public void interruptServiced(int vector) {
-    cpu.flagInterrupt(vector, this, false);
+    /* NOTE: this is handled by SFR : clear IFG bit if interrupt is serviced */
+//    System.out.println("SFR irq");
   }
 
   private void handleTransmit(long cycles) {
