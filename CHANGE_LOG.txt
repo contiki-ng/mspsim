@@ -1,4 +1,13 @@
 0.97
+- fixed bug on SFR interrupt handling
+- added initial support for printing IPv6 packets (HC01) from CC2420
+- added CLI commands for adding rflisteners and analyser
+- added warning for too large packets in CC2420
+- added profiling of interrupts
+- added verification of MAGIC init bytes in ELF files
+- fixed multiplicator (submitted patch)
+- several bugfixes for emulation core (instruction emulation)
+- made call logger configurable for hide of selected calls
 - fixed some cycle timing bugs of instruction set execution
 - added stack trace for misalignment warnings if MSP430 Core is in log mode
 - added MSP430 Core as a loggable
