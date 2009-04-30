@@ -42,11 +42,7 @@
  */
 
 package se.sics.mspsim.net;
-
-import org.jfree.util.ArrayUtilities;
-
 import se.sics.mspsim.util.Utils;
-import sun.java2d.SunGraphicsEnvironment.TTFilter;
 
 public class HC01PacketHandler extends AbstractPacketHandler {
   /*
