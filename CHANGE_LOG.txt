@@ -6,6 +6,7 @@
 - added profiling of interrupts
 - added verification of MAGIC init bytes in ELF files
 - fixed multiplicator (submitted patch)
+- added support for flash
 - several bugfixes for emulation core (instruction emulation)
 - made call logger configurable for hide of selected calls
 - fixed some cycle timing bugs of instruction set execution
