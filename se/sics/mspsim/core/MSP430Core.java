@@ -857,8 +857,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
       int ad = (instruction >> 4) & 3;
       int nxtCarry = 0;
       op = instruction & 0xff80;
-      if (op == PUSH) {
-	// The PUSH operation increase the SP before address resolution!
+      if (op == PUSH || op == CALL) {
+	// The PUSH and CALL operations increase the SP before 
+        // address resolution!
 	// store on stack - always move 2 steps (W) even if B./
 	sp = readRegister(SP) - 2;
 	writeRegister(SP, sp);
@@ -972,10 +973,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	updateStatus = false;
 	break;
       case CALL:        
-        // store current PC on stack... (current PC points to next instr.)
-	sp = readRegister(SP) - 2;
-	writeRegister(SP, sp);
-
+        // store current PC on stack. (current PC points to next instr.)
 	pc = readRegister(PC);
 	memory[sp] = pc & 0xff;
 	memory[sp + 1] = pc >> 8;
