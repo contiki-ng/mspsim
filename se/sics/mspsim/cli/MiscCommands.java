@@ -54,13 +54,11 @@ import se.sics.mspsim.chip.RFSource;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
-import se.sics.mspsim.net.CC2420Packet;
 import se.sics.mspsim.net.CC2420PacketHandler;
-import se.sics.mspsim.net.HC01PacketHandler;
 import se.sics.mspsim.net.ICMP6Packet;
 import se.sics.mspsim.net.ICMP6PacketHandler;
 import se.sics.mspsim.net.IEEE802154Handler;
-import se.sics.mspsim.net.IEEE802154Packet;
+import se.sics.mspsim.net.IPStack;
 import se.sics.mspsim.net.IPv6Packet;
 import se.sics.mspsim.net.LoWPANHandler;
 import se.sics.mspsim.util.ComponentRegistry;
@@ -324,14 +322,9 @@ public class MiscCommands implements CommandBundle {
         listener = new CC2420PacketHandler();
         IEEE802154Handler ieeeHandler = new IEEE802154Handler();
         listener.addUpperLayerHandler(0, ieeeHandler);
-        LoWPANHandler lowpanHandler = new LoWPANHandler();
-        ieeeHandler.addUpperLayerHandler(0, lowpanHandler);
-        HC01PacketHandler hc01Handler = new HC01PacketHandler();
-        
-        lowpanHandler.addUpperLayerHandler(0x03, hc01Handler);
-        hc01Handler.addUpperLayerHandler(IPv6Packet.ICMP6_DISPATCH,
-            new ICMP6PacketHandler());
-        
+        IPStack ipStack = new IPStack();
+        LoWPANHandler lowpanHandler = new LoWPANHandler(ipStack);
+        ieeeHandler.addUpperLayerHandler(0, lowpanHandler);        
         return 0;
       }
       public void lineRead(String line) {
