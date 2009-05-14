@@ -47,23 +47,37 @@ import java.io.PrintStream;
  * @author joakim
  *
  */
-public class IPv6Packet extends AbstractPacket {
+public class IPv6Packet extends Packet implements IPPacketer {
 
   public static final int ICMP6_DISPATCH = 58;
   
   int version;
   int trafficClass;
   int flowLabel;
-  int nextHeader;
+  byte nextHeader;
   int hopLimit;
   byte[] sourceAddress = new byte[16];
   byte[] destAddress = new byte[16];
 
+  int ipLen = 0;
+  int payloadLen = 0;
+  
   public IPv6Packet() {
     version = 6;
     flowLabel = 0;
   }
   
+  public IPv6Packet(Packet packet) {
+    version = 6;
+    flowLabel = 0;
+    // copy over all the data from the packet...
+    // is this the right way to do this???
+    this.currentPos = packet.currentPos;
+    this.attributes = packet.attributes;
+    this.packetData = packet.packetData;
+    ipLen = packetData.length - currentPos;
+  }
+    
   public byte[] getSourceAddress() {
     return sourceAddress;
   }
@@ -78,9 +92,6 @@ public class IPv6Packet extends AbstractPacket {
     out.print(" to ");
     printAddress(out, destAddress);
     out.printf(" NxHdr: %d\n", nextHeader);
-    if (payloadPacket != null) {
-      payloadPacket.printPacket(out);
-    }
   }
 
   public static void printAddress(PrintStream out, byte[] address) {
@@ -94,20 +105,23 @@ public class IPv6Packet extends AbstractPacket {
   }
 
   /* this is for setting raw packet data */
-  public void setPacketData(Packet container, byte[] data, int len) {
-    version = (data[0] & 0xff) >> 4;
+  public void parsePacketData(IPv6Packet packet) {
+    version = (packet.getData(0) & 0xff) >> 4;
     if (version != 6) {
       return;
     }
-    trafficClass = ((data[0] & 0x0f)<<4) + ((data[1] & 0xff) >> 4);
-    flowLabel = (data[1] & 0x0f) << 16 + (data[2] & 0xff) << 8 +
-      data[3] & 0xff;
-    payloadLen = ((data[4] & 0xff) << 8) + data[5];
-    nextHeader = data[6];
-    hopLimit = data[7];
-    System.arraycopy(data, 8, sourceAddress, 0, 16);
-    System.arraycopy(data, 24, destAddress, 0, 16);
-    setPayload(data, 40, payloadLen);
+    trafficClass = ((packet.getData(0) & 0x0f)<<4) +
+    ((packet.getData(1) & 0xff) >> 4);
+    flowLabel = (packet.getData(1) & 0x0f) << 16 +
+    (packet.getData(2) & 0xff) << 8 +
+    packet.getData(3) & 0xff;
+    payloadLen = ((packet.getData(4) & 0xff) << 8) + packet.getData(5);
+    nextHeader = packet.getData(6);
+    hopLimit = packet.getData(7);
+    packet.copy(8, sourceAddress, 0, 16);
+    packet.copy(24, destAddress, 0, 16);
+    // move position 40 bytes forward for handling next headers / payload
+    packet.incPos(40);
   }
 
   public static long getLong(byte[] data, int pos) {
@@ -167,7 +181,7 @@ public class IPv6Packet extends AbstractPacket {
   }
   
   public boolean isSourceMACBased() {
-    byte[] macAddress = containerPacket.getSourceAddress();
+    byte[] macAddress = getLinkSource();
     return isMACBased(sourceAddress, macAddress);
   }
 
@@ -178,8 +192,18 @@ public class IPv6Packet extends AbstractPacket {
 
   /* how can we check this before we know the MAC address??? */
   public boolean isDestinationMACBased() {
-    byte[] macAddress = containerPacket.getDestinationAddress();
+    byte[] macAddress = getLinkDestination();
     return isMACBased(destAddress, macAddress);
+  }
+
+  public byte getDispatch() {
+    return nextHeader;
+  }
+
+  @Override
+  public byte[] generatePacketData(IPv6Packet packet) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

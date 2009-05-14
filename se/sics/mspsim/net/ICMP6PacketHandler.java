@@ -1,14 +1,16 @@
 package se.sics.mspsim.net;
 
-public class ICMP6PacketHandler extends AbstractPacketHandler {
+public class ICMP6PacketHandler {
 
-  public void packetReceived(Packet container) {
+  IPStack ipStack;
+  
+  public ICMP6PacketHandler(IPStack stack) {
+    ipStack = stack;
+  }
+  
+  public void handlePacket(IPv6Packet packet) {
     ICMP6Packet icmpPacket = new ICMP6Packet();
-    IPv6Packet ipv6 = (IPv6Packet) container;
-    container.setPayloadPacket(icmpPacket);
-    icmpPacket.containerPacket = container;
-    icmpPacket.setPacketData(container, container.getPayload(),
-        container.getPayload().length);
+    icmpPacket.parsePacketData(packet);
 
     /* handle packet - just a test for now */
     switch (icmpPacket.type) {
@@ -20,19 +22,11 @@ public class ICMP6PacketHandler extends AbstractPacketHandler {
         ICMP6Packet.FLAG_OVERRIDE;
 
       IPv6Packet ipp = new IPv6Packet();
-      ipp.version = 6;
-      ipp.flowLabel = 0;
-      ipp.setPayloadPacket(p);
       ipp.nextHeader = IPv6Packet.ICMP6_DISPATCH;
-      
-      
-      // ipp.destAddress = ???;
+      // is this ok?
+      ipp.destAddress = packet.sourceAddress;
+      ipStack.sendPacket(ipp);
       break;
     }
   }
-
-    public void sendPacket(Packet payload) {
-    /* ICMP does not carry payload ?? */
-  }
-  
 }

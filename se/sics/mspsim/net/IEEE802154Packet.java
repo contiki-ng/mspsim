@@ -42,8 +42,8 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
-
-public class IEEE802154Packet extends AbstractPacket {
+/* remove */
+public class IEEE802154Packet { //extends AbstractPacket {
 
   public static final int SHORT_ADDRESS = 2;
   public static final int LONG_ADDRESS = 3;
@@ -65,10 +65,10 @@ public class IEEE802154Packet extends AbstractPacket {
   private byte[] sourceAddress = new byte[8];
   private int srcPanID;
   
-  public IEEE802154Packet(Packet container) {
-    byte[] payload = container.getPayload();
-    setPacketData(container, payload, payload.length);
-  }
+//  public IEEE802154Packet(Packet container) {
+//    byte[] payload = container.getPayload();
+//    setPacketData(container, payload, payload.length);
+//  }
 
   public IEEE802154Packet() {
   }
@@ -94,20 +94,8 @@ public class IEEE802154Packet extends AbstractPacket {
     return sourceAddress; 
   }
   
-  public void printPacket(PrintStream out) {
-    out.printf("802.15.4 from %4x/", srcPanID);
-    printAddress(out, srcAddrMode, srcAddr);
-    out.printf(" to %4x/", destPanID);
-    printAddress(out, destAddrMode, destAddr);
-    out.printf(" seqNo: %d len: %d\n", seqNumber, payloadLen);
-    if (payloadPacket != null) {
-      payloadPacket.printPacket(out);
-    }
-  }
 
   public void setPacketData(Packet container, byte[] data, int len) {
-    container.setPayloadPacket(this);
-    containerPacket = container;
     
     type = data[0] & 7;
     security = (data[0] >> 3) & 1;
@@ -166,14 +154,6 @@ public class IEEE802154Packet extends AbstractPacket {
         pos += 8;
       }
     }
-    setPayload(data, pos, len - pos);
-  }
-
-  private void printAddress(PrintStream out, int type, long addr) {
-    if (type == SHORT_ADDRESS) {
-      out.printf("%04x", addr & 0xffff);
-    } else if (type == LONG_ADDRESS) {
-      out.printf("%04x:%04x:%04x:%04x", (addr >> 48) & 0xffff, (addr >> 32) & 0xffff, (addr >> 16) & 0xffff, addr & 0xffff);
-    }
+//    setPayload(data, pos, len - pos);
   }
 }

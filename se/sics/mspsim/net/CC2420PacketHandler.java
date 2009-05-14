@@ -40,10 +40,14 @@
 
 package se.sics.mspsim.net;
 
+import java.io.PrintStream;
+
 import se.sics.mspsim.chip.RFListener;
 
 public class CC2420PacketHandler extends AbstractPacketHandler implements RFListener {
 
+  public static final String CC2420_LEN = "cc2420.len";
+  
   private static final int SFD_SEARCH = 1;
   private static final int LEN = 2;
   private static final int PACKET = 3;  
@@ -75,11 +79,14 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
     case PACKET:
       if (pos == packetLen + PREAMBLE.length + 1) {
         /* the packet is in!!! */
-        CC2420Packet packet = new CC2420Packet();
-        packet.setPayload(packetBuffer, PREAMBLE.length + 1, packetLen - 2);
+//        CC2420Packet packet = new CC2420Packet();
+//        packet.setPayload(packetBuffer, PREAMBLE.length + 1, packetLen - 2);
+        Packet packet = new Packet();
+        packet.setBytes(packetBuffer, PREAMBLE.length + 1, packetLen - 2);
+        packet.setAttribute(CC2420_LEN, packet.getTotalLength());
         dispatch(-1, packet);
-        System.out.println("Packet received");
-        packet.printPacket(System.out);
+        System.out.println("CC2420: Packet received");
+
         /* this is a packet that has passed the stack! */
         mode = SFD_SEARCH;
         pos = 0;
@@ -93,7 +100,25 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
     // Never any packets received here...
   }
 
-  public void sendPacket(Packet payload) {
-    // give to radio!!!
+  public void printPacket(PrintStream out, Packet packet) {
+    int payloadLen = packet.getAttributeAsInt(CC2420_LEN);
+    out.print("CC2420 | len:" + payloadLen + " | ");
+    for (int i = 0; i < payloadLen; i++) {
+      out.printf("%02x", packet.getData(i) & 0xff);
+      if ((i & 3) == 3) {
+        out.print(" ");
+      }
+    }
+    out.println();
   }
+
+  
+  public void sendPacket(Packet packet) {
+    packet.prependBytes(new byte[packet.getTotalLength()]);
+    packet.prependBytes(PREAMBLE);
+    byte[] data = packet.getBytes();
+    System.out.println("Should send to radio!!!! " + packet.getTotalLength());
+    // Stuff to send to radio!!!
+  }
+
 }

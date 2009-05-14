@@ -41,7 +41,8 @@
 
 package se.sics.mspsim.net;
 
-public abstract class AbstractPacket implements Packet {
+// remove
+public abstract class AbstractPacket extends Packet {
 
   byte[] payload;
   int payloadLen;
@@ -61,29 +62,6 @@ public abstract class AbstractPacket implements Packet {
     return null;
   }
 
-  public void setPayloadPacket(Packet packet) {
-    payloadPacket = packet;
-    if (packet.getContainerPacket() != this) {
-      packet.setContainerPacket(this);
-    }
-  }
-
-  public void setContainerPacket(Packet packet) {
-    containerPacket = packet;
-    if (packet.getPayloadPacket() != this) {
-      packet.setPayloadPacket(this);
-    }
-  }
-
-  public Packet getPayloadPacket() {
-    return payloadPacket;
-  }
-
-  public Packet getContainerPacket() {
-    return containerPacket;
-  }
-
-  
   public AbstractPacket createReply() {
     return null;
   }

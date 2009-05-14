@@ -41,19 +41,38 @@ package se.sics.mspsim.net;
 
 public class LoWPANHandler extends AbstractPacketHandler {
 
-  public void packetReceived(Packet container) {
-    LoWPANPacket packet = new LoWPANPacket(container.getPayload());
-    container.setPayloadPacket(packet);
-    packet.containerPacket = container;
-    dispatch(packet.dispatch, packet);
+  private IPStack ipStack;
+  
+  public LoWPANHandler(IPStack stack) {
+    ipStack = stack;
+  }
+  
+  public void packetReceived(Packet packet) {
+    /* create IP packet based on the correct dispatch */
+    IPv6Packet ipPacket = new IPv6Packet(packet);
+    int dispatch = packet.getData(0);
+    packet.setAttribute("6lowpan.dispatch", dispatch);
+    /* remove the dispatch and continue */
+    ipPacket.incPos(1);
+    if (dispatch == ipStack.getDefaultPacketer().getDispatch()) {
+      ipStack.getDefaultPacketer().parsePacketData(ipPacket);
+      /* send in the packet */
+      ipStack.receivePacket(ipPacket);
+    }
   }
 
-  public void sendPacket(Packet payload) {
+  public void sendPacket(Packet packet) {
     /* LoWPANHandler is for IP over 802.15.4 */
-  
-    if (payload instanceof IPv6Packet) {
-      // Assume HC01 compression for now...
-      IEEE802154Packet p = new IEEE802154Packet();
+    if (packet instanceof IPv6Packet) {
+      // Get packeter and create packet
+      byte[] data = ipStack.getPacketer().generatePacketData((IPv6Packet)packet);
+      packet.setBytes(data);
+      /* set the dispatch */
+      byte[] data2 = new byte[1];
+      data2[0] = ipStack.getPacketer().getDispatch();
+      packet.prependBytes(data2);
+      /* give to lower layer for sending on... */
+      lowerLayer.sendPacket(packet);
     }
   }
 

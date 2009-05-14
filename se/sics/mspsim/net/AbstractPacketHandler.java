@@ -40,9 +40,12 @@
 
 package se.sics.mspsim.net;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 
 public abstract class AbstractPacketHandler implements PacketHandler {
+  
+  boolean debug = true;
   
   ArrayList<PacketHandlerDispatch> upperLayers =
     new ArrayList<PacketHandlerDispatch>();
@@ -64,25 +67,30 @@ public abstract class AbstractPacketHandler implements PacketHandler {
   }
 
   /* incoming packets ... */
-  void dispatch(int dispatch, Packet container) {
-    byte[] payload = container.getPayload();
+  void dispatch(int dispatch, Packet packet) {
+    if (debug) {
+      printPacket(System.out, packet);
+    }
     if (dispatch != -1) {
       for (int i = 0; i < upperLayers.size(); i++) {
         if (upperLayers.get(i).dispatch == dispatch) {
-          upperLayers.get(i).packetHandler.packetReceived(container);
+          upperLayers.get(i).packetHandler.packetReceived(packet);
           return;
         }
       }
       System.out.println("**** no dispatch handler for " + dispatch + " found...");
     } else if (upperLayers.size() > 0){
-      upperLayers.get(0).packetHandler.packetReceived(container);
+      upperLayers.get(0).packetHandler.packetReceived(packet);
     }
   }
   
   public abstract void packetReceived(Packet container);
 
-  public abstract void sendPacket(Packet payload);
+  public abstract void sendPacket(Packet packet);
 
+  public void printPacket(PrintStream out, Packet packet) {
+  }
+  
   private static class PacketHandlerDispatch {
     int dispatch;
     PacketHandler packetHandler;
