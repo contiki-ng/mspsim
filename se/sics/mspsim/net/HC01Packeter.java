@@ -514,7 +514,7 @@ public class HC01Packeter implements IPPacketer {
     System.out.println("TTL: " + packet.hopLimit);
     System.out.print("Src Addr: ");
     IPv6Packet.printAddress(System.out, packet.sourceAddress);
-    System.out.print(" Dest Addr: ");
+    System.out.print("Dst Addr: ");
     IPv6Packet.printAddress(System.out, packet.destAddress);
     System.out.println();
     // packet.setPayload(data, 40, ???);

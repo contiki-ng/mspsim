@@ -133,6 +133,7 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     packet.incPos(pos);
     packet.setAttribute(PAYLOAD_LEN, packet.getPayloadLength());
     packet.setAttribute(VERSION, frameVersion);
+    packet.setAttribute(SEQ_NO, seqNumber);
 
     dispatch(-1, packet);
   }
@@ -184,7 +185,7 @@ public class IEEE802154Handler extends AbstractPacketHandler {
 //    for (int i = 0; i < buffer.length; i++) {
 //      System.out.printf("%02x", buffer[i]);
 //    }
-    System.out.println();
+//    System.out.println();
     lowerLayer.sendPacket(packet);
   }
 

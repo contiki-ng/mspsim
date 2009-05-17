@@ -102,9 +102,9 @@ public class ICMP6Packet implements IPPayload {
         break;
       }
 
-      int sum = packet.upperLayerHeaderChecksum();
       byte[] data = packet.getPayload();
       System.out.println("Payloadsize: " + data.length);
+      int sum = packet.upperLayerHeaderChecksum();
       sum = IPv6Packet.checkSum(sum, data, data.length);
       sum = (~sum) & 0xffff;
       if (sum == checksum) {
@@ -161,6 +161,14 @@ public class ICMP6Packet implements IPPayload {
     
     byte[] packetData = new byte[pos];
     System.arraycopy(buffer, 0, packetData, 0, pos);
+
+    int sum = packet.upperLayerHeaderChecksum();
+    sum = IPv6Packet.checkSum(sum, packetData, packetData.length);
+    sum = (~sum) & 0xffff;
+
+    packetData[2] = (byte) (sum >> 8);
+    packetData[3] = (byte) (sum & 0xff);
+      
     return packetData;
   }
 
