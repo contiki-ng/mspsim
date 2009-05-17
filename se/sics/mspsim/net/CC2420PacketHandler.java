@@ -43,6 +43,7 @@ package se.sics.mspsim.net;
 import java.io.PrintStream;
 
 import se.sics.mspsim.chip.RFListener;
+import se.sics.mspsim.util.Utils;
 
 public class CC2420PacketHandler extends AbstractPacketHandler implements RFListener {
 
@@ -51,8 +52,10 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
   private static final int SFD_SEARCH = 1;
   private static final int LEN = 2;
   private static final int PACKET = 3;  
-  
+ 
   private static final byte[] PREAMBLE = {0, 0, 0, 0, 0x7a};
+ 
+  private PrintStream out;
   
   byte[] packetBuffer = new byte[256];
   int mode = SFD_SEARCH;
@@ -114,11 +117,25 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
 
   
   public void sendPacket(Packet packet) {
-    packet.prependBytes(new byte[packet.getTotalLength()]);
+    byte[] size = new byte[1];
+    size[0] = (byte) (packet.getTotalLength() & 0xff);
+    packet.prependBytes(size);
     packet.prependBytes(PREAMBLE);
     byte[] data = packet.getBytes();
     System.out.println("Should send packet to radio!!!! " + packet.getTotalLength());
     // Stuff to send to radio!!!
+    System.out.println("CC2420: Packet to send: ");
+    byte[] buffer = packet.getBytes();
+    for (int i = 0; i < buffer.length; i++) {
+      System.out.printf("%02x", buffer[i]);
+      out.printf("%02x", buffer[i]);
+    }
+    /* send to output! */
+    out.println();
   }
 
+
+  public void setOutput(PrintStream out) {
+    this.out = out;
+  }
 }

@@ -61,6 +61,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
 
   int ipLen = 0;
   int payloadLen = 0;
+  IPPayload ipPayload;
   
   public IPv6Packet() {
     version = 6;
@@ -124,6 +125,13 @@ public class IPv6Packet extends Packet implements IPPacketer {
     packet.incPos(40);
   }
 
+  public static void set32(byte[] data, int pos, int value) {
+    data[pos++] = (byte) ((value >> 32) & 0xff);
+    data[pos++] = (byte) ((value >> 16) & 0xff);
+    data[pos++] = (byte) ((value >> 8) & 0xff);
+    data[pos++] = (byte) (value & 0xff);
+  }
+  
   public static long getLong(byte[] data, int pos) {
     long lval = data[pos] + ((data[pos + 1] & 0xffL) << 8) +
     ((data[pos + 2] & 0xffL) << 16) + ((data[pos + 3] & 0xffL) << 24) +
@@ -206,4 +214,12 @@ public class IPv6Packet extends Packet implements IPPacketer {
     return null;
   }
 
+  public IPPayload getIPPayload() {
+    return ipPayload;
+  }
+  
+  public void setIPPayload(IPPayload ipp) {
+    ipPayload = ipp;
+    nextHeader = ipp.getDispatch();
+  }
 }

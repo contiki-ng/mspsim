@@ -291,9 +291,14 @@ public class HC01Packeter implements IPPacketer {
     data[2] = (byte) (enc2 & 0xff);
     
     System.out.println("HC01 Header compression: size " + pos);
+
+    IPPayload payload = packet.getIPPayload();
+    byte[] pload = payload.generatePacketData(packet);
+    System.out.println("HC01 Payload size: " + pload.length);
     
-    byte[] dataPacket = new byte[pos];
+    byte[] dataPacket = new byte[pos + pload.length];
     System.arraycopy(data, 0, dataPacket, 0, pos);
+    System.arraycopy(pload, 0, dataPacket, pos, pload.length);
     return dataPacket;
   }
   

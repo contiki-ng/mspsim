@@ -320,6 +320,7 @@ public class MiscCommands implements CommandBundle {
       public int executeCommand(CommandContext context) {
         this.context = context;
         listener = new CC2420PacketHandler();
+        listener.setOutput(context.out);
         IEEE802154Handler ieeeHandler = new IEEE802154Handler();
         listener.addUpperLayerHandler(0, ieeeHandler);
         ieeeHandler.setLowerLayerHandler(listener);

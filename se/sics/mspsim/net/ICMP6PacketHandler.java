@@ -12,18 +12,34 @@ public class ICMP6PacketHandler {
     ICMP6Packet icmpPacket = new ICMP6Packet();
     icmpPacket.parsePacketData(packet);
 
+    icmpPacket.printPacket(System.out);
+
     /* handle packet - just a test for now */
+    ICMP6Packet p;
+    IPv6Packet ipp;
     switch (icmpPacket.type) {
     case ICMP6Packet.NEIGHBOR_SOLICITATION:
-      icmpPacket.printPacket(System.out);
-      ICMP6Packet p = new ICMP6Packet();
+      p = new ICMP6Packet();
       p.targetAddress = icmpPacket.targetAddress;
       p.type = ICMP6Packet.NEIGHBOR_ADVERTISEMENT;
       p.flags = ICMP6Packet.FLAG_SOLICITED |
         ICMP6Packet.FLAG_OVERRIDE;
 
-      IPv6Packet ipp = new IPv6Packet();
-      ipp.nextHeader = IPv6Packet.ICMP6_DISPATCH;
+      ipp = new IPv6Packet();
+      ipp.setIPPayload(p);
+      // is this ok?
+      ipp.destAddress = packet.sourceAddress;
+      ipStack.sendPacket(ipp);
+      break;
+    case ICMP6Packet.ROUTER_SOLICITATION:
+      p = new ICMP6Packet();
+      p.targetAddress = icmpPacket.targetAddress;
+      p.type = ICMP6Packet.ROUTER_ADVERTISEMENT;
+      p.flags = ICMP6Packet.FLAG_SOLICITED |
+        ICMP6Packet.FLAG_OVERRIDE;
+      
+      ipp = new IPv6Packet();
+      ipp.setIPPayload(p);
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
       ipStack.sendPacket(ipp);

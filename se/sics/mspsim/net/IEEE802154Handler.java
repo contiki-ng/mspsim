@@ -175,11 +175,17 @@ public class IEEE802154Handler extends AbstractPacketHandler {
       buffer[pos++] = src[dest.length - i - 1];
     }
 
-    System.out.println("Packet to send: ");
-    for (int i = 0; i < pos; i++) {
-      System.out.printf("%02x", buffer[i]);
-    }
-    System.out.println(); 
+    byte[] pHeader = new byte[pos];
+    System.arraycopy(buffer, 0, pHeader, 0, pos);
+    packet.prependBytes(pHeader);
+    
+//    System.out.println("802.15.4: Packet to send: ");
+//    buffer = packet.getBytes();
+//    for (int i = 0; i < buffer.length; i++) {
+//      System.out.printf("%02x", buffer[i]);
+//    }
+    System.out.println();
+    lowerLayer.sendPacket(packet);
   }
 
   public void printPacket(PrintStream out, Packet packet) {
