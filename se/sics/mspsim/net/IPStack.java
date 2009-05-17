@@ -45,9 +45,10 @@ package se.sics.mspsim.net;
 
 public class IPStack {
 
-  byte[] myIPAddress;
+  byte[] myIPAddress = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
   /* currently assumes only one link-layer and one address */
-  byte[] myLinkAddress;
+  byte[] myLinkAddress = new byte[] {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   
   private PacketHandler linkLayerHandler;
   private IPPacketer defaultPacketer = new HC01Packeter();

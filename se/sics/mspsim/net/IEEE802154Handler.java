@@ -48,12 +48,22 @@ public class IEEE802154Handler extends AbstractPacketHandler {
   public static final String SOURCE_MODE = "802154.sourceMode";
   public static final String DESTINATION_PAN_ID = "802154.destPAN";
   public static final String DESTINATION_MODE = "802154.destMode";
+  public static final String VERSION = "802154.version";
   
   public static final String SEQ_NO = "802154.seqno";
   public static final String PAYLOAD_LEN = "802154.len";
   
+  public static final int BEACONFRAME = 0x00;
+  public static final int DATAFRAME = 0x01;
+  public static final int ACKFRAME = 0x02;
+  public static final int CMDFRAME = 0x03;
+  
+  
   public static final int SHORT_ADDRESS = 2;
   public static final int LONG_ADDRESS = 3;
+  
+  private int defaultAddressMode = LONG_ADDRESS;
+  private byte seqNo = 0;
   
   /* create a 802.15.4 packet of the bytes and "dispatch" to the
    * next handler
@@ -91,6 +101,7 @@ public class IEEE802154Handler extends AbstractPacketHandler {
         }
         pos += 8;
       }
+      packet.setAttribute(DESTINATION_MODE, destAddrMode);
       packet.setAttribute(Packet.LL_DESTINATION, destAddress);
     }
 
@@ -116,10 +127,12 @@ public class IEEE802154Handler extends AbstractPacketHandler {
         }
         pos += 8;
       }
+      packet.setAttribute(SOURCE_MODE, srcAddrMode);
       packet.setAttribute(Packet.LL_SOURCE, sourceAddress);
     }
     packet.incPos(pos);
     packet.setAttribute(PAYLOAD_LEN, packet.getPayloadLength());
+    packet.setAttribute(VERSION, frameVersion);
 
     dispatch(-1, packet);
   }
@@ -127,8 +140,46 @@ public class IEEE802154Handler extends AbstractPacketHandler {
   /* create a 802.15.4 packet with the given packet as payload, and
    * deliver to the lower layer handler */
   @Override
-  public void sendPacket(Packet payload) {
-    // TODO Auto-generated method stub
+  public void sendPacket(Packet packet) {
+    System.out.println("Packet should be sent!!!");
+    byte[] buffer = new byte[127];
+    int pos = 0;
+    /* construct a default packet... needs fixing later */
+    /* no security, no compression, etc */
+    buffer[0] = DATAFRAME;
+
+    int destMode = defaultAddressMode;
+    int srcMode = defaultAddressMode;
+    int frameVersion = 0;
+    
+    buffer[1] = (byte)((destMode << 2) |
+      (frameVersion << 4) | (srcMode << 6));
+    buffer[2] = seqNo++;
+    
+    pos = 3;
+    /* hardcoded PAN */
+    buffer[pos++] = (byte) 0xcd;
+    buffer[pos++] = (byte) 0xab;
+
+    byte[] dest = packet.getLinkDestination();
+    for (int i = 0; i < dest.length; i++) {
+      buffer[pos++] = dest[dest.length - i - 1];
+    }
+
+    /* hardcoded PAN */
+    buffer[pos++] = (byte) 0xcd;
+    buffer[pos++] = (byte) 0xab;
+
+    byte[] src  = packet.getLinkSource();
+    for (int i = 0; i < dest.length; i++) {
+      buffer[pos++] = src[dest.length - i - 1];
+    }
+
+    System.out.println("Packet to send: ");
+    for (int i = 0; i < pos; i++) {
+      System.out.printf("%02x", buffer[i]);
+    }
+    System.out.println(); 
   }
 
   public void printPacket(PrintStream out, Packet packet) {
@@ -138,15 +189,15 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     out.printf(" to %4x/", packet.getAttributeAsInt(DESTINATION_PAN_ID));
     printAddress(out, packet.getAttributeAsInt(DESTINATION_MODE),
           (byte[]) packet.getAttribute(Packet.LL_DESTINATION));
-    out.printf(" seqNo: %d len: %d\n", packet.getAttributeAsInt(SEQ_NO),
-          packet.getAttributeAsInt(PAYLOAD_LEN));
+    out.printf(" seqNo: %d vers: %d len: %d\n", packet.getAttributeAsInt(SEQ_NO),
+        packet.getAttributeAsInt(VERSION), packet.getAttributeAsInt(PAYLOAD_LEN));
   }
 
   private void printAddress(PrintStream out, int type, byte[] addr) {
     if (type == SHORT_ADDRESS) {
-      out.printf("%02x02x", addr[0], addr[1]);
+      out.printf("%02x%02x", addr[0], addr[1]);
     } else if (type == LONG_ADDRESS) {
-      out.printf("%02x02x:%02x02x:%02x02x:%02x02x", addr[0], addr[1], 
+      out.printf("%02x%02x:%02x%02x:%02x%02x:%02x%02x", addr[0], addr[1], 
           addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
     }
   }

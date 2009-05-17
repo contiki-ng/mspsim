@@ -117,7 +117,7 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
     packet.prependBytes(new byte[packet.getTotalLength()]);
     packet.prependBytes(PREAMBLE);
     byte[] data = packet.getBytes();
-    System.out.println("Should send to radio!!!! " + packet.getTotalLength());
+    System.out.println("Should send packet to radio!!!! " + packet.getTotalLength());
     // Stuff to send to radio!!!
   }
 

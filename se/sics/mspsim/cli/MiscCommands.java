@@ -322,9 +322,12 @@ public class MiscCommands implements CommandBundle {
         listener = new CC2420PacketHandler();
         IEEE802154Handler ieeeHandler = new IEEE802154Handler();
         listener.addUpperLayerHandler(0, ieeeHandler);
+        ieeeHandler.setLowerLayerHandler(listener);
         IPStack ipStack = new IPStack();
         LoWPANHandler lowpanHandler = new LoWPANHandler(ipStack);
-        ieeeHandler.addUpperLayerHandler(0, lowpanHandler);        
+        ieeeHandler.addUpperLayerHandler(0, lowpanHandler);
+        lowpanHandler.setLowerLayerHandler(ieeeHandler);
+        ipStack.setLinkLayerHandler(lowpanHandler);
         return 0;
       }
       public void lineRead(String line) {

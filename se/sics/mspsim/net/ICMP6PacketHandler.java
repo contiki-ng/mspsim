@@ -15,6 +15,7 @@ public class ICMP6PacketHandler {
     /* handle packet - just a test for now */
     switch (icmpPacket.type) {
     case ICMP6Packet.NEIGHBOR_SOLICITATION:
+      icmpPacket.printPacket(System.out);
       ICMP6Packet p = new ICMP6Packet();
       p.targetAddress = icmpPacket.targetAddress;
       p.type = ICMP6Packet.NEIGHBOR_ADVERTISEMENT;
