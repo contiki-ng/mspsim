@@ -3,11 +3,11 @@ package se.sics.mspsim.net;
 public class ICMP6PacketHandler {
 
   IPStack ipStack;
-  
+
   public ICMP6PacketHandler(IPStack stack) {
     ipStack = stack;
   }
-  
+
   public void handlePacket(IPv6Packet packet) {
     ICMP6Packet icmpPacket = new ICMP6Packet();
     icmpPacket.parsePacketData(packet);
@@ -37,7 +37,7 @@ public class ICMP6PacketHandler {
       p.type = ICMP6Packet.ROUTER_ADVERTISEMENT;
       p.flags = ICMP6Packet.FLAG_SOLICITED |
         ICMP6Packet.FLAG_OVERRIDE;
-      
+
       ipp = new IPv6Packet();
       ipp.setIPPayload(p);
       // is this ok?

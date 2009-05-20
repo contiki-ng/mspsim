@@ -5,7 +5,7 @@ import java.io.PrintStream;
 public class ICMP6Packet implements IPPayload {
 
   public static final int DISPATCH = 58;
-  
+
   public static final int ECHO_REQUEST = 128;
   public static final int ECHO_REPLY = 129;
   public static final int GROUP_QUERY = 130;
@@ -22,11 +22,11 @@ public class ICMP6Packet implements IPPayload {
 
   public static final int ON_LINK = 0x80;
   public static final int AUTOCONFIG = 0x40;
-  
+
   public static final String[] TYPE_NAME = new String[] {
     "ECHO_REQUEST", "ECHO_REPLY",
     "GROUP_QUERY", "GROUP_REPORT", "GROUP_REDUCTION",
-    "ROUTER_SOLICITATION", "ROUTER_ADVERTISEMENT", 
+    "ROUTER_SOLICITATION", "ROUTER_ADVERTISEMENT",
     "NEIGHBOR_SOLICITATION", "NEIGHBOR_ADVERTISEMENT"};
 
   int type;
@@ -39,16 +39,16 @@ public class ICMP6Packet implements IPPayload {
 
   int flags;
 
-  byte hopLimit;
+  byte hopLimit = (byte) 255;
   byte autoConfigFlags;
-  int routerLifetime = 600; /* time in seconds for keeping the router as default */ 
+  int routerLifetime = 600; /* time in seconds for keeping the router as default */
   int reachableTime = 10000; /* time in millis when node still should be counted as reachable */
   int retransmissionTimer = 1000; /* time in millis between solicitations */
 
   /* source link layer option - type = 1, len = 1 (64 bits) */
   byte[] srcLinkOptionShort = new byte[] {1, 1, 0, 0, 0, 0, 0, 0};
   byte[] srcLinkOptionLong = new byte[] {1, 2, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0};  
+      0, 0, 0, 0, 0, 0, 0, 0};
   /* prefix info option - type = 3, len = 4 (64x4 bits), prefix = 64 bits */
   byte[] prefixInfo = new byte[] {3, 4, 64, (byte) (ON_LINK | AUTOCONFIG),
         0, 0, 1, 0, /* valid lifetime - 256 seconds for now*/
@@ -59,7 +59,7 @@ public class ICMP6Packet implements IPPayload {
   };
   /* default MTU is 1280 (5x256) which also is the smallest allowed */
   byte[] mtuOption = new byte[] {5, 1, 0, 0, 0, 0, 5, 0};
-  
+
   public void printPacket(PrintStream out) {
     String typeS = "" + type;
     if (type >= 128) {
@@ -75,9 +75,9 @@ public class ICMP6Packet implements IPPayload {
       IPv6Packet.printAddress(out, targetAddress);
       out.println();
     }
-    /* ICMP can not have payload ?! */  
+    /* ICMP can not have payload ?! */
   }
-  
+
   public void parsePacketData(IPv6Packet packet) {
     if (packet.nextHeader == 58) {
       type = packet.getData(0) & 0xff;
@@ -158,7 +158,7 @@ public class ICMP6Packet implements IPPayload {
       pos += prefixInfo.length;
       break;
     }
-    
+
     byte[] packetData = new byte[pos];
     System.arraycopy(buffer, 0, packetData, 0, pos);
 
@@ -168,7 +168,7 @@ public class ICMP6Packet implements IPPayload {
 
     packetData[2] = (byte) (sum >> 8);
     packetData[3] = (byte) (sum & 0xff);
-      
+
     return packetData;
   }
 

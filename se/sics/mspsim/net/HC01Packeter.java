@@ -42,9 +42,13 @@
  */
 
 package se.sics.mspsim.net;
+import com.sun.corba.se.impl.javax.rmi.CORBA.Util;
+
 import se.sics.mspsim.util.Utils;
 
 public class HC01Packeter implements IPPacketer {
+
+  private boolean DEBUG = true;
   /*
    * Values of fields within the IPHC encoding first byte
    * (C stands for compressed and I for inline)
@@ -173,7 +177,7 @@ public class HC01Packeter implements IPPacketer {
   public byte[] generatePacketData(IPv6Packet packet) {
     int enc1 = 0, enc2 = 0;
     byte[] data = new byte[40];
-    int pos = 3;
+    int pos = 2;
     
     if (packet.flowLabel == 0) {
       /* compress version and flow label! */
@@ -286,15 +290,16 @@ public class HC01Packeter implements IPPacketer {
    // uncomp_hdr_len = UIP_IPH_LEN;
    // TODO: add udp header compression!!! 
     
-    data[0] = HC01_DISPATCH;
-    data[1] = (byte) (enc1 & 0xff);
-    data[2] = (byte) (enc2 & 0xff);
-    
-    System.out.println("HC01 Header compression: size " + pos);
+    // data[0] = HC01_DISPATCH; - layer below does this!!!
+    data[0] = (byte) (enc1 & 0xff);
+    data[1] = (byte) (enc2 & 0xff);
+
+    if (DEBUG) System.out.println("HC01 Header compression: size " + pos +
+        " enc1: " + Utils.hex8(enc1) + " enc2: " + Utils.hex8(enc2));
 
     IPPayload payload = packet.getIPPayload();
     byte[] pload = payload.generatePacketData(packet);
-    System.out.println("HC01 Payload size: " + pload.length);
+    if (DEBUG) System.out.println("HC01 Payload size: " + pload.length);
     
     byte[] dataPacket = new byte[pos + pload.length];
     System.arraycopy(data, 0, dataPacket, 0, pos);
@@ -305,8 +310,10 @@ public class HC01Packeter implements IPPacketer {
   public void parsePacketData(IPv6Packet packet) {
     /* first two is ... */
     int pos = 2;
-    if ((packet.getData(0) & 0x40) == 0) {
-      if ((packet.getData(0) & 0x80) == 0) {
+    int enc0 = packet.getData(0);
+    int enc1 = packet.getData(1);
+    if ((enc0 & 0x40) == 0) {
+      if ((enc0 & 0x80) == 0) {
         packet.version = (packet.getData(pos) & 0xf0) >> 4;
       packet.trafficClass = ((packet.getData(pos) & 0x0f)<<4) + ((packet.getData(pos + 1) & 0xff) >> 4);
       packet.flowLabel = (packet.getData(pos + 1) & 0x0f) << 16 + (packet.getData(pos + 2) & 0xff) << 8 +
@@ -322,7 +329,7 @@ public class HC01Packeter implements IPPacketer {
     } else {
       packet.version = 6;
       packet.flowLabel = 0;
-      if ((packet.getData(0) & 0x80) == 0) {
+      if ((enc0 & 0x80) == 0) {
         packet.trafficClass = (packet.getData(pos) & 0xff);
         pos++;
       } else {
@@ -331,12 +338,12 @@ public class HC01Packeter implements IPPacketer {
     }
     
     /* next header not compressed -> get it */
-    if ((packet.getData(0) & 0x20) == 0) {
+    if ((enc0 & 0x20) == 0) {
       packet.nextHeader = packet.getData(pos++);
     }
     
     /* encoding of TTL */
-    switch (packet.getData(0) & 0x18) {
+    switch (enc0 & 0x18) {
     case IPHC_TTL_1:
       packet.hopLimit = 1;
       break;
@@ -354,7 +361,7 @@ public class HC01Packeter implements IPPacketer {
     /* 0, 1, 2, 3 as source address ??? */
     int srcAddress = (packet.getData(1) & 0x30) >> 4;
     AddrContext context = lookupContext(srcAddress);
-    switch (packet.getData(1) & 0xc0) {
+    switch (enc1 & 0xc0) {
     case IPHC_SAM_0:
       if(context == null) {
         System.out.println("sicslowpan uncompress_hdr: error context not found\n");
@@ -412,7 +419,7 @@ public class HC01Packeter implements IPPacketer {
     /* Destination address */
     context = lookupContext(packet.getData(2) & 0x03);
 
-    switch(packet.getData(1) & 0x0C) {
+    switch(enc1 & 0x0C) {
     case IPHC_DAM_0:
       if(context == null) {
         System.out.println("sicslowpan uncompress_hdr: error context not found\n");
@@ -466,7 +473,7 @@ public class HC01Packeter implements IPPacketer {
       break;
     }
 
-    if ((packet.getData(0) & 0x20) != 0) {
+    if ((enc0 & 0x20) != 0) {
       /* The next header is compressed, NHC is following */
       if ((packet.getData(pos) & 0xfc) == NHC_UDP_ID) {
         System.out.println("HC01: Next header UDP!");
@@ -508,8 +515,8 @@ public class HC01Packeter implements IPPacketer {
     } else {
     }
 
-    System.out.println("Encoding 0: " + Utils.hex8(packet.getData(0)) +
-        " Encoding 1: " + Utils.hex8(packet.getData(1)));
+    System.out.println("Encoding 0: " + Utils.hex8(enc0) +
+        " Encoding 1: " + Utils.hex8(enc1));
 
     System.out.println("TTL: " + packet.hopLimit);
     System.out.print("Src Addr: ");

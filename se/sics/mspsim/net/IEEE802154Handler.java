@@ -134,7 +134,7 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     packet.setAttribute(PAYLOAD_LEN, packet.getPayloadLength());
     packet.setAttribute(VERSION, frameVersion);
     packet.setAttribute(SEQ_NO, seqNumber);
-
+    System.out.println("802.15.4 Consumed " + pos + " bytes");
     dispatch(-1, packet);
   }
   
