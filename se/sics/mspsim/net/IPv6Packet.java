@@ -144,6 +144,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
   public int upperLayerHeaderChecksum() {
     /* First sum pseudoheader. */
     /* IP protocol and length fields. This addition cannot carry. */
+    if (payloadLen == 0) throw new IllegalStateException("No payload length when calculating upper layer checksum.");
     int sum = payloadLen + nextHeader;
     /* Sum IP source and destination addresses. */
     sum = checkSum(sum, sourceAddress, 16);

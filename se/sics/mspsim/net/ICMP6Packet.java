@@ -79,6 +79,16 @@ public class ICMP6Packet implements IPPayload {
       IPv6Packet.printAddress(out, targetAddress);
       out.println();
     }
+    if (type == ROUTER_ADVERTISEMENT) {
+      int bits = prefixInfo[2];
+      int bytes = bits / 8;
+      out.print("RA Prefix: ");
+      for (int i = 0; i < bytes; i++) {
+        out.printf("%02x", prefixInfo[16 + i]);
+        if ((i & 1) == 1) out.print(":");
+      }
+      out.println("/" + bits);
+    }
     /* ICMP can not have payload ?! */
   }
   
@@ -167,6 +177,11 @@ public class ICMP6Packet implements IPPayload {
     byte[] packetData = new byte[pos];
     System.arraycopy(buffer, 0, packetData, 0, pos);
 
+    /* TODO: this should probably be taken care of in another way - 
+     * for example by allowing the IPPayload packets to set the data
+     * into the payload which sets the payload length...  
+     */
+    packet.payloadLen = pos;
     int sum = packet.upperLayerHeaderChecksum();
     sum = IPv6Packet.checkSum(sum, packetData, packetData.length);
     sum = (~sum) & 0xffff;
