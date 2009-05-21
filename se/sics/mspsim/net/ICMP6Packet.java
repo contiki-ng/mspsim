@@ -32,8 +32,7 @@ public class ICMP6Packet implements IPPayload {
   int type;
   int code;
   int checksum;
-  byte[] targetAddress = new byte[16];
-
+  byte[] targetAddress;
   int id;
   int seqNo;
 
@@ -60,6 +59,11 @@ public class ICMP6Packet implements IPPayload {
   /* default MTU is 1280 (5x256) which also is the smallest allowed */
   byte[] mtuOption = new byte[] {5, 1, 0, 0, 0, 0, 5, 0};
 
+  void updateRA(IPStack stack) {
+    byte[] llAddr = stack.getLinkLayerAddress();
+    System.arraycopy(llAddr, 0, srcLinkOptionLong, 2, llAddr.length);
+  }
+  
   public void printPacket(PrintStream out) {
     String typeS = "" + type;
     if (type >= 128) {
@@ -77,7 +81,7 @@ public class ICMP6Packet implements IPPayload {
     }
     /* ICMP can not have payload ?! */
   }
-
+  
   public void parsePacketData(IPv6Packet packet) {
     if (packet.nextHeader == 58) {
       type = packet.getData(0) & 0xff;
@@ -98,6 +102,7 @@ public class ICMP6Packet implements IPPayload {
         if (type == NEIGHBOR_ADVERTISEMENT) {
           flags = packet.getData(4) & 0xff;
         }
+        targetAddress = new byte[16];
         packet.copy(8, targetAddress, 0, 16);
         break;
       }

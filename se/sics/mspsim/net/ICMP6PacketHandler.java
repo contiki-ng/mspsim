@@ -38,10 +38,15 @@ public class ICMP6PacketHandler {
       p.flags = ICMP6Packet.FLAG_SOLICITED |
         ICMP6Packet.FLAG_OVERRIDE;
 
+      /* ensure that the RA is updated... */
+      p.updateRA(ipStack);
+      
       ipp = new IPv6Packet();
       ipp.setIPPayload(p);
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
+      System.out.print("Created ICMP6 RA for ");
+      IPv6Packet.printAddress(System.out, ipp.destAddress);
       ipStack.sendPacket(ipp);
       break;
     }

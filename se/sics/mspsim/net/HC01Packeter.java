@@ -275,14 +275,15 @@ public class HC01Packeter implements IPPacketer {
           } else {
             /* do not compress IID */
             enc2 |= IPHC_DAM_64;
-            System.arraycopy(data, pos, packet.destAddress, 8, 8);
+            System.arraycopy(packet.destAddress, 8, data, pos, 8);
             pos += 8;
           }
         }
       } else {
         /* send the full address */
+        if (DEBUG) System.out.println("HC01: full destination address");
         enc2 |= IPHC_DAM_I;
-        System.arraycopy(data, pos, packet.destAddress, 0, 16);
+        System.arraycopy(packet.destAddress, 0, data, pos, 16);
         pos += 16;
       }
     }
@@ -296,7 +297,12 @@ public class HC01Packeter implements IPPacketer {
 
     if (DEBUG) System.out.println("HC01 Header compression: size " + pos +
         " enc1: " + Utils.hex8(enc1) + " enc2: " + Utils.hex8(enc2));
-
+    if (DEBUG) {
+        System.out.print("HC01: From ");
+        IPv6Packet.printAddress(System.out, packet.sourceAddress);
+        System.out.print("HC01:   To ");
+        IPv6Packet.printAddress(System.out, packet.destAddress);
+    }
     IPPayload payload = packet.getIPPayload();
     byte[] pload = payload.generatePacketData(packet);
     if (DEBUG) System.out.println("HC01 Payload size: " + pload.length);
