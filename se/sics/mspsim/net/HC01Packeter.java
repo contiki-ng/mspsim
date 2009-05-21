@@ -42,8 +42,6 @@
  */
 
 package se.sics.mspsim.net;
-import com.sun.corba.se.impl.javax.rmi.CORBA.Util;
-
 import se.sics.mspsim.util.Utils;
 
 public class HC01Packeter implements IPPacketer {
@@ -112,15 +110,13 @@ public class HC01Packeter implements IPPacketer {
     // set-up some fake contexts just to get started...
     contexts[0] = new AddrContext();
     contexts[1] = new AddrContext();
-    contexts[2] = new AddrContext();
-    contexts[3] = new AddrContext();
+//    contexts[2] = new AddrContext();
+//    contexts[3] = new AddrContext();
 
-    contexts[0].used = 1;
     contexts[0].number = 0;
     contexts[0].prefix[0] = (byte) 0xfe;
     contexts[0].prefix[1] = (byte) 0x80;
 
-    contexts[1].used = 1;
     contexts[1].number = 1;
     contexts[1].prefix[0] = (byte) 0xaa;
     contexts[1].prefix[1] = (byte) 0xaa;
@@ -217,6 +213,7 @@ public class HC01Packeter implements IPPacketer {
     
     int context;
     if ((context = lookupContext(packet.sourceAddress)) != -1) {
+      if (DEBUG) System.out.println("HC01: Found context (SRC): " + context);
       /* elide the prefix */
       enc2 |= context << 4;
       if (packet.isSourceMACBased()) {
@@ -232,6 +229,7 @@ public class HC01Packeter implements IPPacketer {
         pos += 8;
       }
     } else {
+      if (DEBUG) System.out.println("HC01: no context - use full addr (SRC)");
       enc2 |= IPHC_SAM_I;
       System.arraycopy(packet.sourceAddress, 0, data, pos, 16);
       pos += 16;
@@ -261,6 +259,7 @@ public class HC01Packeter implements IPPacketer {
     } else {
       /* Address is unicast, try to compress */
       if((context = lookupContext(packet.destAddress)) != -1) {
+        if (DEBUG) System.out.println("HC01: Found context (DST): " + context);
         /* elide the prefix */        
         enc2 |= context;
         if(packet.isDestinationMACBased()) {
@@ -316,10 +315,10 @@ public class HC01Packeter implements IPPacketer {
   public void parsePacketData(IPv6Packet packet) {
     /* first two is ... */
     int pos = 2;
-    int enc0 = packet.getData(0);
-    int enc1 = packet.getData(1);
-    if ((enc0 & 0x40) == 0) {
-      if ((enc0 & 0x80) == 0) {
+    int enc1 = packet.getData(0);
+    int enc2 = packet.getData(1);
+    if ((enc1 & 0x40) == 0) {
+      if ((enc1 & 0x80) == 0) {
         packet.version = (packet.getData(pos) & 0xf0) >> 4;
       packet.trafficClass = ((packet.getData(pos) & 0x0f)<<4) + ((packet.getData(pos + 1) & 0xff) >> 4);
       packet.flowLabel = (packet.getData(pos + 1) & 0x0f) << 16 + (packet.getData(pos + 2) & 0xff) << 8 +
@@ -335,7 +334,7 @@ public class HC01Packeter implements IPPacketer {
     } else {
       packet.version = 6;
       packet.flowLabel = 0;
-      if ((enc0 & 0x80) == 0) {
+      if ((enc1 & 0x80) == 0) {
         packet.trafficClass = (packet.getData(pos) & 0xff);
         pos++;
       } else {
@@ -344,12 +343,12 @@ public class HC01Packeter implements IPPacketer {
     }
     
     /* next header not compressed -> get it */
-    if ((enc0 & 0x20) == 0) {
+    if ((enc1 & 0x20) == 0) {
       packet.nextHeader = packet.getData(pos++);
     }
     
     /* encoding of TTL */
-    switch (enc0 & 0x18) {
+    switch (enc1 & 0x18) {
     case IPHC_TTL_1:
       packet.hopLimit = 1;
       break;
@@ -365,9 +364,13 @@ public class HC01Packeter implements IPPacketer {
     }
 
     /* 0, 1, 2, 3 as source address ??? */
-    int srcAddress = (packet.getData(1) & 0x30) >> 4;
+    int srcAddress = (enc2 & 0x30) >> 4;
     AddrContext context = lookupContext(srcAddress);
-    switch (enc1 & 0xc0) {
+    if (DEBUG) {
+        System.out.println("HC01: uncompress (SRC) enc2 & c0 = " + (enc2 & 0xc0) +
+            " ctx =" + srcAddress);
+    }
+    switch (enc2 & 0xc0) {
     case IPHC_SAM_0:
       if(context == null) {
         System.out.println("sicslowpan uncompress_hdr: error context not found\n");
@@ -416,6 +419,7 @@ public class HC01Packeter implements IPPacketer {
       pos += 8;
       break;
     case IPHC_SAM_I:
+      if (DEBUG) System.out.println("HC01: full address used (SRC)");
       /* copy whole address from packet */
       packet.copy(pos, packet.sourceAddress, 0, 16);
       pos += 16;
@@ -423,9 +427,13 @@ public class HC01Packeter implements IPPacketer {
     }
 
     /* Destination address */
-    context = lookupContext(packet.getData(2) & 0x03);
-
-    switch(enc1 & 0x0C) {
+    context = lookupContext(enc2 & 0x03);
+    if (DEBUG) {
+      System.out.println("HC01: uncompress (DST) enc2 & 0x0c = " + (enc2 & 0x0c) +
+          " ctx =" + (enc2 & 0x03));
+    }
+  
+    switch(enc2 & 0x0C) {
     case IPHC_DAM_0:
       if(context == null) {
         System.out.println("sicslowpan uncompress_hdr: error context not found\n");
@@ -479,7 +487,7 @@ public class HC01Packeter implements IPPacketer {
       break;
     }
 
-    if ((enc0 & 0x20) != 0) {
+    if ((enc1 & 0x20) != 0) {
       /* The next header is compressed, NHC is following */
       if ((packet.getData(pos) & 0xfc) == NHC_UDP_ID) {
         System.out.println("HC01: Next header UDP!");
@@ -521,8 +529,8 @@ public class HC01Packeter implements IPPacketer {
     } else {
     }
 
-    System.out.println("Encoding 0: " + Utils.hex8(enc0) +
-        " Encoding 1: " + Utils.hex8(enc1));
+    System.out.println("Encoding 0: " + Utils.hex8(enc1) +
+        " Encoding 1: " + Utils.hex8(enc2));
 
     System.out.println("TTL: " + packet.hopLimit);
     System.out.print("Src Addr: ");
