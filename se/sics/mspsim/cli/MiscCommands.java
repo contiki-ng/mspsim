@@ -319,7 +319,8 @@ public class MiscCommands implements CommandBundle {
       CommandContext context;
       public int executeCommand(CommandContext context) {
         this.context = context;
-        listener = new CC2420PacketHandler();
+        MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+        listener = new CC2420PacketHandler(cpu);
         listener.setOutput(context.out);
         IEEE802154Handler ieeeHandler = new IEEE802154Handler();
         listener.addUpperLayerHandler(0, ieeeHandler);

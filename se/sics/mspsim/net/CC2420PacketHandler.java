@@ -41,8 +41,9 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
-
 import se.sics.mspsim.chip.RFListener;
+import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.Utils;
 
 public class CC2420PacketHandler extends AbstractPacketHandler implements RFListener {
@@ -62,6 +63,11 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
   int pos;
   int packetLen;
   int sfdSearch = 0;
+  
+  MSP430Core cpu;
+  public CC2420PacketHandler(MSP430Core cpu) {
+    this.cpu = cpu;
+  }
   
   public void receivedByte(byte data) {
     packetBuffer[pos++] = data;
@@ -117,6 +123,7 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
 
   
   public void sendPacket(Packet packet) {
+    final Packet sendPacket = packet;
     byte[] size = new byte[1];
     byte[] crc = new byte[2];
     size[0] = (byte) ((packet.getTotalLength() + 2)& 0xff);
@@ -126,14 +133,20 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
     byte[] data = packet.getBytes();
     System.out.println("Should send packet to radio!!!! " + packet.getTotalLength());
     // Stuff to send to radio!!!
-    System.out.println("CC2420: Packet to send: ");
-    byte[] buffer = packet.getBytes();
-    for (int i = 0; i < buffer.length; i++) {
-      System.out.printf("%02x", buffer[i]);
-      out.printf("%02x", buffer[i]);
-    }
-    /* send to output + two additional bytes...! */
-    out.println();
+    TimeEvent te = new TimeEvent(0) {
+      public void execute(long t) {
+        System.out.println("CC2420: Packet to send: ");
+        byte[] buffer = sendPacket.getBytes();
+        for (int i = 0; i < buffer.length; i++) {
+          System.out.printf("%02x", buffer[i]);
+          out.printf("%02x", buffer[i]);
+        }
+        /* send to output + two additional bytes...! */
+        out.println();
+      }
+    };
+    /* schedule packet delivery in 10 ms */
+    cpu.scheduleTimeEventMillis(te, 10);
   }
 
 

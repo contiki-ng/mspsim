@@ -85,7 +85,7 @@ public class IPStack {
   public void receivePacket(IPv6Packet packet) {
     System.out.println("IPv6 packet received!!!");
     packet.printPacket(System.out);
-    // do stuff!
+
     switch (packet.nextHeader) {
     case ICMP6Packet.DISPATCH:
       icmp6Handler.handlePacket(packet);
