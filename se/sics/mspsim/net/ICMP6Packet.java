@@ -1,6 +1,7 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
+import java.util.ArrayList;
 
 public class ICMP6Packet implements IPPayload {
 
@@ -23,6 +24,11 @@ public class ICMP6Packet implements IPPayload {
   public static final int ON_LINK = 0x80;
   public static final int AUTOCONFIG = 0x40;
 
+  public static final int SOURCE_LINKADDR = 1;
+  public static final int TARGET_LINKADDR = 2;
+  public static final int PREFIX_INFO = 3;
+  public static final int MTU_INFO = 5;
+  
   public static final String[] TYPE_NAME = new String[] {
     "ECHO_REQUEST", "ECHO_REPLY",
     "GROUP_QUERY", "GROUP_REPORT", "GROUP_REDUCTION",
@@ -43,25 +49,43 @@ public class ICMP6Packet implements IPPayload {
   int routerLifetime = 600; /* time in seconds for keeping the router as default */
   int reachableTime = 10000; /* time in millis when node still should be counted as reachable */
   int retransmissionTimer = 1000; /* time in millis between solicitations */
+  int mtuSize = 1280;
 
-  /* source link layer option - type = 1, len = 1 (64 bits) */
-  byte[] srcLinkOptionShort = new byte[] {1, 1, 0, 0, 0, 0, 0, 0};
-  byte[] srcLinkOptionLong = new byte[] {1, 2, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0};
+  private ArrayList<byte[]> options = new ArrayList<byte[]>();
+  
   /* prefix info option - type = 3, len = 4 (64x4 bits), prefix = 64 bits */
-  byte[] prefixInfo = new byte[] {3, 4, 64, (byte) (ON_LINK | AUTOCONFIG),
-        0, 0, 1, 0, /* valid lifetime - 256 seconds for now*/
-        0, 1, 0, 0, /* prefered lifetime - 65535 seconds lifetime of autoconf addr */
-        0, 0, 0, 0, /* reserved */
-        /* the prefix ... */
-        (byte)0xaa, (byte)0xaa, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
+  private final static byte[] defaultPrefixInfo = 
+    new byte[] {3, 4, 64, (byte) (ON_LINK | AUTOCONFIG),
+    0, 0, 1, 0, /* valid lifetime - 256 seconds for now*/
+    0, 1, 0, 0, /* prefered lifetime - 65535 seconds lifetime of autoconf addr */
+    0, 0, 0, 0, /* reserved */
+    /* the prefix ... */
+    (byte)0xaa, (byte)0xaa, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
   };
+
   /* default MTU is 1280 (5x256) which also is the smallest allowed */
   byte[] mtuOption = new byte[] {5, 1, 0, 0, 0, 0, 5, 0};
 
   void updateRA(IPStack stack) {
     byte[] llAddr = stack.getLinkLayerAddress();
-    System.arraycopy(llAddr, 0, srcLinkOptionLong, 2, llAddr.length);
+    byte[] srcLinkOptionLong = new byte[16];
+    srcLinkOptionLong[0] = SOURCE_LINKADDR;
+    srcLinkOptionLong[1] = 2;
+    System.arraycopy(llAddr, 0, srcLinkOptionLong, 2, llAddr.length);    
+    options.add(srcLinkOptionLong);
+    byte[] prefixInfo = new byte[defaultPrefixInfo.length];
+    System.arraycopy(defaultPrefixInfo, 0, prefixInfo, 0, defaultPrefixInfo.length);
+    options.add(prefixInfo);
+    options.add(mtuOption);
+  }
+  
+  public byte[] getOption(int type) {
+    for (int i = 0; i < options.size(); i++) {
+      if (options.get(i)[0] == type) {
+        return options.get(i);
+      }
+    }
+    return null;
   }
   
   public void printPacket(PrintStream out) {
@@ -80,6 +104,7 @@ public class ICMP6Packet implements IPPayload {
       out.println();
     }
     if (type == ROUTER_ADVERTISEMENT) {
+      byte[] prefixInfo = getOption(PREFIX_INFO);
       int bits = prefixInfo[2];
       int bytes = bits / 8;
       out.print("RA Prefix: ");
@@ -88,6 +113,13 @@ public class ICMP6Packet implements IPPayload {
         if ((i & 1) == 1) out.print(":");
       }
       out.println("/" + bits);
+      byte[] srcLink = getOption(SOURCE_LINKADDR);
+      if (srcLink != null) {
+        /* assuming 8 bytes for the mac ??? */
+        System.out.print("Source Link: ");
+        IPv6Packet.printMACAddress(out, srcLink, 2, 8);
+        System.out.println();
+      }
     }
     /* ICMP can not have payload ?! */
   }
@@ -115,6 +147,16 @@ public class ICMP6Packet implements IPPayload {
         targetAddress = new byte[16];
         packet.copy(8, targetAddress, 0, 16);
         break;
+      case ROUTER_SOLICITATION:
+        break;
+      case ROUTER_ADVERTISEMENT:
+        hopLimit = packet.getData(4);
+        autoConfigFlags = packet.getData(5);
+        routerLifetime = packet.get16(6);
+        reachableTime = packet.get32(8);
+        retransmissionTimer = packet.get32(12);
+        handleOptions(packet, 16);
+        break;
       }
 
       byte[] data = packet.getPayload();
@@ -130,6 +172,20 @@ public class ICMP6Packet implements IPPayload {
     }
   }
 
+  /* create generic options array instead... */
+  private void handleOptions(IPv6Packet packet, int pos) {
+    int size = packet.getPayloadLength();
+    System.out.println("ICMPv6 Options: total size: " + size + " pos: " + pos);
+    while (pos < size) {
+      int type = packet.getData(pos);
+      int oSize = (packet.getData(pos + 1) & 0xff) * 8;
+      byte[] option = new byte[oSize];
+      packet.copy(pos, option, 0, oSize);
+      options.add(option);
+      pos += oSize;
+    }
+  }
+  
   @Override
   public byte[] generatePacketData(IPv6Packet packet) {
     byte[] buffer = new byte[127];
@@ -165,12 +221,11 @@ public class ICMP6Packet implements IPPayload {
       IPv6Packet.set32(buffer, pos, retransmissionTimer);
       pos += 4;
       /* add options */
-      System.arraycopy(srcLinkOptionLong, 0, buffer, pos, srcLinkOptionLong.length);
-      pos += mtuOption.length;
-      System.arraycopy(mtuOption, 0, buffer, pos, mtuOption.length);
-      pos += mtuOption.length;
-      System.arraycopy(prefixInfo, 0, buffer, pos, prefixInfo.length);
-      pos += prefixInfo.length;
+      for (int i = 0; i < options.size(); i++) {
+        byte[] option = options.get(i);
+        System.arraycopy(option, 0, buffer, pos, option.length);
+        pos += option.length;
+      }
       break;
     }
 

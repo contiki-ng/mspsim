@@ -223,4 +223,13 @@ public class IPv6Packet extends Packet implements IPPacketer {
     ipPayload = ipp;
     nextHeader = ipp.getDispatch();
   }
+
+  public static void printMACAddress(PrintStream out, byte[] data,
+      int pos, int size) {
+    for (int i = 0; i < size; i++) {
+      out.printf("%02x", data[i + pos]);
+      if (i < size - 1)
+        out.print(":");
+    }
+  }
 }
