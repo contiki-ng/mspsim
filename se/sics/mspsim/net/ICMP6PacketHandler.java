@@ -44,9 +44,12 @@ public class ICMP6PacketHandler {
       ipp = new IPv6Packet();
       ipp.setIPPayload(p);
       // is this ok?
-      ipp.destAddress = packet.sourceAddress;
+      //ipp.destAddress = packet.sourceAddress;
+      ipp.destAddress = IPStack.ALL_NODES; //packet.sourceAddress;
+      ipp.sourceAddress = ipStack.myLocalIPAddress;
       System.out.print("Created ICMP6 RA for ");
       IPv6Packet.printAddress(System.out, ipp.destAddress);
+      
       ipStack.sendPacket(ipp);
       break;
     }

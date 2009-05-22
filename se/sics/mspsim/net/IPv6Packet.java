@@ -44,7 +44,7 @@ package se.sics.mspsim.net;
 import java.io.PrintStream;
 
 /**
- * @author joakim
+ * @author Joakim Eriksson, SICS
  *
  */
 public class IPv6Packet extends Packet implements IPPacketer {
@@ -66,6 +66,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
   public IPv6Packet() {
     version = 6;
     flowLabel = 0;
+    hopLimit = 255;
   }
   
   public IPv6Packet(Packet packet) {
@@ -125,8 +126,8 @@ public class IPv6Packet extends Packet implements IPPacketer {
     packet.incPos(40);
   }
 
-  public static void set32(byte[] data, int pos, int value) {
-    data[pos++] = (byte) ((value >> 32) & 0xff);
+  public static void set32(byte[] data, int pos, long value) {
+    data[pos++] = (byte) ((value >> 24) & 0xff);
     data[pos++] = (byte) ((value >> 16) & 0xff);
     data[pos++] = (byte) ((value >> 8) & 0xff);
     data[pos++] = (byte) (value & 0xff);
@@ -195,8 +196,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
   }
 
   public boolean isMulticastDestination() {
-    // TODO Auto-generated method stub
-    return false;
+    return (destAddress[0] == (byte)0xff);
   }
 
   /* how can we check this before we know the MAC address??? */

@@ -41,6 +41,7 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
+import java.util.Arrays;
 
 public class IEEE802154Handler extends AbstractPacketHandler {
 
@@ -61,9 +62,13 @@ public class IEEE802154Handler extends AbstractPacketHandler {
   
   public static final int SHORT_ADDRESS = 2;
   public static final int LONG_ADDRESS = 3;
+
+  private static final byte[] BROADCAST_ADDR = {(byte)0xff, (byte)0xff};
   
   private int defaultAddressMode = LONG_ADDRESS;
   private byte seqNo = 0;
+
+  private int myPanID = 0xabcd;
   
   /* create a 802.15.4 packet of the bytes and "dispatch" to the
    * next handler
@@ -145,6 +150,7 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     System.out.println("Packet should be sent!!!");
     byte[] buffer = new byte[127];
     int pos = 0;
+    int destPanID = 0xabcd;
     /* construct a default packet... needs fixing later */
     /* no security, no compression, etc */
     buffer[0] = DATAFRAME;
@@ -152,28 +158,33 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     int destMode = defaultAddressMode;
     int srcMode = defaultAddressMode;
     int frameVersion = 0;
+
+    if (Arrays.equals(packet.getLinkDestination(), BROADCAST_ADDR)) {
+      destMode = SHORT_ADDRESS;
+      destPanID = 0xffff;
+    }
     
     buffer[1] = (byte)((destMode << 2) |
-      (frameVersion << 4) | (srcMode << 6));
+        (frameVersion << 4) | (srcMode << 6));
     buffer[2] = seqNo++;
     
     pos = 3;
-    /* hardcoded PAN */
-    buffer[pos++] = (byte) 0xcd;
-    buffer[pos++] = (byte) 0xab;
+    /* Destination PAN */
+    buffer[pos++] = (byte) (destPanID & 0xff);
+    buffer[pos++] = (byte) (destPanID >> 8);
 
     byte[] dest = packet.getLinkDestination();
     for (int i = 0; i < dest.length; i++) {
       buffer[pos++] = dest[dest.length - i - 1];
     }
 
-    /* hardcoded PAN */
-    buffer[pos++] = (byte) 0xcd;
-    buffer[pos++] = (byte) 0xab;
+    /* Source PAN */
+    buffer[pos++] = (byte) (myPanID & 0xff);
+    buffer[pos++] = (byte) (myPanID >> 8);
 
     byte[] src  = packet.getLinkSource();
-    for (int i = 0; i < dest.length; i++) {
-      buffer[pos++] = src[dest.length - i - 1];
+    for (int i = 0; i < src.length; i++) {
+      buffer[pos++] = src[src.length - i - 1];
     }
 
     byte[] pHeader = new byte[pos];

@@ -44,7 +44,7 @@ public class ICMP6Packet implements IPPayload {
 
   int flags;
 
-  byte hopLimit = (byte) 255;
+  byte hopLimit = (byte) 128;
   byte autoConfigFlags;
   int routerLifetime = 600; /* time in seconds for keeping the router as default */
   int reachableTime = 10000; /* time in millis when node still should be counted as reachable */
@@ -71,12 +71,13 @@ public class ICMP6Packet implements IPPayload {
     byte[] srcLinkOptionLong = new byte[16];
     srcLinkOptionLong[0] = SOURCE_LINKADDR;
     srcLinkOptionLong[1] = 2;
-    System.arraycopy(llAddr, 0, srcLinkOptionLong, 2, llAddr.length);    
-    options.add(srcLinkOptionLong);
+    System.arraycopy(llAddr, 0, srcLinkOptionLong, 2, llAddr.length);
+    options.clear();
     byte[] prefixInfo = new byte[defaultPrefixInfo.length];
     System.arraycopy(defaultPrefixInfo, 0, prefixInfo, 0, defaultPrefixInfo.length);
     options.add(prefixInfo);
     options.add(mtuOption);
+    options.add(srcLinkOptionLong);
   }
   
   public byte[] getOption(int type) {
@@ -104,6 +105,12 @@ public class ICMP6Packet implements IPPayload {
       out.println();
     }
     if (type == ROUTER_ADVERTISEMENT) {
+      System.out.println("ICMPv6 Route Advertisement");
+      System.out.println("  Hop Limit: " + (hopLimit & 0xff));
+      System.out.println("  autoConfig: " + (autoConfigFlags & 0xff));
+      System.out.println("  routerLifeTime: " + routerLifetime + " (sec)");
+      System.out.println("  reachableTime: " + reachableTime + " (msec)");
+      System.out.println("  retransmissionTimer: " + retransmissionTimer + " (msec)");
       byte[] prefixInfo = getOption(PREFIX_INFO);
       int bits = prefixInfo[2];
       int bytes = bits / 8;
@@ -179,6 +186,8 @@ public class ICMP6Packet implements IPPayload {
     while (pos < size) {
       int type = packet.getData(pos);
       int oSize = (packet.getData(pos + 1) & 0xff) * 8;
+      System.out.println("Handling option: " + type + " size " + oSize);
+      if (oSize == 0) return;
       byte[] option = new byte[oSize];
       packet.copy(pos, option, 0, oSize);
       options.add(option);
@@ -214,7 +223,7 @@ public class ICMP6Packet implements IPPayload {
     case ROUTER_ADVERTISEMENT:
       buffer[pos++] = hopLimit;
       buffer[pos++] = autoConfigFlags;
-      buffer[pos++] = (byte) (routerLifetime >> 8);
+      buffer[pos++] = (byte) ((routerLifetime >> 8) & 0xff);
       buffer[pos++] = (byte) (routerLifetime & 0xff);
       IPv6Packet.set32(buffer, pos, reachableTime);
       pos += 4;
@@ -223,6 +232,8 @@ public class ICMP6Packet implements IPPayload {
       /* add options */
       for (int i = 0; i < options.size(); i++) {
         byte[] option = options.get(i);
+        System.out.println("Adding option: " + option[0] + " len: " + option[1] +
+            "/" + option.length + " at " + pos);
         System.arraycopy(option, 0, buffer, pos, option.length);
         pos += option.length;
       }
