@@ -18,6 +18,22 @@ public class ICMP6PacketHandler {
     ICMP6Packet p;
     IPv6Packet ipp;
     switch (icmpPacket.type) {
+    case ICMP6Packet.ECHO_REQUEST:
+      p = new ICMP6Packet();
+      p.type = ICMP6Packet.ECHO_REPLY;
+      p.seqNo = icmpPacket.seqNo;
+      p.id = icmpPacket.id;
+
+      ipp = new IPv6Packet();
+      ipp.setIPPayload(p);
+      // is this ok?
+      ipp.destAddress = packet.sourceAddress;
+      ipp.sourceAddress = ipStack.myLocalIPAddress;
+      ipStack.sendPacket(ipp);
+      break;
+    case ICMP6Packet.ECHO_REPLY:
+      System.out.println("ICMP6 got echo reply!!");
+      break;      
     case ICMP6Packet.NEIGHBOR_SOLICITATION:
       p = new ICMP6Packet();
       p.targetAddress = icmpPacket.targetAddress;
@@ -33,28 +49,31 @@ public class ICMP6PacketHandler {
       ipp.setIPPayload(p);
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
+      ipp.sourceAddress = ipStack.myLocalIPAddress;
       ipStack.sendPacket(ipp);
       break;
     case ICMP6Packet.ROUTER_SOLICITATION:
-      p = new ICMP6Packet();
-      p.targetAddress = icmpPacket.targetAddress;
-      p.type = ICMP6Packet.ROUTER_ADVERTISEMENT;
-      p.flags = ICMP6Packet.FLAG_SOLICITED |
+      if (ipStack.isRouter()) {
+        p = new ICMP6Packet();
+        p.targetAddress = icmpPacket.targetAddress;
+        p.type = ICMP6Packet.ROUTER_ADVERTISEMENT;
+        p.flags = ICMP6Packet.FLAG_SOLICITED |
         ICMP6Packet.FLAG_OVERRIDE;
 
-      /* ensure that the RA is updated... */
-      p.updateRA(ipStack);
-      
-      ipp = new IPv6Packet();
-      ipp.setIPPayload(p);
-      // is this ok?
-      //ipp.destAddress = packet.sourceAddress;
-      ipp.destAddress = IPStack.ALL_NODES; //packet.sourceAddress;
-      ipp.sourceAddress = ipStack.myLocalIPAddress;
-      System.out.print("Created ICMP6 RA for ");
-      IPv6Packet.printAddress(System.out, ipp.destAddress);
-      
-      ipStack.sendPacket(ipp);
+        /* ensure that the RA is updated... */
+        p.updateRA(ipStack);
+
+        ipp = new IPv6Packet();
+        ipp.setIPPayload(p);
+        // is this ok?
+        //ipp.destAddress = packet.sourceAddress;
+        ipp.destAddress = IPStack.ALL_NODES; //packet.sourceAddress;
+        ipp.sourceAddress = ipStack.myLocalIPAddress;
+        System.out.print("Created ICMP6 RA for ");
+        IPv6Packet.printAddress(System.out, ipp.destAddress);
+
+        ipStack.sendPacket(ipp);
+      }
       break;
     }
   }

@@ -153,6 +153,7 @@ public class ICMP6Packet implements IPPayload {
       case ECHO_REPLY:
         id = packet.get16(4);
         seqNo = packet.get16(6);
+        handleOptions(packet, 8);
         break;
       case NEIGHBOR_SOLICITATION:
       case NEIGHBOR_ADVERTISEMENT:
@@ -218,6 +219,7 @@ public class ICMP6Packet implements IPPayload {
       buffer[pos++] = (byte) (id & 0xff);
       buffer[pos++] = (byte) (seqNo >> 8);
       buffer[pos++] = (byte) (seqNo & 0xff);
+      pos = addOptions(buffer, pos);
       break;
     case NEIGHBOR_SOLICITATION:
     case NEIGHBOR_ADVERTISEMENT:
