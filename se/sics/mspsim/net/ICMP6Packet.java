@@ -3,6 +3,8 @@ package se.sics.mspsim.net;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
+import sun.awt.geom.AreaOp.AddOp;
+
 public class ICMP6Packet implements IPPayload {
 
   public static final int DISPATCH = 58;
@@ -68,16 +70,25 @@ public class ICMP6Packet implements IPPayload {
 
   void updateRA(IPStack stack) {
     byte[] llAddr = stack.getLinkLayerAddress();
-    byte[] srcLinkOptionLong = new byte[16];
-    srcLinkOptionLong[0] = SOURCE_LINKADDR;
-    srcLinkOptionLong[1] = 2;
-    System.arraycopy(llAddr, 0, srcLinkOptionLong, 2, llAddr.length);
     options.clear();
     byte[] prefixInfo = new byte[defaultPrefixInfo.length];
     System.arraycopy(defaultPrefixInfo, 0, prefixInfo, 0, defaultPrefixInfo.length);
     options.add(prefixInfo);
     options.add(mtuOption);
-    options.add(srcLinkOptionLong);
+    addLinkOption(SOURCE_LINKADDR, llAddr);
+  }
+  
+  void addLinkOption(int type, byte[] llAddr) {
+    byte[] opt;
+    if (llAddr.length > 6) {
+      opt = new byte[16];
+    } else {
+      opt = new byte[8];
+    }
+    opt[0] = (byte) type;
+    opt[1] = (byte) (opt.length / 8);
+    System.arraycopy(llAddr, 0, opt, 2, llAddr.length);    
+    options.add(opt);
   }
   
   public byte[] getOption(int type) {
@@ -153,6 +164,7 @@ public class ICMP6Packet implements IPPayload {
         }
         targetAddress = new byte[16];
         packet.copy(8, targetAddress, 0, 16);
+        handleOptions(packet, 24);
         break;
       case ROUTER_SOLICITATION:
         break;
@@ -219,6 +231,7 @@ public class ICMP6Packet implements IPPayload {
       for (int i = 0; i < targetAddress.length; i++) {
         buffer[pos++] = targetAddress[i];
       }
+      pos = addOptions(buffer, pos);
       break;
     case ROUTER_ADVERTISEMENT:
       buffer[pos++] = hopLimit;
@@ -230,13 +243,7 @@ public class ICMP6Packet implements IPPayload {
       IPv6Packet.set32(buffer, pos, retransmissionTimer);
       pos += 4;
       /* add options */
-      for (int i = 0; i < options.size(); i++) {
-        byte[] option = options.get(i);
-        System.out.println("Adding option: " + option[0] + " len: " + option[1] +
-            "/" + option.length + " at " + pos);
-        System.arraycopy(option, 0, buffer, pos, option.length);
-        pos += option.length;
-      }
+      pos = addOptions(buffer, pos);
       break;
     }
 
@@ -258,6 +265,17 @@ public class ICMP6Packet implements IPPayload {
     return packetData;
   }
 
+  private int addOptions(byte[] buffer, int pos) {
+    for (int i = 0; i < options.size(); i++) {
+      byte[] option = options.get(i);
+      System.out.println("Adding option: " + option[0] + " len: " + option[1] +
+          "/" + option.length + " at " + pos);
+      System.arraycopy(option, 0, buffer, pos, option.length);
+      pos += option.length;
+    }
+    return pos;
+  }
+  
   @Override
   public byte getDispatch() {
     return DISPATCH;

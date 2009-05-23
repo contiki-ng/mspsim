@@ -21,10 +21,14 @@ public class ICMP6PacketHandler {
     case ICMP6Packet.NEIGHBOR_SOLICITATION:
       p = new ICMP6Packet();
       p.targetAddress = icmpPacket.targetAddress;
-      p.type = ICMP6Packet.NEIGHBOR_ADVERTISEMENT;
+      p.type = ICMP6Packet.NEIGHBOR_ADVERTISEMENT;      
       p.flags = ICMP6Packet.FLAG_SOLICITED |
-        ICMP6Packet.FLAG_OVERRIDE;
-
+      ICMP6Packet.FLAG_OVERRIDE;
+      if (ipStack.isRouter()) {
+        p.flags |= ICMP6Packet.FLAG_ROUTER;
+      }
+        /* always send the linkaddr option */
+      p.addLinkOption(ICMP6Packet.TARGET_LINKADDR, ipStack.getLinkLayerAddress());
       ipp = new IPv6Packet();
       ipp.setIPPayload(p);
       // is this ok?

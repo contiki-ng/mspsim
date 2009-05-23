@@ -74,6 +74,9 @@ public class IPStack {
   private PacketHandler linkLayerHandler;
   private IPPacketer defaultPacketer = new HC01Packeter();
   private ICMP6PacketHandler icmp6Handler;
+
+  /* is router -> router behavior */
+  private boolean isRouter = true;
   
   /* this needs to be generalized later... and down to lowpan too... */
   //private HC01Packeter ipPacketer = new HC01Packeter();
@@ -197,5 +200,9 @@ public class IPStack {
         ieeeHandler.packetReceived(packet);
       }
     }
+  }
+
+  public boolean isRouter() {
+    return isRouter ;
   }
 }
