@@ -1,9 +1,6 @@
 package se.sics.mspsim.net;
-
 import java.io.PrintStream;
 import java.util.ArrayList;
-
-import sun.awt.geom.AreaOp.AddOp;
 
 public class ICMP6Packet implements IPPayload {
 
