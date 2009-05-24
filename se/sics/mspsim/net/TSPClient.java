@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TSPClient {
+public class TSPClient implements NetworkInterface {
 
   public static final int DEFAULT_PORT = 3653;
   private static final byte[] VERSION = "VERSION=2.0.0\r\n".getBytes();
@@ -17,13 +17,14 @@ public class TSPClient {
   private static final byte[] AUTH_ANON = "AUTHENTICATE ANONYMOUS\r\b".getBytes();
   enum WriterState {WAIT, STARTED, CAPABILITIES_RECEIVED, AUTHENTICATE_REQ_OK,
     TUNNEL_CONF_RECEIVED, TUNNEL_UP};
-  enum ReaderState {CAP_EXPECTED, AUTH_OK_EXPECTED, TUNNEL_CONF_EXPECTED, 
+  enum ReaderState {CAP_EXPECTED, AUTH_ACK_EXPECTED, AUTH_OK_EXPECTED, TUNNEL_CONF_EXPECTED, 
     TUNNEL_UP};
 
   private static final Pattern prefixPattern = 
     Pattern.compile("(?m).+?<prefix (.+?)>(.+?)</prefix>");
     
-    
+  private IPStack ipStack;
+  
   WriterState writerState = WriterState.STARTED;
   ReaderState readerState = ReaderState.CAP_EXPECTED;
   
@@ -35,8 +36,16 @@ public class TSPClient {
   
   private String user;
   private String password;
+  private boolean userLoggedIn = false;
   
   public TSPClient(String host) throws SocketException, UnknownHostException {
+    this(host, null, null);
+  }
+  
+  public TSPClient(String host, String user, String password) throws SocketException, UnknownHostException {
+    this.user = user;
+    this.password = password;
+ 
     connection = new DatagramSocket();
     serverAddr = InetAddress.getByName(host);
     //connection.connect(serverAddr, DEFAULT_PORT);
@@ -67,6 +76,18 @@ public class TSPClient {
     new Thread(reader).start(); 
   }
   
+  public String getName() {
+    return "tsp";
+  }
+  
+  public void setIPStack(IPStack ipStack) {
+    this.ipStack = ipStack;
+  }
+  
+  public boolean isReady() {
+    return writerState == WriterState.TUNNEL_UP;
+  }
+  
   int wWait = 0;
   private void writer() throws IOException, InterruptedException {
    System.out.println("Writer started. sending version...");
@@ -87,18 +108,22 @@ public class TSPClient {
        System.out.println("Writer: sending AUTH");
        if (user == null) {
          sendPacket(AUTH_ANON);
+         setReaderState(ReaderState.AUTH_OK_EXPECTED, WriterState.WAIT);
        } else {
          sendPacket(AUTH_PLAIN);
+         setReaderState(ReaderState.AUTH_ACK_EXPECTED, WriterState.WAIT);
        }
-       setReaderState(ReaderState.AUTH_OK_EXPECTED, WriterState.WAIT);
        break;
      case AUTHENTICATE_REQ_OK:
-       if (user == null) {
+       if (user == null || userLoggedIn) {
          sendTunnelReq();
+         setReaderState(ReaderState.TUNNEL_CONF_EXPECTED, WriterState.WAIT);
        } else {
          // send login with user/pass!!!
+         sendAuth();
+         userLoggedIn = true;
+         setReaderState(ReaderState.AUTH_OK_EXPECTED, WriterState.WAIT);
        }
-       setReaderState(ReaderState.TUNNEL_CONF_EXPECTED, WriterState.WAIT);
        break;
      case TUNNEL_CONF_RECEIVED:
        String accept = "<tunnel action=\"accept\"></tunnel>\r\n";
@@ -106,6 +131,7 @@ public class TSPClient {
        sendPacket(accept.getBytes());
        System.out.println("*** Tunnel UP!");
        setReaderState(ReaderState.TUNNEL_UP, WriterState.TUNNEL_UP);
+       notifyReady();
        break;
      case TUNNEL_UP:
        /* all ok - do nothing but sleep.*/
@@ -117,15 +143,28 @@ public class TSPClient {
      }
    }
   }
+  
+  private synchronized void notifyReady() {
+    notifyAll();
+  }
 
+  private void sendAuth() throws IOException {
+    String auth = "\0" + user + "\0" + password + "\r\n";
+    sendPacket(auth.getBytes());
+  }
+  
   private void sendTunnelReq() throws IOException {
     InetAddress myAddr = InetAddress.getLocalHost();
     byte[] addr = myAddr.getAddress();
     String myAddress = String.format("%d.%d.%d.%d",
         addr[0] & 0xff, addr[1] & 0xff, addr[2] & 0xff, addr[3] & 0xff);
+    String router = "";
+    if (user != null) {
+      router = "<router><prefix length=\"64\"/></router>";
+    }
     String tunnelConf =
       "<tunnel action=\"create\" type=\"v6udpv4\"><client><address type=\"ipv4\">" +
-      myAddress + "</address><keepalive interval=\"30\"></keepalive>" +
+      myAddress + "</address><keepalive interval=\"30\"></keepalive>" + router +
       "</client></tunnel>\r\n";
     tunnelConf = "Content-length: " + tunnelConf.length() + "\r\n" +
       tunnelConf;
@@ -161,7 +200,11 @@ public class TSPClient {
       case CAP_EXPECTED:
         writerState = WriterState.CAPABILITIES_RECEIVED;
         break;
+      case AUTH_ACK_EXPECTED:
+        writerState = WriterState.AUTHENTICATE_REQ_OK;
+        break;
       case AUTH_OK_EXPECTED:
+        // Check if auth is really ok!!!
         writerState = WriterState.AUTHENTICATE_REQ_OK;
         break;
       case TUNNEL_CONF_EXPECTED:
@@ -169,17 +212,43 @@ public class TSPClient {
           Matcher m = prefixPattern.matcher(sData);
           if (m.find()) {
             System.out.println("Prefix: " + m.group(2) + " arg:" + m.group(1)); 
+            if (ipStack != null) {
+              byte[] prefix = getPrefix(m.group(2));
+              /* this is hardcoded for 64 bits for now */
+              ipStack.setPrefix(prefix, 64);
+            }
           }
         }
         writerState = WriterState.TUNNEL_CONF_RECEIVED;
         break;
       case TUNNEL_UP:
         System.out.println("*** Tunneled packet received!!!");
+        if (ipStack != null) {
+          IPv6Packet packet = new IPv6Packet();
+          packet.setBytes(data, 0, receiveP.getLength());
+          packet.parsePacketData(packet);
+          packet.netInterface = this;
+          ipStack.receivePacket(packet);
+        }
         break;
       }
     }
   }
-  
+
+  // handles format XXXX:XXXX:XXXX ...
+  private byte[] getPrefix(String prefix) {
+    prefix = prefix.trim();
+    String[] parts = prefix.split(":");
+    // each XXXX should be two bytes...
+    byte[] prefixBytes = new byte[parts.length * 2];
+    for (int i = 0; i < parts.length; i++) {
+      System.out.println("## Parsing: " + parts[i]);
+      int val = Integer.parseInt(parts[i], 16);
+      prefixBytes[i * 2] = (byte) (val >> 8);
+      prefixBytes[i * 2 + 1] = (byte) (val & 0xff);    
+    }
+    return prefixBytes;
+  }
 
   private void sendPacket(byte[] packetData) throws IOException {
     byte[] pData = new byte[8 + packetData.length];
@@ -203,6 +272,21 @@ public class TSPClient {
         new String(packetData));
     
   }
+
+  
+  public void sendPacket(IPv6Packet packet) {
+    byte[] data = packet.generatePacketData(packet);
+    System.out.println("Sending IPv6Packet on tunnel: " + data);
+    System.out.print("Packet: ");
+    packet.printPacket(System.out);
+    System.out.println();
+    try {
+      sendPacket(data);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
   
   
   public static void main(String[] args) throws UnknownHostException, IOException {
@@ -229,7 +313,21 @@ public class TSPClient {
 //     System.out.println("No match"); 
 //    }
 //    
-    
-    TSPClient tspc = new TSPClient(args[0]);
+    if (args.length == 1) {
+      TSPClient tspc = new TSPClient(args[0]);
+    } else if (args.length == 3) {
+      TSPClient tspc = new TSPClient(args[0], args[1], args[2]);      
+    }
+  }
+
+  public synchronized boolean waitSetup() {
+    if (!isReady()) {
+      try {
+        wait(1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    return isReady();
   }
 }

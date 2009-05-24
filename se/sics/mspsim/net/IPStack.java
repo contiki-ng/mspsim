@@ -46,9 +46,10 @@ package se.sics.mspsim.net;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
-import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.util.Utils;
 
 public class IPStack {
@@ -56,7 +57,9 @@ public class IPStack {
   public static final byte[] ALL_NODES = {(byte) 0xff, 0x02, 0, 0, 0, 0, 0, 0,
        0, 0, 0, 0, 0, 0, 0, 1};
   public static final byte[] ALL_ROUTERS = {(byte) 0xff, 0x02, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 1};
+    0, 0, 0, 0, 0, 0, 0, 2};
+  public static final byte[] UNSPECIFIED = {(byte) 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0};
   
   byte[] prefix = null;
   int prefixSize = 0;
@@ -77,15 +80,34 @@ public class IPStack {
 
   /* is router -> router behavior */
   private boolean isRouter = true;
+
+  private IPPacketer tunnelPacketer = new IPv6Packet();
+  private TSPClient tunnel;
   
   /* this needs to be generalized later... and down to lowpan too... */
   //private HC01Packeter ipPacketer = new HC01Packeter();
-  
+
+  // TODO: read from configfile...
+
   public IPStack() {
     icmp6Handler = new ICMP6PacketHandler(this);
     prefix = new byte[] {(byte) 0xaa, (byte)0xaa, 0, 0, 0, 0, 0, 0};
     prefixSize = 64; /* link size */
     configureIPAddress();
+  }
+
+  public boolean startTSPTunnel(String server, String user, String password) {
+    try {
+      tunnel = new TSPClient(server, user, password);
+      tunnel.setIPStack(this);
+      tunnel.waitSetup();
+      return tunnel.isReady();
+    } catch (SocketException e) {
+      e.printStackTrace();
+    } catch (UnknownHostException e) {
+      e.printStackTrace();
+    }
+    return false;
   }
 
   public void setLinkLayerHandler(PacketHandler handler) {
@@ -98,6 +120,22 @@ public class IPStack {
     configureIPAddress();
   }
   
+  public boolean isOnLink(byte[] address) {
+    /* bc or link local */
+    if (address[0] == ((byte) 0xff) || (address[0] == ((byte) 0xfe) &&
+        address[1] == ((byte)0x80))) {
+      return true;
+    }
+
+    /* unspecified - on link ?? */
+    if (Arrays.equals(UNSPECIFIED, address)) return true;
+    /* prefix match? */
+    for (int i = 0; i < prefixSize / 8; i++) {
+      if (address[i] != prefix[i]) return false;
+    }
+    return true;
+  }
+  
   public void configureIPAddress() {
     if (prefix != null) {
       System.arraycopy(prefix, 0, myIPAddress, 0, prefixSize / 8);
@@ -107,6 +145,9 @@ public class IPStack {
     }
     /* autoconfig ?? */
     myLocalIPAddress[8] = myIPAddress[8] = (byte) (myIPAddress[8] ^ 0x02);
+    
+    System.out.println("***** Prefix Set / IP address: ");
+    IPv6Packet.printAddress(System.out, myIPAddress);
   }
   
   private boolean findRoute(IPv6Packet packet) {
@@ -135,24 +176,74 @@ public class IPStack {
     macAddr[0] = (byte) (macAddr[0] ^ 0x02);
   }
   
-  public void sendPacket(IPv6Packet packet) {
+  /* send a packet - can be bound for specific interface */
+  public void sendPacket(IPv6Packet packet, NetworkInterface nIf) {
     /* find route checks if there are link addr, and otherwise sets them */
-    if (findRoute(packet)) {
-      linkLayerHandler.sendPacket(packet);
+    if (nIf == linkLayerHandler ||
+        (nIf == null) && isOnLink(packet.getDestinationAddress())) {
+      if (findRoute(packet)) {
+        linkLayerHandler.sendPacket(packet);
+      }
+    } else {
+      System.out.println("*** Should go out on tunnel: ");
+      System.out.print("MyAddress: ");
+      IPv6Packet.printAddress(System.out, myIPAddress);
+      System.out.print(", Dest: ");
+      IPv6Packet.printAddress(System.out, packet.getDestinationAddress());
+      if (tunnel.isReady()) {
+        tunnel.sendPacket(packet);
+      }
     }
   }
   
   public void receivePacket(IPv6Packet packet) {
-    System.out.println("IPv6 packet received!!!");
+    System.out.println("IPv6 packet received!");
     packet.printPacket(System.out);
 
-    switch (packet.nextHeader) {
-    case ICMP6Packet.DISPATCH:
-      icmp6Handler.handlePacket(packet);
-      break;
+    if (!isOnLink(packet.getDestinationAddress()) &&
+        packet.netInterface != tunnel) {
+      System.out.println("**** Should go out on tunnel!!!!");
+      if (packet.ipPayload == null) {
+        packet.setIPPayload(new BytePayload(packet));
+      }
+      /* will this work ??? */
+      System.out.print("MyAddress: ");
+      IPv6Packet.printAddress(System.out, myIPAddress);
+      System.out.print(", Dest: ");
+      IPv6Packet.printAddress(System.out, packet.getDestinationAddress());
+      if (tunnel.isReady()) {
+        tunnel.sendPacket(packet);
+      }
+    } else if (isForMe(packet.getDestinationAddress())){
+      System.out.println("#### PACKET FOR ME!!!");
+      switch (packet.nextHeader) {
+      case ICMP6Packet.DISPATCH:
+        icmp6Handler.handlePacket(packet);
+        break;
+      }
+    } else if (packet.netInterface != linkLayerHandler) {
+      /* Can not be from link layer (default) -- */
+      /* if HC01 - we need to handle UDP at least... */
+      System.out.println("#### PACKET FOR: " + packet.getDestinationAddress() + " sent to link");
+      if (packet.ipPayload == null) {
+        packet.setIPPayload(new BytePayload(packet));
+        if (findRoute(packet)) {
+          linkLayerHandler.sendPacket(packet);
+        }
+      }
     }
   }
-    
+
+  /* is the packet for me ? */
+  private boolean isForMe(byte[] address) {
+    if (Arrays.equals(myIPAddress, address) ||
+        Arrays.equals(myLocalIPAddress, address)) return true;
+    if (isRouter && Arrays.equals(ALL_ROUTERS, address)) return true;
+    if (Arrays.equals(ALL_NODES, address)) return true;
+    if (Arrays.equals(UNSPECIFIED, address)) return true;
+    return false;
+  }
+  
   public void setLinkLayerAddress(byte[] addr) {
     myLinkAddress = addr;
   }

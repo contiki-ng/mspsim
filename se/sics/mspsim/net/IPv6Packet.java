@@ -43,6 +43,8 @@ package se.sics.mspsim.net;
 
 import java.io.PrintStream;
 
+import se.sics.mspsim.util.Utils;
+
 /**
  * @author Joakim Eriksson, SICS
  *
@@ -50,6 +52,7 @@ import java.io.PrintStream;
 public class IPv6Packet extends Packet implements IPPacketer {
 
   public static final int ICMP6_DISPATCH = 58;
+  public static final boolean DEBUG = true;
   
   int version;
   int trafficClass;
@@ -62,6 +65,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
   int ipLen = 0;
   int payloadLen = 0;
   IPPayload ipPayload;
+  public NetworkInterface netInterface;
   
   public IPv6Packet() {
     version = 6;
@@ -107,8 +111,13 @@ public class IPv6Packet extends Packet implements IPPacketer {
   }
 
   /* this is for setting raw packet data */
+//TODO: should not take an argument here??? it should parse its own
+// data array???  
   public void parsePacketData(IPv6Packet packet) {
     version = (packet.getData(0) & 0xff) >> 4;
+    if (DEBUG) {
+      System.out.println("IPv6Packet: version: " + version);
+    }
     if (version != 6) {
       return;
     }
@@ -119,7 +128,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
     packet.getData(3) & 0xff;
     payloadLen = ((packet.getData(4) & 0xff) << 8) + packet.getData(5);
     nextHeader = packet.getData(6);
-    hopLimit = packet.getData(7);
+    hopLimit = packet.getData(7) & 0xff;
     packet.copy(8, sourceAddress, 0, 16);
     packet.copy(24, destAddress, 0, 16);
     // move position 40 bytes forward for handling next headers / payload
@@ -172,13 +181,6 @@ public class IPv6Packet extends Packet implements IPPacketer {
     return sum;
   }
 
-  public int writeVFlow(byte[] data, int pos) {
-    data[pos++] = (byte) (0x60 | (flowLabel >> 16) & 0x0f);
-    data[pos++] = (byte)((flowLabel >> 8) & 0xff);
-    data[pos++] = (byte) (flowLabel & 0xff);
-    return 3;
-  }
-
   public static boolean isMACBased(byte[] address, byte[] macAddress) {
     if (address[8] == (macAddress[0] ^ 0x02)) {
       for (int i = 1; i < macAddress.length; i++) {
@@ -209,10 +211,32 @@ public class IPv6Packet extends Packet implements IPPacketer {
     return nextHeader;
   }
 
-  @Override
+  // TODO: should not take an argument here - should be this packet
+  // that should be generating the data???
   public byte[] generatePacketData(IPv6Packet packet) {
-    // TODO Auto-generated method stub
-    return null;
+    byte[] payload = ipPayload.generatePacketData(packet); 
+    int size = 40 + payload.length;
+    byte[] dataPacket = new byte[size];
+
+    dataPacket[0] = (byte) (0x60 | (trafficClass >> 4) & 0x0f);
+    dataPacket[1] = (byte) (((trafficClass & 0xf) << 4) |
+        ((flowLabel >> 16) & 0xf));
+    dataPacket[2] = (byte) ((trafficClass >> 8) & 0xff);
+    dataPacket[3] = (byte) (trafficClass & 0xff);
+    
+    dataPacket[4] = (byte) ((payload.length >> 8) & 0xff);
+    dataPacket[5] = (byte) (payload.length & 0xff);
+    
+    dataPacket[6] = (byte) (nextHeader & 0xff);
+    dataPacket[7] = (byte) (hopLimit & 0xff);
+    
+    int pos = 8;
+    System.arraycopy(packet.getSourceAddress(), 0, dataPacket, pos, 16);
+    pos += 16;
+    System.arraycopy(packet.getDestinationAddress(), 0, dataPacket, pos, 16);
+    pos += 16;
+    System.arraycopy(payload, 0, dataPacket, 40, payload.length);
+    return dataPacket;
   }
 
   public IPPayload getIPPayload() {
@@ -231,5 +255,13 @@ public class IPv6Packet extends Packet implements IPPacketer {
       if (i < size - 1)
         out.print(":");
     }
+  }
+  
+  public static void main(String[] args) {
+    byte[] data = Utils.hexconv("6000000000200001fe80000000000000023048fffe904cd2ff02000000000000000000026c5b5f303a000100050200008300527800000000ff02000000000000000000026c5b5f30");
+    IPv6Packet packet = new IPv6Packet();
+    packet.setBytes(data);
+    packet.parsePacketData(packet);
+    packet.printPacket(System.out);
   }
 }

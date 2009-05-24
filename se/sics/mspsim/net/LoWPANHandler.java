@@ -39,12 +39,16 @@
  */
 package se.sics.mspsim.net;
 
-public class LoWPANHandler extends AbstractPacketHandler {
+public class LoWPANHandler extends AbstractPacketHandler implements NetworkInterface {
 
   private IPStack ipStack;
   
   public LoWPANHandler(IPStack stack) {
     ipStack = stack;
+  }
+  
+  public String getName() {
+    return "6lowpan";
   }
   
   public void packetReceived(Packet packet) {
@@ -57,6 +61,7 @@ public class LoWPANHandler extends AbstractPacketHandler {
     if (dispatch == ipStack.getDefaultPacketer().getDispatch()) {
       ipStack.getDefaultPacketer().parsePacketData(ipPacket);
       /* send in the packet */
+      ipPacket.netInterface = this;
       ipStack.receivePacket(ipPacket);
     }
   }

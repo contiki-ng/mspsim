@@ -29,7 +29,7 @@ public class ICMP6PacketHandler {
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
       ipp.sourceAddress = ipStack.myLocalIPAddress;
-      ipStack.sendPacket(ipp);
+      ipStack.sendPacket(ipp, packet.netInterface);
       break;
     case ICMP6Packet.ECHO_REPLY:
       System.out.println("ICMP6 got echo reply!!");
@@ -50,7 +50,7 @@ public class ICMP6PacketHandler {
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
       ipp.sourceAddress = ipStack.myLocalIPAddress;
-      ipStack.sendPacket(ipp);
+      ipStack.sendPacket(ipp, packet.netInterface);
       break;
     case ICMP6Packet.ROUTER_SOLICITATION:
       if (ipStack.isRouter()) {
@@ -71,8 +71,9 @@ public class ICMP6PacketHandler {
         ipp.sourceAddress = ipStack.myLocalIPAddress;
         System.out.print("Created ICMP6 RA for ");
         IPv6Packet.printAddress(System.out, ipp.destAddress);
+        packet.printPacket(System.out);
 
-        ipStack.sendPacket(ipp);
+        ipStack.sendPacket(ipp, packet.netInterface);
       }
       break;
     }

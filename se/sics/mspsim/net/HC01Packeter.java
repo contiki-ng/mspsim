@@ -185,7 +185,7 @@ public class HC01Packeter implements IPPacketer {
 
     /* write version and flow if needed */ 
     if ((enc1 & IPHC_VF_C) == 0) {
-      pos += packet.writeVFlow(data, pos);
+      pos += writeVFlow(packet, data, pos);
     }
     /* write traffic class if needed */
     if ((enc1 & IPHC_TC_C) == 0) {
@@ -314,6 +314,14 @@ public class HC01Packeter implements IPPacketer {
     System.arraycopy(pload, 0, dataPacket, pos, pload.length);
     return dataPacket;
   }
+  
+  public int writeVFlow(IPv6Packet packet, byte[] data, int pos) {
+    data[pos++] = (byte) (0x60 | (packet.flowLabel >> 16) & 0x0f);
+    data[pos++] = (byte)((packet.flowLabel >> 8) & 0xff);
+    data[pos++] = (byte) (packet.flowLabel & 0xff);
+    return 3;
+  }
+
   
   public void parsePacketData(IPv6Packet packet) {
     /* first two is ... */

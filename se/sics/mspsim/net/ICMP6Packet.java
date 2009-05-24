@@ -2,6 +2,8 @@ package se.sics.mspsim.net;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
+import se.sics.mspsim.util.Utils;
+
 public class ICMP6Packet implements IPPayload {
 
   public static final int DISPATCH = 58;
@@ -45,18 +47,20 @@ public class ICMP6Packet implements IPPayload {
 
   byte hopLimit = (byte) 128;
   byte autoConfigFlags;
-  int routerLifetime = 600; /* time in seconds for keeping the router as default */
-  int reachableTime = 10000; /* time in millis when node still should be counted as reachable */
-  int retransmissionTimer = 1000; /* time in millis between solicitations */
+  int routerLifetime = 100; /* time in seconds for keeping the router as default */
+  int reachableTime = 360000; /* time in millis when node still should be counted as reachable */
+  int retransmissionTimer = 0; /* time in millis between solicitations */
   int mtuSize = 1280;
 
+  byte[] echoData;
+  
   private ArrayList<byte[]> options = new ArrayList<byte[]>();
   
   /* prefix info option - type = 3, len = 4 (64x4 bits), prefix = 64 bits */
   private final static byte[] defaultPrefixInfo = 
     new byte[] {3, 4, 64, (byte) (ON_LINK | AUTOCONFIG),
-    0, 0, 1, 0, /* valid lifetime - 256 seconds for now*/
-    0, 1, 0, 0, /* prefered lifetime - 65535 seconds lifetime of autoconf addr */
+    (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, /* valid lifetime -1 seconds for now*/
+    (byte)0xff, (byte)0xff, (byte)0xff, (byte)0xff, /* prefered lifetime -1 seconds lifetime of autoconf addr */
     0, 0, 0, 0, /* reserved */
     /* the prefix ... */
     (byte)0xaa, (byte)0xaa, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0
@@ -70,6 +74,8 @@ public class ICMP6Packet implements IPPayload {
     options.clear();
     byte[] prefixInfo = new byte[defaultPrefixInfo.length];
     System.arraycopy(defaultPrefixInfo, 0, prefixInfo, 0, defaultPrefixInfo.length);
+    byte[] prefix = stack.prefix;
+    System.arraycopy(prefix, 0, prefixInfo, 16, prefix.length);
     options.add(prefixInfo);
     options.add(mtuOption);
     addLinkOption(SOURCE_LINKADDR, llAddr);
@@ -97,6 +103,14 @@ public class ICMP6Packet implements IPPayload {
     return null;
   }
   
+  public byte[] getEchoData() {
+    return echoData;
+  }
+  
+  public void setEchoData(byte[] edata) {
+    echoData = edata;
+  }
+  
   public void printPacket(PrintStream out) {
     String typeS = "" + type;
     if (type >= 128) {
@@ -119,6 +133,7 @@ public class ICMP6Packet implements IPPayload {
       System.out.println("  routerLifeTime: " + routerLifetime + " (sec)");
       System.out.println("  reachableTime: " + reachableTime + " (msec)");
       System.out.println("  retransmissionTimer: " + retransmissionTimer + " (msec)");
+      System.out.println("  autoConf: " + autoConfigFlags);
       byte[] prefixInfo = getOption(PREFIX_INFO);
       int bits = prefixInfo[2];
       int bytes = bits / 8;
@@ -128,6 +143,8 @@ public class ICMP6Packet implements IPPayload {
         if ((i & 1) == 1) out.print(":");
       }
       out.println("/" + bits);
+      out.println("RA Valid Lifetime: " + Packet.get32(prefixInfo, 4));
+      out.println("RA Pref. Lifetime: " + Packet.get32(prefixInfo, 8));
       byte[] srcLink = getOption(SOURCE_LINKADDR);
       if (srcLink != null) {
         /* assuming 8 bytes for the mac ??? */
@@ -153,7 +170,11 @@ public class ICMP6Packet implements IPPayload {
       case ECHO_REPLY:
         id = packet.get16(4);
         seqNo = packet.get16(6);
-        handleOptions(packet, 8);
+        int dataLen = packet.getPayloadLength() - 8;
+        if (dataLen > 0) {
+          echoData = new byte[dataLen];
+          packet.copy(8, echoData, 0, dataLen);
+        }
         break;
       case NEIGHBOR_SOLICITATION:
       case NEIGHBOR_ADVERTISEMENT:
@@ -219,7 +240,11 @@ public class ICMP6Packet implements IPPayload {
       buffer[pos++] = (byte) (id & 0xff);
       buffer[pos++] = (byte) (seqNo >> 8);
       buffer[pos++] = (byte) (seqNo & 0xff);
-      pos = addOptions(buffer, pos);
+      if (echoData != null) {
+        for (int i = 0; i < echoData.length; i++) {
+          buffer[pos++] = echoData[i];
+        }
+      }
       break;
     case NEIGHBOR_SOLICITATION:
     case NEIGHBOR_ADVERTISEMENT:
@@ -278,5 +303,18 @@ public class ICMP6Packet implements IPPayload {
   @Override
   public byte getDispatch() {
     return DISPATCH;
+  }
+  
+  
+  public static void main(String[] args) {
+    byte[] pData = Utils.hexconv("6000000000403a3f200105c01000000a00000000000001ad200105c011024e000212740504030201800070e3de1b00011b87194ad859000008090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334353637");
+    IPv6Packet packet = new IPv6Packet();
+    packet.setBytes(pData);
+    packet.parsePacketData(packet);
+    if (packet.nextHeader == 58) {
+      ICMP6Packet icmpPacket = new ICMP6Packet();
+      icmpPacket.parsePacketData(packet);
+      icmpPacket.printPacket(System.out);
+    }
   }
 }

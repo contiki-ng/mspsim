@@ -314,35 +314,6 @@ public class MiscCommands implements CommandBundle {
         context.executeCommand(command);
       }
     });
-    handler.registerCommand("rfanalyzer", new BasicLineCommand("analyze radio packets", "") {
-      CC2420PacketHandler listener;
-      CommandContext context;
-      public int executeCommand(CommandContext context) {
-        this.context = context;
-        MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
-        listener = new CC2420PacketHandler(cpu);
-        listener.setOutput(context.out);
-        IEEE802154Handler ieeeHandler = new IEEE802154Handler();
-        listener.addUpperLayerHandler(0, ieeeHandler);
-        ieeeHandler.setLowerLayerHandler(listener);
-        IPStack ipStack = new IPStack();
-        LoWPANHandler lowpanHandler = new LoWPANHandler(ipStack);
-        ieeeHandler.addUpperLayerHandler(0, lowpanHandler);
-        lowpanHandler.setLowerLayerHandler(ieeeHandler);
-        ipStack.setLinkLayerHandler(lowpanHandler);
-        return 0;
-      }
-      public void lineRead(String line) {
-        if (listener != null) {
-          byte[] data = Utils.hexconv(line);
-          for (int i = 0; i < data.length; i++) {
-            //context.out.println("Byte " + i + " = " + ((int) data[i] & 0xff));
-            // Currently it will autoprint when packet is ready...
-            listener.receivedByte(data[i]);
-          }
-        }
-      }
-    });
 
     handler.registerCommand("rflistener", new BasicLineCommand("an rflisteer", "[input|output] <rf-chip>") {
       CommandContext context;

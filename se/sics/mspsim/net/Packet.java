@@ -124,13 +124,33 @@ public class Packet {
 
   public int get32(int pos) {
     pos = currentPos + pos;
-    if (packetData.length > pos + 3)
+    if (packetData.length >= pos + 3) {
     return ((packetData[pos] & 0xff) << 24) |
     ((packetData[pos + 1] & 0xff) << 16) |
     ((packetData[pos + 2] & 0xff) << 8) |
     (packetData[pos + 3] & 0xff);
+    }
     return 0;
   }
+
+  public static int get32(byte[] data, int pos) {
+    if (data.length >= pos + 3) {
+    return ((data[pos] & 0xff) << 24) |
+    ((data[pos + 1] & 0xff) << 16) |
+    ((data[pos + 2] & 0xff) << 8) |
+    (data[pos + 3] & 0xff);
+    }
+    return 0;
+  }
+
+  public static int get16(byte[] data, int pos) {
+    if (data.length >= pos + 1) {
+    return ((data[pos] & 0xff) << 8) |
+    ((data[pos + 1] & 0xff) << 0);
+    }
+    return 0;
+  }
+
   
   public int get16(int pos) {
     pos = currentPos + pos;
