@@ -54,7 +54,7 @@ public class ICMP6Packet implements IPPayload {
 
   byte[] echoData;
   
-  private ArrayList<byte[]> options = new ArrayList<byte[]>();
+  private ArrayList options = new ArrayList();
   
   /* prefix info option - type = 3, len = 4 (64x4 bits), prefix = 64 bits */
   private final static byte[] defaultPrefixInfo = 
@@ -96,8 +96,8 @@ public class ICMP6Packet implements IPPayload {
   
   public byte[] getOption(int type) {
     for (int i = 0; i < options.size(); i++) {
-      if (options.get(i)[0] == type) {
-        return options.get(i);
+      if (((byte[])options.get(i))[0] == type) {
+        return (byte[]) options.get(i);
       }
     }
     return null;
@@ -226,7 +226,6 @@ public class ICMP6Packet implements IPPayload {
     }
   }
   
-  @Override
   public byte[] generatePacketData(IPv6Packet packet) {
     byte[] buffer = new byte[127];
     buffer[0] = (byte) type;
@@ -291,7 +290,7 @@ public class ICMP6Packet implements IPPayload {
 
   private int addOptions(byte[] buffer, int pos) {
     for (int i = 0; i < options.size(); i++) {
-      byte[] option = options.get(i);
+      byte[] option = (byte[]) options.get(i);
       System.out.println("Adding option: " + option[0] + " len: " + option[1] +
           "/" + option.length + " at " + pos);
       System.arraycopy(option, 0, buffer, pos, option.length);
@@ -300,7 +299,6 @@ public class ICMP6Packet implements IPPayload {
     return pos;
   }
   
-  @Override
   public byte getDispatch() {
     return DISPATCH;
   }

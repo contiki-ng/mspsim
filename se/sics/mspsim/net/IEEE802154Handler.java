@@ -145,7 +145,6 @@ public class IEEE802154Handler extends AbstractPacketHandler {
   
   /* create a 802.15.4 packet with the given packet as payload, and
    * deliver to the lower layer handler */
-  @Override
   public void sendPacket(Packet packet) {
     System.out.println("Packet should be sent!!!");
     byte[] buffer = new byte[127];

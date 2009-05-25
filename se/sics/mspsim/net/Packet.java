@@ -133,7 +133,7 @@ public class Packet {
     return 0;
   }
 
-  public static int get32(byte[] data, int pos) {
+  static int get32(byte[] data, int pos) {
     if (data.length >= pos + 3) {
     return ((data[pos] & 0xff) << 24) |
     ((data[pos + 1] & 0xff) << 16) |
@@ -143,7 +143,7 @@ public class Packet {
     return 0;
   }
 
-  public static int get16(byte[] data, int pos) {
+  static int get16(byte[] data, int pos) {
     if (data.length >= pos + 1) {
     return ((data[pos] & 0xff) << 8) |
     ((data[pos + 1] & 0xff) << 0);

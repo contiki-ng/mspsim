@@ -47,8 +47,7 @@ public abstract class AbstractPacketHandler implements PacketHandler {
   
   boolean debug = true;
   
-  ArrayList<PacketHandlerDispatch> upperLayers =
-    new ArrayList<PacketHandlerDispatch>();
+  ArrayList upperLayers = new ArrayList();
   PacketHandler lowerLayer;
   
   public PacketHandler getLowerLayerHandler() {
@@ -73,14 +72,14 @@ public abstract class AbstractPacketHandler implements PacketHandler {
     }
     if (dispatch != -1) {
       for (int i = 0; i < upperLayers.size(); i++) {
-        if (upperLayers.get(i).dispatch == dispatch) {
-          upperLayers.get(i).packetHandler.packetReceived(packet);
+        if (((PacketHandlerDispatch)upperLayers.get(i)).dispatch == dispatch) {
+          ((PacketHandlerDispatch)upperLayers.get(i)).packetHandler.packetReceived(packet);
           return;
         }
       }
       System.out.println("**** no dispatch handler for " + dispatch + " found...");
     } else if (upperLayers.size() > 0){
-      upperLayers.get(0).packetHandler.packetReceived(packet);
+      ((PacketHandlerDispatch)upperLayers.get(0)).packetHandler.packetReceived(packet);
     }
   }
   
