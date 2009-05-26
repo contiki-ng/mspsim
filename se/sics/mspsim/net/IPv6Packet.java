@@ -93,16 +93,16 @@ public class IPv6Packet extends Packet implements IPPacketer {
   }
   
   public void printPacket(PrintStream out) {
-    out.printf("IPv6: from ");
+    out.print("IPv6: from ");
     printAddress(out, sourceAddress);
     out.print(" to ");
     printAddress(out, destAddress);
-    out.printf(" NxHdr: %d\n", nextHeader);
+    out.println(" NxHdr: " + nextHeader);
   }
 
   public static void printAddress(PrintStream out, byte[] address) {
     for (int i = 0; i < 16; i+=2) {
-      out.printf("%04x", (((address[i] & 0xff) << 8) | address[i + 1] & 0xff));
+      out.print(Utils.hex16((((address[i] & 0xff) << 8) | address[i + 1] & 0xff)));
       if (i < 14) {
         out.print(":");
       }
@@ -251,7 +251,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
   public static void printMACAddress(PrintStream out, byte[] data,
       int pos, int size) {
     for (int i = 0; i < size; i++) {
-      out.printf("%02x", data[i + pos]);
+      out.print(Utils.hex8(data[i + pos]));
       if (i < size - 1)
         out.print(":");
     }

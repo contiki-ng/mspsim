@@ -8,6 +8,7 @@ import se.sics.mspsim.net.CC2420PacketHandler;
 import se.sics.mspsim.net.IEEE802154Handler;
 import se.sics.mspsim.net.IPStack;
 import se.sics.mspsim.net.LoWPANHandler;
+import se.sics.mspsim.net.TSPClient;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 
@@ -32,7 +33,8 @@ public class NetCommands implements CommandBundle {
         listener.addUpperLayerHandler(0, ieeeHandler);
         ieeeHandler.setLowerLayerHandler(listener);
         ipStack = new IPStack();
-        LoWPANHandler lowpanHandler = new LoWPANHandler(ipStack);
+        LoWPANHandler lowpanHandler = new LoWPANHandler();
+        lowpanHandler.setIPStack(ipStack);
         ieeeHandler.addUpperLayerHandler(0, lowpanHandler);
         lowpanHandler.setLowerLayerHandler(ieeeHandler);
         ipStack.setLinkLayerHandler(lowpanHandler);
@@ -54,8 +56,9 @@ public class NetCommands implements CommandBundle {
 
     handler.registerCommand("tspstart", new BasicCommand("starts a TSP tunnel", "<server> <user> <password>") {
       public int executeCommand(CommandContext context) {
-        if (ipStack.startTSPTunnel(context.getArgument(0),
-            context.getArgument(1), context.getArgument(2))) {
+        TSPClient tunnel = TSPClient.startTSPTunnel(ipStack, context.getArgument(0),
+            context.getArgument(1), context.getArgument(2));
+        if (tunnel != null) {
           context.out.print("TSP Tunnel started");
           return 0;
         } else {

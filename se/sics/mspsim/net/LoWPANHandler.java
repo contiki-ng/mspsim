@@ -43,12 +43,19 @@ public class LoWPANHandler extends AbstractPacketHandler implements NetworkInter
 
   private IPStack ipStack;
   
-  public LoWPANHandler(IPStack stack) {
+  public LoWPANHandler() {
+  }
+
+  public void setIPStack(IPStack stack) {
     ipStack = stack;
   }
   
   public String getName() {
     return "6lowpan";
+  }
+  
+  public boolean isReady() {
+    return true;
   }
   
   public void packetReceived(Packet packet) {
@@ -66,19 +73,21 @@ public class LoWPANHandler extends AbstractPacketHandler implements NetworkInter
     }
   }
 
-  public void sendPacket(Packet packet) {
+  public void sendPacket(IPv6Packet packet) {
     /* LoWPANHandler is for IP over 802.15.4 */
-    if (packet instanceof IPv6Packet) {
-      // Get packeter and create packet
-      byte[] data = ipStack.getPacketer().generatePacketData((IPv6Packet)packet);
-      packet.setBytes(data);
-      /* set the dispatch */
-      byte[] data2 = new byte[1];
-      data2[0] = ipStack.getPacketer().getDispatch();
-      packet.prependBytes(data2);
-      /* give to lower layer for sending on... */
-      lowerLayer.sendPacket(packet);
-    }
+    // Get packeter and create packet
+    byte[] data = ipStack.getPacketer().generatePacketData((IPv6Packet)packet);
+    packet.setBytes(data);
+    /* set the dispatch */
+    byte[] data2 = new byte[1];
+    data2[0] = ipStack.getPacketer().getDispatch();
+    packet.prependBytes(data2);
+    /* give to lower layer for sending on... */
+    lowerLayer.sendPacket(packet);
+  }
+
+  public void sendPacket(Packet packet) {
+    sendPacket((IPv6Packet) packet);
   }
 
 }

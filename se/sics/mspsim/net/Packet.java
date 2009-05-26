@@ -41,14 +41,14 @@
 
 package se.sics.mspsim.net;
 
-import java.util.HashMap;
+import java.util.Hashtable;
 
 public class Packet {
 
   public static final String LL_SOURCE = "link.source";
   public static final String LL_DESTINATION = "link.destination";
   
-  protected HashMap<String, Object> attributes = new HashMap<String, Object>();
+  protected Hashtable attributes = new Hashtable();
 
   /* this is the packet data array */
   protected byte[] packetData;
@@ -110,6 +110,10 @@ public class Packet {
     attributes.put(name, object);
   }
 
+  public void setAttribute(String name, int data) {
+    attributes.put(name, new Integer(data));
+  }
+  
   public Object getAttribute(String name) {
     return attributes.get(name);
   }

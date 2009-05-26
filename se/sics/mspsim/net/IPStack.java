@@ -43,13 +43,6 @@
 
 package se.sics.mspsim.net;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.util.Arrays;
-
 import se.sics.mspsim.util.Utils;
 
 public class IPStack {
@@ -81,9 +74,8 @@ public class IPStack {
   /* is router -> router behavior */
   private boolean isRouter = true;
 
-  private IPPacketer tunnelPacketer = new IPv6Packet();
-  private TSPClient tunnel;
-  
+  private NetworkInterface tunnel;
+  //TSPClient
   /* this needs to be generalized later... and down to lowpan too... */
   //private HC01Packeter ipPacketer = new HC01Packeter();
 
@@ -96,24 +88,14 @@ public class IPStack {
     configureIPAddress();
   }
 
-  public boolean startTSPTunnel(String server, String user, String password) {
-    try {
-      tunnel = new TSPClient(server, user, password);
-      tunnel.setIPStack(this);
-      tunnel.waitSetup();
-      return tunnel.isReady();
-    } catch (SocketException e) {
-      e.printStackTrace();
-    } catch (UnknownHostException e) {
-      e.printStackTrace();
-    }
-    return false;
-  }
-
   public void setLinkLayerHandler(PacketHandler handler) {
     linkLayerHandler = handler;
   }
 
+  public void setTunnel(NetworkInterface tunnel) {
+    this.tunnel = tunnel;
+  }
+  
   public void setPrefix(byte[] prefix, int size) {
     this.prefix = prefix;
     prefixSize = size;
@@ -128,7 +110,7 @@ public class IPStack {
     }
 
     /* unspecified - on link ?? */
-    if (Arrays.equals(UNSPECIFIED, address)) return true;
+    if (Utils.equals(UNSPECIFIED, address)) return true;
     /* prefix match? */
     for (int i = 0; i < prefixSize / 8; i++) {
       if (address[i] != prefix[i]) return false;
@@ -146,8 +128,12 @@ public class IPStack {
     /* autoconfig ?? */
     myLocalIPAddress[8] = myIPAddress[8] = (byte) (myIPAddress[8] ^ 0x02);
     
-    System.out.println("***** Prefix Set / IP address: ");
+    System.out.print("***** Configured IP address: ");
     IPv6Packet.printAddress(System.out, myIPAddress);
+    System.out.println();
+    System.out.print("***** Configured Local IP address: ");
+    IPv6Packet.printAddress(System.out, myLocalIPAddress);
+    System.out.println();
   }
   
   private boolean findRoute(IPv6Packet packet) {
@@ -156,7 +142,7 @@ public class IPStack {
       /* find a MAC address for this packets destination... */
       byte[] destAddr = packet.getDestinationAddress();
       /* is it a bc to all nodes? */
-      if (Arrays.equals(ALL_NODES, destAddr)) {
+      if (Utils.equals(ALL_NODES, destAddr)) {
         packet.setAttribute("link.destination", linkBroadcast);
       } else {
         byte[] destMAC = new byte[8];
@@ -190,7 +176,7 @@ public class IPStack {
       IPv6Packet.printAddress(System.out, myIPAddress);
       System.out.print(", Dest: ");
       IPv6Packet.printAddress(System.out, packet.getDestinationAddress());
-      if (tunnel.isReady()) {
+      if (tunnel != null && tunnel.isReady()) {
         tunnel.sendPacket(packet);
       }
     }
@@ -211,7 +197,7 @@ public class IPStack {
       IPv6Packet.printAddress(System.out, myIPAddress);
       System.out.print(", Dest: ");
       IPv6Packet.printAddress(System.out, packet.getDestinationAddress());
-      if (tunnel.isReady()) {
+      if (tunnel != null && tunnel.isReady()) {
         tunnel.sendPacket(packet);
       }
     } else if (isForMe(packet.getDestinationAddress())){
@@ -231,21 +217,26 @@ public class IPStack {
           linkLayerHandler.sendPacket(packet);
         }
       }
+    } else {
+      System.out.println("#### PACKET ignored...");
     }
   }
 
   /* is the packet for me ? */
   private boolean isForMe(byte[] address) {
-    if (Arrays.equals(myIPAddress, address) ||
-        Arrays.equals(myLocalIPAddress, address)) return true;
-    if (isRouter && Arrays.equals(ALL_ROUTERS, address)) return true;
-    if (Arrays.equals(ALL_NODES, address)) return true;
-    if (Arrays.equals(UNSPECIFIED, address)) return true;
+    System.out.print("=== is for me? ");
+    IPv6Packet.printAddress(System.out, address);
+    if (Utils.equals(myIPAddress, address) ||
+        Utils.equals(myLocalIPAddress, address)) return true;
+    if (isRouter && Utils.equals(ALL_ROUTERS, address)) return true;
+    if (Utils.equals(ALL_NODES, address)) return true;
+    if (Utils.equals(UNSPECIFIED, address)) return true;
     return false;
   }
   
   public void setLinkLayerAddress(byte[] addr) {
     myLinkAddress = addr;
+    configureIPAddress();
   }
   
   public void setIPAddress(byte[] addr) {
@@ -272,28 +263,8 @@ public class IPStack {
     return defaultPacketer;
   }
   
-  public static void main(String[] args) throws IOException {
-    IEEE802154Handler ieeeHandler = new IEEE802154Handler();
-    IPStack ipStack = new IPStack();
-    LoWPANHandler lowpanHandler = new LoWPANHandler(ipStack);
-    ieeeHandler.addUpperLayerHandler(0, lowpanHandler);
-    lowpanHandler.setLowerLayerHandler(ieeeHandler);
-    ipStack.setLinkLayerHandler(lowpanHandler);
-
-    String line;
-    BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-    while((line = reader.readLine()) != null) {
-      if (line.length() > 10) {
-        System.out.println("---------- packet read ------");
-        byte[] data = Utils.hexconv(line);
-        Packet packet = new Packet();
-        packet.setBytes(data, 0, data.length);
-        ieeeHandler.packetReceived(packet);
-      }
-    }
-  }
-
   public boolean isRouter() {
     return isRouter ;
   }
+  
 }

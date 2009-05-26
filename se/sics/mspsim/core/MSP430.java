@@ -316,11 +316,11 @@ public class MSP430 extends MSP430Core {
   }
 
   public synchronized void addSimEventListener(SimEventListener l) {
-    simEventListeners = (SimEventListener[]) Utils.add(SimEventListener.class, simEventListeners, l);
+    simEventListeners = (SimEventListener[]) ArrayUtils.add(SimEventListener.class, simEventListeners, l);
   }
 
   public synchronized void removeSimEventListener(SimEventListener l) {
-    simEventListeners = (SimEventListener[]) Utils.remove(simEventListeners, l);
+    simEventListeners = (SimEventListener[]) ArrayUtils.remove(simEventListeners, l);
   }
   
 }

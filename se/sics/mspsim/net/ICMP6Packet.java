@@ -1,6 +1,6 @@
 package se.sics.mspsim.net;
 import java.io.PrintStream;
-import java.util.ArrayList;
+import java.util.Vector;
 
 import se.sics.mspsim.util.Utils;
 
@@ -54,7 +54,8 @@ public class ICMP6Packet implements IPPayload {
 
   byte[] echoData;
   
-  private ArrayList options = new ArrayList();
+  // for 1.3 compatibility
+  private Vector options = new Vector();
   
   /* prefix info option - type = 3, len = 4 (64x4 bits), prefix = 64 bits */
   private final static byte[] defaultPrefixInfo = 
@@ -71,13 +72,13 @@ public class ICMP6Packet implements IPPayload {
 
   void updateRA(IPStack stack) {
     byte[] llAddr = stack.getLinkLayerAddress();
-    options.clear();
+    options.removeAllElements();
     byte[] prefixInfo = new byte[defaultPrefixInfo.length];
     System.arraycopy(defaultPrefixInfo, 0, prefixInfo, 0, defaultPrefixInfo.length);
     byte[] prefix = stack.prefix;
     System.arraycopy(prefix, 0, prefixInfo, 16, prefix.length);
-    options.add(prefixInfo);
-    options.add(mtuOption);
+    options.addElement(prefixInfo);
+    options.addElement(mtuOption);
     addLinkOption(SOURCE_LINKADDR, llAddr);
   }
   
@@ -91,13 +92,13 @@ public class ICMP6Packet implements IPPayload {
     opt[0] = (byte) type;
     opt[1] = (byte) (opt.length / 8);
     System.arraycopy(llAddr, 0, opt, 2, llAddr.length);    
-    options.add(opt);
+    options.addElement(opt);
   }
   
   public byte[] getOption(int type) {
     for (int i = 0; i < options.size(); i++) {
-      if (((byte[])options.get(i))[0] == type) {
-        return (byte[]) options.get(i);
+      if (((byte[])options.elementAt(i))[0] == type) {
+        return (byte[]) options.elementAt(i);
       }
     }
     return null;
@@ -119,8 +120,8 @@ public class ICMP6Packet implements IPPayload {
         typeS = TYPE_NAME[tS];
       }
     }
-    out.printf("ICMPv6 Type: %d (%s) Code: %d id: %04x seq: %04x\n", type, typeS,
-        code, id, seqNo);
+    out.println("ICMPv6 Type: " + type + " (" + typeS + ") Code: " + code + " id: " +
+        id + " seq: " + seqNo);
     if (targetAddress != null) {
       out.print("ICMPv6 Target address: ");
       IPv6Packet.printAddress(out, targetAddress);
@@ -139,7 +140,7 @@ public class ICMP6Packet implements IPPayload {
       int bytes = bits / 8;
       out.print("RA Prefix: ");
       for (int i = 0; i < bytes; i++) {
-        out.printf("%02x", prefixInfo[16 + i]);
+        out.print(Utils.hex8(prefixInfo[16 + i]));
         if ((i & 1) == 1) out.print(":");
       }
       out.println("/" + bits);
@@ -205,7 +206,8 @@ public class ICMP6Packet implements IPPayload {
       if (sum == checksum) {
         System.out.println("ICMPv6: Checksum matches!!!");
       } else {
-        System.out.printf("ICMPv6: Checksum error: %04x <?> %04x\n", checksum, sum);
+        System.out.println("ICMPv6: Checksum error: " + 
+            Utils.hex16(checksum) + " <?> " + Utils.hex16(sum));
       }
     }
   }
@@ -221,7 +223,7 @@ public class ICMP6Packet implements IPPayload {
       if (oSize == 0) return;
       byte[] option = new byte[oSize];
       packet.copy(pos, option, 0, oSize);
-      options.add(option);
+      options.addElement(option);
       pos += oSize;
     }
   }
@@ -290,7 +292,7 @@ public class ICMP6Packet implements IPPayload {
 
   private int addOptions(byte[] buffer, int pos) {
     for (int i = 0; i < options.size(); i++) {
-      byte[] option = (byte[]) options.get(i);
+      byte[] option = (byte[]) options.elementAt(i);
       System.out.println("Adding option: " + option[0] + " len: " + option[1] +
           "/" + option.length + " at " + pos);
       System.arraycopy(option, 0, buffer, pos, option.length);

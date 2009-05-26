@@ -113,7 +113,7 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
     int payloadLen = packet.getAttributeAsInt(CC2420_LEN);
     out.print("CC2420 | len:" + payloadLen + " | ");
     for (int i = 0; i < payloadLen; i++) {
-      out.printf("%02x", packet.getData(i) & 0xff);
+      out.print(Utils.hex8(packet.getData(i) & 0xff));
       if ((i & 3) == 3) {
         out.print(" ");
       }
@@ -138,8 +138,8 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
         System.out.println("CC2420: Packet to send: ");
         byte[] buffer = sendPacket.getBytes();
         for (int i = 0; i < buffer.length; i++) {
-          System.out.printf("%02x", buffer[i]);
-          out.printf("%02x", buffer[i]);
+          System.out.print(Utils.hex8(buffer[i]));
+          out.print(Utils.hex8(buffer[i]));
         }
         /* send to output + two additional bytes...! */
         out.println();

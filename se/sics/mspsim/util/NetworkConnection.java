@@ -95,7 +95,7 @@ public class NetworkConnection implements Runnable {
       try {
         Socket s = serverSocket.accept();
         if (DEBUG) System.out.println("NetworkConnection: New connection from " + s.getRemoteSocketAddress());
-        connections = (ConnectionThread[]) Utils.add(ConnectionThread.class, connections, new ConnectionThread(s));
+        connections = (ConnectionThread[]) ArrayUtils.add(ConnectionThread.class, connections, new ConnectionThread(s));
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -142,7 +142,7 @@ public class NetworkConnection implements Runnable {
   private boolean connect(int port) {
     try {
       Socket socket = new Socket("127.0.0.1", port);
-      connections = (ConnectionThread[]) Utils.add(ConnectionThread.class, connections, new ConnectionThread(socket));
+      connections = (ConnectionThread[]) ArrayUtils.add(ConnectionThread.class, connections, new ConnectionThread(socket));
     } catch (UnknownHostException e) {
       return false;
     } catch (IOException e) {
@@ -185,7 +185,7 @@ public class NetworkConnection implements Runnable {
       if (cthr != null) {
         for (int i = 0; i < cthr.length; i++) {
           if (cthr[i].isClosed()) {
-            connections = (ConnectionThread[]) Utils.remove(connections, cthr[i]);
+            connections = (ConnectionThread[]) ArrayUtils.remove(connections, cthr[i]);
             // Do not write back to the source
           } else if (cthr[i] != event.source){
             try {

@@ -41,13 +41,13 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
+import java.util.Vector;
 
 public abstract class AbstractPacketHandler implements PacketHandler {
   
   boolean debug = true;
   
-  ArrayList upperLayers = new ArrayList();
+  Vector upperLayers = new Vector();
   PacketHandler lowerLayer;
   
   public PacketHandler getLowerLayerHandler() {
@@ -58,7 +58,7 @@ public abstract class AbstractPacketHandler implements PacketHandler {
     PacketHandlerDispatch layer = new PacketHandlerDispatch();
     layer.dispatch = protoID;
     layer.packetHandler = handler;
-    upperLayers.add(layer);
+    upperLayers.addElement(layer);
   }
 
   public void setLowerLayerHandler(PacketHandler handler) {
@@ -72,14 +72,14 @@ public abstract class AbstractPacketHandler implements PacketHandler {
     }
     if (dispatch != -1) {
       for (int i = 0; i < upperLayers.size(); i++) {
-        if (((PacketHandlerDispatch)upperLayers.get(i)).dispatch == dispatch) {
-          ((PacketHandlerDispatch)upperLayers.get(i)).packetHandler.packetReceived(packet);
+        if (((PacketHandlerDispatch)upperLayers.elementAt(i)).dispatch == dispatch) {
+          ((PacketHandlerDispatch)upperLayers.elementAt(i)).packetHandler.packetReceived(packet);
           return;
         }
       }
       System.out.println("**** no dispatch handler for " + dispatch + " found...");
     } else if (upperLayers.size() > 0){
-      ((PacketHandlerDispatch)upperLayers.get(0)).packetHandler.packetReceived(packet);
+      ((PacketHandlerDispatch)upperLayers.elementAt(0)).packetHandler.packetReceived(packet);
     }
   }
   

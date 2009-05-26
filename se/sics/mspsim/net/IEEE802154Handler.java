@@ -41,7 +41,8 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
-import java.util.Arrays;
+
+import se.sics.mspsim.util.Utils;
 
 public class IEEE802154Handler extends AbstractPacketHandler {
 
@@ -158,7 +159,7 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     int srcMode = defaultAddressMode;
     int frameVersion = 0;
 
-    if (Arrays.equals(packet.getLinkDestination(), BROADCAST_ADDR)) {
+    if (Utils.equals(packet.getLinkDestination(), BROADCAST_ADDR)) {
       destMode = SHORT_ADDRESS;
       destPanID = 0xffff;
     }
@@ -190,32 +191,29 @@ public class IEEE802154Handler extends AbstractPacketHandler {
     System.arraycopy(buffer, 0, pHeader, 0, pos);
     packet.prependBytes(pHeader);
     
-//    System.out.println("802.15.4: Packet to send: ");
-//    buffer = packet.getBytes();
-//    for (int i = 0; i < buffer.length; i++) {
-//      System.out.printf("%02x", buffer[i]);
-//    }
-//    System.out.println();
     lowerLayer.sendPacket(packet);
   }
 
   public void printPacket(PrintStream out, Packet packet) {
-    out.printf("802.15.4 from %4x/", packet.getAttributeAsInt(SOURCE_PAN_ID));
+    out.print("802.15.4 from " + Utils.hex16(packet.getAttributeAsInt(SOURCE_PAN_ID)) + "/");
     printAddress(out, packet.getAttributeAsInt(SOURCE_MODE),
         (byte[]) packet.getAttribute(Packet.LL_SOURCE));
-    out.printf(" to %4x/", packet.getAttributeAsInt(DESTINATION_PAN_ID));
+    out.print(" to " + Utils.hex16(packet.getAttributeAsInt(DESTINATION_PAN_ID)) + "/");
     printAddress(out, packet.getAttributeAsInt(DESTINATION_MODE),
           (byte[]) packet.getAttribute(Packet.LL_DESTINATION));
-    out.printf(" seqNo: %d vers: %d len: %d\n", packet.getAttributeAsInt(SEQ_NO),
-        packet.getAttributeAsInt(VERSION), packet.getAttributeAsInt(PAYLOAD_LEN));
+    out.println(" seqNo: " + packet.getAttributeAsInt(SEQ_NO) + " vers: " + 
+        packet.getAttributeAsInt(VERSION) + " len: " +
+        packet.getAttributeAsInt(PAYLOAD_LEN));
   }
 
   private void printAddress(PrintStream out, int type, byte[] addr) {
     if (type == SHORT_ADDRESS) {
-      out.printf("%02x%02x", addr[0], addr[1]);
+      out.print(Utils.hex8(addr[0]) + Utils.hex8(addr[1]));
     } else if (type == LONG_ADDRESS) {
-      out.printf("%02x%02x:%02x%02x:%02x%02x:%02x%02x", addr[0], addr[1], 
-          addr[2], addr[3], addr[4], addr[5], addr[6], addr[7]);
+      out.print(Utils.hex8(addr[0]) + Utils.hex8(addr[1]) + ":" + 
+          Utils.hex8(addr[2]) + Utils.hex8(addr[3]) + ":" +
+          Utils.hex8(addr[4]) + Utils.hex8(addr[5]) + ":" +
+          Utils.hex8(addr[6]) + Utils.hex8(addr[7]));
     }
   }
 }

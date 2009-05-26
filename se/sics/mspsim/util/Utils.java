@@ -75,37 +75,10 @@ public class Utils {
     return s;
   }
 
-  public static Object[] add(Class<?> componentType, Object[] array, Object value) {
-    Object[] tmp;
-    if (array == null) {
-      tmp = (Object[]) java.lang.reflect.Array.newInstance(componentType, 1);
-    } else {
-      tmp = (Object[]) java.lang.reflect.Array.newInstance(componentType, array.length + 1);
-      System.arraycopy(array, 0, tmp, 0, array.length);
+  public static void fill(byte[] array, int pos, int len, byte value) {
+    for (int i = 0; i < len; i++) {
+      array[pos++] = value;
     }
-    tmp[tmp.length - 1] = value;
-    return tmp;
-  }
-
-  public static Object[] remove(Object[] array, Object value) {
-    if (array != null) {
-      for (int index = 0, n = array.length; index < n; index++) {
-        if (value.equals(array[index])) {
-          if (n == 1) {
-            return null;
-          }
-          Object[] tmp = (Object[]) java.lang.reflect.Array.newInstance(array.getClass().getComponentType(), array.length - 1);
-          if (index > 0) {
-            System.arraycopy(array, 0, tmp, 0, index);
-          }
-          if (index < tmp.length) {
-            System.arraycopy(array, index + 1, tmp, index, tmp.length - index);
-          }
-          return tmp;
-        }
-      }
-    }
-    return array;
   }
 
   public static int decodeInt(String value) throws NumberFormatException {
@@ -212,6 +185,16 @@ public class Utils {
       }
     }
     return data;
+  }
+
+  public static boolean equals(byte[] arr1, byte[] arr2) {
+    if (arr1 == null && arr2 == null) return true;
+    if (arr1 == null || arr2 == null) return false;
+    if (arr1.length != arr2.length) return false;
+    for (int i = 0; i < arr1.length; i++) {
+      if (arr1[i] != arr2[i]) return false;
+    }
+    return true;
   }
 
 //  public static void main(String[] args) {

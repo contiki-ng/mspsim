@@ -80,6 +80,18 @@ public class TSPClient implements NetworkInterface {
     return "tsp";
   }
   
+  public static TSPClient startTSPTunnel(IPStack ipStack, String server, String user, String password) {
+    try {
+      TSPClient tunnel = new TSPClient(server, user, password);
+      tunnel.setIPStack(ipStack);
+      tunnel.waitSetup();
+      return tunnel;
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+  
   public void setIPStack(IPStack ipStack) {
     this.ipStack = ipStack;
   }

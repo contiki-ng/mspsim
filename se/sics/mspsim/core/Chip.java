@@ -41,7 +41,7 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 
-import se.sics.mspsim.util.Utils;
+import se.sics.mspsim.util.ArrayUtils;
 
 /**
  * @author Joakim
@@ -59,11 +59,11 @@ public abstract class Chip implements Loggable, EventSource {
   protected boolean DEBUG = false;
   
   public void addOperatingModeListener(OperatingModeListener listener) {
-    omListeners = (OperatingModeListener[]) Utils.add(OperatingModeListener.class, omListeners, listener);
+    omListeners = (OperatingModeListener[]) ArrayUtils.add(OperatingModeListener.class, omListeners, listener);
   }
   
   public void removeOperatingModeListener(OperatingModeListener listener) {
-    omListeners = (OperatingModeListener[]) Utils.remove(omListeners, listener);
+    omListeners = (OperatingModeListener[]) ArrayUtils.remove(omListeners, listener);
   }
 
   public int getMode() {
