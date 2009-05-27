@@ -373,6 +373,16 @@ public class Timer extends IOUnit {
     // This does not handle word/byte difference yet... assumes it gets
     // all 16 bits when called!!!
 
+    if (address == TAIV || address == TBIV) {
+      // should clear registers for cause of interrupt (highest value)?
+      // but what if a higher value have been triggered since this was
+      // triggered??? -> does that matter???
+      // But this mess the TIV up too early......
+      // Must DELAY the reset of interrupt flags until next read...?
+      resetTIV(cycles);
+    }
+
+
     int iAddress = address - offset;
 
     switch (iAddress) {
@@ -388,7 +398,6 @@ public class Timer extends IOUnit {
 
       updateCyclesMultiplicator();
 
-      
       if ((data & TCLR) != 0) {
 	counter = 0;
 	resetCounter(cycles);
