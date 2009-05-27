@@ -37,6 +37,7 @@ public class ICMP6Packet implements IPPayload {
     "NEIGHBOR_SOLICITATION", "NEIGHBOR_ADVERTISEMENT"};
 
   int type;
+
   int code;
   int checksum;
   byte[] targetAddress;
@@ -93,6 +94,20 @@ public class ICMP6Packet implements IPPayload {
     opt[1] = (byte) (opt.length / 8);
     System.arraycopy(llAddr, 0, opt, 2, llAddr.length);    
     options.addElement(opt);
+  }
+
+  public int getType() {
+    return type;
+  }
+  public void setType(int type) {
+    this.type = type;
+  }
+
+  public int getFlags() {
+    return flags;
+  }
+  public void setFlags(int flags) {
+    this.flags = flags;
   }
   
   public byte[] getOption(int type) {

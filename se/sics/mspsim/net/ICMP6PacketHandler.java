@@ -11,6 +11,7 @@ public class ICMP6PacketHandler {
   public void handlePacket(IPv6Packet packet) {
     ICMP6Packet icmpPacket = new ICMP6Packet();
     icmpPacket.parsePacketData(packet);
+    packet.setIPPayload(icmpPacket);
 
     icmpPacket.printPacket(System.out);
 
@@ -23,17 +24,18 @@ public class ICMP6PacketHandler {
       p.type = ICMP6Packet.ECHO_REPLY;
       p.seqNo = icmpPacket.seqNo;
       p.id = icmpPacket.id;
-
+      p.echoData = icmpPacket.echoData;
       ipp = new IPv6Packet();
       ipp.setIPPayload(p);
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
-      ipp.sourceAddress = ipStack.myLocalIPAddress;
+      ipp.sourceAddress = ipStack.myIPAddress;
+      
       ipStack.sendPacket(ipp, packet.netInterface);
       break;
     case ICMP6Packet.ECHO_REPLY:
       System.out.println("ICMP6 got echo reply!!");
-      break;      
+      break;
     case ICMP6Packet.NEIGHBOR_SOLICITATION:
       p = new ICMP6Packet();
       p.targetAddress = icmpPacket.targetAddress;
@@ -43,13 +45,20 @@ public class ICMP6PacketHandler {
       if (ipStack.isRouter()) {
         p.flags |= ICMP6Packet.FLAG_ROUTER;
       }
-        /* always send the linkaddr option */
+      /* always send the linkaddr option */
       p.addLinkOption(ICMP6Packet.TARGET_LINKADDR, ipStack.getLinkLayerAddress());
       ipp = new IPv6Packet();
       ipp.setIPPayload(p);
       // is this ok?
       ipp.destAddress = packet.sourceAddress;
-      ipp.sourceAddress = ipStack.myLocalIPAddress;
+      if (ipp.destAddress[0] == 0xfe && ipp.destAddress[1] == 0x80) {
+        System.out.print("**** Dest address is link local: ");
+        IPv6Packet.printAddress(System.out, ipp.destAddress);
+        System.out.println();
+        ipp.sourceAddress = ipStack.myLocalIPAddress;
+      } else {
+        ipp.sourceAddress = ipStack.myIPAddress;
+      }
       ipStack.sendPacket(ipp, packet.netInterface);
       break;
     case ICMP6Packet.ROUTER_SOLICITATION:
@@ -74,6 +83,23 @@ public class ICMP6PacketHandler {
         packet.printPacket(System.out);
 
         ipStack.sendPacket(ipp, packet.netInterface);
+      }
+      break;
+    case ICMP6Packet.ROUTER_ADVERTISEMENT:
+      if (!ipStack.isRouter()) {
+        byte[] prefixInfo = icmpPacket.getOption(ICMP6Packet.PREFIX_INFO);
+        if (prefixInfo != null) {
+          byte[] prefix = new byte[16];
+          System.arraycopy(prefixInfo, 16, prefix, 0, prefix.length);
+          int size = prefixInfo[2];
+          ipStack.setPrefix(prefix, size);
+
+          System.out.println("Adding router as neighbor!!!");
+          NeighborTable nt = ipStack.getNeighborTable();
+          Neighbor nei = nt.addNeighbor(packet.sourceAddress, packet.getLinkSource());
+          nt.setDefrouter(nei);
+          nei.setState(Neighbor.REACHABLE);
+        }
       }
       break;
     }

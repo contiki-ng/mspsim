@@ -72,10 +72,9 @@ public class IPv6Packet extends Packet implements IPPacketer {
     flowLabel = 0;
     hopLimit = 255;
   }
-  
+
   public IPv6Packet(Packet packet) {
-    version = 6;
-    flowLabel = 0;
+    this();
     // copy over all the data from the packet...
     // is this the right way to do this???
     this.currentPos = packet.currentPos;
@@ -83,7 +82,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
     this.packetData = packet.packetData;
     ipLen = packetData.length - currentPos;
   }
-    
+
   public byte[] getSourceAddress() {
     return sourceAddress;
   }
@@ -91,7 +90,8 @@ public class IPv6Packet extends Packet implements IPPacketer {
   public byte[] getDestinationAddress() {
     return destAddress;
   }
-  
+
+
   public void printPacket(PrintStream out) {
     out.print("IPv6: from ");
     printAddress(out, sourceAddress);

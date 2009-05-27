@@ -33,6 +33,7 @@ public class NetCommands implements CommandBundle {
         listener.addUpperLayerHandler(0, ieeeHandler);
         ieeeHandler.setLowerLayerHandler(listener);
         ipStack = new IPStack();
+        ipStack.setRouter(true);
         LoWPANHandler lowpanHandler = new LoWPANHandler();
         lowpanHandler.setIPStack(ipStack);
         ieeeHandler.addUpperLayerHandler(0, lowpanHandler);

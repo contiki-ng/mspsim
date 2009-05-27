@@ -62,8 +62,14 @@ public class IPStack {
   byte[] myLocalIPAddress = new byte[] { (byte)0xfe, (byte)0x80,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x00};
+  
+  byte[] myLocalSolicited = new byte[] {(byte) 0xff, 0x02, 0, 0,
+      0, 0, 0, 0,  0, 0, 0, 0x01,  (byte) 0xff, 0, 0, 0};
+
   /* currently assumes only one link-layer and one address */
   byte[] myLinkAddress = new byte[] {0x00, 0x12, 0x75, 0x04, 0x05, 0x06, 0x07, 0x08};
+
+  
   
   byte[] linkBroadcast = new byte[] {(byte) 0xff, (byte) 0xff};
   
@@ -72,13 +78,16 @@ public class IPStack {
   private ICMP6PacketHandler icmp6Handler;
 
   /* is router -> router behavior */
-  private boolean isRouter = true;
+  private boolean isRouter = false;
 
   private NetworkInterface tunnel;
   //TSPClient
   /* this needs to be generalized later... and down to lowpan too... */
   //private HC01Packeter ipPacketer = new HC01Packeter();
 
+  private NeighborTable neighborTable = new NeighborTable();
+  private NetworkEventListener networkEventListener;
+  
   // TODO: read from configfile...
 
   public IPStack() {
@@ -88,10 +97,18 @@ public class IPStack {
     configureIPAddress();
   }
 
+  public NeighborTable getNeighborTable() {
+    return neighborTable;
+  }
+  
   public void setLinkLayerHandler(PacketHandler handler) {
     linkLayerHandler = handler;
   }
 
+  public void setNetworkEventListener(NetworkEventListener li) {
+    networkEventListener = li;
+  }
+  
   public void setTunnel(NetworkInterface tunnel) {
     this.tunnel = tunnel;
   }
@@ -127,12 +144,20 @@ public class IPStack {
     }
     /* autoconfig ?? */
     myLocalIPAddress[8] = myIPAddress[8] = (byte) (myIPAddress[8] ^ 0x02);
+
+    /* create multicast solicited address */
+    for (int i = 13; i < 16; i++) {
+      myLocalSolicited[i] = myIPAddress[i];
+    }
     
     System.out.print("***** Configured IP address: ");
     IPv6Packet.printAddress(System.out, myIPAddress);
     System.out.println();
     System.out.print("***** Configured Local IP address: ");
     IPv6Packet.printAddress(System.out, myLocalIPAddress);
+    System.out.println();
+    System.out.print("***** Configured Solicited IP address: ");
+    IPv6Packet.printAddress(System.out, myLocalSolicited);
     System.out.println();
   }
   
@@ -142,12 +167,24 @@ public class IPStack {
       /* find a MAC address for this packets destination... */
       byte[] destAddr = packet.getDestinationAddress();
       /* is it a bc to all nodes? */
-      if (Utils.equals(ALL_NODES, destAddr)) {
+      if (Utils.equals(ALL_ROUTERS, destAddr)) {
+        packet.setAttribute("link.destination", linkBroadcast);
+      } else if (Utils.equals(ALL_NODES, destAddr)) {
         packet.setAttribute("link.destination", linkBroadcast);
       } else {
-        byte[] destMAC = new byte[8];
-        /* fill the array with a autoconf address ... */
-        makeLLAddress(destAddr, destMAC);
+        byte[] destMAC;
+        Neighbor n = neighborTable.getNeighbor(destAddr);
+        if (n == null) {
+          if (neighborTable.getDefrouter() != null) {
+            destMAC = neighborTable.getDefrouter().linkAddress;
+          } else {
+          /* fill the array with a autoconf address ... */
+          destMAC = new byte[8];
+          makeLLAddress(destAddr, destMAC);
+          }
+        } else {
+          destMAC = n.linkAddress;
+        }
         packet.setAttribute("link.destination", destMAC);
       }
     }
@@ -205,6 +242,9 @@ public class IPStack {
       switch (packet.nextHeader) {
       case ICMP6Packet.DISPATCH:
         icmp6Handler.handlePacket(packet);
+        if (networkEventListener != null) {
+          networkEventListener.packetHandled(packet);
+        }
         break;
       }
     } else if (packet.netInterface != linkLayerHandler) {
@@ -227,7 +267,8 @@ public class IPStack {
     System.out.print("=== is for me? ");
     IPv6Packet.printAddress(System.out, address);
     if (Utils.equals(myIPAddress, address) ||
-        Utils.equals(myLocalIPAddress, address)) return true;
+        Utils.equals(myLocalIPAddress, address) ||
+        Utils.equals(myLocalSolicited, address)) return true;
     if (isRouter && Utils.equals(ALL_ROUTERS, address)) return true;
     if (Utils.equals(ALL_NODES, address)) return true;
     if (Utils.equals(UNSPECIFIED, address)) return true;
@@ -261,6 +302,10 @@ public class IPStack {
 
   public IPPacketer getDefaultPacketer() {
     return defaultPacketer;
+  }
+  
+  public void setRouter(boolean isRouter) {
+    this.isRouter = isRouter;
   }
   
   public boolean isRouter() {
