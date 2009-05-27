@@ -640,13 +640,21 @@ public class Timer extends IOUnit {
       counter = (int) (bigCounter & 0xffff);
       break;
     case UP:
-      counter = (int) (bigCounter % tccr[0]);
+      if (tccr[0] == 0) {
+	counter = 0;
+      } else {
+	counter = (int) (bigCounter % tccr[0]);
+      }
       break;
     case UPDWN:
-      counter = (int) (bigCounter % (tccr[0] * 2));
-      if (counter > tccr[0]) {
-	// Should back down to start again!
-	counter = 2 * tccr[0] - counter;
+      if (tccr[0] == 0) {
+	counter = 0;
+      } else {
+	counter = (int) (bigCounter % (tccr[0] * 2));
+	if (counter > tccr[0]) {
+	  // Should back down to start again!
+	  counter = 2 * tccr[0] - counter;
+	}
       }
     }
 //    System.out.println("CounterStart: " + counterStart + " C:" + cycles + " bigCounter: " + bigCounter +
