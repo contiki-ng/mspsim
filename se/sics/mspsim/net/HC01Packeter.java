@@ -174,7 +174,7 @@ public class HC01Packeter implements IPPacketer {
   /* HC01 header compression from 40 bytes to less... */
   public byte[] generatePacketData(IPv6Packet packet) {
     int enc1 = 0, enc2 = 0;
-    byte[] data = new byte[40];
+    byte[] data = new byte[40 + 8];
     int pos = 2;
     
     if (packet.flowLabel == 0) {
@@ -196,9 +196,13 @@ public class HC01Packeter implements IPPacketer {
     
     /* Note that the payload length is always compressed */
 
-    /* TODO: compress UDP!!! */
-    data[pos++] = (byte) (packet.nextHeader & 0xff);
-
+    /* Compress NextHeader if UDP!!! */
+    if (packet.nextHeader == UDPPacket.DISPATCH) {
+      enc1 |= IPHC_NH_C;
+    } else {
+      data[pos++] = (byte) (packet.nextHeader & 0xff);
+    }
+    
     switch (packet.hopLimit) {
     case 1:
       enc1 |= IPHC_TTL_1;
@@ -292,8 +296,36 @@ public class HC01Packeter implements IPPacketer {
       }
     }
     
-   // uncomp_hdr_len = UIP_IPH_LEN;
-   // TODO: add udp header compression!!! 
+    // uncomp_hdr_len = UIP_IPH_LEN;
+    // TODO: add udp header compression!!! 
+    
+    /* UDP header compression */
+    if(packet.nextHeader == UDPPacket.DISPATCH) {
+      UDPPacket udp = (UDPPacket) packet.getIPPayload();
+      if( udp.sourcePort  >= UDP_PORT_MIN &&
+          udp.sourcePort <  UDP_PORT_MAX &&
+          udp.destinationPort >= UDP_PORT_MIN &&
+          udp.destinationPort <  UDP_PORT_MAX) {
+        /* we can compress. Copy compressed ports, full chcksum */
+        data[pos++] = (byte) NHC_UDP_C;
+        data[pos++] = (byte) (((udp.sourcePort - UDP_PORT_MIN) << 4) +
+            (udp.destinationPort - UDP_PORT_MIN));
+        int checksum = udp.doVirtualChecksum(packet);
+        data[pos++] = (byte) (checksum >> 8);
+        data[pos++] = (byte) (checksum & 0xff);
+      } else {
+        /* we cannot compress. Copy uncompressed ports, full chcksum */
+        data[pos++] = (byte) NHC_UDP_I;
+        data[pos++] = (byte) (udp.sourcePort >> 8);
+        data[pos++] = (byte) (udp.sourcePort & 0xff);
+        data[pos++] = (byte) (udp.destinationPort >> 8);
+        data[pos++] = (byte) (udp.destinationPort & 0xff);
+        int checksum = udp.doVirtualChecksum(packet);
+        data[pos++] = (byte) (checksum >> 8);
+        data[pos++] = (byte) (checksum & 0xff);
+      }
+    }
+
     
     // data[0] = HC01_DISPATCH; - layer below does this!!!
     data[0] = (byte) (enc1 & 0xff);
@@ -307,8 +339,15 @@ public class HC01Packeter implements IPPacketer {
         System.out.print("HC01:   To ");
         IPv6Packet.printAddress(System.out, packet.destAddress);
     }
-    IPPayload payload = packet.getIPPayload();
-    byte[] pload = payload.generatePacketData(packet);
+    byte[] pload;
+    if (packet.nextHeader == UDPPacket.DISPATCH) {
+      UDPPacket udp = (UDPPacket) packet.getIPPayload();
+      /* already have the udp header */
+      pload = udp.payload;
+    } else {
+      IPPayload payload = packet.getIPPayload();
+      pload = payload.generatePacketData(packet);
+    }
     if (DEBUG) System.out.println("HC01 Payload size: " + pload.length);
     
     byte[] dataPacket = new byte[pos + pload.length];

@@ -12,8 +12,15 @@ public class UDPPacket implements IPPayload {
   int destinationPort;
   int length;
   int checkSum;
-  byte[] payload;
+  public byte[] payload;
   
+  public UDPPacket replyPacket() {
+    UDPPacket udp = new UDPPacket();
+    udp.destinationPort = sourcePort;
+    udp.sourcePort = destinationPort;
+    return udp;
+  }
+    
   public byte[] generatePacketData(IPv6Packet packet) {
     return null;
   }
@@ -31,7 +38,7 @@ public class UDPPacket implements IPPayload {
   public void parsePacketData(IPv6Packet packet) {
     sourcePort = packet.get16(0);
     destinationPort = packet.get16(2);
-    length = packet.get16(4);
+    int length = packet.get16(4);
     checkSum = packet.get16(6);
 
     System.out.println("UDP Length: " + length);
@@ -58,15 +65,18 @@ public class UDPPacket implements IPPayload {
 
   // TODO: HC01 should instead insert this data into the UDP packet so
   // that there is no need for special handling-
-  public void doVirtualChecksum(IPv6Packet packet) {
-    int sum = packet.upperLayerHeaderChecksum();
+  public int doVirtualChecksum(IPv6Packet packet) {
     byte[] vheader = new byte[8];
+    int length = payload.length + 8;
     vheader[0] = (byte) (sourcePort >> 8);
     vheader[1] = (byte) (sourcePort & 0xff);
     vheader[2] = (byte) (destinationPort >> 8);
     vheader[3] = (byte) (destinationPort & 0xff);
     vheader[4] = (byte) (length >> 8);
     vheader[5] = (byte) (length & 0xff);
+
+    packet.payloadLen = length;
+    int sum = packet.upperLayerHeaderChecksum();
     
     sum = IPv6Packet.checkSum(sum, vheader, 8);
     sum = IPv6Packet.checkSum(sum, payload, payload.length);
@@ -77,5 +87,6 @@ public class UDPPacket implements IPPayload {
       System.out.println("UDP: Checksum error: " + 
           Utils.hex16(checkSum) + " <?> " + Utils.hex16(sum));
     }
+    return sum;
   }
 }

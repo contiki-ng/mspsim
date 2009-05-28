@@ -83,14 +83,29 @@ public class IPv6Packet extends Packet implements IPPacketer {
     ipLen = packetData.length - currentPos;
   }
 
+  public IPv6Packet replyPacket(IPPayload payload) {
+    IPv6Packet ipPacket = new IPv6Packet();
+    ipPacket.destAddress = sourceAddress;
+    ipPacket.ipPayload = payload;
+    ipPacket.nextHeader = payload.getDispatch();
+    return ipPacket;
+  }
+  
   public byte[] getSourceAddress() {
     return sourceAddress;
+  }
+
+  public void setSourceAddress(byte[] addr) {
+    sourceAddress = addr;
   }
   
   public byte[] getDestinationAddress() {
     return destAddress;
   }
 
+  public void setDestinationAddress(byte[] addr) {
+    destAddress = addr;
+  }
 
   public void printPacket(PrintStream out) {
     out.print("IPv6: from ");

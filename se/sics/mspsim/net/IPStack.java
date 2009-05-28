@@ -238,7 +238,7 @@ public class IPStack {
         tunnel.sendPacket(packet);
       }
     } else if (isForMe(packet.getDestinationAddress())){
-      System.out.println("#### PACKET FOR ME!!!");
+      System.out.println("#### PACKET FOR ME!!! " + packet.getDispatch());
       switch (packet.nextHeader) {
       case ICMP6Packet.DISPATCH:
         icmp6Handler.handlePacket(packet);
@@ -254,10 +254,12 @@ public class IPStack {
           UDPPacket p = new UDPPacket();
           p.parsePacketData(packet);
           p.printPacket(System.out);
+          packet.setIPPayload(p);
         }
         if (networkEventListener != null) {
+          System.out.println("UDP: Notifying event listener...");
           networkEventListener.packetHandled(packet);
-        }        
+        }
         break;
       }
     } else if (packet.netInterface != linkLayerHandler) {
