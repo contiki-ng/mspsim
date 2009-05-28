@@ -561,6 +561,8 @@ public class HC01Packeter implements IPPacketer {
       /* the rest is only the payload */
       udp.payload = packet.getPayload();
       udp.length = udp.payload.length + 8;
+      /* add 8 to the payload length of the UDP packet */
+      packet.payloadLen += 8;
       udp.doVirtualChecksum(packet);
       packet.setIPPayload(udp);
     }

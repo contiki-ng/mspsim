@@ -255,6 +255,9 @@ public class IPStack {
           p.parsePacketData(packet);
           p.printPacket(System.out);
         }
+        if (networkEventListener != null) {
+          networkEventListener.packetHandled(packet);
+        }        
         break;
       }
     } else if (packet.netInterface != linkLayerHandler) {
