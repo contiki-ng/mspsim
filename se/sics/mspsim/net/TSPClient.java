@@ -263,21 +263,24 @@ public class TSPClient implements NetworkInterface {
   }
 
   private void sendPacket(byte[] packetData) throws IOException {
-    byte[] pData = new byte[8 + packetData.length];
-    pData[0] = (byte) (0xf0 | (seq >>24) & 0xf);
-    pData[1] = (byte) ((seq >> 16) & 0xff);
-    pData[2] = (byte) ((seq >> 8) & 0xff);
-    pData[3] = (byte) (seq & 0xff);
-    
-    long time = System.currentTimeMillis() / 1000;
-    pData[4] = (byte) ((time >> 24) & 0xff);
-    pData[5] = (byte) ((time >> 16) & 0xff);
-    pData[6] = (byte) ((time >> 8) & 0xff);
-    pData[7] = (byte) ((time >> 0) & 0xff);
-    seq++;
+    byte[] pData;
+    if (writerState != WriterState.TUNNEL_UP) {
+      pData = new byte[8 + packetData.length];
+      pData[0] = (byte) (0xf0 | (seq >>24) & 0xf);
+      pData[1] = (byte) ((seq >> 16) & 0xff);
+      pData[2] = (byte) ((seq >> 8) & 0xff);
+      pData[3] = (byte) (seq & 0xff);
 
-    System.arraycopy(packetData, 0, pData, 8, packetData.length);
-
+      long time = System.currentTimeMillis() / 1000;
+      pData[4] = (byte) ((time >> 24) & 0xff);
+      pData[5] = (byte) ((time >> 16) & 0xff);
+      pData[6] = (byte) ((time >> 8) & 0xff);
+      pData[7] = (byte) ((time >> 0) & 0xff);
+      seq++;
+      System.arraycopy(packetData, 0, pData, 8, packetData.length);
+    } else {
+      pData = packetData;
+    }
     DatagramPacket packet = new DatagramPacket(pData, pData.length, serverAddr, DEFAULT_PORT);
     connection.send(packet);
     System.out.println("Packet sent... " + pData.length + " => C:" +
