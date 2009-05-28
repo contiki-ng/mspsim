@@ -246,6 +246,16 @@ public class IPStack {
           networkEventListener.packetHandled(packet);
         }
         break;
+      case UDPPacket.DISPATCH:
+        // TODO: move to HC01 compression handler... => generate raw UDP
+        if (packet.getIPPayload() != null) {
+          packet.getIPPayload().printPacket(System.out);
+        } else {
+          UDPPacket p = new UDPPacket();
+          p.parsePacketData(packet);
+          p.printPacket(System.out);
+        }
+        break;
       }
     } else if (packet.netInterface != linkLayerHandler) {
       /* Can not be from link layer (default) -- */

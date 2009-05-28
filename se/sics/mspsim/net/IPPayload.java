@@ -1,5 +1,7 @@
 package se.sics.mspsim.net;
 
+import java.io.PrintStream;
+
 public interface IPPayload {
 
   public byte getDispatch();
@@ -12,5 +14,7 @@ public interface IPPayload {
    * Call this to parse the IP packet 
    */
   public void parsePacketData(IPv6Packet packet); 
+  
+  public void printPacket(PrintStream out);
 }
 

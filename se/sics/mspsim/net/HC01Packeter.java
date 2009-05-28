@@ -42,6 +42,8 @@
  */
 
 package se.sics.mspsim.net;
+
+
 import se.sics.mspsim.util.Utils;
 
 public class HC01Packeter implements IPPacketer {
@@ -325,6 +327,7 @@ public class HC01Packeter implements IPPacketer {
   
   public void parsePacketData(IPv6Packet packet) {
     /* first two is ... */
+    UDPPacket udp = null;
     int pos = 2;
     int enc1 = packet.getData(0);
     int enc2 = packet.getData(1);
@@ -525,9 +528,10 @@ public class HC01Packeter implements IPPacketer {
           System.out.println("sicslowpan uncompress_hdr: error unsupported UDP compression\n");
         return;
         }
-        System.out.println("DestPort: " + destPort);
-        System.out.println("SourcePort: " + srcPort);
-        System.out.println("Checksum: " + srcPort);
+        udp = new UDPPacket();
+        udp.sourcePort = srcPort;
+        udp.destinationPort = destPort;
+        udp.checkSum = checkSum;
       }
     }
 
@@ -551,6 +555,15 @@ public class HC01Packeter implements IPPacketer {
     System.out.println();
     // packet.setPayload(data, 40, ???);
     packet.payloadLen = packet.getPayloadLength();
+
+    if (udp != null) {
+      /* if we have a udp payload we already have the udp headers in place */
+      /* the rest is only the payload */
+      udp.payload = packet.getPayload();
+      udp.length = udp.payload.length + 8;
+      udp.doVirtualChecksum(packet);
+      packet.setIPPayload(udp);
+    }
   }
   
   private boolean isMulticastCompressable(byte[] address) {
