@@ -95,6 +95,7 @@ public class IPStack {
     prefix = new byte[] {(byte) 0xaa, (byte)0xaa, 0, 0, 0, 0, 0, 0};
     prefixSize = 64; /* link size */
     configureIPAddress();
+    new NeighborManager(this, neighborTable);
   }
 
   public NeighborTable getNeighborTable() {
@@ -202,8 +203,8 @@ public class IPStack {
   /* send a packet - can be bound for specific interface */
   public void sendPacket(IPv6Packet packet, NetworkInterface nIf) {
     /* find route checks if there are link addr, and otherwise sets them */
-    if ((nIf == linkLayerHandler ||
-        (nIf == null)) && isOnLink(packet.getDestinationAddress())) {
+    if (nIf == linkLayerHandler ||
+        (nIf == null && isOnLink(packet.getDestinationAddress()))) {
       if (findRoute(packet)) {
         linkLayerHandler.sendPacket(packet);
       }

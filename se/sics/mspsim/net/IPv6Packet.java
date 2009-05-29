@@ -83,6 +83,15 @@ public class IPv6Packet extends Packet implements IPPacketer {
     ipLen = packetData.length - currentPos;
   }
 
+  public IPv6Packet(IPPayload pl) {
+    this();
+    // copy over all the data from the packet...
+    // is this the right way to do this???
+    nextHeader = pl.getDispatch();
+    ipPayload = pl;
+  }
+
+  
   public IPv6Packet replyPacket(IPPayload payload) {
     IPv6Packet ipPacket = new IPv6Packet();
     ipPacket.destAddress = sourceAddress;

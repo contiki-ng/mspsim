@@ -12,7 +12,7 @@ public class UDPPacket implements IPPayload {
   int destinationPort;
   int length;
   int checkSum;
-  public byte[] payload;
+  byte[] payload;
   
   public UDPPacket replyPacket() {
     UDPPacket udp = new UDPPacket();
@@ -20,7 +20,31 @@ public class UDPPacket implements IPPayload {
     udp.sourcePort = destinationPort;
     return udp;
   }
-    
+
+  public byte[] getPayload() {
+    return payload;
+  }
+
+  public void setPayload(byte[] payload) {
+    this.payload = payload;
+  }
+
+  public int getSourcePort() {
+    return sourcePort;
+  }
+
+  public void setSourcePort(int sourcePort) {
+    this.sourcePort = sourcePort;
+  }
+
+  public int getDestinationPort() {
+    return destinationPort;
+  }
+
+  public void setDestinationPort(int destinationPort) {
+    this.destinationPort = destinationPort;
+  }
+  
   public byte[] generatePacketData(IPv6Packet packet) {
     return null;
   }
