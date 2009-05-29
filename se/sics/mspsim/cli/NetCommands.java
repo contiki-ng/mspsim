@@ -59,6 +59,7 @@ public class NetCommands implements CommandBundle {
       public int executeCommand(CommandContext context) {
         TSPClient tunnel = TSPClient.startTSPTunnel(ipStack, context.getArgument(0),
             context.getArgument(1), context.getArgument(2));
+        ipStack.setTunnel(tunnel);
         if (tunnel != null) {
           context.out.print("TSP Tunnel started");
           return 0;

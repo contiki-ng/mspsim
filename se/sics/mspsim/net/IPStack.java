@@ -202,13 +202,13 @@ public class IPStack {
   /* send a packet - can be bound for specific interface */
   public void sendPacket(IPv6Packet packet, NetworkInterface nIf) {
     /* find route checks if there are link addr, and otherwise sets them */
-    if (nIf == linkLayerHandler ||
-        (nIf == null) && isOnLink(packet.getDestinationAddress())) {
+    if ((nIf == linkLayerHandler ||
+        (nIf == null)) && isOnLink(packet.getDestinationAddress())) {
       if (findRoute(packet)) {
         linkLayerHandler.sendPacket(packet);
       }
     } else {
-      System.out.println("*** Should go out on tunnel: ");
+      System.out.println("*** Should go out on tunnel: " + tunnel);
       System.out.print("MyAddress: ");
       IPv6Packet.printAddress(System.out, myIPAddress);
       System.out.print(", Dest: ");
@@ -223,21 +223,7 @@ public class IPStack {
     System.out.println("IPv6 packet received!");
     packet.printPacket(System.out);
 
-    if (!isOnLink(packet.getDestinationAddress()) &&
-        packet.netInterface != tunnel) {
-      System.out.println("**** Should go out on tunnel!!!!");
-      if (packet.ipPayload == null) {
-        packet.setIPPayload(new BytePayload(packet));
-      }
-      /* will this work ??? */
-      System.out.print("MyAddress: ");
-      IPv6Packet.printAddress(System.out, myIPAddress);
-      System.out.print(", Dest: ");
-      IPv6Packet.printAddress(System.out, packet.getDestinationAddress());
-      if (tunnel != null && tunnel.isReady()) {
-        tunnel.sendPacket(packet);
-      }
-    } else if (isForMe(packet.getDestinationAddress())){
+    if (isForMe(packet.getDestinationAddress())){
       System.out.println("#### PACKET FOR ME!!! " + packet.getDispatch());
       switch (packet.nextHeader) {
       case ICMP6Packet.DISPATCH:
@@ -261,6 +247,20 @@ public class IPStack {
           networkEventListener.packetHandled(packet);
         }
         break;
+      }
+    } else if (!isOnLink(packet.getDestinationAddress()) &&
+        packet.netInterface != tunnel) {
+      System.out.println("**** Should go out on tunnel!!!!" + tunnel);
+      if (packet.ipPayload == null) {
+        packet.setIPPayload(new BytePayload(packet));
+      }
+      /* will this work ??? */
+      System.out.print("MyAddress: ");
+      IPv6Packet.printAddress(System.out, myIPAddress);
+      System.out.print(", Dest: ");
+      IPv6Packet.printAddress(System.out, packet.getDestinationAddress());
+      if (tunnel != null && tunnel.isReady()) {
+        tunnel.sendPacket(packet);
       }
     } else if (packet.netInterface != linkLayerHandler) {
       /* Can not be from link layer (default) -- */

@@ -22,7 +22,9 @@ public class TSPClient implements NetworkInterface {
 
   private static final Pattern prefixPattern = 
     Pattern.compile("(?m).+?<prefix (.+?)>(.+?)</prefix>");
-    
+  private static final Pattern myIPPattern = 
+    Pattern.compile("(?s).+?<client>.+?ipv6\">(.+?)</address>");
+
   private IPStack ipStack;
   
   WriterState writerState = WriterState.STARTED;
@@ -229,6 +231,20 @@ public class TSPClient implements NetworkInterface {
               /* this is hardcoded for 64 bits for now */
               ipStack.setPrefix(prefix, 64);
             }
+          }
+        } else {
+          Matcher m = myIPPattern.matcher(sData);
+          if (m.find()) {
+            if (ipStack != null) {
+              System.out.println("### Got IP address: " + m.group(1));
+              byte[] prefix = getPrefix(m.group(1));
+              byte[] macAddr = new byte[8];
+              ipStack.makeLLAddress(prefix, macAddr);
+              ipStack.setLinkLayerAddress(macAddr);
+              ipStack.setIPAddress(prefix);
+            }
+          } else {
+            System.out.println("NOT MATCH!!!");
           }
         }
         writerState = WriterState.TUNNEL_CONF_RECEIVED;
