@@ -273,6 +273,13 @@ public class ICMP6Packet implements IPPayload {
       }
       pos = addOptions(buffer, pos);
       break;
+    case ROUTER_SOLICITATION:
+      buffer[pos++] = 0;
+      buffer[pos++] = 0;
+      buffer[pos++] = 0;
+      buffer[pos++] = 0;
+      pos = addOptions(buffer, pos);
+      break;
     case ROUTER_ADVERTISEMENT:
       buffer[pos++] = hopLimit;
       buffer[pos++] = autoConfigFlags;
