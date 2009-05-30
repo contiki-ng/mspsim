@@ -2,8 +2,6 @@
  * 
  */
 package se.sics.mspsim.net;
-
-import java.util.Vector;
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -18,11 +16,23 @@ public class NeighborTable {
   Neighbor defrouter;
   
   public synchronized Neighbor addNeighbor(byte[] ipAddress, byte[] linkAddress) {
-    Neighbor nb = new Neighbor();
-    nb.ipAddress = ipAddress;
-    nb.linkAddress = linkAddress;
-    nb.state = Neighbor.INCOMPLETE;
-    neighbors[neighborCount++] = nb;
+    Neighbor nb = getNeighbor(ipAddress);
+    if (nb == null) {
+      nb = new Neighbor();
+      nb.ipAddress = ipAddress;
+      nb.linkAddress = linkAddress;
+      nb.state = Neighbor.INCOMPLETE;
+      if (neighborCount < neighbors.length) {
+        neighbors[neighborCount++] = nb;
+      } else {
+        // TODO select suitable neighbor to replace
+        neighbors[0] = nb;
+      }
+    } else {
+      /* Neighbor already in neighbor table */
+      nb.linkAddress = linkAddress;
+      nb.state = Neighbor.INCOMPLETE;
+    }
     return nb;
   }
   
