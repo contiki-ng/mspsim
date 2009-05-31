@@ -94,7 +94,6 @@ public class ICMP6PacketHandler {
           int size = prefixInfo[2];
           ipStack.setPrefix(prefix, size);
 
-          System.out.println("Adding router as neighbor!!!");
           NeighborTable nt = ipStack.getNeighborTable();
           Neighbor nei = nt.addNeighbor(packet.sourceAddress, packet.getLinkSource());
           nt.setDefrouter(nei);

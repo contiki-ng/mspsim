@@ -325,6 +325,7 @@ public class Timer extends IOUnit {
     case TCCTL5:
     case TCCTL6:
       int i = (index - TCCTL0) / 2;
+      updateTCCTL(i, cycles);
       val = tcctl[i];
       break;
     case TCCR0:
@@ -348,6 +349,14 @@ public class Timer extends IOUnit {
 
     // It reads the interrupt flag for capture...
     return val & 0xffff;
+  }
+
+  /* here we need to update things such as CCI / Capture/Compare Input value
+   * and other dynamic values
+   */
+  private void updateTCCTL(int cctl, long cycles) {
+    // TODO Auto-generated method stub
+    // update the CCI depending on speed of clocks...
   }
 
   private void resetTIV(long cycles) {
