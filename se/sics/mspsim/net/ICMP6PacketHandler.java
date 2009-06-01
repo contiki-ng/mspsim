@@ -82,7 +82,10 @@ public class ICMP6PacketHandler {
         IPv6Packet.printAddress(System.out, ipp.destAddress);
         packet.printPacket(System.out);
 
+        ipStack.getNeighborManager().receiveNDMessage(packet);
+
         ipStack.sendPacket(ipp, packet.netInterface);
+        
       }
       break;
     case ICMP6Packet.ROUTER_ADVERTISEMENT:
@@ -94,10 +97,7 @@ public class ICMP6PacketHandler {
           int size = prefixInfo[2];
           ipStack.setPrefix(prefix, size);
 
-          NeighborTable nt = ipStack.getNeighborTable();
-          Neighbor nei = nt.addNeighbor(packet.sourceAddress, packet.getLinkSource());
-          nt.setDefrouter(nei);
-          nei.setState(Neighbor.REACHABLE);
+          ipStack.getNeighborManager().receiveNDMessage(packet);
         }
       }
       break;

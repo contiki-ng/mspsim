@@ -86,6 +86,7 @@ public class IPStack {
   //private HC01Packeter ipPacketer = new HC01Packeter();
 
   private NeighborTable neighborTable = new NeighborTable();
+  private NeighborManager neighborManager;
   private NetworkEventListener networkEventListener;
   
   // TODO: read from configfile...
@@ -95,11 +96,15 @@ public class IPStack {
     prefix = new byte[] {(byte) 0xaa, (byte)0xaa, 0, 0, 0, 0, 0, 0};
     prefixSize = 64; /* link size */
     configureIPAddress();
-    new NeighborManager(this, neighborTable);
+    neighborManager = new NeighborManager(this, neighborTable);
   }
 
   public NeighborTable getNeighborTable() {
     return neighborTable;
+  }
+
+  public NeighborManager getNeighborManager() {
+    return neighborManager;
   }
   
   public void setLinkLayerHandler(PacketHandler handler) {

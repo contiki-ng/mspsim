@@ -18,15 +18,17 @@ public class NeighborTable {
   public synchronized Neighbor addNeighbor(byte[] ipAddress, byte[] linkAddress) {
     Neighbor nb = getNeighbor(ipAddress);
     if (nb == null) {
-      nb = new Neighbor();
-      nb.ipAddress = ipAddress;
-      nb.linkAddress = linkAddress;
-      nb.state = Neighbor.INCOMPLETE;
-      if (neighborCount < neighbors.length) {
-        neighbors[neighborCount++] = nb;
-      } else {
-        // TODO select suitable neighbor to replace
-        neighbors[0] = nb;
+      if (checkIPAddress(ipAddress)) {
+        nb = new Neighbor();
+        nb.ipAddress = ipAddress;
+        nb.linkAddress = linkAddress;
+        nb.state = checkLinkAddress(linkAddress) ? Neighbor.STALE : Neighbor.INCOMPLETE;
+        if (neighborCount < neighbors.length) {
+          neighbors[neighborCount++] = nb;
+        } else {
+          // TODO select suitable neighbor to replace
+          neighbors[0] = nb;
+        }
       }
     } else {
       /* Neighbor already in neighbor table */
@@ -36,6 +38,18 @@ public class NeighborTable {
     return nb;
   }
   
+  private boolean checkLinkAddress(byte[] link) {
+    if (link == null) return false;
+    /* is there any other non-ok address ?? */
+    return true;
+  }
+  private boolean checkIPAddress(byte[] ipAddress) {
+    /* can not add unspecified IP addresses */
+    if (Utils.equals(ipAddress, IPStack.UNSPECIFIED)) return false;
+    /* are all other ok? */
+    return true;
+  }
+
   public Neighbor getDefrouter() {
     return defrouter;
   }
