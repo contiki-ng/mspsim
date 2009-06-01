@@ -123,6 +123,7 @@ public class Timer extends IOUnit {
   public static final int SRC_VCC = 0x201;
   public static final int SRC_CAOUT = 0x202; // Internal ??? What is this?
 
+  public static final int CC_I = 0x08;
   public static final int CC_IFG = 0x01; // Bit 0
   public static final int CC_IE = 0x10;  // Bit 4
   public static final int CC_TRIGGER_INT = CC_IE | CC_IFG;
@@ -183,6 +184,7 @@ public class Timer extends IOUnit {
   private double cyclesMultiplicator = 1;
 
   private int clockSource;
+  private int clockSpeed;
   private int mode;
   
   // The IO registers
@@ -357,6 +359,17 @@ public class Timer extends IOUnit {
   private void updateTCCTL(int cctl, long cycles) {
     // TODO Auto-generated method stub
     // update the CCI depending on speed of clocks...
+    boolean input = false;
+    /* if ACLK we can calculate edge... */
+    if (inputSrc[cctl] == SRC_ACLK) {
+      /* needs the TimerA clock speed here... */
+      int aTicks = clockSpeed / core.aclkFrq;
+      updateCounter(cycles);
+      if (counter % aTicks > aTicks / 2) {
+        input = true;
+      }
+    }
+    tcctl[cctl] = (tcctl[cctl] & ~CC_I) | (input ? CC_I : 0);    
   }
 
   private void resetTIV(long cycles) {
@@ -555,6 +568,7 @@ public class Timer extends IOUnit {
         System.out.println(getName() + " setting multiplicator to: " + cyclesMultiplicator);
       }
     }
+    clockSpeed = (int) (core.smclkFrq / cyclesMultiplicator);
   }
   
   void resetCounter(long cycles) {
@@ -637,6 +651,7 @@ public class Timer extends IOUnit {
     
     // Needs to be non-integer since smclk Frq can be lower
     // than aclk
+    /* this should be cached and changed whenever clockSource change!!! */
     double divider = 1;
     if (clockSource == SRC_ACLK) {
       // Should later be divided with DCO clock?
