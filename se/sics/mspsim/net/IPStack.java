@@ -76,7 +76,8 @@ public class IPStack {
   private PacketHandler linkLayerHandler;
   private IPPacketer defaultPacketer = new HC01Packeter();
   private ICMP6PacketHandler icmp6Handler;
-
+  private TCPHandler tcpHandler = new TCPHandler(this);
+  
   /* is router -> router behavior */
   private boolean isRouter = false;
 
@@ -250,6 +251,17 @@ public class IPStack {
         }
         if (networkEventListener != null) {
           System.out.println("UDP: Notifying event listener...");
+          networkEventListener.packetHandled(packet);
+        }
+        break;
+      case TCPPacket.DISPATCH:
+        TCPPacket p = new TCPPacket();
+        p.parsePacketData(packet);
+        p.printPacket(System.out);
+        packet.setIPPayload(p);
+        tcpHandler.handlePacket(packet);
+        if (networkEventListener != null) {
+          System.out.println("TCP: Notifying event listener...");
           networkEventListener.packetHandled(packet);
         }
         break;

@@ -48,7 +48,7 @@ import se.sics.mspsim.util.Utils;
 
 public class HC01Packeter implements IPPacketer {
 
-  private boolean DEBUG = true;
+  private boolean DEBUG = false;//true;
   /*
    * Values of fields within the IPHC encoding first byte
    * (C stands for compressed and I for inline)

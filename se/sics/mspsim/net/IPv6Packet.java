@@ -288,4 +288,5 @@ public class IPv6Packet extends Packet implements IPPacketer {
     packet.parsePacketData(packet);
     packet.printPacket(System.out);
   }
+
 }
