@@ -51,9 +51,9 @@ public class TCPPacket implements IPPayload {
     /* offset to the first payload byte div. by 4 */
     offset = size / 4;
 
-    if (payload != null) 
+    if (payload != null) {
       size += payload.length;
-    
+    }
     byte[] data = new byte[size];
     int pos = 0;
     data[pos++] = (byte)(sourcePort >> 8);
@@ -85,9 +85,10 @@ public class TCPPacket implements IPPayload {
     }
     /* no options, no padding for now */
     if (payload != null) {
+      System.out.println("Adding payload to packet!!!" + payload.length);
       System.arraycopy(payload, 0, data, pos, payload.length);
     }
-    
+
     packet.payloadLen = size;
     int sum = packet.upperLayerHeaderChecksum();
     

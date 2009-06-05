@@ -30,7 +30,7 @@ public class TCPConnection {
   int sendNext;
   int sendWindow = TCPPacket.DEFAULT_WINDOW;
 
-  /* last received seqNo + 1 */
+  /* last received seqNo + payloadLen*/
   int receiveNext;
   int receiveWindow = TCPPacket.DEFAULT_WINDOW;
   
@@ -45,4 +45,15 @@ public class TCPConnection {
     return false;
   }
 
+  public void updateOnSend(TCPPacket tcpPacket) {
+    sendNext += tcpPacket.payload.length;
+  }
+    
+  public void updateOnReceive(TCPPacket tcpPacket) {
+    int plen = tcpPacket.payload == null ? 0 : tcpPacket.payload.length;
+    receiveNext = tcpPacket.seqNo + plen;
+  }
+
+
+  
 }

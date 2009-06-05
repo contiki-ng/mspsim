@@ -76,12 +76,6 @@ public class TCPHandler {
                 " sendNext: " + Integer.toString(connection.sendNext, 16));
           }
         }
-        int plen = 0;
-        if (tcpPacket.payload != null) {
-          /* payload received !!! */
-          System.out.println("Payload of: " + tcpPacket.payload.length);
-          plen = tcpPacket.payload.length;
-        }
 
         if (connection.receiveNext == tcpPacket.seqNo) {
           System.out.println("TCPHandler: data received ok!!!");
@@ -89,21 +83,39 @@ public class TCPHandler {
           System.out.println("TCPHandler: seqNo error: receiveNext: " +
               connection + " != seqNo: " + tcpPacket.seqNo);
         }
-        
-        connection.receiveNext = tcpPacket.seqNo + plen;
-        
+
+        int plen = 0;
+        if (tcpPacket.payload != null) {
+          /* payload received !!! */
+          System.out.println("Payload of: " + tcpPacket.payload.length);
+          plen = tcpPacket.payload.length;
+        }
+
+        connection.updateOnReceive(tcpPacket);
+
+        /* we should check if we have acked the last data from the other */
+        if (tcpPacket.isAck() && 
+            (tcpPacket.payload == null || tcpPacket.payload.length == 0)) {
+          return;
+        }
+
         IPv6Packet reply = createAck(packet, tcpPacket, flag);
         TCPPacket tcpReply = (TCPPacket) reply.getIPPayload();
         tcpReply.ackNo = tcpPacket.seqNo + plen;
         tcpReply.seqNo = connection.sendNext;
-        System.out.println("TCPHandler: Sending ACK: ");
+        
+        // just to test replying....
+        if (tcpPacket.payload != null && tcpPacket.payload.length > 4) {
+          tcpReply.payload = "MSPSim>".getBytes();
+          connection.updateOnSend(tcpReply);
+        }
+        System.out.println("TCPHandler: Sending ACK");
         ipStack.sendPacket(reply, packet.netInterface);
         break;
-      }
-      
+      }     
     }
   }
-
+  
   private IPv6Packet createAck(IPv6Packet packet, TCPPacket tcpPacket, int flags) {
     TCPPacket tcpReply = tcpPacket.replyPacket();
     IPv6Packet reply = packet.replyPacket(tcpReply);
