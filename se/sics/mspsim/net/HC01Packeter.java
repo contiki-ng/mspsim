@@ -543,7 +543,7 @@ public class HC01Packeter implements IPPacketer {
     if ((enc1 & 0x20) != 0) {
       /* The next header is compressed, NHC is following */
       if ((packet.getData(pos) & 0xfc) == NHC_UDP_ID) {
-        System.out.println("HC01: Next header UDP!");
+        if (DEBUG) System.out.println("HC01: Next header UDP!");
         packet.nextHeader = PROTO_UDP;
         int srcPort = 0;
         int destPort = 0;
@@ -583,15 +583,16 @@ public class HC01Packeter implements IPPacketer {
     } else {
     }
 
-    System.out.println("Encoding 0: " + Utils.hex8(enc1) +
-        " Encoding 1: " + Utils.hex8(enc2));
-
-    System.out.println("TTL: " + packet.hopLimit);
-    System.out.print("Src Addr: ");
-    IPv6Packet.printAddress(System.out, packet.sourceAddress);
-    System.out.print("Dst Addr: ");
-    IPv6Packet.printAddress(System.out, packet.destAddress);
-    System.out.println();
+    if (DEBUG) {
+      System.out.println("Encoding 0: " + Utils.hex8(enc1) +
+          " Encoding 1: " + Utils.hex8(enc2));
+      System.out.println("TTL: " + packet.hopLimit);
+      System.out.print("Src Addr: ");
+      IPv6Packet.printAddress(System.out, packet.sourceAddress);
+      System.out.print("Dst Addr: ");
+      IPv6Packet.printAddress(System.out, packet.destAddress);
+      System.out.println();
+    }
     // packet.setPayload(data, 40, ???);
     packet.payloadLen = packet.getPayloadLength();
 

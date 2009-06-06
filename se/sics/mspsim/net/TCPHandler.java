@@ -15,11 +15,15 @@ public class TCPHandler {
   
   public TCPHandler(IPStack stack) {
     this.ipStack = stack;
-    TCPConnection conn = listenConnections[0] = new TCPConnection();
-    /* fake a port 23 - telnet */
-    conn.localPort = 23;
+  }
+  
+  public synchronized TCPConnection addListenConnection(int port) {
+    TCPConnection conn = listenConnections[listenNo++] =
+      new TCPConnection(ipStack, null);
+
+    conn.localPort = port;
     conn.state = TCPConnection.LISTEN;
-    listenNo++;
+    return conn;
   }
   
   public void handlePacket(IPv6Packet packet) {
@@ -33,9 +37,8 @@ public class TCPHandler {
       } else {
         System.out.println("TCPHandler: found listen connection!!!");
         if ((tcpPacket.flags & TCPPacket.SYN) > 0) {
-          IPv6Packet reply = createAck(packet, tcpPacket, TCPPacket.SYN);
-          TCPPacket tcpReply = (TCPPacket) reply.getIPPayload();
-          TCPConnection tc = new TCPConnection();
+          TCPPacket tcpReply = createAck(tcpPacket, TCPPacket.SYN);
+          TCPConnection tc = new TCPConnection(ipStack, packet.netInterface);
           /* setup the connection */
           tc.externalIP = packet.sourceAddress;
           tc.externalPort = tcpPacket.sourcePort;
@@ -47,8 +50,9 @@ public class TCPHandler {
           activeConnections[connectionNo++] = tc;
           tcpReply.ackNo = tcpPacket.seqNo + 1;
           System.out.println("TCPHandler: Sending: " + tcpReply);
-          ipStack.sendPacket(reply, packet.netInterface);
+          tc.send(tcpReply);
           tc.sentUnack = tc.sendNext = tc.sendNext + 1;
+          connection.newConnection(tc);
         }
       }
     } else {
@@ -63,27 +67,6 @@ public class TCPHandler {
         break;
       case TCPConnection.ESTABLISHED:
         System.out.println("Gotten packet of real data!!!");
-        int flag = 0;
-        if (tcpPacket.isAck()) {
-          /* check if correct ack - we are only sending a packet a time... */
-          if (connection.sendNext == tcpPacket.ackNo) {
-            /* no more unacked data */
-            connection.sentUnack = tcpPacket.ackNo;
-            /* this means that we can send more data !!*/
-          } else {
-            System.out.println("TCPHandler: Unexpected ACK no: " +
-                Integer.toString(tcpPacket.ackNo, 16) +
-                " sendNext: " + Integer.toString(connection.sendNext, 16));
-          }
-        }
-
-        if (connection.receiveNext == tcpPacket.seqNo) {
-          System.out.println("TCPHandler: data received ok!!!");
-        } else {
-          System.out.println("TCPHandler: seqNo error: receiveNext: " +
-              connection + " != seqNo: " + tcpPacket.seqNo);
-        }
-
         int plen = 0;
         if (tcpPacket.payload != null) {
           /* payload received !!! */
@@ -91,37 +74,22 @@ public class TCPHandler {
           plen = tcpPacket.payload.length;
         }
 
-        connection.updateOnReceive(tcpPacket);
-
         /* we should check if we have acked the last data from the other */
         if (tcpPacket.isAck() && 
             (tcpPacket.payload == null || tcpPacket.payload.length == 0)) {
           return;
         }
 
-        IPv6Packet reply = createAck(packet, tcpPacket, flag);
-        TCPPacket tcpReply = (TCPPacket) reply.getIPPayload();
-        tcpReply.ackNo = tcpPacket.seqNo + plen;
-        tcpReply.seqNo = connection.sendNext;
-        
-        // just to test replying....
-        if (tcpPacket.payload != null && tcpPacket.payload.length > 4) {
-          tcpReply.payload = "MSPSim>".getBytes();
-          connection.updateOnSend(tcpReply);
-        }
-        System.out.println("TCPHandler: Sending ACK");
-        ipStack.sendPacket(reply, packet.netInterface);
+        connection.receive(tcpPacket);
         break;
       }     
     }
   }
   
-  private IPv6Packet createAck(IPv6Packet packet, TCPPacket tcpPacket, int flags) {
+  static TCPPacket createAck(TCPPacket tcpPacket, int flags) {
     TCPPacket tcpReply = tcpPacket.replyPacket();
-    IPv6Packet reply = packet.replyPacket(tcpReply);
-    reply.sourceAddress = ipStack.myIPAddress;
     tcpReply.flags |= flags | TCPPacket.ACK;
-    return reply;
+    return tcpReply;
   }
   
   private TCPConnection findConnection(IPv6Packet packet, TCPPacket tcpPacket) {

@@ -85,10 +85,14 @@ public class IPv6Packet extends Packet implements IPPacketer {
 
   public IPv6Packet(IPPayload pl) {
     this();
-    // copy over all the data from the packet...
-    // is this the right way to do this???
     nextHeader = pl.getDispatch();
     ipPayload = pl;
+  }
+
+  public IPv6Packet(IPPayload pl, byte[] source, byte[] dest) {
+    this(pl);
+    this.sourceAddress = source;
+    this.destAddress = dest;
   }
 
   

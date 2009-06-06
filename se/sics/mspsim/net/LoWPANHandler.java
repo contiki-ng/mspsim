@@ -41,6 +41,8 @@ package se.sics.mspsim.net;
 
 public class LoWPANHandler extends AbstractPacketHandler implements NetworkInterface {
 
+  private final static boolean DEBUG = false;
+  
   private IPStack ipStack;
   
   public LoWPANHandler() {

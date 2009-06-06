@@ -42,11 +42,13 @@
  */
 
 package se.sics.mspsim.net;
-
+import java.util.Timer;
 import se.sics.mspsim.util.Utils;
 
 public class IPStack {
 
+  private static final boolean DEBUG = false;
+  
   public static final byte[] ALL_NODES = {(byte) 0xff, 0x02, 0, 0, 0, 0, 0, 0,
        0, 0, 0, 0, 0, 0, 0, 1};
   public static final byte[] ALL_ROUTERS = {(byte) 0xff, 0x02, 0, 0, 0, 0, 0, 0,
@@ -89,7 +91,7 @@ public class IPStack {
   private NeighborTable neighborTable = new NeighborTable();
   private NeighborManager neighborManager;
   private NetworkEventListener networkEventListener;
-  
+  private Timer timer = new Timer();
   // TODO: read from configfile...
 
   public IPStack() {
@@ -100,6 +102,15 @@ public class IPStack {
     neighborManager = new NeighborManager(this, neighborTable);
   }
 
+  public Timer getTimer() {
+    return timer;
+  }
+  
+  /* this needs some error handling!!! */
+  public TCPConnection listen(int port) {
+    return tcpHandler.addListenConnection(port);
+  }
+  
   public NeighborTable getNeighborTable() {
     return neighborTable;
   }
@@ -231,7 +242,7 @@ public class IPStack {
     packet.printPacket(System.out);
 
     if (isForMe(packet.getDestinationAddress())){
-      System.out.println("#### PACKET FOR ME!!! " + packet.getDispatch());
+      if (DEBUG) System.out.println("#### PACKET FOR ME!!! " + packet.getDispatch());
       switch (packet.nextHeader) {
       case ICMP6Packet.DISPATCH:
         icmp6Handler.handlePacket(packet);
@@ -250,7 +261,6 @@ public class IPStack {
           packet.setIPPayload(p);
         }
         if (networkEventListener != null) {
-          System.out.println("UDP: Notifying event listener...");
           networkEventListener.packetHandled(packet);
         }
         break;
@@ -261,7 +271,6 @@ public class IPStack {
         packet.setIPPayload(p);
         tcpHandler.handlePacket(packet);
         if (networkEventListener != null) {
-          System.out.println("TCP: Notifying event listener...");
           networkEventListener.packetHandled(packet);
         }
         break;
@@ -297,7 +306,6 @@ public class IPStack {
 
   /* is the packet for me ? */
   private boolean isForMe(byte[] address) {
-    System.out.print("=== is for me? ");
     IPv6Packet.printAddress(System.out, address);
     if (Utils.equals(myIPAddress, address) ||
         Utils.equals(myLocalIPAddress, address) ||
@@ -343,6 +351,5 @@ public class IPStack {
   
   public boolean isRouter() {
     return isRouter ;
-  }
-  
+  }  
 }

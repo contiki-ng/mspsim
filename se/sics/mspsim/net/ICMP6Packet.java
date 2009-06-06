@@ -71,6 +71,12 @@ public class ICMP6Packet implements IPPayload {
   /* default MTU is 1280 (5x256) which also is the smallest allowed */
   byte[] mtuOption = new byte[] {5, 1, 0, 0, 0, 0, 5, 0};
 
+  public ICMP6Packet() {
+  }
+  public ICMP6Packet(int type) {
+    this.type = type;
+  }
+  
   void updateRA(IPStack stack) {
     byte[] llAddr = stack.getLinkLayerAddress();
     options.removeAllElements();

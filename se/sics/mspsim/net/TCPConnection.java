@@ -34,6 +34,25 @@ public class TCPConnection {
   int receiveNext;
   int receiveWindow = TCPPacket.DEFAULT_WINDOW;
   
+  private IPStack ipStack;
+  private NetworkInterface netInterface;
+  private TCPListener tcpListener;
+  
+  TCPConnection(IPStack stack, NetworkInterface nIf) {
+    ipStack = stack;
+    netInterface = nIf;
+  }
+  
+  public void setTCPListener(TCPListener listener) {
+    tcpListener = listener;
+  }
+  
+  public void newConnection(TCPConnection c) {
+    if (tcpListener != null) {
+      tcpListener.newConnection(c);
+    }
+  }
+  
   /* check if incoming packet matches */
   public boolean matches(IPv6Packet packet, TCPPacket tcpPacket) {
     if ((externalPort == -1 || tcpPacket.sourcePort == externalPort) &&
@@ -45,15 +64,65 @@ public class TCPConnection {
     return false;
   }
 
-  public void updateOnSend(TCPPacket tcpPacket) {
-    sendNext += tcpPacket.payload.length;
+  /* send packet + update sendNext - this should take into account ext window */
+  /* is this what mess up the stuff */
+  public void send(TCPPacket tcpPacket) {
+    IPv6Packet packet = new IPv6Packet(tcpPacket, localIP, externalIP);
+    tcpPacket.seqNo = sendNext;
+    if (tcpPacket.payload != null) {
+      sendNext += tcpPacket.payload.length;
+    }
+    System.out.print("////  TCPConnection: Sending packet");
+    packet.printPacket(System.out);
+    ipStack.sendPacket(packet, netInterface);
   }
-    
-  public void updateOnReceive(TCPPacket tcpPacket) {
+  
+  public void receive(TCPPacket tcpPacket) {
     int plen = tcpPacket.payload == null ? 0 : tcpPacket.payload.length;
     receiveNext = tcpPacket.seqNo + plen;
+    if (tcpPacket.isAck()) {
+      /* check if correct ack - we are only sending a packet a time... */
+      if (sendNext == tcpPacket.ackNo) {
+        /* no more unacked data */
+        sentUnack = tcpPacket.ackNo;
+        /* this means that we can send more data !!*/
+      } else {
+        System.out.println("TCPHandler: Unexpected ACK no: " +
+            Integer.toString(tcpPacket.ackNo, 16) +
+            " sendNext: " + Integer.toString(sendNext, 16));
+      }
+    }
+    
+    if (receiveNext == tcpPacket.seqNo) {
+      System.out.println("TCPHandler: data received ok!!!");
+    } else {
+      System.out.println("TCPHandler: seqNo error: receiveNext: " +
+          receiveNext + " != seqNo: " + tcpPacket.seqNo);
+    }
+
+    /* ack the new data! - this could be done from the connection itself!!*/
+    TCPPacket tcpReply = TCPHandler.createAck(tcpPacket, 0);
+    tcpReply.ackNo = tcpPacket.seqNo + plen;
+    tcpReply.seqNo = sendNext;
+    
+    // just to test replying....
+    if (tcpPacket.payload != null && tcpPacket.payload.length > 2) {
+      tcpReply.payload = "MSPSim>".getBytes();
+    }
+    System.out.println("TCPHandler: Sending ACK");
+    send(tcpReply);
+    
+    if (tcpListener != null && plen > 0) {
+      tcpListener.tcpDataReceived(this, tcpPacket);
+    }
   }
 
-
+  public void send(byte[] bytes) {
+    TCPPacket tcpPacket = new TCPPacket();
+    tcpPacket.sourcePort = localPort;
+    tcpPacket.destinationPort = externalPort;
+    tcpPacket.payload = bytes;
+    send(tcpPacket);
+  }
   
 }

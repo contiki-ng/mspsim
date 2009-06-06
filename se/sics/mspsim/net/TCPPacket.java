@@ -119,6 +119,9 @@ public class TCPPacket implements IPPayload {
     return DISPATCH;
   }
 
+  public byte[] getPayload() {
+    return payload;
+  }
   /* (non-Javadoc)
    * @see se.sics.mspsim.net.IPPayload#parsePacketData(se.sics.mspsim.net.IPv6Packet)
    */
