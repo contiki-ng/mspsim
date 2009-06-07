@@ -78,7 +78,7 @@ public class IPStack {
   private PacketHandler linkLayerHandler;
   private IPPacketer defaultPacketer = new HC01Packeter();
   private ICMP6PacketHandler icmp6Handler;
-  private TCPHandler tcpHandler = new TCPHandler(this);
+  private TCPHandler tcpHandler = null;
   
   /* is router -> router behavior */
   private boolean isRouter = false;
@@ -100,6 +100,7 @@ public class IPStack {
     prefixSize = 64; /* link size */
     configureIPAddress();
     neighborManager = new NeighborManager(this, neighborTable);
+    tcpHandler = new TCPHandler(this);
   }
 
   public Timer getTimer() {

@@ -15,6 +15,8 @@ public class TCPConnection {
   public static final int FIN_WAIT_2 = 8;
   public static final int CLOSING = 9;
   public static final int TIME_WAIT = 10;
+  
+  public static final long TIME_WAIT_MILLIS = 1000;
 
   // my port & IP (IP can be null here...)
   int localPort;
@@ -37,6 +39,12 @@ public class TCPConnection {
   private IPStack ipStack;
   private NetworkInterface netInterface;
   private TCPListener tcpListener;
+  
+  long lastSendTime;
+  
+  private byte[] outgoingBuffer;
+  int bufFirst = 0;
+  int bufLast = 0;
   
   TCPConnection(IPStack stack, NetworkInterface nIf) {
     ipStack = stack;
@@ -72,14 +80,16 @@ public class TCPConnection {
     if (tcpPacket.payload != null) {
       sendNext += tcpPacket.payload.length;
     }
+    lastSendTime = System.currentTimeMillis();
     System.out.print("////  TCPConnection: Sending packet");
     packet.printPacket(System.out);
     ipStack.sendPacket(packet, netInterface);
   }
   
-  public void receive(TCPPacket tcpPacket) {
+  void receive(TCPPacket tcpPacket) {
     int plen = tcpPacket.payload == null ? 0 : tcpPacket.payload.length;
     receiveNext = tcpPacket.seqNo + plen;
+
     if (tcpPacket.isAck()) {
       /* check if correct ack - we are only sending a packet a time... */
       if (sendNext == tcpPacket.ackNo) {
@@ -100,6 +110,14 @@ public class TCPConnection {
           receiveNext + " != seqNo: " + tcpPacket.seqNo);
     }
 
+    if (tcpPacket.isFin()) {
+      if (tcpListener != null && plen > 0) {
+        /* notify app that the other side is closing... */
+        tcpListener.connectionClosed(this);
+      }
+    }
+    
+    
     /* ack the new data! - this could be done from the connection itself!!*/
     TCPPacket tcpReply = TCPHandler.createAck(tcpPacket, 0);
     tcpReply.ackNo = tcpPacket.seqNo + plen;
@@ -118,11 +136,25 @@ public class TCPConnection {
   }
 
   public void send(byte[] bytes) {
+    TCPPacket tcpPacket = createPacket();
+    tcpPacket.payload = bytes;
+    send(tcpPacket);
+  }
+
+  public void close() {
+    if (state == ESTABLISHED) {
+      TCPPacket packet = createPacket();
+      packet.flags |= TCPPacket.FIN;
+      state = FIN_WAIT_1;
+      send(packet);
+    }
+  }
+  
+  public TCPPacket createPacket() {
     TCPPacket tcpPacket = new TCPPacket();
     tcpPacket.sourcePort = localPort;
     tcpPacket.destinationPort = externalPort;
-    tcpPacket.payload = bytes;
-    send(tcpPacket);
+    return tcpPacket;
   }
   
 }

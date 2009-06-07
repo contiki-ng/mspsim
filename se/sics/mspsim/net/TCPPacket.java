@@ -108,6 +108,14 @@ public class TCPPacket implements IPPayload {
     return (flags & PSH) > 0;
   }
   
+  public boolean isSyn() {
+    return (flags & SYN) > 0;
+  }
+
+  public boolean isFin() {
+    return (flags & FIN) > 0;
+  }
+  
   public boolean isReset() {
     return (flags & RST) > 0;
   }

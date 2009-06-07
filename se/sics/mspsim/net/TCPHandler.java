@@ -1,7 +1,9 @@
 package se.sics.mspsim.net;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
-public class TCPHandler {
+public class TCPHandler extends TimerTask {
   /* MAX 16 simult. connections for now */
   private static final int MAX_CONNECTIONS = 16;
   private static final int MAX_LISTEN = 16;
@@ -12,9 +14,12 @@ public class TCPHandler {
   int connectionNo = 0;
   int listenNo = 0;
   IPStack ipStack;
+  Timer timer;
   
   public TCPHandler(IPStack stack) {
     this.ipStack = stack;
+    timer = ipStack.getTimer();
+    timer.schedule(this, 100, 100);
   }
   
   public synchronized TCPConnection addListenConnection(int port) {
@@ -24,6 +29,10 @@ public class TCPHandler {
     conn.localPort = port;
     conn.state = TCPConnection.LISTEN;
     return conn;
+  }
+
+  private synchronized void addConnection(TCPConnection c) {
+    activeConnections[connectionNo++] = c;
   }
   
   public void handlePacket(IPv6Packet packet) {
@@ -47,7 +56,9 @@ public class TCPHandler {
           tc.state = TCPConnection.SYN_RECEIVED;
           tc.receiveNext = tcpPacket.seqNo + 1;
           tc.sentUnack = tc.sendNext = tcpReply.seqNo = (int) (System.currentTimeMillis() * 7);
-          activeConnections[connectionNo++] = tc;
+
+          addConnection(tc);
+
           tcpReply.ackNo = tcpPacket.seqNo + 1;
           System.out.println("TCPHandler: Sending: " + tcpReply);
           tc.send(tcpReply);
@@ -56,33 +67,48 @@ public class TCPHandler {
         }
       }
     } else {
-      System.out.println("TCPHandler: found connection!!!");
-      
+      System.out.println("TCPHandler: found connection!!!");      
       switch(connection.state) {
       case TCPConnection.SYN_RECEIVED:
-        if ((tcpPacket.flags & TCPPacket.ACK) > 0) {
+        if (tcpPacket.isAck()) {
           System.out.println("TCPConnection: gotten ACK on syn! => ESTABLISHED!!");
           connection.state = TCPConnection.ESTABLISHED;
         }
         break;
-      case TCPConnection.ESTABLISHED:
-        System.out.println("Gotten packet of real data!!!");
-        int plen = 0;
-        if (tcpPacket.payload != null) {
-          /* payload received !!! */
-          System.out.println("Payload of: " + tcpPacket.payload.length);
-          plen = tcpPacket.payload.length;
-        }
-
+      case TCPConnection.ESTABLISHED:        
         /* we should check if we have acked the last data from the other */
         if (tcpPacket.isAck() && 
             (tcpPacket.payload == null || tcpPacket.payload.length == 0)) {
           return;
         }
 
+        if (tcpPacket.isFin()) {
+          connection.state = TCPConnection.CLOSE_WAIT;
+        }
+        
         connection.receive(tcpPacket);
         break;
-      }     
+      case TCPConnection.LAST_ACK:
+        if (tcpPacket.isAck()) {
+          connection.state = TCPConnection.CLOSED;
+        }
+        break;
+      case TCPConnection.FIN_WAIT_1:
+        if (tcpPacket.isAck()) {
+          connection.state = TCPConnection.FIN_WAIT_2;
+        }
+        break;
+      case TCPConnection.FIN_WAIT_2:
+        if (tcpPacket.isFin()) {
+          System.out.println("TCPHandler: setting connection in TIME_WAIT...");
+          connection.state = TCPConnection.TIME_WAIT;
+          connection.lastSendTime = System.currentTimeMillis();
+        }
+        break;
+      case TCPConnection.CLOSE_WAIT:
+        /* ignore... */
+        break;
+      }
     }
   }
   
@@ -110,4 +136,44 @@ public class TCPHandler {
     return null;
   }
 
+  /* The run method for checking connections, etc */
+  public synchronized void run() {
+    if (connectionNo > 0) {
+      System.out.println("Checking connections: " + connectionNo);
+      long time = System.currentTimeMillis();
+      for (int i = 0; i < connectionNo; i++) {
+        TCPConnection connection = activeConnections[i];
+        switch (connection.state) {
+        case TCPConnection.CLOSE_WAIT:
+          /* if nothing in buffer - close it! */
+          if (connection.bufFirst == connection.bufLast) {
+            System.out.println("Closing - sending FIN");
+            TCPPacket packet = connection.createPacket();
+            packet.flags |= TCPPacket.FIN;
+            connection.state = TCPConnection.LAST_ACK;
+            connection.send(packet);
+          } else {
+            /* send something from the buffer */
+          }
+          break;
+        case TCPConnection.TIME_WAIT:
+          /* wait for a while ... */
+          if (connection.lastSendTime < time + TCPConnection.TIME_WAIT_MILLIS) {
+            System.out.println("TCPHandler: Connection is closed...");
+            connection.state = TCPConnection.CLOSED;
+
+            connectionNo--;
+            if (i > 0) {
+              /* move the last connection to this position - we do not need
+               * this any more ??!!
+               */
+              activeConnections[i] = activeConnections[connectionNo];
+              i--; /* allow processing of that connection too */
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
 }
