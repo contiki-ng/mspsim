@@ -106,13 +106,12 @@ public class TCPConnection {
       sendNext += tcpPacket.payload.length;
     }
     lastSendTime = System.currentTimeMillis();
-    packet.printPacket(System.out);
+    tcpPacket.printPacket(System.out);
     ipStack.sendPacket(packet, netInterface);
   }
   
   void receive(TCPPacket tcpPacket) {
     int plen = tcpPacket.payload == null ? 0 : tcpPacket.payload.length;
-    receiveNext = tcpPacket.seqNo + plen;
 
     if (tcpPacket.isAck()) {
       /* check if correct ack - we are only sending a packet a time... */
@@ -130,10 +129,15 @@ public class TCPConnection {
     if (receiveNext == tcpPacket.seqNo) {
       //System.out.println("TCPHandler: data received ok!!!");
     } else {
-      System.out.println("TCPHandler: seqNo error: receiveNext: " +
-          receiveNext + " != seqNo: " + tcpPacket.seqNo);
+      /* error - did we miss a packet??? */
+      System.out.println("TCPHandler: seq error: expSeq: " +
+          Integer.toString(receiveNext, 16) + " != seqNo: " +
+          Integer.toString(tcpPacket.seqNo, 16));
     }
 
+    /* update what to expect next - after this packet! */
+    receiveNext = tcpPacket.seqNo + plen;
+    
     if (tcpPacket.isFin()) {
       if (tcpListener != null && plen > 0) {
         /* notify app that the other side is closing... */
@@ -147,11 +151,6 @@ public class TCPConnection {
     tcpReply.ackNo = tcpPacket.seqNo + plen;
     tcpReply.seqNo = sendNext;
     
-//    // just to test replying....
-//    if (tcpPacket.payload != null && tcpPacket.payload.length > 2) {
-//      tcpReply.payload = "MSPSim>".getBytes();
-//    }
-//    System.out.println("TCPHandler: Sending ACK");
     send(tcpReply);
 
     if (plen > 0)
@@ -180,6 +179,5 @@ public class TCPConnection {
     tcpPacket.sourcePort = localPort;
     tcpPacket.destinationPort = externalPort;
     return tcpPacket;
-  }
-  
+  } 
 }

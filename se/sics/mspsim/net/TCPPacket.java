@@ -169,15 +169,19 @@ public class TCPPacket implements IPPayload {
    * @see se.sics.mspsim.net.IPPayload#printPacket(java.io.PrintStream)
    */
   public void printPacket(PrintStream out) {
-    out.println("TCP Packet: srcPort: " + sourcePort +
-          " dstPort: " + destinationPort + " Flags: " + Utils.hex8(flags));
-    out.println("SeqNo: " + seqNo + " AckNo: " + ackNo);
+    out.print("[TCP " + sourcePort +
+          " -> " + destinationPort + " Flag: " + Utils.hex8(flags) +
+          " seq: " + Integer.toString(seqNo, 16) +
+          " ack:" + Integer.toString(ackNo, 16));
     if (payload != null) {
-      for (int i = 0; i < payload.length; i++) {
+      System.out.print("|");
+      int len = 8;
+      if (payload.length < len) len = payload.length;      
+      for (int i = 0; i < len; i++) {
         out.print((char) payload[i]);
       }
-      System.out.println();
     }
+    System.out.println("]");
   }
 
   public TCPPacket replyPacket() {

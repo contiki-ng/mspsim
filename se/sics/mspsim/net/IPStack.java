@@ -309,7 +309,6 @@ public class IPStack {
 
   /* is the packet for me ? */
   private boolean isForMe(byte[] address) {
-    IPv6Packet.printAddress(System.out, address);
     if (Utils.equals(myIPAddress, address) ||
         Utils.equals(myLocalIPAddress, address) ||
         Utils.equals(myLocalSolicited, address)) return true;

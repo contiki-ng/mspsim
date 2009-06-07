@@ -44,7 +44,6 @@ public class TCPHandler extends TimerTask {
       if (connection == null) {
         System.out.println("TCPHandler: can not find active or listen connection for this packet");        
       } else {
-        System.out.println("TCPHandler: found listen connection!!!");
         if ((tcpPacket.flags & TCPPacket.SYN) > 0) {
           TCPPacket tcpReply = createAck(tcpPacket, TCPPacket.SYN);
           TCPConnection tc = new TCPConnection(ipStack, packet.netInterface);
@@ -60,14 +59,12 @@ public class TCPHandler extends TimerTask {
           addConnection(tc);
 
           tcpReply.ackNo = tcpPacket.seqNo + 1;
-          System.out.println("TCPHandler: Sending: " + tcpReply);
           tc.send(tcpReply);
           tc.sentUnack = tc.sendNext = tc.sendNext + 1;
           connection.newConnection(tc);
         }
       }
     } else {
-      System.out.println("TCPHandler: found connection!!!");      
       switch(connection.state) {
       case TCPConnection.SYN_RECEIVED:
         if (tcpPacket.isAck()) {

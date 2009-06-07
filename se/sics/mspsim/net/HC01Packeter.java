@@ -242,8 +242,8 @@ public class HC01Packeter implements IPPacketer {
     }
     
     /* destination  compression */
-    //System.out.print("isMulticastCompressable?: ");
-    IPv6Packet.printAddress(System.out, packet.destAddress);
+    // System.out.print("isMulticastCompressable?: ");
+    // IPv6Packet.printAddress(System.out, packet.destAddress);
 
     if(packet.isMulticastDestination()) {
       /* Address is multicast, try to compress */

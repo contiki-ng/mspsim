@@ -17,8 +17,6 @@ public class TCPInputStream extends InputStream {
     }
     public void newConnection(TCPConnection connection) {}
     public void tcpDataReceived(TCPConnection source, TCPPacket packet) {
-      System.out.println("TCP Data received to input stream ");
-
       byte[] payload = packet.payload;
       if (payload == null || payload.length == 0) return;
       
@@ -66,11 +64,9 @@ public class TCPInputStream extends InputStream {
       return -1;
     }
     if (firstByte == nextEmpty) {
-      System.out.println("InputStream Reader: Nothing in buffer while reading - going to wait...");
       synchronized(this) {
         try {
           wait();
-          System.out.println("InputStream Reader: Data in buffer: " + available());
         } catch (InterruptedException e) {
           e.printStackTrace();
         }
