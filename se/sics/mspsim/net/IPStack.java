@@ -239,9 +239,11 @@ public class IPStack {
   }
   
   public void receivePacket(IPv6Packet packet) {
-    System.out.println("IPv6 packet received!");
-    packet.printPacket(System.out);
-
+    if (DEBUG) {
+      System.out.println("IPv6 packet received!");
+      packet.printPacket(System.out);
+    }
+    
     if (isForMe(packet.getDestinationAddress())){
       if (DEBUG) System.out.println("#### PACKET FOR ME!!! " + packet.getDispatch());
       switch (packet.nextHeader) {

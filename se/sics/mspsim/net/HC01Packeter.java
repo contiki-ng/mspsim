@@ -242,7 +242,7 @@ public class HC01Packeter implements IPPacketer {
     }
     
     /* destination  compression */
-    System.out.print("isMulticastCompressable?: ");
+    //System.out.print("isMulticastCompressable?: ");
     IPv6Packet.printAddress(System.out, packet.destAddress);
 
     if(packet.isMulticastDestination()) {
@@ -514,7 +514,7 @@ public class HC01Packeter implements IPPacketer {
         pos += 2;
       } else {
         /* [ignore] multicast address check the 9-bit group-id is known */
-        System.out.println("*** Multicast address!!! HC01: " + packet.getData(pos) + "," + packet.getData(pos + 1));
+        //System.out.println("*** Multicast address!!! HC01: " + packet.getData(pos) + "," + packet.getData(pos + 1));
         Utils.fill(packet.destAddress, 0, 16, (byte)0);
         packet.destAddress[0] = (byte) 0xff; 
         packet.destAddress[1] = (byte)(((packet.getData(pos) & 0xff) >> 1) & 0x0F);

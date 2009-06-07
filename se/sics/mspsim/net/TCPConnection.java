@@ -1,5 +1,8 @@
 package se.sics.mspsim.net;
 
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import se.sics.mspsim.util.Utils;
 
 public class TCPConnection {
@@ -45,14 +48,36 @@ public class TCPConnection {
   private byte[] outgoingBuffer;
   int bufFirst = 0;
   int bufLast = 0;
+  private TCPInputStream inputStream;
+  private TCPOutputStream outputStream;
   
   TCPConnection(IPStack stack, NetworkInterface nIf) {
     ipStack = stack;
     netInterface = nIf;
   }
   
+  public InputStream getInputStream() {
+     if (inputStream == null) {
+       inputStream = new TCPInputStream(this);
+       /* steal the listener... */
+       tcpListener = inputStream.listener;
+     }
+     return inputStream;
+  }
+  
+  public OutputStream getOutputStream() {
+    if (outputStream == null) {
+      outputStream = new TCPOutputStream(this);
+    }
+    return outputStream;
+  }
+  
   public void setTCPListener(TCPListener listener) {
-    tcpListener = listener;
+    if (tcpListener == null) {
+      tcpListener = listener;
+    } else {
+      throw new IllegalStateException("TCPListener already set: " + tcpListener);
+    }
   }
   
   public void newConnection(TCPConnection c) {
@@ -81,7 +106,6 @@ public class TCPConnection {
       sendNext += tcpPacket.payload.length;
     }
     lastSendTime = System.currentTimeMillis();
-    System.out.print("////  TCPConnection: Sending packet");
     packet.printPacket(System.out);
     ipStack.sendPacket(packet, netInterface);
   }
@@ -104,7 +128,7 @@ public class TCPConnection {
     }
     
     if (receiveNext == tcpPacket.seqNo) {
-      System.out.println("TCPHandler: data received ok!!!");
+      //System.out.println("TCPHandler: data received ok!!!");
     } else {
       System.out.println("TCPHandler: seqNo error: receiveNext: " +
           receiveNext + " != seqNo: " + tcpPacket.seqNo);
@@ -123,14 +147,15 @@ public class TCPConnection {
     tcpReply.ackNo = tcpPacket.seqNo + plen;
     tcpReply.seqNo = sendNext;
     
-    // just to test replying....
-    if (tcpPacket.payload != null && tcpPacket.payload.length > 2) {
-      tcpReply.payload = "MSPSim>".getBytes();
-    }
-    System.out.println("TCPHandler: Sending ACK");
+//    // just to test replying....
+//    if (tcpPacket.payload != null && tcpPacket.payload.length > 2) {
+//      tcpReply.payload = "MSPSim>".getBytes();
+//    }
+//    System.out.println("TCPHandler: Sending ACK");
     send(tcpReply);
-    
-    if (tcpListener != null && plen > 0) {
+
+    if (plen > 0)
+    if (tcpListener != null) {
       tcpListener.tcpDataReceived(this, tcpPacket);
     }
   }

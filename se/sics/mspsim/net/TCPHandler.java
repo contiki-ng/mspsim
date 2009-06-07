@@ -139,7 +139,6 @@ public class TCPHandler extends TimerTask {
   /* The run method for checking connections, etc */
   public synchronized void run() {
     if (connectionNo > 0) {
-      System.out.println("Checking connections: " + connectionNo);
       long time = System.currentTimeMillis();
       for (int i = 0; i < connectionNo; i++) {
         TCPConnection connection = activeConnections[i];

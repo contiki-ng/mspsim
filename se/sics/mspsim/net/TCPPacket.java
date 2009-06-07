@@ -85,7 +85,7 @@ public class TCPPacket implements IPPayload {
     }
     /* no options, no padding for now */
     if (payload != null) {
-      System.out.println("Adding payload to packet!!!" + payload.length);
+//      System.out.println("Adding payload to packet!!!" + payload.length);
       System.arraycopy(payload, 0, data, pos, payload.length);
     }
 
@@ -152,7 +152,7 @@ public class TCPPacket implements IPPayload {
     sum = IPv6Packet.checkSum(sum, data, data.length);
     sum = (~sum) & 0xffff;
     if (sum == checksum) {
-      System.out.println("TCP: Checksum matches!!!");
+      // System.out.println("TCP: Checksum matches!!!");
     } else {
       System.out.println("TCP: Checksum error: " + 
           Utils.hex16(checksum) + " <?> " + Utils.hex16(sum));
