@@ -159,7 +159,6 @@ public class TCPPacket implements IPPayload {
     }
     if (data.length - (offset * 4) > 0) {
       int len = data.length - (offset * 4);
-      System.out.println("TCPPacket: offset: " + offset + " => p-len: " + len);
       payload = new byte[len];
       System.arraycopy(data, (offset * 4), payload, 0, len);
     }

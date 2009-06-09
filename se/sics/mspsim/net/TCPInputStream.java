@@ -44,7 +44,6 @@ public class TCPInputStream extends InputStream {
   }
 
   private synchronized void notifyReader() {
-    System.out.println("Notifying reader...");
     notify();
   }
   

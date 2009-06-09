@@ -20,6 +20,7 @@ public class TCPConnection {
   public static final int TIME_WAIT = 10;
   
   public static final long TIME_WAIT_MILLIS = 1000;
+  private static final int OUT_BUFFER = 128;
 
   // my port & IP (IP can be null here...)
   int localPort;
@@ -45,9 +46,11 @@ public class TCPConnection {
   
   long lastSendTime;
   
-  private byte[] outgoingBuffer;
-  int bufFirst = 0;
-  int bufLast = 0;
+  private byte[] outgoingBuffer = new byte[OUT_BUFFER];
+  int bufPos = 0;
+  int bufNextEmpty = 0;
+  /* sentUnack == bufPos */
+  
   private TCPInputStream inputStream;
   private TCPOutputStream outputStream;
   
@@ -103,26 +106,80 @@ public class TCPConnection {
     IPv6Packet packet = new IPv6Packet(tcpPacket, localIP, externalIP);
     tcpPacket.seqNo = sendNext;
     if (tcpPacket.payload != null) {
+      copyToBuffer(tcpPacket.payload);
       sendNext += tcpPacket.payload.length;
     }
     lastSendTime = System.currentTimeMillis();
     tcpPacket.printPacket(System.out);
     ipStack.sendPacket(packet, netInterface);
   }
+
+  private int outSize() {
+    int bytesToSend = bufNextEmpty - bufPos;
+    if (bytesToSend < 0) bytesToSend = -bytesToSend;
+    return bytesToSend;
+  }
   
-  void receive(TCPPacket tcpPacket) {
+  private synchronized void copyToBuffer(byte[] data) {
+    int empty = outgoingBuffer.length - outSize();
+    while (empty < data.length) {
+      /* need to block this tread until data is available...*/
+      try {
+        wait(1000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+        return;
+      }
+      empty = outgoingBuffer.length - outSize();
+    }
+  }
+  
+  private synchronized void resend() {
+    int size = outSize();
+    if (outSize() < size) size = outSize();
+    byte[] data = new byte[size];
+    int pos = bufPos;
+    for (int i = 0; i < data.length; i++) {
+      data[i] = outgoingBuffer[pos++];
+      if (pos >= outgoingBuffer.length) {
+        pos = 0;
+      }
+    }
+    
+    System.out.println("**** TCPConnection resending data");
+    
+    TCPPacket tcpPacket = createPacket(); 
+    IPv6Packet packet = new IPv6Packet(tcpPacket, localIP, externalIP);
+    tcpPacket.seqNo = sentUnack;
+    tcpPacket.payload = data;
+    lastSendTime = System.currentTimeMillis();
+    tcpPacket.printPacket(System.out);
+    ipStack.sendPacket(packet, netInterface);
+  }
+  
+  synchronized void receive(TCPPacket tcpPacket) {
     int plen = tcpPacket.payload == null ? 0 : tcpPacket.payload.length;
 
     if (tcpPacket.isAck()) {
       /* check if correct ack - we are only sending a packet a time... */
       if (sendNext == tcpPacket.ackNo) {
         /* no more unacked data */
+        int noAcked = tcpPacket.ackNo - sentUnack;
         sentUnack = tcpPacket.ackNo;
+        bufPos += noAcked;
+        System.out.println("ACK for " + noAcked + " bytes... pos: " + bufPos +
+              " nxtE:" + bufNextEmpty);
+        notify();
         /* this means that we can send more data !!*/
       } else {
         System.out.println("TCPHandler: Unexpected ACK no: " +
             Integer.toString(tcpPacket.ackNo, 16) +
-            " sendNext: " + Integer.toString(sendNext, 16));
+            " sendNext: " + Integer.toString(sendNext, 16) + " sentUnack: " +
+            Integer.toString(sentUnack,16));
+        if (tcpPacket.ackNo == sentUnack) {
+          resend();
+        }
       }
     }
     
@@ -144,18 +201,19 @@ public class TCPConnection {
         tcpListener.connectionClosed(this);
       }
     }
-    
-    
-    /* ack the new data! - this could be done from the connection itself!!*/
-    TCPPacket tcpReply = TCPHandler.createAck(tcpPacket, 0);
-    tcpReply.ackNo = tcpPacket.seqNo + plen;
-    tcpReply.seqNo = sendNext;
-    
-    send(tcpReply);
 
-    if (plen > 0)
-    if (tcpListener != null) {
-      tcpListener.tcpDataReceived(this, tcpPacket);
+    /* only ack if new data arrived! */
+    if (plen > 0) {
+      /* ack the new data! - this could be done from the connection itself!!*/
+      TCPPacket tcpReply = TCPHandler.createAck(tcpPacket, 0);
+      tcpReply.ackNo = tcpPacket.seqNo + plen;
+      tcpReply.seqNo = sendNext;
+
+      send(tcpReply);
+
+      if (tcpListener != null) {
+        tcpListener.tcpDataReceived(this, tcpPacket);
+      }
     }
   }
 

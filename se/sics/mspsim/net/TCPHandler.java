@@ -73,12 +73,6 @@ public class TCPHandler extends TimerTask {
         }
         break;
       case TCPConnection.ESTABLISHED:        
-        /* we should check if we have acked the last data from the other */
-        if (tcpPacket.isAck() && 
-            (tcpPacket.payload == null || tcpPacket.payload.length == 0)) {
-          return;
-        }
-
         if (tcpPacket.isFin()) {
           connection.state = TCPConnection.CLOSE_WAIT;
         }
@@ -142,7 +136,7 @@ public class TCPHandler extends TimerTask {
         switch (connection.state) {
         case TCPConnection.CLOSE_WAIT:
           /* if nothing in buffer - close it! */
-          if (connection.bufFirst == connection.bufLast) {
+          if (connection.bufPos == connection.bufNextEmpty) {
             System.out.println("Closing - sending FIN");
             TCPPacket packet = connection.createPacket();
             packet.flags |= TCPPacket.FIN;
