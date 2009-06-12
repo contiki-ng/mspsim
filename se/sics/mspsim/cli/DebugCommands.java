@@ -41,6 +41,8 @@
 package se.sics.mspsim.cli;
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.DbgInstruction;
+import se.sics.mspsim.core.DisAsm;
 import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
@@ -435,7 +437,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-
+        
         ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "<loggable>" ) {
           Chip chip = null;
           @Override
@@ -453,6 +455,24 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
+        ch.registerCommand("trace", new BasicCommand("store a trace of execution positions.", "<trace size | show>") {
+            @Override
+            public int executeCommand(CommandContext context) {
+        	if ("show".equals(context.getArgument(0))) {
+        	    int size = cpu.getTraceSize();
+        	    DisAsm disAsm = cpu.getDisAsm();
+        	    for (int i = 0; i < size; i++) {
+        		int pc = cpu.getBackTrace(i);
+        		DbgInstruction inst = disAsm.getDbgInstruction(pc, cpu);
+        		inst.setPos(pc);
+			System.out.println(inst);
+		    }
+        	} else {
+        	    cpu.setTrace(context.getArgumentAsInt(0));
+        	}
+              return 0;
+            }
+          });        
       }
     }
   }

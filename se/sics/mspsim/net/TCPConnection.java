@@ -162,14 +162,15 @@ public class TCPConnection {
     int plen = tcpPacket.payload == null ? 0 : tcpPacket.payload.length;
 
     if (tcpPacket.isAck()) {
-      /* check if correct ack - we are only sending a packet a time... */
-      if (sendNext == tcpPacket.ackNo) {
+      /* check if correct ack - this is the "max" case*/
+      if (sentUnack < tcpPacket.ackNo && sendNext >= tcpPacket.ackNo) {
         /* no more unacked data */
         int noAcked = tcpPacket.ackNo - sentUnack;
         sentUnack = tcpPacket.ackNo;
         bufPos += noAcked;
         System.out.println("ACK for " + noAcked + " bytes... pos: " + bufPos +
-              " nxtE:" + bufNextEmpty);
+              " nxtE:" + bufNextEmpty + " unack: " + sentUnack + " sendNext: " 
+              + sendNext);
         notify();
         /* this means that we can send more data !!*/
       } else {

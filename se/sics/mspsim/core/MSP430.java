@@ -47,9 +47,11 @@ import se.sics.mspsim.util.*;
 public class MSP430 extends MSP430Core {
 
   public static final int RETURN = 0x4130;
-
+  
   private int[] execCounter;
-
+  private int[] trace;
+  private int tracePos;
+  
   private boolean debug = false;
   private boolean running = false;
   private long sleepRate = 50000;
@@ -120,6 +122,11 @@ public class MSP430 extends MSP430Core {
 	if (execCounter != null) {
 	  execCounter[reg[PC]]++;
 	}
+	if (trace != null) {
+	    trace[tracePos++] = reg[PC];
+	    if (tracePos >= trace.length)
+		tracePos = 0;
+	}
       }
 
       /* Just a test to see if it gets down to a reasonable speed */
@@ -167,6 +174,11 @@ public class MSP430 extends MSP430Core {
         if (execCounter != null) {
           execCounter[reg[PC]]++;
         }
+        if (trace != null) {
+  	  trace[tracePos++] = reg[PC];
+  	  if (tracePos > trace.length)
+  	      tracePos = 0;
+        }
       }
     }
     setRunning(false);
@@ -213,6 +225,11 @@ public class MSP430 extends MSP430Core {
       if (execCounter != null) {
 	execCounter[reg[PC]]++;
       }
+      if (trace != null) {
+	  trace[tracePos++] = reg[PC];
+	  if (tracePos > trace.length)
+	      tracePos = 0;
+      }
     }
     return cycles;
 }
@@ -238,6 +255,28 @@ public class MSP430 extends MSP430Core {
     }
   }
 
+  public void setTrace(int size) {
+      if (size == 0) {
+	  trace = null;
+      } else {
+	  trace = new int[size];
+      }
+      tracePos = 0;
+  }
+  
+  public int getBackTrace(int pos) {
+      int tPos = tracePos - pos;
+      if (tPos < 0) {
+	  tPos += trace.length;
+      }
+      return trace[tPos];
+  }
+  
+  public int getTraceSize() {
+      return trace == null ? 0 : trace.length;
+  }
+
+  
   private void printCPUSpeed(int pc) {
     // Passed time
     int td = (int)(System.currentTimeMillis() - time);
@@ -322,5 +361,6 @@ public class MSP430 extends MSP430Core {
   public synchronized void removeSimEventListener(SimEventListener l) {
     simEventListeners = (SimEventListener[]) ArrayUtils.remove(simEventListeners, l);
   }
+
   
 }
