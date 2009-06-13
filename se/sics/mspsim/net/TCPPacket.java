@@ -170,8 +170,8 @@ public class TCPPacket implements IPPayload {
   public void printPacket(PrintStream out) {
     out.print("[TCP " + sourcePort +
           " -> " + destinationPort + " Flag: " + Utils.hex8(flags) +
-          " seq: " + Integer.toString(seqNo, 16) +
-          " ack:" + Integer.toString(ackNo, 16));
+          " seq: " + Long.toString(seqNo & 0xffffL, 16) +
+          " ack:" + Long.toString(ackNo &  0xffffL, 16));
     if (payload != null) {
       System.out.print("|");
       int len = 8;

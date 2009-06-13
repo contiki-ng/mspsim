@@ -116,16 +116,17 @@ public class TCPConnection {
 
   private int outSize() {
     int bytesToSend = bufNextEmpty - bufPos;
-    if (bytesToSend < 0) bytesToSend = -bytesToSend;
+    if (bytesToSend < 0) bytesToSend += outgoingBuffer.length;
     return bytesToSend;
   }
   
   private synchronized void copyToBuffer(byte[] data) {
     int empty = outgoingBuffer.length - outSize();
     while (empty < data.length) {
-      /* need to block this tread until data is available...*/
+      /* need to block this tread until place for data is available...*/
       try {
-        wait(1000);
+	  System.out.println("blocking output...");
+	  wait(1000);
       } catch (InterruptedException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
@@ -133,11 +134,22 @@ public class TCPConnection {
       }
       empty = outgoingBuffer.length - outSize();
     }
+    for (int i = 0; i < data.length; i++) {
+	outgoingBuffer[bufNextEmpty++] = data[i];
+	if (bufNextEmpty >= outgoingBuffer.length)
+	    bufNextEmpty = 0;
+    }
   }
   
   private synchronized void resend() {
     int size = outSize();
+    System.out.println("### Bytes to resend: " + outSize() + " seqDiff: " +
+	    (sendNext - sentUnack));
     if (outSize() < size) size = outSize();
+    /* ensure small payload size... this should be handled at IP level...*/
+    if (size > 40) {
+	size = 40;
+    }
     byte[] data = new byte[size];
     int pos = bufPos;
     for (int i = 0; i < data.length; i++) {
@@ -147,7 +159,7 @@ public class TCPConnection {
       }
     }
     
-    System.out.println("**** TCPConnection resending data");
+    System.out.println("**** TCPConnection resending data: size = " + size);
     
     TCPPacket tcpPacket = createPacket(); 
     IPv6Packet packet = new IPv6Packet(tcpPacket, localIP, externalIP);
@@ -168,19 +180,21 @@ public class TCPConnection {
         int noAcked = tcpPacket.ackNo - sentUnack;
         sentUnack = tcpPacket.ackNo;
         bufPos += noAcked;
-        System.out.println("ACK for " + noAcked + " bytes... pos: " + bufPos +
-              " nxtE:" + bufNextEmpty + " unack: " + sentUnack + " sendNext: " 
-              + sendNext);
+        if (bufPos >= outgoingBuffer.length)
+            bufPos = 0;
+        System.out.println("ACK for " + noAcked + " bytes. pos: " + bufPos +
+              " nxtE:" + bufNextEmpty + " unack: " + Integer.toString(sentUnack & 0xffff, 16) + " sendNext: " 
+              + Integer.toString(sendNext & 0xffff, 16));
         notify();
         /* this means that we can send more data !!*/
       } else {
-        System.out.println("TCPHandler: Unexpected ACK no: " +
-            Integer.toString(tcpPacket.ackNo, 16) +
-            " sendNext: " + Integer.toString(sendNext, 16) + " sentUnack: " +
-            Integer.toString(sentUnack,16));
-        if (tcpPacket.ackNo == sentUnack) {
-          resend();
-        }
+	  System.out.println("TCPHandler: Unexpected ACK no: " +
+		  Integer.toString(tcpPacket.ackNo & 0xffff, 16) +
+		  " sendNext: " + Integer.toString(sendNext & 0xffff, 16) + " sentUnack: " +
+		  Integer.toString(sentUnack & 0xffff,16));
+	  if (tcpPacket.ackNo == sentUnack) {
+	      resend();
+	  }
       }
     }
     
@@ -189,8 +203,8 @@ public class TCPConnection {
     } else {
       /* error - did we miss a packet??? */
       System.out.println("TCPHandler: seq error: expSeq: " +
-          Integer.toString(receiveNext, 16) + " != seqNo: " +
-          Integer.toString(tcpPacket.seqNo, 16));
+          Integer.toString(receiveNext & 0xffff, 16) + " != seqNo: " +
+          Integer.toString(tcpPacket.seqNo & 0xffff, 16));
     }
 
     /* update what to expect next - after this packet! */

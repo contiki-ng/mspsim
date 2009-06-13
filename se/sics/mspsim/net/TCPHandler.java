@@ -134,6 +134,9 @@ public class TCPHandler extends TimerTask {
       for (int i = 0; i < connectionNo; i++) {
         TCPConnection connection = activeConnections[i];
         switch (connection.state) {
+        case TCPConnection.ESTABLISHED:
+            /* here we should check for retransmissions... */
+            break;
         case TCPConnection.CLOSE_WAIT:
           /* if nothing in buffer - close it! */
           if (connection.bufPos == connection.bufNextEmpty) {
