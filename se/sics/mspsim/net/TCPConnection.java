@@ -108,6 +108,9 @@ public class TCPConnection {
     if (tcpPacket.payload != null) {
       copyToBuffer(tcpPacket.payload);
       sendNext += tcpPacket.payload.length;
+      System.out.println("SEND: Updated sendNext: " + sendNext +
+	      " outSize: " + outSize() + " seqDiff: " +
+	      (sendNext - sentUnack));
     }
     lastSendTime = System.currentTimeMillis();
     tcpPacket.printPacket(System.out);
@@ -181,10 +184,11 @@ public class TCPConnection {
         sentUnack = tcpPacket.ackNo;
         bufPos += noAcked;
         if (bufPos >= outgoingBuffer.length)
-            bufPos = 0;
+            bufPos -= outgoingBuffer.length;
         System.out.println("ACK for " + noAcked + " bytes. pos: " + bufPos +
               " nxtE:" + bufNextEmpty + " unack: " + Integer.toString(sentUnack & 0xffff, 16) + " sendNext: " 
-              + Integer.toString(sendNext & 0xffff, 16));
+              + Integer.toString(sendNext & 0xffff, 16) + " outSize: " + outSize() + 
+              " seqDiff: " + (sendNext - sentUnack));
         notify();
         /* this means that we can send more data !!*/
       } else {
