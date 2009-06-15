@@ -13,8 +13,8 @@ import se.sics.mspsim.util.Utils;
  */
 public class TCPPacket implements IPPayload {
 
-  public static final int DEFAULT_WINDOW = 60;
-  public static final int DEFAULT_MSS = 60;
+  public static final int DEFAULT_WINDOW = 45;
+  public static final int DEFAULT_MSS = 45;
   
   public static final int DISPATCH = 6;
   

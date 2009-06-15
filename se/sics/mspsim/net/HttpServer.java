@@ -81,6 +81,14 @@ public class HttpServer implements TCPListener, Runnable{
 		    input.close();
 		    connection.close();
 		} else {
+		    String line = null;
+		    while((line = readLine(input)) != null) {
+			line = line.trim();
+			System.out.println("/// HTTP Header: " + line);
+			if (line.length() == 0) {
+			    break;
+			}
+		    }
 		    HttpServletRequest req = new HttpServletRequest(connection, method, path);
 		    HttpServletResponse resp = new HttpServletResponse(connection);
 		    servlet.service(req, resp);
