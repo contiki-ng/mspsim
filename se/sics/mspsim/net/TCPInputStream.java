@@ -19,7 +19,6 @@ public class TCPInputStream extends InputStream {
     public void tcpDataReceived(TCPConnection source, TCPPacket packet) {
       byte[] payload = packet.payload;
       if (payload == null || payload.length == 0) return;
-      
       /* add to cyclic buffer... */
       /* what if we can not accept all data??? */
       int pos = 0;

@@ -7,7 +7,7 @@ public class TCPHandler extends TimerTask {
   /* MAX 16 simult. connections for now */
   private static final int MAX_CONNECTIONS = 16;
   private static final int MAX_LISTEN = 16;
-  
+
   TCPConnection[] activeConnections = new TCPConnection[MAX_CONNECTIONS];
   TCPConnection[] listenConnections = new TCPConnection[MAX_LISTEN];
   
@@ -44,7 +44,7 @@ public class TCPHandler extends TimerTask {
       if (connection == null) {
         System.out.println("TCPHandler: can not find active or listen connection for this packet");        
       } else {
-        if ((tcpPacket.flags & TCPPacket.SYN) > 0) {
+        if (tcpPacket.isSyn()) {
           TCPPacket tcpReply = createAck(tcpPacket, TCPPacket.SYN);
           TCPConnection tc = new TCPConnection(ipStack, packet.netInterface);
           /* setup the connection */
@@ -58,10 +58,13 @@ public class TCPHandler extends TimerTask {
 
           addConnection(tc);
 
-          tcpReply.ackNo = tcpPacket.seqNo + 1;
+          /* established => report to listeners... */
+          connection.newConnection(tc);
+          
+          tcpReply.ackNo = tc.receiveNext;
           tc.send(tcpReply);
           tc.sentUnack = tc.sendNext = tc.sendNext + 1;
-          connection.newConnection(tc);
+          tc.serverConnection = connection;          
         }
       }
     } else {
@@ -70,9 +73,15 @@ public class TCPHandler extends TimerTask {
         if (tcpPacket.isAck()) {
           System.out.println("TCPConnection: gotten ACK on syn! => ESTABLISHED!!");
           connection.state = TCPConnection.ESTABLISHED;
+          connection.receive(tcpPacket);
+          
+          synchronized(connection) {
+              /* for any early outputter to the output stream */
+              connection.notify();
+          }
         }
         break;
-      case TCPConnection.ESTABLISHED:        
+      case TCPConnection.ESTABLISHED:
         if (tcpPacket.isFin()) {
           connection.state = TCPConnection.CLOSE_WAIT;
         }
@@ -136,6 +145,11 @@ public class TCPHandler extends TimerTask {
         switch (connection.state) {
         case TCPConnection.ESTABLISHED:
             /* here we should check for retransmissions... */
+            if (connection.outSize() > 0 &&
+        	(connection.lastSendTime + connection.retransmissionTime < time)) {
+        	System.out.println("### Timeout - retransmitting...");
+        	connection.resend();
+            }
             break;
         case TCPConnection.CLOSE_WAIT:
           /* if nothing in buffer - close it! */
