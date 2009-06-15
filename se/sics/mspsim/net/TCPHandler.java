@@ -96,6 +96,13 @@ public class TCPHandler extends TimerTask {
       case TCPConnection.FIN_WAIT_1:
         if (tcpPacket.isAck()) {
           connection.state = TCPConnection.FIN_WAIT_2;
+          connection.receive(tcpPacket);
+        }
+        if (tcpPacket.isFin()) {
+            connection.state = TCPConnection.TIME_WAIT;
+            connection.lastSendTime = System.currentTimeMillis();
+            connection.receiveNext++;
+            connection.sendAck(tcpPacket);
         }
         break;
       case TCPConnection.FIN_WAIT_2:
@@ -103,6 +110,8 @@ public class TCPHandler extends TimerTask {
           System.out.println("TCPHandler: setting connection in TIME_WAIT...");
           connection.state = TCPConnection.TIME_WAIT;
           connection.lastSendTime = System.currentTimeMillis();
+          connection.receiveNext++;
+          connection.sendAck(tcpPacket);
         }
         break;
       case TCPConnection.CLOSE_WAIT:

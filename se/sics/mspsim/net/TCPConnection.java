@@ -1,5 +1,6 @@
 package se.sics.mspsim.net;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -57,6 +58,7 @@ public class TCPConnection {
   
   private TCPInputStream inputStream;
   private TCPOutputStream outputStream;
+private boolean closing;
   
   TCPConnection(IPStack stack, NetworkInterface nIf) {
     ipStack = stack;
@@ -201,6 +203,9 @@ public class TCPConnection {
               " seqDiff: " + (sendNext - sentUnack) + " plen: " + plen);
         notify();
         /* this means that we can send more data !!*/
+        if (closing && sentUnack == sendNext) {
+            sendFIN();
+        }
       } else {
 	  System.out.println("TCPHandler: Unexpected ACK no: " +
 		  Integer.toString(tcpPacket.ackNo & 0xffff, 16) +
@@ -238,6 +243,11 @@ public class TCPConnection {
     }
     
     if (tcpPacket.isFin()) {
+	if (plen == 0) {
+	    /* send ack if plen = 0 - since we did not send ack above !!! */
+	    sendAck(tcpPacket);
+	}
+
       if (tcpListener != null && plen > 0) {
         /* notify app that the other side is closing... */
         tcpListener.connectionClosed(this);
@@ -245,7 +255,7 @@ public class TCPConnection {
     }
   }
 
-  private void sendAck(TCPPacket tcpPacket) {
+  void sendAck(TCPPacket tcpPacket) {
       TCPPacket tcpReply = TCPHandler.createAck(tcpPacket, 0);
       tcpReply.ackNo = receiveNext;
       tcpReply.seqNo = sendNext;
@@ -253,19 +263,30 @@ public class TCPConnection {
       send(tcpReply);
   }
 
-  public void send(byte[] bytes) {
+  public void send(byte[] bytes) throws IOException {
+    if (closing) throw new IOException("TCPConnection closing...");
     TCPPacket tcpPacket = createPacket();
     tcpPacket.payload = bytes;
     send(tcpPacket);
   }
 
+  /* should close autoflush??? */
   public void close() {
     if (state == ESTABLISHED) {
+	System.out.println("=== Closing connection... outSize: " + outSize());
+	closing = true;
+	if (outSize() == 0) {
+	      sendFIN();
+	}
+    }
+  }
+
+  private void sendFIN() {
+      System.out.println("Sending FIN!!!!");
       TCPPacket packet = createPacket();
       packet.flags |= TCPPacket.FIN;
       state = FIN_WAIT_1;
       send(packet);
-    }
   }
   
   public TCPPacket createPacket() {
