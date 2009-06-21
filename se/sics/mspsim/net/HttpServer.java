@@ -60,12 +60,16 @@ public class HttpServer implements TCPListener, Runnable{
 	    }
 	    InputStream input = connection.getInputStream();
 	    OutputStream output = connection.getOutputStream();
+	    connection.setTimeout(5000);
 	    try {
 		/* read a line */
 		System.out.println("%%% HttpServer: reading req line from: " + input);
 		String reqLine = readLine(input);
 		reqLine = reqLine.trim();
 		int space = reqLine.indexOf(' ');
+		if (space == -1) {
+		    return;
+		}
 		String method = reqLine.substring(0, space);
 		String path = reqLine.substring(space + 1, reqLine.lastIndexOf(' '));
 		System.out.println("Method: " + method);
@@ -94,7 +98,7 @@ public class HttpServer implements TCPListener, Runnable{
 		    servlet.service(req, resp);
 		}
 		
-	    } catch (IOException e) {
+	    } catch (Exception e) {
 		e.printStackTrace();
 	    } finally {
 		try {

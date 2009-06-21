@@ -33,6 +33,9 @@ public class TCPConnection {
   int externalPort = -1;
   byte[] externalIP;
 
+  /* position in connection array - debug */
+  byte pos;
+
   int state;
   
   /* sent unacked and nextSend byte */
@@ -58,7 +61,10 @@ public class TCPConnection {
   
   private TCPInputStream inputStream;
   private TCPOutputStream outputStream;
-private boolean closing;
+  private boolean closing;
+  
+  /* no read timeout */
+  int timeout = -1;
   
   TCPConnection(IPStack stack, NetworkInterface nIf) {
     ipStack = stack;
@@ -109,16 +115,21 @@ private boolean closing;
 
   /* send packet + update sendNext - this should take into account ext window */
   /* is this what mess up the stuff */
-  public void send(TCPPacket tcpPacket) {
+  public void send(TCPPacket tcpPacket) throws IOException {
     IPv6Packet packet = new IPv6Packet(tcpPacket, localIP, externalIP);
     tcpPacket.seqNo = sendNext;
     tcpPacket.ackNo = receiveNext;
+    
     if (tcpPacket.payload != null) {
       copyToBuffer(tcpPacket.payload);
       sendNext += tcpPacket.payload.length;
       System.out.println("SEND: Updated sendNext: " + sendNext +
 	      " outSize: " + outSize() + " seqDiff: " +
 	      (sendNext - sentUnack));
+    }
+    /* fin also is a payload byte */
+    if (tcpPacket.isFin()) {
+	sendNext++;
     }
     lastSendTime = System.currentTimeMillis();
     tcpPacket.printPacket(System.out);
@@ -127,17 +138,20 @@ private boolean closing;
 
   /* number of currently un-acked bytes in buffer */
   int outSize() {
-    int bytesToSend = bufNextEmpty - bufPos;
-    if (bytesToSend < 0) bytesToSend += outgoingBuffer.length;
-    return bytesToSend;
+      int bytesToSend = bufNextEmpty - bufPos;
+      if (bytesToSend < 0) bytesToSend += outgoingBuffer.length;
+      return bytesToSend;
   }
   
-  private synchronized void copyToBuffer(byte[] data) {
+  private synchronized void copyToBuffer(byte[] data) throws IOException {
     int empty = outgoingBuffer.length - outSize();
-    while (empty < data.length || state != TCPConnection.ESTABLISHED) {
+    while (empty < data.length || state == TCPConnection.SYN_RECEIVED
+	    || state == TCPConnection.SYN_SENT) {
+	/* if closed... just return */
+	if (state == TCPConnection.CLOSED) throw new IOException("Connection closed");
       /* need to block this tread until place for data is available...*/
       try {
-	  System.out.println("blocking output...");
+	  System.out.println("blocking output... state: " + state);
 	  wait(1000);
       } catch (InterruptedException e) {
         // TODO Auto-generated catch block
@@ -157,7 +171,7 @@ private boolean closing;
     int size = outSize();
     System.out.println("### Bytes to resend: " + outSize() + " seqDiff: " +
 	    (sendNext - sentUnack));
-    /* nothing to resend... */
+    /* nothing to resend... TODO: this should handle resend of FIN also! */
     if (size == 0) return;
     
     if (outSize() < size) size = outSize();
@@ -203,7 +217,8 @@ private boolean closing;
               " seqDiff: " + (sendNext - sentUnack) + " plen: " + plen);
         notify();
         /* this means that we can send more data !!*/
-        if (closing && sentUnack == sendNext) {
+        if (state == ESTABLISHED && closing && outSize() == 0) {
+            state = FIN_WAIT_1;
             sendFIN();
         }
       } else {
@@ -224,6 +239,12 @@ private boolean closing;
 	/* update what to expect next - after this packet! */
 	receiveNext = tcpPacket.seqNo + plen;
 
+	/* fin is equal to a packet of 1 additional byte */
+	if (tcpPacket.isFin()) {
+	    receiveNext++;
+	    if (plen == 0) sendAck(tcpPacket);
+	}
+	
 	if (plen > 0) {
 	    /* ack the new data! - this could be done from the connection itself!!*/	    
 	    sendAck(tcpPacket);
@@ -241,26 +262,15 @@ private boolean closing;
 		Integer.toString(tcpPacket.seqNo & 0xffff, 16));
 	sendAck(tcpPacket);
     }
-    
-    if (tcpPacket.isFin()) {
-	if (plen == 0) {
-	    /* send ack if plen = 0 - since we did not send ack above !!! */
-	    sendAck(tcpPacket);
-	}
-
-      if (tcpListener != null && plen > 0) {
-        /* notify app that the other side is closing... */
-        tcpListener.connectionClosed(this);
-      }
-    }
   }
 
   void sendAck(TCPPacket tcpPacket) {
       TCPPacket tcpReply = TCPHandler.createAck(tcpPacket, 0);
-      tcpReply.ackNo = receiveNext;
-      tcpReply.seqNo = sendNext;
-
-      send(tcpReply);
+      try {
+	send(tcpReply);
+    } catch (IOException e) {
+	e.printStackTrace();
+    }
   }
 
   public void send(byte[] bytes) throws IOException {
@@ -272,21 +282,30 @@ private boolean closing;
 
   /* should close autoflush??? */
   public void close() {
-    if (state == ESTABLISHED) {
-	System.out.println("=== Closing connection... outSize: " + outSize());
-	closing = true;
-	if (outSize() == 0) {
+      if (state == ESTABLISHED) {
+	  System.out.println("=== Closing connection... outSize: " + outSize());
+	  closing = true;
+	  if (outSize() == 0) {
+	      state = FIN_WAIT_1;
 	      sendFIN();
-	}
-    }
+	  }
+      }
   }
 
-  private void sendFIN() {
+  void closed() {
+      if (tcpListener != null)
+	  tcpListener.connectionClosed(this);
+  }
+  
+  void sendFIN() {
       System.out.println("Sending FIN!!!!");
       TCPPacket packet = createPacket();
       packet.flags |= TCPPacket.FIN;
-      state = FIN_WAIT_1;
-      send(packet);
+      try {
+	  send(packet);
+      } catch (IOException e) {
+	  e.printStackTrace();
+      }
   }
   
   public TCPPacket createPacket() {
@@ -294,5 +313,9 @@ private boolean closing;
     tcpPacket.sourcePort = localPort;
     tcpPacket.destinationPort = externalPort;
     return tcpPacket;
-  } 
+  }
+
+  public void setTimeout(int tms) {
+      timeout = tms;
+  }
 }

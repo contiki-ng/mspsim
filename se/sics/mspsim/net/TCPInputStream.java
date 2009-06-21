@@ -14,8 +14,12 @@ public class TCPInputStream extends InputStream {
   
   TCPListener listener = new TCPListener() {
     public void connectionClosed(TCPConnection connection) {
+	closed = true;
+	System.out.println("InputStream - connection closed...");
+	notifyReader();
     }
-    public void newConnection(TCPConnection connection) {}
+    public void newConnection(TCPConnection connection) {
+    }
     public void tcpDataReceived(TCPConnection source, TCPPacket packet) {
       byte[] payload = packet.payload;
       if (payload == null || payload.length == 0) return;
