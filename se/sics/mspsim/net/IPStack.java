@@ -42,6 +42,7 @@
  */
 
 package se.sics.mspsim.net;
+import java.io.IOException;
 import java.util.Timer;
 import se.sics.mspsim.util.Utils;
 
@@ -79,6 +80,7 @@ public class IPStack {
   private IPPacketer defaultPacketer = new HC01Packeter();
   private ICMP6PacketHandler icmp6Handler;
   private TCPHandler tcpHandler = null;
+  private UDPHandler udpHandler = null;
   
   /* is router -> router behavior */
   private boolean isRouter = false;
@@ -101,6 +103,7 @@ public class IPStack {
     configureIPAddress();
     neighborManager = new NeighborManager(this, neighborTable);
     tcpHandler = new TCPHandler(this);
+    udpHandler = new UDPHandler();
   }
 
   public Timer getTimer() {
@@ -110,6 +113,10 @@ public class IPStack {
   /* this needs some error handling!!! */
   public TCPConnection listen(int port) {
     return tcpHandler.addListenConnection(port);
+  }
+  
+  public void listen(UDPListener listener, int port) throws IOException {
+      udpHandler.addUDPListener(listener, port);
   }
   
   public NeighborTable getNeighborTable() {
@@ -257,11 +264,13 @@ public class IPStack {
         // TODO: move to HC01 compression handler... => generate raw UDP
         if (packet.getIPPayload() != null) {
           packet.getIPPayload().printPacket(System.out);
+          udpHandler.handlePacket(packet, (UDPPacket) packet.getIPPayload());
         } else {
           UDPPacket p = new UDPPacket();
           p.parsePacketData(packet);
           p.printPacket(System.out);
           packet.setIPPayload(p);
+          udpHandler.handlePacket(packet, p);
         }
         if (networkEventListener != null) {
           networkEventListener.packetHandled(packet);

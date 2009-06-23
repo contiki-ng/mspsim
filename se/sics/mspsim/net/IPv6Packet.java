@@ -284,6 +284,36 @@ public class IPv6Packet extends Packet implements IPPacketer {
         out.print(":");
     }
   }
+
+  /* parse a hex x:y:z... address */
+  public byte[] parseAddress(String addressStr) {
+      byte[] address = new byte[16];
+      int hexVal = 0;
+      int pos = 0;
+      int splitPos = 0;
+      addressStr = addressStr.toLowerCase();
+      for (int i = 0; i < addressStr.length() && pos < 16; i++) {
+	  char c = addressStr.charAt(i);
+	  if (c == ':') {
+	      address[pos++] = (byte)(hexVal >> 8);
+	      address[pos++] = (byte)(hexVal & 0xff);
+	      if (i + 1 < addressStr.length() && 
+		      addressStr.charAt(i + 1) == ':') {
+		  splitPos = pos;
+	      }
+	      hexVal = 0;
+	  } else if (c >= '0' && c <= '9') {
+	      hexVal = (hexVal << 4) + c - '0';
+	  } else if (c >= 'a' && c <= 'f') {
+	      hexVal = (hexVal << 4) + c - 'a' + 10;
+	  }
+      }
+      if (splitPos != 0) {
+	// we should move some bytes forward...  
+      }
+      
+      return address;
+  }
   
   public static void main(String[] args) {
     byte[] data = Utils.hexconv("6000000000200001fe80000000000000023048fffe904cd2ff02000000000000000000026c5b5f303a000100050200008300527800000000ff02000000000000000000026c5b5f30");
