@@ -362,7 +362,7 @@ public class ELF {
           }
         } else if (!sn.startsWith("_")) {
 //          System.out.println("Adding entry: " + sn + " at " + sAddr);
-          map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, sn, currentFile,
+          map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, 0, sn, currentFile,
               false));
         }
       }
@@ -393,14 +393,14 @@ public class ELF {
           if (file == null) {
             file = currentFile;
           }
-	  map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, symbolName, file,
+	  map.setEntry(new MapEntry(MapEntry.TYPE.function, sAddr, 0, symbolName, file,
 	      bind == ELFSection.SYMBIND_LOCAL));
 	} else if (type == ELFSection.SYMTYPE_OBJECT) {
           String file = lookupFile(sAddr);
           if (file == null) {
             file = currentFile;
           }
-	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, symbolName, file,
+	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, 0, symbolName, file,
 	      bind == ELFSection.SYMBIND_LOCAL));
 	} else {
 	  if (DEBUG) {
