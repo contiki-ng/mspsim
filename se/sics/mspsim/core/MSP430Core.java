@@ -1350,7 +1350,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   MapEntry getFunction(MapTable map, int address) {
-    MapEntry function = new MapEntry(MapEntry.TYPE.function, address,
+    MapEntry function = new MapEntry(MapEntry.TYPE.function, address, 0,
         "fkn at $" + Utils.hex16(address), null, true);
     map.setEntry(function);
     return function;
