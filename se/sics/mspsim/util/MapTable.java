@@ -67,6 +67,7 @@ public class MapTable {
   public int heapStartAddress = -1;
   public int stackStartAddress = -1;
 
+  private ArrayList<MapEntry> modules = new ArrayList<MapEntry>();
   private MapEntry[] entries;
 
   public MapTable() {
@@ -94,7 +95,10 @@ public class MapTable {
       System.out.println("Data Mode!");
     } else if (line.startsWith(" .text")) {
       if (parts.length > 3) {
-	// 	  System.out.println("Code " + parts[2] + " Name:" + parts[4]);
+        int addr = Integer.parseInt(parts[2].substring(2), 16);
+        int size = Integer.parseInt(parts[3].substring(2), 16);
+        System.out.println("Module add: " + addr + " Size:" + size + " file:" + parts[4]);
+        modules.add(new MapEntry(MapEntry.TYPE.module, addr, size, parts[4], null, false));        
       }
     } else if (mode == Mode.CODE && line.startsWith("    ")) {
       if (parts.length > 2) {
@@ -104,7 +108,7 @@ public class MapTable {
 			   Utils.hex16(val));
 	// Add the file part later some time...
 	// After the demo...
-	setEntry(new MapEntry(MapEntry.TYPE.function, val, parts[2], null, false));
+	setEntry(new MapEntry(MapEntry.TYPE.function, val, 0, parts[2], null, false));
       }
 
     } else if (line.contains(" _end = .") && parts.length > 2) {
@@ -167,14 +171,16 @@ public class MapTable {
   
   // Should be any symbol... not just function...
   public void setFunctionName(int address, String name) {
-    setEntry(new MapEntry(MapEntry.TYPE.function, address, name, null, false));
+    setEntry(new MapEntry(MapEntry.TYPE.function, address, 0, name, null, false));
   }
 
   public void setEntry(MapEntry entry) {
     if (entries == null) {
       entries = new MapEntry[0x10000];
     }
-    entries[entry.getAddress()] = entry;
+    if (entry.getAddress() < 0x10000) {
+      entries[entry.getAddress()] = entry;
+    }
   }
 
   // Really slow way to find a specific function address!!!!
@@ -197,6 +203,13 @@ public class MapTable {
   }
 
   public static void main(String[] args) throws IOException {
-    new MapTable(args[0]);
+    MapTable map = new MapTable(args[0]);
+    int totsize = 0;
+    for (int i = 0; i < map.modules.size(); i++) {
+      MapEntry module = map.modules.get(i);
+      totsize += module.getSize();
+      System.out.println("Module: " + module.getName() + " addr: " + module.getAddress() + " size: " + module.getSize()); 
+    }
+    System.out.println("Total size: " + totsize + " " + Integer.toHexString(totsize));
   }
 }

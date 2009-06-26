@@ -43,20 +43,26 @@ package se.sics.mspsim.util;
 
 public class MapEntry {
 
-  public static enum TYPE {function, variable}
+  public static enum TYPE {function, variable, module}
 
   private TYPE type;
   private int address;
+  private int size;
   private String name;
   private String file;
   private boolean isLocal;
   
-  public MapEntry(TYPE type, int address, String name, String file, boolean isLocal) {
+  public MapEntry(TYPE type, int address, int size, String name, String file, boolean isLocal) {
     this.type = type;
     this.address = address;
     this.name = name;
     this.file = file;
     this.isLocal = isLocal;
+    this.size = size;
+  }
+  
+  public int getSize() {
+    return size;
   }
   
   public TYPE getType() {
