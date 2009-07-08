@@ -631,14 +631,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         }
         if (DEBUG) log("Writing data: " + data + " to tx: " + txCursor);
 
-        if(txCursor == 0 && (data & 0xff) > 127) {
-          logger.warning(this, "CC2420: Warning - packet size too large");
+        if(txCursor == 0) {
+          if ((data & 0xff) > 127) {
+            logger.warning(this, "CC2420: Warning - packet size too large");
+          }
+        } else if (txCursor > 127) {
+          logger.warning(this, "CC2420: Warning - TX Cursor wrapped");
+          txCursor = 0;
         }
         memory[RAM_TXFIFO + txCursor] = data & 0xff;
-        txCursor = (txCursor + 1) & 127;
-        if (txCursor == 0) {
-          logger.warning(this, "CC2420: Warning - TX Cursor wrapped");
-        } 
+        txCursor++;
         if (sendEvents) {
           sendEvent("WRITE_TXFIFO", null);
         }
@@ -795,8 +797,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       }
       txfifoPos++;
       // Two symbol periods to send a byte...
-      long time = cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
-//      log("Scheduling 2 SYMB at: " + time + " getTime(now): " + cpu.getTime());
+      cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
     } else {
       if (DEBUG) log("Completed Transmission.");
       status &= ~STATUS_TX_ACTIVE;
@@ -1093,3 +1094,4 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
   
 } // CC2420
+
