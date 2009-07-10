@@ -286,7 +286,7 @@ public class IPv6Packet extends Packet implements IPPacketer {
   }
 
   /* parse a hex x:y:z... address */
-  public byte[] parseAddress(String addressStr) {
+  public static byte[] parseAddress(String addressStr) {
       byte[] address = new byte[16];
       int hexVal = 0;
       int pos = 0;

@@ -43,6 +43,7 @@
 
 package se.sics.mspsim.net;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Timer;
 import se.sics.mspsim.util.Utils;
 
@@ -362,5 +363,9 @@ public class IPStack {
   
   public boolean isRouter() {
     return isRouter ;
-  }  
+  }
+  
+  public void printTCPStatus(PrintStream out) {
+	  tcpHandler.printStatus(out);
+  }
 }

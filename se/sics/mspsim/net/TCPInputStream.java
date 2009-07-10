@@ -11,6 +11,7 @@ public class TCPInputStream extends InputStream {
   private int firstByte = 0;
   private int nextEmpty = 0;
   boolean closed = false;
+  long lastReadCall = 0;
   
   TCPListener listener = new TCPListener() {
     public void connectionClosed(TCPConnection connection) {
@@ -59,20 +60,27 @@ public class TCPInputStream extends InputStream {
   public void close() {
     connection.close();
     closed = true;
+    notifyReader();
   }
   
   public int read() throws IOException {
     if (closed) {
       return -1;
     }
-    if (firstByte == nextEmpty) {
-      synchronized(this) {
-        try {
-          wait();
-        } catch (InterruptedException e) {
-          e.printStackTrace();
+    synchronized(this) {
+        lastReadCall = System.currentTimeMillis();
+        while (!closed && firstByte == nextEmpty) {
+            try {
+                wait(1000);
+                System.out.println("TCPInputStream: waiting for input...");
+                if ((connection.timeout != -1) &&
+                        lastReadCall + connection.timeout < System.currentTimeMillis()) {
+                    throw new IOException("I/O operation: Read timed out...");
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
-      }
     }
     if (!closed) {
       int data = inputBuffer[firstByte++];

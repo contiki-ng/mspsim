@@ -1,5 +1,6 @@
 package se.sics.mspsim.net;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -36,46 +37,56 @@ public class TCPHandler extends TimerTask {
       c.pos = (byte) connectionNo;
       activeConnections[connectionNo++] = c;
   }
-  
+
   public void handlePacket(IPv6Packet packet) {
-    TCPPacket tcpPacket = (TCPPacket) packet.getIPPayload();
-    
-    TCPConnection connection = findConnection(packet, tcpPacket);
-    if (connection == null) {
-      connection = findListenConnection(packet, tcpPacket);
+      TCPPacket tcpPacket = (TCPPacket) packet.getIPPayload();
+
+      TCPConnection connection = findConnection(packet, tcpPacket);
       if (connection == null) {
-        System.out.println("TCPHandler: can not find active or listen connection for this packet");        
-      } else {
-        if (tcpPacket.isSyn()) {
-          TCPPacket tcpReply = createAck(tcpPacket, TCPPacket.SYN);
-          TCPConnection tc = new TCPConnection(ipStack, packet.netInterface);
-          /* setup the connection */
-          tc.externalIP = packet.sourceAddress;
-          tc.externalPort = tcpPacket.sourcePort;
-          tc.localIP = ipStack.myIPAddress;
-          tc.localPort = tcpPacket.destinationPort;
-          tc.state = TCPConnection.SYN_RECEIVED;
-          tc.receiveNext = tcpPacket.seqNo + 1;
-          tc.sentUnack = tc.sendNext = tcpReply.seqNo = (int) (System.currentTimeMillis() * 7);
+          connection = findListenConnection(packet, tcpPacket);
+          if (connection == null) {
+              System.out.println("TCPHandler: can not find active or listen connection for this packet");        
+          } else {
+              if (tcpPacket.isSyn()) {
+                  TCPPacket tcpReply = createAck(tcpPacket, TCPPacket.SYN);
+                  TCPConnection tc = new TCPConnection(ipStack, packet.netInterface);
+                  /* setup the connection */
+                  tc.externalIP = packet.sourceAddress;
+                  tc.externalPort = tcpPacket.sourcePort;
+                  tc.localIP = ipStack.myIPAddress;
+                  tc.localPort = tcpPacket.destinationPort;
+                  tc.state = TCPConnection.SYN_RECEIVED;
+                  tc.receiveNext = tcpPacket.seqNo + 1;
+                  tc.sentUnack = tc.sendNext = tcpReply.seqNo = (int) (System.currentTimeMillis() * 7);
 
-          addConnection(tc);
+                  addConnection(tc);
 
-          /* established => report to listeners... */
-          connection.newConnection(tc);
-          
-          tcpReply.ackNo = tc.receiveNext;
-          try {
-              tc.send(tcpReply);
-          } catch (IOException e) {
-              e.printStackTrace();
+                  /* established => report to listeners... */
+                  connection.newConnection(tc);
+
+                  tcpReply.ackNo = tc.receiveNext;
+                  try {
+                      tc.send(tcpReply);
+                  } catch (IOException e) {
+                      e.printStackTrace();
+                  }
+                  tc.sentUnack = tc.sendNext = tc.sendNext + 1;
+                  tc.serverConnection = connection;          
+              } else {
+                  System.out.println("TCPHandler: dropping packet & sending RST - likely for old connection?");
+                  TCPPacket tcpReply = tcpPacket.replyPacket();
+                  tcpReply.flags = TCPPacket.RST | TCPPacket.ACK;
+                  tcpReply.seqNo = tcpPacket.ackNo;
+                  tcpReply.ackNo = tcpPacket.seqNo + 1;
+                  IPv6Packet ipReply = packet.replyPacket(tcpReply);
+                  ipStack.sendPacket(ipReply, packet.netInterface);
+              }
           }
-          tc.sentUnack = tc.sendNext = tc.sendNext + 1;
-          tc.serverConnection = connection;          
-        } else {
-            System.out.println("TCPHandler: dropping packet - likely for old connection?");
-        }
+      } else {
+      if (tcpPacket.isReset()) {
+          /* something is very wrong - just close and remove... */
+          connection.state = TCPConnection.CLOSED;
       }
-    } else {
       switch(connection.state) {
       case TCPConnection.SYN_RECEIVED:
         if (tcpPacket.isAck()) {
@@ -91,6 +102,7 @@ public class TCPHandler extends TimerTask {
         break;
       case TCPConnection.ESTABLISHED:
         if (tcpPacket.isFin()) {
+          System.out.println("TCPConnection: received FIN => CLOSE_WAIT!!!");
           connection.state = TCPConnection.CLOSE_WAIT;
         }
         
@@ -105,14 +117,11 @@ public class TCPHandler extends TimerTask {
       case TCPConnection.FIN_WAIT_1:
         if (tcpPacket.isAck()) {
           connection.state = TCPConnection.FIN_WAIT_2;
-          connection.receive(tcpPacket);
         }
         if (tcpPacket.isFin()) {
             connection.state = TCPConnection.TIME_WAIT;
-            connection.lastSendTime = System.currentTimeMillis();
-            connection.receiveNext++;
-            connection.sendAck(tcpPacket);
         }
+        connection.receive(tcpPacket);
         break;
       case TCPConnection.FIN_WAIT_2:
         if (tcpPacket.isFin()) {
@@ -121,10 +130,13 @@ public class TCPHandler extends TimerTask {
           connection.lastSendTime = System.currentTimeMillis();
           connection.receiveNext++;
           connection.sendAck(tcpPacket);
+        } else {
+          connection.sendReset();
         }
         break;
       case TCPConnection.CLOSE_WAIT:
         /* ignore... */
+          connection.sendReset();
         break;
       }
     }
@@ -186,6 +198,13 @@ public class TCPHandler extends TimerTask {
         	connection.resend();
           }
           break;
+        case TCPConnection.FIN_WAIT_1:
+        case TCPConnection.FIN_WAIT_2:
+            if (connection.lastSendTime + connection.retransmissionTime < time) {
+                /* should probably resend the FIN! */
+                connection.resend();
+            }
+            break;
         case TCPConnection.TIME_WAIT:
             /* wait for a while ... */
             if (connection.lastSendTime + TCPConnection.TIME_WAIT_MILLIS < time) {
@@ -210,4 +229,12 @@ public class TCPHandler extends TimerTask {
       }
     }
   }
+
+  public void printStatus(PrintStream out) {
+	  out.println("---- TCP Connection info ----");
+	  for (int i = 0; i < connectionNo; i++) {
+		  out.println("* Connection " + i + " in state: " + activeConnections[i].state);
+	  }
+  }
+
 }
