@@ -45,9 +45,34 @@ public class UDPPacket implements IPPayload {
     this.destinationPort = destinationPort;
   }
   
+  /* generate RAW UDP packet */
   public byte[] generatePacketData(IPv6Packet packet) {
-    /* TODO: needs to be done!!! */
-    return null;
+      int size = payload != null ? payload.length : 0;
+      size += 8;
+      byte[] data = new byte[size];
+      int pos = 0;
+      data[pos++] = (byte)(sourcePort >> 8);
+      data[pos++] = (byte)(sourcePort & 0xff);
+      data[pos++] = (byte)(destinationPort >> 8);
+      data[pos++] = (byte)(destinationPort & 0xff);
+      data[pos++] = (byte)(size >> 8);
+      data[pos++] = (byte)(size & 0xff);
+      data[pos++] = 0;
+      data[pos++] = 0;
+
+      if (payload != null) {
+          System.arraycopy(payload, 0, data, pos, payload.length);
+      }
+      
+      packet.payloadLen = size;
+      int sum = packet.upperLayerHeaderChecksum();
+      
+      sum = IPv6Packet.checkSum(sum, data, size);
+      sum = (~sum) & 0xffff;
+      data[6] = (byte) (sum >> 8);
+      data[7] = (byte) (sum & 0xff);
+
+      return data;
   }
 
   public byte getDispatch() {

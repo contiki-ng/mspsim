@@ -23,6 +23,9 @@ public class BytePayload implements IPPayload {
   public void parsePacketData(IPv6Packet packet) {
     dispatch = packet.getDispatch();
     payloadData = packet.getPayload();
+    int len = 0;
+    if (payloadData != null) len = payloadData.length;
+    System.out.println("BytePayload: got " + len + " bytes data");
   }
 
   public void printPacket(PrintStream out) {

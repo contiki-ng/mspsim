@@ -36,6 +36,7 @@ public class ICMP6PacketHandler {
     case ICMP6Packet.ECHO_REPLY:
       System.out.println("ICMP6 got echo reply!!");
       break;
+     /* this should be handled by the neighbor manager */
     case ICMP6Packet.NEIGHBOR_SOLICITATION:
       p = new ICMP6Packet();
       p.targetAddress = icmpPacket.targetAddress;
@@ -62,31 +63,7 @@ public class ICMP6PacketHandler {
       ipStack.sendPacket(ipp, packet.netInterface);
       break;
     case ICMP6Packet.ROUTER_SOLICITATION:
-      if (ipStack.isRouter()) {
-        p = new ICMP6Packet();
-        p.targetAddress = icmpPacket.targetAddress;
-        p.type = ICMP6Packet.ROUTER_ADVERTISEMENT;
-        p.flags = ICMP6Packet.FLAG_SOLICITED |
-        ICMP6Packet.FLAG_OVERRIDE;
-
-        /* ensure that the RA is updated... */
-        p.updateRA(ipStack);
-
-        ipp = new IPv6Packet();
-        ipp.setIPPayload(p);
-        // is this ok?
-        //ipp.destAddress = packet.sourceAddress;
-        ipp.destAddress = IPStack.ALL_NODES; //packet.sourceAddress;
-        ipp.sourceAddress = ipStack.myLocalIPAddress;
-        System.out.print("Created ICMP6 RA for ");
-        IPv6Packet.printAddress(System.out, ipp.destAddress);
-        packet.printPacket(System.out);
-
         ipStack.getNeighborManager().receiveNDMessage(packet);
-
-        ipStack.sendPacket(ipp, packet.netInterface);
-        
-      }
       break;
     case ICMP6Packet.ROUTER_ADVERTISEMENT:
       if (!ipStack.isRouter()) {

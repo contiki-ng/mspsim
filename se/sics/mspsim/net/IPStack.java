@@ -292,7 +292,10 @@ public class IPStack {
         packet.netInterface != tunnel) {
       System.out.println("**** Should go out on tunnel!!!!" + tunnel);
       if (packet.ipPayload == null) {
-        packet.setIPPayload(new BytePayload(packet));
+          System.out.println("**   Created byte payload for the packet...");
+          packet.setIPPayload(new BytePayload(packet));
+      } else {
+          System.out.println("**   Payload already set for packet...");
       }
       /* will this work ??? */
       System.out.print("MyAddress: ");
