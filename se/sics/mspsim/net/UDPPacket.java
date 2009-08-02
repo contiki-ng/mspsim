@@ -6,6 +6,7 @@ import se.sics.mspsim.util.Utils;
 
 public class UDPPacket implements IPPayload {
 
+    public final static boolean DEBUG = false;
   public final static int DISPATCH = 17;
 
   int sourcePort;
@@ -91,8 +92,10 @@ public class UDPPacket implements IPPayload {
     int length = packet.get16(4);
     checkSum = packet.get16(6);
 
-    System.out.println("UDP Length: " + length);
-    System.out.println("UDP payload length: " + packet.getPayloadLength());
+    if (DEBUG) {
+        System.out.println("UDP Length: " + length);
+        System.out.println("UDP payload length: " + packet.getPayloadLength());
+    }
     /* this will *crash* if packet does not contain all data */
     payload = new byte[length - 8];
     /* length is total UDP length */
@@ -106,7 +109,7 @@ public class UDPPacket implements IPPayload {
     sum = IPv6Packet.checkSum(sum, data, data.length);
     sum = (~sum) & 0xffff;
     if (sum == checkSum) {
-      System.out.println("UDP: Checksum matches!!!");
+      if (DEBUG) System.out.println("UDP: Checksum matches!!!");
     } else {
       System.out.println("UDP: Checksum error: " + 
           Utils.hex16(checkSum) + " <?> " + Utils.hex16(sum));
@@ -132,7 +135,7 @@ public class UDPPacket implements IPPayload {
     sum = IPv6Packet.checkSum(sum, payload, payload.length);
     sum = (~sum) & 0xffff;
     if (sum == checkSum) {
-      System.out.println("UDP: Checksum matches!!!");
+        if (DEBUG) System.out.println("UDP: Checksum matches!!!");
     } else {
       System.out.println("UDP: Checksum error: " + 
           Utils.hex16(checkSum) + " <?> " + Utils.hex16(sum));

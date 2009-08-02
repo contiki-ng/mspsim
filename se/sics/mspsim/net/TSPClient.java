@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 
 public class TSPClient implements NetworkInterface {
 
+    public static final boolean DEBUG = false;
+    
   public static final int DEFAULT_PORT = 3653;
   private static final byte[] VERSION = "VERSION=2.0.0\r\n".getBytes();
   private static final byte[] AUTH_PLAIN = "AUTHENTICATE PLAIN\r\b".getBytes();
@@ -195,7 +197,7 @@ public class TSPClient implements NetworkInterface {
     while(true) {
       System.out.println("Receiving packet...");
       connection.receive(receiveP);
-      System.out.println("Packet received: " + receiveP.getLength());
+      System.out.println("TSPClient: Packet received: " + receiveP.getLength());
       byte[] data = receiveP.getData();
       for (int i = 0, n = receiveP.getLength(); i < n; i++) {
         if (i < 8 || writerState == WriterState.TUNNEL_UP) {
@@ -205,10 +207,12 @@ public class TSPClient implements NetworkInterface {
         }
       }
       String sData = new String(data, 8, receiveP.getLength() - 8);
-      String[] parts = sData.split("\n");
-      if (parts.length > 1) {
-        System.out.println("Response size: " + parts[0]);
-        System.out.println("Response code: " + parts[1]);
+      if (DEBUG) {
+          String[] parts = sData.split("\n");
+          if ((parts.length > 1) && readerState != ReaderState.TUNNEL_UP) {
+              System.out.println("Response size: " + parts[0]);
+              System.out.println("Response code: " + parts[1]);
+          }
       }
       switch (readerState) {
       case CAP_EXPECTED:
@@ -299,18 +303,22 @@ public class TSPClient implements NetworkInterface {
     }
     DatagramPacket packet = new DatagramPacket(pData, pData.length, serverAddr, DEFAULT_PORT);
     connection.send(packet);
-    System.out.println("Packet sent... " + pData.length + " => C:" +
-        new String(packetData));
-    
+
+    if (DEBUG) {
+        System.out.println("Packet sent... " + pData.length + " => C:" +
+                new String(packetData));
+    }
   }
 
   
   public void sendPacket(IPv6Packet packet) {
     byte[] data = packet.generatePacketData(packet);
-    System.out.println("Sending IPv6Packet on tunnel: " + data);
-    System.out.print("Packet: ");
-    packet.printPacket(System.out);
-    System.out.println();
+    if (DEBUG) {
+        System.out.println("Sending IPv6Packet on tunnel: " + data);
+        System.out.print("Packet: ");
+        packet.printPacket(System.out);
+        System.out.println();
+    }
     try {
       sendPacket(data);
     } catch (IOException e) {
