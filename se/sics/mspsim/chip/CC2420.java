@@ -172,21 +172,30 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   // State Machine - Datasheet Figure 25 page 44
   public enum RadioState {
-     VREG_OFF, // -1;
-     POWER_DOWN, // 0;
-     IDLE, // 1;
-     RX_CALIBRATE, // 2;
-     RX_SFD_SEARCH, // 3;
-     RX_WAIT, // 14;
-     RX_FRAME, // 16;
-     RX_OVERFLOW, // 17;
-     TX_CALIBRATE, // 32;
-     TX_PREAMBLE, // 34;
-     TX_FRAME, // 37;
-     TX_ACK_CALIBRATE, // 48;
-     TX_ACK_PREABLE, // 49;
-     TX_ACK, // 52;
-     TX_UNDERFLOW// 56;
+     VREG_OFF(-1),
+     POWER_DOWN(0),
+     IDLE(1),
+     RX_CALIBRATE(2),
+     RX_SFD_SEARCH(3),
+     RX_WAIT(14),
+     RX_FRAME(16),
+     RX_OVERFLOW(17),
+     TX_CALIBRATE(32),
+     TX_PREAMBLE(34),
+     TX_FRAME(37),
+     TX_ACK_CALIBRATE(48),
+     TX_ACK_PREABLE(49),
+     TX_ACK(52),
+     TX_UNDERFLOW(56);
+
+     private final int state;
+     RadioState(int stateNo) {
+       state = stateNo;
+     }
+
+     public int getFSMState() {
+       return state;
+     }
   };
   
   public static final int STATE_VREG_OFF = -1;
@@ -373,6 +382,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean setState(RadioState state) {
     if(DEBUG) log("State transition from " + stateMachine + " to " + state);
     stateMachine = state;
+    /* write to FSM state register */
+    registers[REG_FSMSTATE] = state.getFSMState();
 
     switch(stateMachine) {
 
