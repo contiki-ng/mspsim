@@ -198,22 +198,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
      }
   };
   
-  public static final int STATE_VREG_OFF = -1;
-  public static final int STATE_POWER_DOWN = 0;
-  public static final int STATE_IDLE = 1;
-  public static final int STATE_RX_CALIBRATE = 2;
-  public static final int STATE_RX_SFD_SEARCH = 3;
-  public static final int STATE_RX_WAIT = 14;
-  public static final int STATE_RX_FRAME = 16;
-  public static final int STATE_RX_OVERFLOW = 17;
-  public static final int STATE_TX_CALIBRATE = 32;
-  public static final int STATE_TX_PREAMBLE = 34;
-  public static final int STATE_TX_FRAME = 37;
-  public static final int STATE_TX_ACK_CALIBRATE = 48;
-  public static final int STATE_TX_ACK_PREABLE = 49;
-  public static final int STATE_TX_ACK = 52;
-  public static final int STATE_TX_UNDERFLOW = 56;
-
   // FCF High
   public static final int FRAME_TYPE = 0xC0;
   public static final int SECURITY_ENABLED = (1<<6);
