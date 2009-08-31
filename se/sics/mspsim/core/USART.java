@@ -43,7 +43,7 @@ package se.sics.mspsim.core;
 
 public class USART extends IOUnit implements SFRModule {
 
-  public static final boolean DEBUG = false;//true;
+  public static final boolean DEBUG = false; //true;
 
   // USART 0/1 register offset (0x70 / 0x78)
   public static final int UCTL = 0;
@@ -93,6 +93,8 @@ public class USART extends IOUnit implements SFRModule {
   private int tickPerByte = 1000;
   private long nextTXReady = -1;
   private int nextTXByte = -1;
+  private int txShiftReg = -1;
+  private boolean transmitting = false;
   
   private MSP430Core cpu;
   private SFR sfr;
@@ -153,7 +155,8 @@ public class USART extends IOUnit implements SFRModule {
 
   public void reset(int type) {
     nextTXReady = cpu.cycles + 100;
-    nextTXByte = -1;
+    txShiftReg = nextTXByte = -1;
+    transmitting = false;
     clrBitIFG(utxifg | urxifg);
     utctl |= UTCTL_TXEMPTY;
     cpu.scheduleCycleEvent(txTrigger, nextTXReady);
@@ -244,6 +247,7 @@ public class USART extends IOUnit implements SFRModule {
       if (txEnabled || (spiMode && rxEnabled)) {
         // Interruptflag not set!
         clrBitIFG(utxifg);
+        /* the TX is no longer empty ! */
         utctl &= ~UTCTL_TXEMPTY;
         /* should the interrupt be flagged off here ? - or only the flags */
         if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
@@ -252,9 +256,14 @@ public class USART extends IOUnit implements SFRModule {
         // Schedule on cycles here
         // TODO: adding 3 extra cycles here seems to give
         // slightly better timing in some test...
-        nextTXReady = cycles + tickPerByte + 3;
+
         nextTXByte = data;
-        cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+        if (!transmitting) {
+            /* how long time will the copy from the TX_BUF to the shift reg take? */
+            /* assume 3 cycles? */
+            nextTXReady = cycles + 3; //tickPerByte + 3;
+            cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+        }
       } else {
         System.out.println("Ignoring UTXBUF data since TX not active...");
       }
@@ -344,12 +353,27 @@ public class USART extends IOUnit implements SFRModule {
       System.out.println(getName() + " Warning: USART transmission during LPM!!! " + nextTXByte);
     }
 
-    if (listener != null && nextTXByte != -1) {
-      listener.dataReceived(this, nextTXByte);
-      nextTXByte = -1;
+    if (transmitting) {
+        /* in this case we have shifted out the last character */
+        if (listener != null && txShiftReg != -1) {
+            listener.dataReceived(this, txShiftReg);
+        }
+        /* nothing more to transmit after this - stop transmission */
+        if (nextTXByte == -1) {
+            utctl |= UTCTL_TXEMPTY;
+            transmitting = false;
+            txShiftReg = -1;
+        }
     }
-    
-    utctl |= UTCTL_TXEMPTY;
+    /* any more chars to transmit? */
+    if (nextTXByte != -1) {
+        txShiftReg = nextTXByte;
+        nextTXByte = -1;
+        transmitting = true;
+        nextTXReady = cycles + tickPerByte + 1;
+        cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+    }
+    /* txbuf always empty after this?! */
     setBitIFG(utxifg);
 
     if (DEBUG) {
