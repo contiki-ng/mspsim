@@ -64,6 +64,10 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   
   private int state = 0;
   public static final int CHIP_SELECT = 0x10;
+
+  private static final double PROGRAM_PAGE_MILLIS = 1.0; // 0.8 - 5 ms
+  private static final double SECTOR_ERASE_MILLIS = 1400; // 800 - 3 000 ms 
+
   private boolean chipSelect;
 
   private int pos;
@@ -103,6 +107,9 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         System.out.println("M25P80: byte received: " + data);
       }
       switch(state) {
+      case READ_STATUS:
+          source.byteReceived(status);
+          return;
       case READ_IDENT:
         source.byteReceived(identity[pos]);
         pos++;
@@ -184,14 +191,15 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         }
         state = READ_IDENT;
         pos = 0;
-        source.byteReceived(identity[pos++]);
+        source.byteReceived(0);
         return;
       case READ_STATUS:
         status = (status & (0xff - 1 - 2)) | (writeEnable ? 0x02 : 0x00) |
           (writing ? 0x01 : 0x00);
-        source.byteReceived(status);
+        state = READ_STATUS;
+        source.byteReceived(0);
         if (DEBUG) {
-          System.out.println("M25P80: Read status => " + status);
+          System.out.println("M25P80: Read status => " + status + " " + cpu.getPC());
         }
         return;
       case WRITE_STATUS:
@@ -319,12 +327,13 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   }
 
   private void writeStatus(double time) {
-    writing = true;
-    cpu.scheduleTimeEventMillis(writeEvent, time);
+      writing = true;
+      cpu.scheduleTimeEventMillis(writeEvent, time);
   }
 
   private void programPage() {
-    writeStatus(0.64);
+      if (writing) System.out.println("Can not set program page while already writing... " + cpu.getPC());
+    writeStatus(PROGRAM_PAGE_MILLIS);
     ensureLoaded(blockWriteAddress);
     for (int i = 0; i < readMemory.length; i++) {
       readMemory[i] &= buffer[i];
@@ -333,7 +342,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   }
 
   private void sectorErase(int address) {
-    writeStatus(600);
+    writeStatus(SECTOR_ERASE_MILLIS);
     int sectorAddress = address & 0xf0000;
     loadedAddress = -1;
     for (int i = 0; i < buffer.length; i++) {
