@@ -739,13 +739,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memory[sp] = sr & 0xff;
       memory[sp + 1] = (sr >> 8) & 0xff;
     }
-    // Clear SR - except ...
+    // Clear SR
+    writeRegister(SR, 0); // sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
+
     // Jump to the address specified in the interrupt vector
     writeRegister(PC, pc =
 		memory[0xffe0 + interruptMax * 2] +
 		(memory[0xffe0 + interruptMax * 2 + 1] << 8));
-
-    writeRegister(SR, sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
