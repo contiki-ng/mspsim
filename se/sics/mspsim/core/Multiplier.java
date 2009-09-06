@@ -170,9 +170,11 @@ public class Multiplier extends IOUnit {
       
       if (accumulating) {
         res += ((long) resHi << 16) + resLo;
-        if (!signed && res > 0xffffffff) {
-          sumext = 1;
+        if (!signed) {
+          sumext = res > 0xffffffffL ? 1 : 0;
         }
+      } else if (!signed) {
+        sumext = 0;
       }
       
       resHi = (int) ((res >> 16) & 0xffff);
