@@ -54,13 +54,6 @@ import se.sics.mspsim.chip.RFSource;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
-import se.sics.mspsim.net.CC2420PacketHandler;
-import se.sics.mspsim.net.ICMP6Packet;
-import se.sics.mspsim.net.ICMP6PacketHandler;
-import se.sics.mspsim.net.IEEE802154Handler;
-import se.sics.mspsim.net.IPStack;
-import se.sics.mspsim.net.IPv6Packet;
-import se.sics.mspsim.net.LoWPANHandler;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 

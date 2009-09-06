@@ -236,11 +236,16 @@ public class CommandHandler implements ActiveComponent, LineListener {
       }
     });
 
-    registerCommand("ps", new BasicCommand("list current executing commands", "") {
+    registerCommand("ps", new BasicCommand("list current executing commands/processes", "") {
       public int executeCommand(CommandContext context) {
-        for (int i = 0; i < currentAsyncCommands.size(); i++) {
-          CommandContext cmd = currentAsyncCommands.get(i)[0];
-          context.out.println("  " + cmd);
+        if (currentAsyncCommands.size() > 0) {
+            context.out.println(" PID\tCommand");
+            for (int i = 0; i < currentAsyncCommands.size(); i++) {
+                CommandContext cmd = currentAsyncCommands.get(i)[0];
+                context.out.println("  " + cmd);
+            }
+        } else {
+            context.out.println("No executing commands.");
         }
         return 0;
       }
