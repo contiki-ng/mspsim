@@ -71,7 +71,9 @@ public class SimpleProfiler implements Profiler, EventListener {
   private MSP430Core cpu;
   private PrintStream logger;
   private boolean hideIRQ = false;
-  
+
+  private CallListener[] callListeners;
+
   /* statistics for interrupts */
   private long[] lastInterruptTime = new long[16];
   private long[] interruptTime = new long[16];
@@ -135,6 +137,13 @@ public class SimpleProfiler implements Profiler, EventListener {
     ce.exclusiveCycles = cycles;
     ce.hide = hide;
     newIRQ = false;
+
+    CallListener[] listeners = callListeners;
+    if (listeners != null) {
+      for (int i = 0, n = listeners.length; i < n; i++) {
+        listeners[i].functionCall(this, entry);
+      }
+    }
   }
 
   public void profileReturn(long cycles) {
@@ -177,6 +186,13 @@ public class SimpleProfiler implements Profiler, EventListener {
           if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
           printSpace(logger, cSP * 2 - interruptLevel);
           logger.println("return from " + ce.function.getInfo() + " elapsed: " + elapsed);
+        }
+      }
+
+      CallListener[] listeners = callListeners;
+      if (listeners != null) {
+        for (int i = 0, n = listeners.length; i < n; i++) {
+          listeners[i].functionReturn(this, fkn);
         }
       }
     }
@@ -451,11 +467,13 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
   }
 
-  public void addCallListener(CallListener listener) {
-    // TODO
+  public synchronized void addCallListener(CallListener listener) {
+    callListeners = (CallListener[])
+      ArrayUtils.add(CallListener.class, callListeners, listener);
   }
 
   public void removeCallListener(CallListener listener) {
-    // TODO
+    callListeners = (CallListener[])
+      ArrayUtils.remove(callListeners, listener);
   }
 }
