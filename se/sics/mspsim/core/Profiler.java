@@ -41,10 +41,16 @@
 
 package se.sics.mspsim.core;
 import java.io.PrintStream;
+import java.util.Properties;
+
 import se.sics.mspsim.util.MapEntry;
 
 public interface Profiler {
 
+  public static final String PARAM_FUNCTION_NAME_REGEXP = "function.regexp";
+  public static final String PARAM_PROFILE_CALLERS = "showcallers";
+  public static final String PARAM_SORT_MODE = "sortmode";
+  
   public void setCPU(MSP430Core cpu);
 
   public void profileCall(MapEntry entry, long cycles);
@@ -56,7 +62,7 @@ public interface Profiler {
 
   public void printProfile(PrintStream out);
 
-  public void printProfile(PrintStream out, String functionNameRegexp);
+  public void printProfile(PrintStream out, Properties parameters);
 
   public void printStackTrace(PrintStream out);
   

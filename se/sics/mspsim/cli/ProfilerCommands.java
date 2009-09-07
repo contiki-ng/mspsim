@@ -39,6 +39,8 @@
  */
 
 package se.sics.mspsim.cli;
+import java.util.Properties;
+
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
@@ -56,27 +58,51 @@ public class ProfilerCommands implements CommandBundle {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     if (cpu != null) {
       ch.registerCommand("profile", new BasicCommand("show profile information",
-          "[-clear] [regexp]") {
+          "[-clear] [-sort column] [-showcallers] [regexp]") {
         public int executeCommand(final CommandContext context) {
           Profiler profiler = cpu.getProfiler();
           if (profiler == null) {
             context.err.println("No profiler found.");
             return 1;
           }
-          if (context.getArgumentCount() > 1) {
-            context.err.println("Too many arguments. Either clear or show profile information.");
-            return 1;
-          }
           String namematch = null;
-          if (context.getArgumentCount() > 0) {
-            namematch = context.getArgument(0);
-            if ("-clear".equals(namematch)) {
+          String sortMode = null;
+          String showCaller = null;
+
+          for (int i = 0; i < context.getArgumentCount(); i++) {
+            String value = context.getArgument(i);
+            if ("-clear".equals(value)) {
               profiler.clearProfile();
               context.out.println("Cleared profile information.");
               return 0;
+            } else if ("-sort".equals(value)) {
+              if (context.getArgumentCount() > i + 1) { 
+                sortMode = context.getArgument(i + 1);
+                i++;
+              } else {
+                context.err.println("Missing mode argument for -sort.");
+                return 1;
+              }
+            } else if ("-showcallers".equals(value)) {
+              showCaller = value;
+            } else if (namematch != null) {
+              context.err.println("Too many arguments. Either clear or show profile information.");              
+            } else {
+              namematch = value;
             }
           }
-          profiler.printProfile(context.out, namematch);
+          
+          Properties params = new Properties();
+          if (namematch != null) { 
+            params.put(Profiler.PARAM_FUNCTION_NAME_REGEXP, namematch);
+          }
+          if (showCaller != null) { 
+            params.put(Profiler.PARAM_PROFILE_CALLERS, showCaller);
+          }
+          if (sortMode != null) { 
+            params.put(Profiler.PARAM_SORT_MODE, sortMode);
+          }
+          profiler.printProfile(context.out, params);
           return 0;
         }
       });

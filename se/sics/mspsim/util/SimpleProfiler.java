@@ -47,12 +47,18 @@ import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 
 public class SimpleProfiler implements Profiler, EventListener {
-
+ 
   private HashMap<MapEntry,CallEntry> profileData;
   private HashMap<String, TagEntry> tagProfiles;
   private HashMap<String, TagEntry> startTags;
@@ -124,6 +130,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     ce.function = entry;
     ce.calls = 0;
     ce.cycles = cycles;
+    ce.exclusiveCycles = cycles;
     ce.hide = hide;
     newIRQ = false;
   }
@@ -139,6 +146,10 @@ public class SimpleProfiler implements Profiler, EventListener {
 //     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
 
     long elapsed = cycles - cspEntry.cycles;
+    long exElapsed = cycles - cspEntry.exclusiveCycles;
+    if (cSP != 0) {
+      callStack[cSP-1].exclusiveCycles += elapsed;
+    }
     if (cspEntry.calls >= 0) {
       CallEntry ce = profileData.get(fkn);
       if (ce == null) {
@@ -146,7 +157,18 @@ public class SimpleProfiler implements Profiler, EventListener {
         ce.function = fkn;
       }
       ce.cycles += elapsed;
+      ce.exclusiveCycles += exElapsed;
       ce.calls++;
+      if (cSP != 0) {
+        MapEntry caller = callStack[cSP-1].function;
+        HashMap<MapEntry,Integer> callers = ce.callers;
+        Integer numCalls = callers.get(caller);
+        if (numCalls == null) {
+          callers.put(caller, 1);
+        } else {
+          callers.put(caller, numCalls + 1);
+        }
+      }
 
       if (logger != null) {
         if ((cspEntry.hide <= 1) && (!hideIRQ || servicedInterrupt == -1)) {
@@ -202,16 +224,20 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
   }  
   public void printProfile(PrintStream out) {
-    printProfile(out, null);
+    printProfile(out, new Properties());
   }
 
-  public void printProfile(PrintStream out, String functionNameRegexp) {
+  public void printProfile(PrintStream out, Properties parameters) {
+    String functionNameRegexp = parameters.getProperty(PARAM_FUNCTION_NAME_REGEXP);
+    String profSort = parameters.getProperty(PARAM_SORT_MODE);
+    boolean profCallers = parameters.getProperty(PARAM_PROFILE_CALLERS) != null;
     Pattern pattern = null;
     CallEntry[] entries = profileData.values().toArray(new CallEntry[profileData.size()]);
-    Arrays.sort(entries);
 
+    Arrays.sort(entries, new CallEntryComparator(profSort));
+    
     out.println("************************* Profile Data **************************************");
-    out.println("Function                                         Average    Calls  Tot.Cycles");
+    out.println("Function                              Calls    Average       Total  Exclusive");
 
     if (functionNameRegexp != null && functionNameRegexp.length() > 0) {
       pattern = Pattern.compile(functionNameRegexp);
@@ -222,17 +248,23 @@ public class SimpleProfiler implements Profiler, EventListener {
         String functionName = entries[i].function.getName();
         if (pattern == null || pattern.matcher(functionName).find()) {
           String cyclesS = "" + entries[i].cycles;
+          String exCyclesS = "" + entries[i].exclusiveCycles;
           String callS = "" + c;
           String avgS = "" + (c > 0 ? (entries[i].cycles / c) : 0);
           out.print(functionName);
-          printSpace(out, 56 - functionName.length() - avgS.length());
-          out.print(avgS);
-          out.print(' ');
-          printSpace(out, 8 - callS.length());
+          printSpace(out, 43 - functionName.length() - callS.length());
           out.print(callS);
           out.print(' ');
-          printSpace(out, 10 - cyclesS.length());
-          out.println(cyclesS);
+          printSpace(out, 10 - avgS.length());
+          out.print(avgS);
+          out.print(' ');
+          printSpace(out, 11 - cyclesS.length());
+          out.print(cyclesS);
+          printSpace(out, 11 - exCyclesS.length());
+          out.println(exCyclesS);
+          if (profCallers) {
+            printCallers(entries[i], out);
+          }
         }
       }
     }
@@ -243,6 +275,26 @@ public class SimpleProfiler implements Profiler, EventListener {
         out.printf("%4d ",(interruptCount[i] > 0 ? (interruptTime[i] / interruptCount[i]):0));
         out.printf("%8d   %8d",interruptCount[i],interruptTime[i]);
         out.println();
+    }
+  }
+
+  private void printCallers(CallEntry callEntry, PrintStream out) {
+    HashMap<MapEntry,Integer> callers = callEntry.callers;
+    List<Entry<MapEntry, Integer>> list = new LinkedList<Entry<MapEntry, Integer>>(callers.entrySet());
+    Collections.sort(list, new Comparator<Entry<MapEntry, Integer>>() {
+        @Override
+        public int compare(Entry<MapEntry, Integer> o1, Entry<MapEntry, Integer> o2) {
+          return o2.getValue().compareTo(o1.getValue());
+        }
+    });
+    for (Entry<MapEntry, Integer> entry : list) {
+      String functionName = entry.getKey().getName();
+      String callS = "" + entry.getValue();
+      printSpace(out, 12 - callS.length());
+      out.print(callS);
+      printSpace(out, 2);
+      out.print(functionName);
+      out.println();
     }
   }
 
@@ -259,17 +311,57 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
   }
   
-  private static class CallEntry implements Comparable<CallEntry> {
-    MapEntry function;
-    long cycles;
-    int calls;
-    int hide;
-
-    public int compareTo(CallEntry o) {
-      long diff = o.cycles - cycles;
+  private static class CallEntryComparator implements Comparator<CallEntry> {
+    private int mode;
+    
+    public CallEntryComparator(String modeS) {
+      if ("exclusive".equalsIgnoreCase(modeS)) {
+        mode = 1;
+      } else if ("calls".equalsIgnoreCase(modeS)) {
+        mode = 2;
+      } else if ("average".equalsIgnoreCase(modeS)) {
+        mode = 3;
+      } else if ("function".equalsIgnoreCase(modeS)) {
+        mode = 4;
+      } else {
+        mode = 0;
+      }
+    }
+    
+    public int compare(CallEntry o1, CallEntry o2) {
+      long diff;
+      switch (mode) {
+      case 1:
+        diff = o2.exclusiveCycles - o1.exclusiveCycles;
+        break;
+      case 2:
+        diff = o2.calls - o1.calls;
+        break;
+      case 3:
+        diff = (o2.calls > 0 ? (o2.cycles / o2.calls) : 0) -
+        (o1.calls > 0 ? (o1.cycles / o1.calls) : 0);
+        break;
+      case 4:
+        return o1.function.getName().compareTo(o2.function.getName());
+      default:
+        diff = o2.cycles - o1.cycles;
+      }
       if (diff > 0) return 1;
       if (diff < 0) return -1;
       return 0;
+    }
+  }
+  
+  private static class CallEntry {
+    MapEntry function;
+    long cycles;
+    long exclusiveCycles;
+    int calls;
+    int hide;
+    HashMap<MapEntry, Integer> callers;
+    
+    public CallEntry() {
+      callers = new HashMap<MapEntry, Integer>();
     }
   }
 
