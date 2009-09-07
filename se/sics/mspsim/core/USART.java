@@ -299,7 +299,7 @@ public class USART extends IOUnit implements SFRModule {
       // When byte is read - the interruptflag is cleared!
       // and error status should also be cleared later...
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-        System.out.println(getName() + " clearing rx interrupt flag " + cpu.getPC());
+        System.out.println(getName() + " clearing rx interrupt flag " + cpu.getPC() + " byte: " + tmp);
       }
       clrBitIFG(urxifg);
       if (listener != null) {

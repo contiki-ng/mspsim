@@ -1,4 +1,5 @@
 package se.sics.mspsim.util;
+import java.io.PrintStream;
 import java.util.ArrayList;
 
 public class ComponentRegistry {
@@ -81,5 +82,14 @@ public class ComponentRegistry {
       this.name = name;
       this.component = component;
     }
+  }
+  
+  public void printRegistry(PrintStream out) {
+      ComponentEntry[] plugs = components.toArray(new ComponentEntry[components.size()]);
+      out.printf("%-22s %s\n", "Component Name", "Component Class");
+      out.println("----------------------------------------------");
+      for (int i = 0; i < plugs.length; i++) {
+          out.printf("%-22s %s\n", plugs[i].name, plugs[i].component.getClass().getName());
+      }
   }
 }

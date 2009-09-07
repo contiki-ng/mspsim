@@ -53,8 +53,10 @@ import se.sics.mspsim.chip.RFListener;
 import se.sics.mspsim.chip.RFSource;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ActiveComponent;
+import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 
@@ -364,6 +366,20 @@ public class MiscCommands implements CommandBundle {
           }
         }
       }
+    });
+    
+    handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "") {
+        public int executeCommand(CommandContext context) {
+            ArgumentManager config = (ArgumentManager) registry.getComponent("config");
+            context.out.println("--------- System info ----------\n");
+            context.out.println("MSPSim version: " + MSP430Constants.VERSION);
+            context.out.println("Firmware      : " + config.getProperty("firmwareFile"));
+            context.out.println("AutoloadScript: " + config.getProperty("autoloadScript"));
+            context.out.println();
+            context.out.println("--------- Registry info --------\n");
+            registry.printRegistry(context.out);
+            return 0;
+        }
     });
   }
 

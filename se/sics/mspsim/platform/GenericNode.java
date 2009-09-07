@@ -166,11 +166,13 @@ public abstract class GenericNode extends Chip implements Runnable {
         CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
         script = script.replace('\\', '/');
         System.out.println("Autoloading script: " + script);
+        config.setProperty("autoloadScript", script);
         if (ch != null) {
           ch.lineRead("source \"" + script + '"');
         }
       }
     }
+    config.setProperty("firmwareFile", firmwareFile);
     System.out.println("-----------------------------------------------");
     System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
     System.out.println("-----------------------------------------------");
