@@ -45,6 +45,8 @@ import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
+import se.sics.mspsim.profiler.CallListener;
+
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collections;
@@ -448,5 +450,15 @@ public class SimpleProfiler implements Profiler, EventListener {
         tagEntry.lastCycles = 0;
       }      
     }
+  }
+
+  @Override
+  public void addCallListener(CallListener listener) {
+    // TODO
+  }
+
+  @Override
+  public void removeCallListener(CallListener listener) {
+    // TODO
   }
 }

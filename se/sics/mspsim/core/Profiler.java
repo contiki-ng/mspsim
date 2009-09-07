@@ -43,6 +43,7 @@ package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.Properties;
 
+import se.sics.mspsim.profiler.CallListener;
 import se.sics.mspsim.util.MapEntry;
 
 public interface Profiler {
@@ -60,6 +61,9 @@ public interface Profiler {
   
   public void clearProfile();
 
+  public void addCallListener(CallListener listener);
+  public void removeCallListener(CallListener listener);
+  
   public void printProfile(PrintStream out);
 
   public void printProfile(PrintStream out, Properties parameters);
