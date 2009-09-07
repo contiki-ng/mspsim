@@ -68,7 +68,7 @@ CPUTEST := tests/cputest.firmware
 SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS}
 
-PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky cli ui util chip net extutil/highlight extutil/jfreechart}
+PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky cli ui util chip net plugin extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 

@@ -3,4 +3,9 @@
 #exec rm log.txt
 #log CC2420 >log.txt
 #printcalls >log.txt
+
+# Install and activate the plugin 'ContikiChecker'
+# install ContikiChecker
+# contikichecker
+
 start
