@@ -138,7 +138,7 @@ public class IHexReader {
 //     System.out.println("T ^ T =>  " + (true ^ true) +
 // 		       " T ^ F => " + (false ^ true));
 
-    MSP430 cpu = new MSP430(0);
+    MSP430 cpu = new MSP430(0, new ComponentRegistry());
     int[] memory = cpu.getMemory();
     reader.readFile(memory, args[0]);
     cpu.reset();

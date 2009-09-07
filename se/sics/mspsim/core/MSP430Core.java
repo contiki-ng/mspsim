@@ -43,6 +43,7 @@ package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
+import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.Utils;
@@ -126,12 +127,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private BasicClockModule bcs;
   private ArrayList<Chip> chips = new ArrayList<Chip>();
 
+  ComponentRegistry registry;
   Profiler profiler;
   private Flash flash;
   
-  public MSP430Core(int type) {
+  public MSP430Core(int type, ComponentRegistry registry) {
     // Ignore type for now...
     setModeNames(MODE_NAMES);
+    this.registry = registry;
     int passIO = 0;
     // IOUnits should likely be placed in a hashtable?
     // Maybe for debugging purposes...
@@ -258,7 +261,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public void setProfiler(Profiler prof) {
+    registry.registerComponent("profiler", prof);
     profiler = prof;
+    profiler.setCPU(this);
   }
   
   /* returns port 1 ... 6 */

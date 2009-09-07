@@ -166,7 +166,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
     return cmds;
   }
 
-  public void setComponentRegistry(ComponentRegistry registry) {
+  public void init(String name, ComponentRegistry registry) {
     this.registry = registry;
   }
 

@@ -54,6 +54,7 @@ import se.sics.mspsim.chip.RFSource;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.TimeEvent;
+import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 
@@ -305,6 +306,28 @@ public class MiscCommands implements CommandBundle {
       }
       public void lineRead(String line) {
         context.executeCommand(command);
+      }
+    });
+    
+    handler.registerCommand("install", new BasicCommand("install and start a plugin", "ClassName") {
+      @Override
+      public int executeCommand(CommandContext context) {
+        String className = context.getArgument(0);
+        Class pluginClass = null;
+        try {
+          try {
+            pluginClass = Class.forName(className);
+          } catch (ClassNotFoundException e) {
+            pluginClass = Class.forName("se.sics.mspsim.plugin." + className);
+          }
+          ActiveComponent component = (ActiveComponent) pluginClass.newInstance();
+          registry.registerComponent(className, component);
+          return 0;
+          } catch (Exception e1) {            // TODO Auto-generated catch block
+            e1.printStackTrace(context.err);
+          }
+          // TODO Auto-generated method stub
+          return 1;
       }
     });
 

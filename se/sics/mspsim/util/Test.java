@@ -83,7 +83,7 @@ public class Test implements USARTListener {
   }
 
   public static void main(String[] args) {
-    MSP430 cpu = new MSP430(0);
+    MSP430 cpu = new MSP430(0, new ComponentRegistry());
     int index = 0;
     if (args[index].startsWith("-")) {
       // Flag

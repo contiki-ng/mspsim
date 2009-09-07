@@ -4,13 +4,17 @@ import java.util.ArrayList;
 public class ComponentRegistry {
 
   private ArrayList<ComponentEntry> components = new ArrayList<ComponentEntry>();
+  private boolean running = false;
   
   public void registerComponent(String name, Object component) {
     synchronized (components) {
       components.add(new ComponentEntry(name, component)); 
     }
     if (component instanceof ActiveComponent) {
-      ((ActiveComponent)component).setComponentRegistry(this);
+      ((ActiveComponent)component).init(name, this);
+      if (running) {
+        ((ActiveComponent)component).start();
+      }
     }
   }
   
@@ -59,6 +63,7 @@ public class ComponentRegistry {
   public void start() {
     ComponentEntry[] plugs;
     synchronized (this) {
+      running = true;
       plugs = components.toArray(new ComponentEntry[components.size()]);
     }
     for (int i = 0; i < plugs.length; i++) {

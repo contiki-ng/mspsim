@@ -74,7 +74,7 @@ public abstract class GenericNode extends Chip implements Runnable {
   protected ConfigManager config;
 
   protected ComponentRegistry registry = new ComponentRegistry();
-  protected MSP430 cpu = new MSP430(0);
+  protected MSP430 cpu = new MSP430(0, registry);
   protected String firmwareFile = null;
   protected ELF elf;
   protected OperatingModeStatistics stats;
