@@ -284,7 +284,6 @@ public class SimpleProfiler implements Profiler, EventListener {
     HashMap<MapEntry,Integer> callers = callEntry.callers;
     List<Entry<MapEntry, Integer>> list = new LinkedList<Entry<MapEntry, Integer>>(callers.entrySet());
     Collections.sort(list, new Comparator<Entry<MapEntry, Integer>>() {
-        @Override
         public int compare(Entry<MapEntry, Integer> o1, Entry<MapEntry, Integer> o2) {
           return o2.getValue().compareTo(o1.getValue());
         }
@@ -452,12 +451,10 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
   }
 
-  @Override
   public void addCallListener(CallListener listener) {
     // TODO
   }
 
-  @Override
   public void removeCallListener(CallListener listener) {
     // TODO
   }
