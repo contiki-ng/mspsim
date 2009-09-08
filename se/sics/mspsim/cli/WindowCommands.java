@@ -50,7 +50,7 @@ public class WindowCommands implements CommandBundle {
     private Hashtable <String, WindowTarget> windowTargets = new Hashtable<String, WindowTarget>();
 
     public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
-        handler.registerCommand("window", new BasicLineCommand("redirect input to a window", "<windowname>") {
+        handler.registerCommand("window", new BasicLineCommand("redirect input to a window", "[-close|-clear|-list] <windowname>") {
             WindowTarget wt;
             CommandContext context;
             public int executeCommand(CommandContext context) {
