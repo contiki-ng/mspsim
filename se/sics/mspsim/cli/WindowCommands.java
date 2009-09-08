@@ -63,7 +63,7 @@ public class WindowCommands implements CommandBundle {
                     if ("-close".equals(name)) {
                         exit = close = true;
                     } else if ("-clear".equals(name)) {
-                        exit = clear = true;
+                        clear = true;
                     } else if ("-list".equals(name)) {
                         WindowTarget tgts[] = windowTargets.values().toArray(new WindowTarget[windowTargets.size()]);
                         if (tgts != null && tgts.length > 0)  {
@@ -85,7 +85,7 @@ public class WindowCommands implements CommandBundle {
                                     wt.clear();
                                 }
                                 /* command is no longer running */
-                                context.exit(0);
+                                if (exit) context.exit(0);
                                 return 0;
                             } else {
                                 context.err.println("Could not find the window " + name);
