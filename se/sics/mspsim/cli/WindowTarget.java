@@ -1,6 +1,9 @@
 package se.sics.mspsim.cli;
 
 import java.awt.Font;
+import java.io.PrintStream;
+import java.util.ArrayList;
+
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -16,6 +19,7 @@ public class WindowTarget implements LineListener {
   // Default in the current version - TODO: replace with better
   private JTextArea jta = new JTextArea(40,80);
   private WindowDataHandler dataHandler = null;
+  private ArrayList<CommandContext> pids = new ArrayList<CommandContext>();
 
   public WindowTarget(String name) {
     jta.setFont(Font.decode("Courier"));
@@ -27,6 +31,16 @@ public class WindowTarget implements LineListener {
     targetName = name;
   }
 
+  public void addContext(CommandContext c) {
+      if (c.getPID() != -1) {
+          pids.add(c);
+      }
+  }
+  
+  public void removeContext(CommandContext c) {
+      pids.remove(c);
+  }
+  
   public void lineRead(final String line) {
     if (line != null && window != null) {
       SwingUtilities.invokeLater(new Runnable() {
@@ -104,7 +118,21 @@ public class WindowTarget implements LineListener {
     window = null;
   }
 
+  public void clear() {
+      jta.setText("");      
+  }
+  
   public String getName() {
     return targetName;
+  }
+
+  public void print(PrintStream out) {
+      out.print("Window: " + targetName + " PIDs: [");
+      CommandContext[] ctx = pids.toArray(new CommandContext[pids.size()]);
+      for (int i = 0; i < ctx.length; i++) {
+          if (i > 0) out.print(" ,");
+          out.print(ctx[i].getPID());
+      }
+      out.println("]");
   }
 }

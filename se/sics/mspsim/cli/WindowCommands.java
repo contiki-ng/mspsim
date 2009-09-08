@@ -47,50 +47,100 @@ import se.sics.mspsim.util.ComponentRegistry;
 
 public class WindowCommands implements CommandBundle {
 
-  private Hashtable <String, WindowTarget> windowTargets = new Hashtable<String, WindowTarget>();
+    private Hashtable <String, WindowTarget> windowTargets = new Hashtable<String, WindowTarget>();
 
-  public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
-    handler.registerCommand(">#", new BasicLineCommand(null, "<windowname>") {
-      WindowTarget wt;
-      public int executeCommand(CommandContext context) {
-        String windowName = context.getArgument(0);
-        wt = windowTargets.get(windowName);
+    public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
+        handler.registerCommand("window", new BasicLineCommand("redirect input to a window", "<windowname>") {
+            WindowTarget wt;
+            CommandContext context;
+            public int executeCommand(CommandContext context) {
+                boolean close = false;
+                boolean clear = false;
+                boolean exit = false;
+                this.context = context;
+                for (int i = 0; i < context.getArgumentCount(); i++) {
+                    String name = context.getArgument(i);
+                    if ("-close".equals(name)) {
+                        exit = close = true;
+                    } else if ("-clear".equals(name)) {
+                        exit = clear = true;
+                    } else if ("-list".equals(name)) {
+                        WindowTarget tgts[] = windowTargets.values().toArray(new WindowTarget[windowTargets.size()]);
+                        if (tgts != null && tgts.length > 0)  {
+                            context.out.println("Window Name   PIDs");
+                        }
+                        for (int j = 0; j < tgts.length; j++) {
+                            tgts[j].print(context.out);
+                        }
+                        exit = true;
+                    } else if (i == context.getArgumentCount() - 1) {
+                        if (clear || close) {
+                            wt = windowTargets.get(name);
+                            if (wt != null) {
+                                if (close) {
+                                    context.out.println("Closing window " + name);
+                                    removeTarget(wt);
+                                    wt.close();
+                                } else if (clear) {
+                                    wt.clear();
+                                }
+                                /* command is no longer running */
+                                context.exit(0);
+                                return 0;
+                            } else {
+                                context.err.println("Could not find the window " + name);
+                                /* command is no longer running */
+                                context.exit(1);
+                                return 1;
+                            }
+                        } else {
+                            wt = addTarget(context, name);
+                        }
+                    }
+                }
+                if (exit) {
+                    context.exit(0);
+                }
+                return 0;
+            }
+
+            public void lineRead(String line) {
+                if (line != null) {
+                    wt.lineRead(line);
+                } else {
+                    wt.removeContext(context);
+                    context.exit(0);
+                }
+            }
+
+            public void stopCommand(CommandContext context) {
+                // Should this do anything?
+                // Probably depending on the wt's config
+                System.out.println("Stopping window target: " + wt.getName());
+                wt.removeContext(context);
+            }
+        });
+
+        handler.registerCommand("wclear", new BasicCommand("resets stored window positions", "") {
+            public int executeCommand(CommandContext context) {
+                WindowUtils.clearState();
+                return 0;
+            }
+        });
+    }
+
+    protected WindowTarget addTarget(CommandContext context, String name) {
+        WindowTarget wt = windowTargets.get(name);
         if (wt == null) {
-          wt = new WindowTarget(windowName);
-          windowTargets.put(windowName, wt);
+            wt = new WindowTarget(name);
+            windowTargets.put(name, wt);
         }
-        return 0;
-      }
-      public void lineRead(String line) {
-        wt.lineRead(line);
-      }
-      public void stopCommand(CommandContext context) {
-        // Should this do anything?
-        // Probably depending on the wt's config
-        System.out.println("Stopping window target: " + wt.getName());
-      }
-    });
-    
-    handler.registerCommand("wclose", new BasicCommand("close the specified window", "<windowname>") {
-      public int executeCommand(CommandContext context) {
-        String name = context.getArgument(0);
-        WindowTarget wt = windowTargets.get(name);     
-        if (wt != null) {
-          context.out.println("Closing window " + name);
-          windowTargets.remove(name);
-          wt.close();
-          return 0;
-        } else {
-          context.err.println("Could not find the window " + name);
-          return 1;
-        }
-      }
-    });
-    handler.registerCommand("wclear", new BasicCommand("resets stored window positions", "") {
-      public int executeCommand(CommandContext context) {
-        WindowUtils.clearState();
-        return 0;
-      }
-    });
-  }
+        wt.addContext(context);
+        return wt;
+    }
+
+    protected void removeTarget(WindowTarget target) {
+        /* needs to close down PIDs that are currently writing to the target too !!!??? */
+        windowTargets.remove(target.getName());
+    }
 }

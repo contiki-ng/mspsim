@@ -68,6 +68,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
           pid = ++pidCounter;
         }
         commands[i] = new CommandContext(this, getMapTable(), commandLine, args, pid, cmd);
+        
         if (i > 0) {
           PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
           commands[i - 1].setOutput(po, err);
@@ -105,8 +106,18 @@ public class CommandHandler implements ActiveComponent, LineListener {
         }
         return 1;
       } else if (pid >= 0) {
-        synchronized (currentAsyncCommands) {
-          currentAsyncCommands.add(commands);
+        boolean exited = false;
+        for (int i = 0; i < commands.length && !exited; i++) {
+            if (commands[i].hasExited()) {
+                exited = true;
+            }
+        }
+        if (exited) {
+            exitCommands(commands);
+        } else {
+            synchronized (currentAsyncCommands) {
+                currentAsyncCommands.add(commands);
+            }
         }
       }
       return 0;
@@ -281,18 +292,22 @@ public class CommandHandler implements ActiveComponent, LineListener {
         }
       }
     }
-    if (contexts != null) {
-      for (int i = 0; i < contexts.length; i++) {
-        Command command = contexts[i].getCommand();
-        // Stop any commands that have not yet been stopped...
-        if (command instanceof AsyncCommand && !contexts[i].hasExited()) {
-          AsyncCommand ac = (AsyncCommand) command;
-          ac.stopCommand(contexts[i]);
-        }
+    return exitCommands(contexts);
+  }
+
+  private boolean exitCommands(CommandContext[] contexts) {
+      if (contexts != null) {
+          for (int i = 0; i < contexts.length; i++) {
+              Command command = contexts[i].getCommand();
+              // Stop any commands that have not yet been stopped...
+              if (command instanceof AsyncCommand && !contexts[i].hasExited()) {
+                  AsyncCommand ac = (AsyncCommand) command;
+                  ac.stopCommand(contexts[i]);
+              }
+          }
+          return true;
       }
-      return true;
-    }
-    return false;
+      return false;
   }
 
   public void lineRead(String line) {
