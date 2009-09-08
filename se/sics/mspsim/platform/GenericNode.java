@@ -45,6 +45,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
+import se.sics.mspsim.cli.FileCommands;
 import se.sics.mspsim.cli.MiscCommands;
 import se.sics.mspsim.cli.NetCommands;
 import se.sics.mspsim.cli.ProfilerCommands;
@@ -203,6 +204,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("pluginRepository", new PluginRepository());
     registry.registerComponent("debugcmd", new DebugCommands());
     registry.registerComponent("misccmd", new MiscCommands());
+    registry.registerComponent("filecmd", new FileCommands());
     registry.registerComponent("statcmd", new StatCommands(cpu, stats));
     registry.registerComponent("wincmd", new WindowCommands());
     registry.registerComponent("profilecmd", new ProfilerCommands());
