@@ -58,6 +58,7 @@ import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.PluginRepository;
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -316,20 +317,24 @@ public class MiscCommands implements CommandBundle {
       public int executeCommand(CommandContext context) {
         String className = context.getArgument(0);
         Class pluginClass = null;
+        PluginRepository plugins = (PluginRepository) registry.getComponent("pluginRepository");
         try {
           try {
-            pluginClass = Class.forName(className);
+            pluginClass = plugins != null ? plugins.loadClass(className) :
+              Class.forName(className);
           } catch (ClassNotFoundException e) {
-            pluginClass = Class.forName("se.sics.mspsim.plugin." + className);
+            className = "se.sics.mspsim.plugin." + className;
+            pluginClass = plugins != null ? plugins.loadClass(className) :
+              Class.forName(className);
           }
           ActiveComponent component = (ActiveComponent) pluginClass.newInstance();
           registry.registerComponent(className, component);
           return 0;
-          } catch (Exception e1) {            // TODO Auto-generated catch block
-            e1.printStackTrace(context.err);
-          }
-          // TODO Auto-generated method stub
-          return 1;
+        } catch (Exception e1) {
+          e1.printStackTrace(context.err);
+        }
+        // TODO Auto-generated method stub
+        return 1;
       }
     });
 

@@ -49,19 +49,11 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-public class PluginRepository {
-
-  private static PluginRepository repository = new PluginRepository();
-
-  public static PluginRepository getDefault() {
-    return repository;
-  }
-
+public class PluginRepository implements ActiveComponent {
 
   private URLClassLoader classLoader;
-  private PluginBundle[] pluginBundles;
 
-  private PluginRepository() {
+  public void init(String name, ComponentRegistry registry) {
     File dir = new File("lib");
     if (dir.isDirectory()) {
       File[] files = dir.listFiles(new JarFilter());
@@ -85,20 +77,16 @@ public class PluginRepository {
 
 	  classLoader = URLClassLoader.newInstance(jarFiles);
 
-	  PluginBundle[] bundles = new PluginBundle[pluginCount];
 	  for (int i = 0; i < pluginCount; i++) {
-	    bundles[i] = (PluginBundle) classLoader.loadClass(plugins[i]).newInstance();
-// 	    System.out.println("PluginBundle: " + bundles[i].getClass()
-// 			       + "  (" + plugins[i] + ')');
+	    try {
+	      PluginBundle bundle = (PluginBundle) classLoader.loadClass(plugins[i]).newInstance();
+	      //	          System.out.println("PluginBundle: " + bundles[i].getClass()
+	      //	                             + "  (" + plugins[i] + ')');
+	      bundle.init(registry);
+	    } catch (Exception e) {
+	      // TODO: handle exception
+	    }
 	  }
-	  this.pluginBundles = bundles;
-
-	} catch (ClassNotFoundException e) {
-	  e.printStackTrace();
-	} catch (InstantiationException e) {
-	  e.printStackTrace();
-	} catch (IllegalAccessException e) {
-	  e.printStackTrace();
 	} catch (IOException e) {
 	  e.printStackTrace();
 	}
@@ -106,8 +94,12 @@ public class PluginRepository {
     }
   }
 
-  public PluginBundle[] getBundles() {
-    return pluginBundles;
+  public Class<?> loadClass(String name) throws ClassNotFoundException {
+    if (classLoader == null) throw new ClassNotFoundException(name);
+    return classLoader.loadClass(name);
+  }
+  
+  public void start() {
   }
 
   private static class JarFilter implements FileFilter {

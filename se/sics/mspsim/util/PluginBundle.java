@@ -42,5 +42,5 @@
 package se.sics.mspsim.util;
 
 public interface PluginBundle {
-
+  public void init(ComponentRegistry registry);
 }

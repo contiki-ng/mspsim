@@ -65,6 +65,7 @@ import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.OperatingModeStatistics;
+import se.sics.mspsim.util.PluginRepository;
 import se.sics.mspsim.util.StatCommands;
 
 public abstract class GenericNode extends Chip implements Runnable {
@@ -198,6 +199,8 @@ public abstract class GenericNode extends Chip implements Runnable {
       registry.registerComponent("commandHandler", ch);
     }
     stats = new OperatingModeStatistics(cpu);
+    
+    registry.registerComponent("pluginRepository", new PluginRepository());
     registry.registerComponent("debugcmd", new DebugCommands());
     registry.registerComponent("misccmd", new MiscCommands());
     registry.registerComponent("statcmd", new StatCommands(cpu, stats));
