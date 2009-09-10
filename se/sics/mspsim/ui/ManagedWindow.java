@@ -8,4 +8,6 @@ public interface ManagedWindow {
 
   public void setVisible(boolean b);
 
+  public void setTitle(String string);
+
 }

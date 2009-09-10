@@ -144,7 +144,8 @@ public abstract class GenericNode extends Chip implements Runnable {
 
     if (!config.getPropertyAsBoolean("nogui", false)) {
       // Setup control and other UI components
-      ControlUI control = new ControlUI(registry);
+      ControlUI control = new ControlUI();
+      registry.registerComponent("controlgui", control);
       HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
       if (firmwareFile != null) {
         // Add the firmware location to the search path

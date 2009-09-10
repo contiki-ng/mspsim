@@ -9,5 +9,6 @@
 # contikichecker
 
 #start the nodegui serice
+service controlgui start
 service nodegui start
 start

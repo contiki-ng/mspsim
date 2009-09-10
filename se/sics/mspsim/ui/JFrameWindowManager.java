@@ -21,6 +21,9 @@ public class JFrameWindowManager implements WindowManager {
             public void setVisible(boolean b) {
                 window.setVisible(b);
             }
+            public void setTitle(String name) {
+                window.setTitle(name);
+            }
         };
         return w;
     }

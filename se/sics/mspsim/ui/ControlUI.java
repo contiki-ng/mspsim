@@ -61,15 +61,17 @@ import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
+import se.sics.mspsim.util.ServiceComponent;
+import se.sics.mspsim.util.ServiceComponent.Status;
 
-public class ControlUI extends JPanel implements ActionListener, SimEventListener {
+public class ControlUI extends JPanel implements ActionListener, SimEventListener, ServiceComponent {
 
   private static final long serialVersionUID = -2431892192775232653L;
 
   private static final String TITLE = "MSPSim monitor";
   private static final boolean USE_STACKUI = false;
 
-  private JFrame window;
+  private ManagedWindow window;
   private JButton controlButton;
   private MSP430 cpu;
   private GenericNode node;
@@ -81,9 +83,18 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
   private SourceViewer sourceViewer;
 
   private Action stepAction;
+  private ComponentRegistry registry;
 
-  public ControlUI(ComponentRegistry registry) {
-    super(new GridLayout(0, 1));
+private Status status;
+
+private String name;
+
+  public ControlUI() {
+      super(new GridLayout(0, 1));
+  };
+  
+  private void setup() {
+    if (window != null) return;
     this.cpu = (MSP430) registry.getComponent("cpu");
     this.node = (GenericNode) registry.getComponent("node");
     elfData = (ELF) registry.getComponent("elf");
@@ -98,15 +109,15 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
       WindowUtils.addSaveOnShutdown("StackUI", stackWindow);
       stackWindow.setVisible(true);
     }
+    WindowManager wm = (WindowManager) registry.getComponent("windowManager");
+    window = wm.createWindow("ControlUI");
+    JPanel jp = new JPanel();
+    jp.setLayout(new BorderLayout());
 
-    window = new JFrame(TITLE);
-//     window.setSize(320,240);
-    window.setLayout(new BorderLayout());
-    window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-    window.add(this, BorderLayout.WEST);
-    window.add(dui = new DebugUI(cpu), BorderLayout.CENTER);
-
+    jp.add(this, BorderLayout.WEST);
+    jp.add(dui = new DebugUI(cpu), BorderLayout.CENTER);
+    window.add(jp);
+    
     createButton("Debug On");
     controlButton = createButton(cpu.isRunning() ? "Stop" : "Run");
     stepAction = new AbstractAction("Single Step") {
@@ -157,8 +168,6 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 
     cpu.addSimEventListener(this);
 
-    WindowUtils.restoreWindowBounds("ControlUI", window);
-    WindowUtils.addSaveOnShutdown("ControlUI", window);
     window.setVisible(true);
   }
 
@@ -246,5 +255,30 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
       });
       break;
     }
+  }
+
+  @Override
+  public Status getStatus() {
+      return status;
+  }
+  
+  public String getName() {
+      return name;
+  }
+
+  public void init(String name, ComponentRegistry registry) {
+      this.name = name;
+      this.registry = registry;
+  }
+
+  public void start() {
+      setup();
+      status = Status.STARTED;
+      window.setVisible(true);
+  }
+
+  public void stop() {
+      status = Status.STOPPED;
+      window.setVisible(false);
   }
 }
