@@ -59,6 +59,7 @@ import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.PluginRepository;
+import se.sics.mspsim.util.ServiceComponent;
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -279,11 +280,19 @@ public class MiscCommands implements CommandBundle {
         context.executeCommand(command);
       }
     });
-    
-    handler.registerCommand("install", new BasicCommand("install and start a plugin", "ClassName") {
+
+    handler.registerCommand("install", new BasicCommand("install and start a plugin", "ClassName [Name]") {
       @Override
       public int executeCommand(CommandContext context) {
         String className = context.getArgument(0);
+        String name = className;
+        if (context.getArgumentCount() > 1) {
+          name = context.getArgument(1);
+        }
+        if (registry.getComponent(name) != null) {
+          context.err.println("Another component with name " + name + " is already installed");
+          return 1;
+        }
         Class pluginClass = null;
         PluginRepository plugins = (PluginRepository) registry.getComponent("pluginRepository");
         try {
@@ -291,18 +300,59 @@ public class MiscCommands implements CommandBundle {
             pluginClass = plugins != null ? plugins.loadClass(className) :
               Class.forName(className);
           } catch (ClassNotFoundException e) {
-            className = "se.sics.mspsim.plugin." + className;
-            pluginClass = plugins != null ? plugins.loadClass(className) :
-              Class.forName(className);
+            String newClassName = "se.sics.mspsim.plugin." + className;
+            pluginClass = plugins != null ? plugins.loadClass(newClassName) :
+              Class.forName(newClassName);
           }
-          ActiveComponent component = (ActiveComponent) pluginClass.newInstance();
-          registry.registerComponent(className, component);
+          Object component = pluginClass.newInstance();
+          registry.registerComponent(name, component);
           return 0;
         } catch (Exception e1) {
           e1.printStackTrace(context.err);
         }
         // TODO Auto-generated method stub
         return 1;
+      }
+    });
+    
+    handler.registerCommand("service", new BasicCommand("handle service plugins", "[class name|service name] [start|stop|install]") {
+      @Override
+      public int executeCommand(CommandContext context) {
+        if (context.getArgumentCount() == 0) {
+          ServiceComponent[] sc = (ServiceComponent[]) registry.getAllComponents(ServiceComponent.class);
+          for (int i = 0; i < sc.length; i++) {
+            context.out.printf(" %-20s %s\n",sc[i].getName(),sc[i].getStatus());
+          }
+        } else if (context.getArgumentCount() == 1){
+          String name = context.getArgument(0);
+          ServiceComponent sc = getServiceForName(registry, name);
+          if (sc != null) {
+            context.out.printf(" %-20s %s\n",sc.getName(),sc.getStatus());
+          } else {
+            context.out.println("can not find service" + name);
+          }
+        } else {
+          String name = context.getArgument(0);
+          String operation = context.getArgument(1);
+          if ("start".equals(operation)) {
+            ServiceComponent sc = getServiceForName(registry, name);
+            if (sc != null) {
+              sc.start();
+              context.out.println("service " + sc.getName() + " started");
+            } else {
+              context.out.println("can not find service" + name);
+            }
+          } else if ("stop".equals(operation)) {
+            ServiceComponent sc = getServiceForName(registry, name);
+            if (sc != null) {
+              sc.start();
+              context.out.println("service " + sc.getName() + " started");
+            } else {
+              context.out.println("can not find service" + name);
+            }
+          }
+        }
+        return 0;
       }
     });
 
@@ -356,4 +406,11 @@ public class MiscCommands implements CommandBundle {
     });
   }
 
+  private static ServiceComponent getServiceForName(ComponentRegistry registry, String name) {
+    Object o = registry.getComponent(name);
+    if (o instanceof ServiceComponent) {
+      return (ServiceComponent) o;
+    }
+    return null;
+  }
 }

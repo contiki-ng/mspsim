@@ -54,7 +54,7 @@ public class PluginRepository implements ActiveComponent {
   private URLClassLoader classLoader;
 
   public void init(String name, ComponentRegistry registry) {
-    File dir = new File("lib");
+    File dir = new File("plugins");
     if (dir.isDirectory()) {
       File[] files = dir.listFiles(new JarFilter());
       if (files != null) {

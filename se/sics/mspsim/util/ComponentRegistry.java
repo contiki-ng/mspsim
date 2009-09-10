@@ -16,6 +16,8 @@ public class ComponentRegistry {
       if (running) {
         ((ActiveComponent)component).start();
       }
+    } else if (component instanceof ServiceComponent) {
+      ((ServiceComponent)component).init(name, this);
     }
   }
   
@@ -58,7 +60,7 @@ public class ComponentRegistry {
 	list.add(component);
       }
     }
-    return list.toArray();
+    return list.toArray((Object[]) java.lang.reflect.Array.newInstance(name, list.size()));
   }
 
   public void start() {
