@@ -214,7 +214,7 @@ public class DebugCommands implements CommandBundle {
         }
       });
 
-      ch.registerCommand("line", new BasicCommand("print line number of address/symbol", "<addres or symbol>") {
+      ch.registerCommand("line", new BasicCommand("print line number of address/symbol", "<address or symbol>") {
         public int executeCommand(final CommandContext context) {
           int adr = context.getArgumentAsAddress(0);
           DebugInfo di = getELF().getDebugInfo(adr);
@@ -242,7 +242,7 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        ch.registerCommand("step", new BasicCommand("singlestep the CPU", "[number of instructions]") {
+        ch.registerCommand("step", new BasicCommand("single step the CPU", "[number of instructions]") {
           public int executeCommand(CommandContext context) {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
             long cyc = cpu.cycles;
@@ -311,7 +311,7 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_emtries> [type]") {
+        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_entries> [type]") {
           public int executeCommand(final CommandContext context) {
             int start = context.getArgumentAsAddress(0);
             int count = context.getArgumentAsInt(1);
@@ -358,7 +358,7 @@ public class DebugCommands implements CommandBundle {
         /******************************************************
          * handle external memory (flash, etc).
          ******************************************************/
-        ch.registerCommand("xmem", new BasicCommand("dump flash memory", "<start address> <num_emtries> [type]") {
+        ch.registerCommand("xmem", new BasicCommand("dump flash memory", "<start address> <num_entries> [type]") {
           public int executeCommand(final CommandContext context) {
             Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
             if (xmem == null) {
@@ -417,7 +417,7 @@ public class DebugCommands implements CommandBundle {
           private GDBStubs stubs = null;
           public int executeCommand(CommandContext context) {
             if (stubs != null) {
-              context.err.println("GDBStubs alread openend");
+              context.err.println("GDBStubs already open");
             } else {
               int port = context.getArgumentAsInt(0);
               stubs = new GDBStubs();
