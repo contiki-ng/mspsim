@@ -49,35 +49,29 @@ import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.SimEvent;
 import se.sics.mspsim.core.SimEventListener;
-import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.ServiceComponent;
-import se.sics.mspsim.util.ServiceComponent.Status;
 
 public class ControlUI extends JPanel implements ActionListener, SimEventListener, ServiceComponent {
 
   private static final long serialVersionUID = -2431892192775232653L;
 
   private static final String TITLE = "MSPSim monitor";
-  private static final boolean USE_STACKUI = false;
 
   private ManagedWindow window;
   private JButton controlButton;
   private MSP430 cpu;
   private GenericNode node;
   private DebugUI dui;
-  private JFrame stackWindow;
-  private StackUI stackUI;
 
   private ELF elfData;
   private SourceViewer sourceViewer;
@@ -99,16 +93,6 @@ private String name;
     this.node = (GenericNode) registry.getComponent("node");
     elfData = (ELF) registry.getComponent("elf");
     
-    DataChart test = new DataChart("Stack Monitor", "Bytes");
-    test.setupStackFrame(cpu);
-    if (USE_STACKUI) {
-      this.stackUI = new StackUI(cpu);
-      stackWindow = new JFrame("Stack");
-      stackWindow.add(this.stackUI);
-      WindowUtils.restoreWindowBounds("StackUI", stackWindow);
-      WindowUtils.addSaveOnShutdown("StackUI", stackWindow);
-      stackWindow.setVisible(true);
-    }
     WindowManager wm = (WindowManager) registry.getComponent("windowManager");
     window = wm.createWindow("ControlUI");
     JPanel jp = new JPanel();

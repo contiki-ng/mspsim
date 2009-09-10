@@ -49,9 +49,12 @@ import javax.swing.JPanel;
 
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
+import se.sics.mspsim.util.ServiceComponent;
+import se.sics.mspsim.util.ServiceComponent.Status;
 
-public class StackUI extends JPanel implements CPUMonitor {
+public class StackUI extends JPanel implements CPUMonitor, ServiceComponent {
 
   private static final long serialVersionUID = 8648239617509299768L;
 
@@ -76,6 +79,14 @@ public class StackUI extends JPanel implements CPUMonitor {
   private int pos = 0;
 
   private boolean update = false;
+
+private Status status;
+
+private ComponentRegistry registry;
+
+private ManagedWindow window;
+
+private String name;
 
   public StackUI(MSP430 cpu) {
     this(cpu, 2500);
@@ -102,28 +113,36 @@ public class StackUI extends JPanel implements CPUMonitor {
 //        this.stackStartAddress - this.heapStartAddress);
 //    diagram.setShowGrid(true);
 //    add(diagram, BorderLayout.CENTER);
-    chartPanel = new ChartPanel();
-
-    ConstantLineChart maxChart = new ConstantLineChart("Max", this.stackStartAddress - this.heapStartAddress);
-    maxChart.setConfig("color", Color.red);
-    chartPanel.addChart(maxChart);
-
-    minStackChart = new LineChart("Min Stack");
-    minStackChart.setConfig("color", Color.green);
-    chartPanel.addChart(minStackChart);
-
-    maxStackChart = new LineChart("Max Stack");
-    maxStackChart.setConfig("color", Color.green);
-    chartPanel.addChart(maxStackChart);
-    chartPanel.setAxisChart(maxStackChart);
-
-    add(chartPanel, BorderLayout.CENTER);
-    setPreferredSize(new Dimension(320, 200));
   }
 
-//  public void addNote(String note) {
-//    notes[pos] = note;
-//  }
+  private void setup() {
+      if (chartPanel != null) return;
+      chartPanel = new ChartPanel();
+
+      ConstantLineChart maxChart = new ConstantLineChart("Max", this.stackStartAddress - this.heapStartAddress);
+      maxChart.setConfig("color", Color.red);
+      chartPanel.addChart(maxChart);
+
+      minStackChart = new LineChart("Min Stack");
+      minStackChart.setConfig("color", Color.green);
+      chartPanel.addChart(minStackChart);
+
+      maxStackChart = new LineChart("Max Stack");
+      maxStackChart.setConfig("color", Color.green);
+      chartPanel.addChart(maxStackChart);
+      chartPanel.setAxisChart(maxStackChart);
+
+      add(chartPanel, BorderLayout.CENTER);
+      setPreferredSize(new Dimension(320, 200));
+      setSize(320, 200);
+      setMinimumSize(new Dimension(320, 200));
+      
+      WindowManager wm = (WindowManager) registry.getComponent("windowManager");
+      if (wm != null) {
+          window = wm.createWindow("stackui");
+          window.add(this);
+      }
+  }
 
   public void paint(Graphics g) {
     if (update) {
@@ -173,5 +192,29 @@ public class StackUI extends JPanel implements CPUMonitor {
 //      diagram.setDataWithNotes(1, this.maxData, notes, pos, this.maxData.length);
     }
   }
+
+public Status getStatus() {
+    return status;
+}
+
+public void init(String name, ComponentRegistry registry) {
+    this.registry = registry;
+    this.name = name;
+}
+
+public String getName() {
+    return name;
+}
+
+public void start() {
+    setup();
+    status = Status.STARTED;
+    window.setVisible(true);
+}
+
+public void stop() {
+    status = Status.STOPPED;
+    window.setVisible(false);
+}
 
 }

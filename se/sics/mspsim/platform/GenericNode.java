@@ -59,6 +59,7 @@ import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.ui.JFrameWindowManager;
+import se.sics.mspsim.ui.StackUI;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
@@ -146,6 +147,7 @@ public abstract class GenericNode extends Chip implements Runnable {
       // Setup control and other UI components
       ControlUI control = new ControlUI();
       registry.registerComponent("controlgui", control);
+      registry.registerComponent("stackui", new StackUI(cpu));
       HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
       if (firmwareFile != null) {
         // Add the firmware location to the search path

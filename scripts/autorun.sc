@@ -11,4 +11,5 @@
 #start the nodegui serice
 service controlgui start
 service nodegui start
+service stackui start
 start
