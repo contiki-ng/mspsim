@@ -45,6 +45,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 
 
@@ -61,11 +62,15 @@ import java.util.regex.Pattern;
  */
 public class MapTable {
 
+  private final static boolean DEBUG = false;
+
   private enum Mode {NONE,CODE,DATA,BSS};
   private Mode mode;
 
   public int heapStartAddress = -1;
   public int stackStartAddress = -1;
+  private int bssFill = 0;
+  private int dataFill = 0;
 
   private ArrayList<MapEntry> modules = new ArrayList<MapEntry>();
   private MapEntry[] entries;
@@ -77,35 +82,92 @@ public class MapTable {
     loadMap(file);
   }
 
+  private MapEntry getModuleEntry(HashMap<String,MapEntry> moduleTable,
+                                  int addr, int size, String name) {
+    MapEntry entry = moduleTable.get(name);
+    if (entry == null) {
+      entry = new MapEntry(MapEntry.TYPE.module, addr, size, name, null, false);
+      moduleTable.put(name, entry);
+      modules.add(entry);
+    } else if (size > 0) {
+      entry.setSize(entry.getSize() + size);
+    }
+    return entry;
+  }
+
   /**
    *  <code>parseMapLine</code>
    * parses a line of a map file!
    * @param line a <code>String</code> value
    */
-  public void parseMapLine(String line) {
+  private void parseMapLine(HashMap<String,MapEntry> moduleTable, String line) {
     String parts[] = line.split("\\s+");
     if (line.startsWith(".text")) {
       mode = Mode.CODE;
-      System.out.println("CODE Mode");
+      if (DEBUG) {
+        System.out.println("CODE Mode");
+      }
     } else if (line.startsWith(".bss")) {
       mode = Mode.BSS;
-      System.out.println("BSS Mode!");
+      if (DEBUG) {
+        System.out.println("BSS Mode!");
+      }
     } else if (line.startsWith(".data")) {
       mode = Mode.DATA;
-      System.out.println("Data Mode!");
-    } else if (line.startsWith(" .text")) {
+      if (DEBUG) {
+        System.out.println("Data Mode!");
+      }
+    } else if (line.startsWith(" .text") || line.startsWith(" .init")
+               || line.startsWith(" .vectors")) {
       if (parts.length > 3) {
         int addr = Integer.parseInt(parts[2].substring(2), 16);
         int size = Integer.parseInt(parts[3].substring(2), 16);
-        System.out.println("Module add: " + addr + " Size:" + size + " file:" + parts[4]);
-        modules.add(new MapEntry(MapEntry.TYPE.module, addr, size, parts[4], null, false));        
+        MapEntry entry = getModuleEntry(moduleTable, addr, size, parts[4]);
+        if (DEBUG) {
+          System.out.println("Module add: " + addr + " Size:" + size
+                             + " file:" + parts[4]);
+        }
       }
+    } else if (line.startsWith(" .data")) {
+      if (parts.length > 3) {
+        int addr = Integer.parseInt(parts[2].substring(2), 16);
+        int size = Integer.parseInt(parts[3].substring(2), 16);
+        MapEntry entry = getModuleEntry(moduleTable, addr, 0, parts[4]);
+        if (DEBUG) {
+          System.out.println("Module add data: " + addr + " Size:" + size
+                             + " file:" + parts[4]);
+        }
+        entry.setData(addr, size);
+      }
+    } else if (line.startsWith(" .bss") || line.startsWith(" COMMON")) {
+      if (parts.length > 3) {
+        int addr = Integer.parseInt(parts[2].substring(2), 16);
+        int size = Integer.parseInt(parts[3].substring(2), 16);
+        MapEntry entry = getModuleEntry(moduleTable, addr, 0, parts[4]);
+        if (DEBUG) {
+          System.out.println("Module add bss: " + addr + " Size:" + size
+                             + " file: " + parts[4]);
+        }
+        entry.setBSS(addr, entry.getBSSSize() + size);
+      }
+    } else if (line.startsWith(" *fill*")) {
+      if(parts.length > 3) {
+        int size = Integer.parseInt(parts[3].substring(2), 16);
+        if (mode == Mode.BSS) {
+          bssFill += size;
+        } else if (mode == Mode.DATA) {
+          dataFill += size;
+        }
+      }
+
     } else if (mode == Mode.CODE && line.startsWith("    ")) {
       if (parts.length > 2) {
 	// Scrap 0x and parse as hex!
 	int val = Integer.parseInt(parts[1].substring(2), 16);
-	System.out.println("Function: " + parts[2] + " at " +
-			   Utils.hex16(val));
+        if (DEBUG) {
+          System.out.println("Function: " + parts[2] + " at " +
+                             Utils.hex16(val));
+        }
 	// Add the file part later some time...
 	// After the demo...
 	setEntry(new MapEntry(MapEntry.TYPE.function, val, 0, parts[2], null, false));
@@ -116,15 +178,25 @@ public class MapTable {
 
     } else if (line.contains("PROVIDE (__stack") && parts.length > 2) {
       stackStartAddress = Integer.parseInt(parts[1].substring(2), 16);
+
+//     } else if ((line.startsWith("text ")
+//                 || line.startsWith("data ")
+//                 || line.startsWith("vectors ")
+//                 || line.startsWith("bootloader ")
+//                 || line.startsWith("infomem ")
+//                 || line.startsWith("infomemnobits ")) && parts.length == 4) {
+      // Memory configuration
+
     }
   }
 
   public void loadMap(String file) throws IOException {
     FileInputStream fInput = new FileInputStream(file);
     BufferedReader bInput = new BufferedReader(new InputStreamReader(fInput));
+    HashMap<String,MapEntry> moduleTable = new HashMap<String,MapEntry>();
     String line;
     while ((line = bInput.readLine()) != null) {
-      parseMapLine(line);
+      parseMapLine(moduleTable, line);
     }
     bInput.close();
     fInput.close();
@@ -147,10 +219,12 @@ public class MapTable {
 
   public MapEntry[] getAllEntries() {
     ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
-    for (int address=0; address < entries.length; address++) {
-      MapEntry entry = getEntry(address);
-      if (entry != null) {
-        allEntries.add(entry);
+    if (entries != null) {
+      for (int address = 0; address < entries.length; address++) {
+        MapEntry entry = getEntry(address);
+        if (entry != null) {
+          allEntries.add(entry);
+        }
       }
     }
     return allEntries.toArray(new MapEntry[allEntries.size()]);
@@ -159,16 +233,17 @@ public class MapTable {
   public MapEntry[] getEntries(String regexp) {
     Pattern pattern = Pattern.compile(regexp);
     ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
-    for (int address=0; address < entries.length; address++) {
-      MapEntry entry = getEntry(address);
-      if (entry != null && pattern.matcher(entry.getName()).find()) {
-        allEntries.add(entry);
+    if (entries != null) {
+      for (int address = 0; address < entries.length; address++) {
+        MapEntry entry = getEntry(address);
+        if (entry != null && pattern.matcher(entry.getName()).find()) {
+          allEntries.add(entry);
+        }
       }
     }
     return allEntries.toArray(new MapEntry[allEntries.size()]);
   }
 
-  
   // Should be any symbol... not just function...
   public void setFunctionName(int address, String name) {
     setEntry(new MapEntry(MapEntry.TYPE.function, address, 0, name, null, false));
@@ -186,9 +261,11 @@ public class MapTable {
   // Really slow way to find a specific function address!!!!
   // Either reimplement this or cache in hashtable...
   public int getFunctionAddress(String function) {
-    for (int i = 0, n = entries.length; i < n; i++) {
-      if (entries[i] != null && function.equals(entries[i].getName())) {
-        return i;
+    if (entries != null) {
+      for (int i = 0, n = entries.length; i < n; i++) {
+        if (entries[i] != null && function.equals(entries[i].getName())) {
+          return i;
+        }
       }
     }
     return -1;
@@ -205,11 +282,23 @@ public class MapTable {
   public static void main(String[] args) throws IOException {
     MapTable map = new MapTable(args[0]);
     int totsize = 0;
+    int totdata = map.dataFill, totbss = map.bssFill;
+    int totmemory = totdata + totbss;
+    System.out.printf("%6s %6s %6s  %4s %s\n",
+                      "text", "data", "bss", "addr", "name");
     for (int i = 0; i < map.modules.size(); i++) {
       MapEntry module = map.modules.get(i);
       totsize += module.getSize();
-      System.out.println("Module: " + module.getName() + " addr: " + module.getAddress() + " size: " + module.getSize()); 
+      totdata += module.getDataSize();
+      totbss += module.getBSSSize();
+      totmemory += module.getDataSize() + module.getBSSSize();
+      System.out.printf("%7d %7d %7d $%04x %s\n", module.getSize(),
+                        module.getDataSize(), module.getBSSSize(),
+                        module.getAddress(), module.getName());
     }
-    System.out.println("Total size: " + totsize + " " + Integer.toHexString(totsize));
+    System.out.printf("%7d %7d %7d       Total Size\n",
+                      totsize, totdata, totbss);
+//     System.out.println("Total size: " + totsize + " (0x" + Integer.toHexString(totsize) + ')');
+//     System.out.println("Total data/bss size: " + totmemory + " (0x" + Integer.toHexString(totmemory) + ") data: " + totdata + " bss: " + totbss);
   }
 }

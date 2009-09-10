@@ -51,6 +51,10 @@ public class MapEntry {
   private String name;
   private String file;
   private boolean isLocal;
+  private int dataAddr;
+  private int dataSize;
+  private int bssAddr;
+  private int bssSize;
   
   public MapEntry(TYPE type, int address, int size, String name, String file, boolean isLocal) {
     this.type = type;
@@ -60,11 +64,33 @@ public class MapEntry {
     this.isLocal = isLocal;
     this.size = size;
   }
-  
+
+  void setData(int dataAddr, int dataSize) {
+    this.dataAddr = dataAddr;
+    this.dataSize = dataSize;
+  }
+
+  void setBSS(int bssAddr, int bssSize) {
+    this.bssAddr = bssAddr;
+    this.bssSize = bssSize;
+  }
+
+  void setSize(int size) {
+    this.size = size;
+  }
+
   public int getSize() {
     return size;
   }
-  
+
+  public int getDataSize() {
+    return dataSize;
+  }
+
+  public int getBSSSize() {
+    return bssSize;
+  }
+
   public TYPE getType() {
     return type;
   }
