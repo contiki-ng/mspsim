@@ -404,6 +404,14 @@ public class MiscCommands implements CommandBundle {
             return 0;
         }
     });
+
+    handler.registerCommand("exit", new BasicCommand("exit MSPSim", "") {
+        public int executeCommand(CommandContext context) {
+            System.exit(0);
+            return 0;
+        }
+    });
+
   }
 
   private static ServiceComponent getServiceForName(ComponentRegistry registry, String name) {
