@@ -58,6 +58,7 @@ import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.ui.ControlUI;
+import se.sics.mspsim.ui.JFrameWindowManager;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
@@ -209,6 +210,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("wincmd", new WindowCommands());
     registry.registerComponent("profilecmd", new ProfilerCommands());
     registry.registerComponent("netcmd", new NetCommands());
+    registry.registerComponent("windowManager", new JFrameWindowManager());
 
     // Monitor execution
     cpu.setMonitorExec(true);

@@ -117,12 +117,10 @@ public class SkyGui extends JComponent implements ServiceComponent {
     setPreferredSize(new Dimension(skyImage.getIconWidth(),
 				   skyImage.getIconHeight()));
 
-    WindowManager wm = (WindowManager) registry.getComponent("WindowManager");
-    window = wm.createWindow("Sky");
-//     window.setSize(190,240);
+    WindowManager wm = (WindowManager) registry.getComponent("windowManager");
+    window = wm.createWindow("SkyGui");
+    setSize(190, 240);
     window.add(this);
-//    WindowUtils.restoreWindowBounds("SkyGui", window);
-//    WindowUtils.addSaveOnShutdown("SkyGui", window);
     window.setVisible(true);
 
     MouseAdapter mouseHandler = new MouseAdapter() {
