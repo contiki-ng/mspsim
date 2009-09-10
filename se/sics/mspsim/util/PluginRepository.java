@@ -95,10 +95,12 @@ public class PluginRepository implements ActiveComponent {
   }
 
   public Class<?> loadClass(String name) throws ClassNotFoundException {
-    if (classLoader == null) throw new ClassNotFoundException(name);
+    if (classLoader == null) {
+      return Class.forName(name);
+    }
     return classLoader.loadClass(name);
   }
-  
+
   public void start() {
   }
 
