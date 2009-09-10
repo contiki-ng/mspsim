@@ -43,26 +43,28 @@ package se.sics.mspsim.platform.sky;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URL;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.USART;
+import se.sics.mspsim.ui.ManagedWindow;
 import se.sics.mspsim.ui.SerialMon;
-import se.sics.mspsim.ui.WindowUtils;
+import se.sics.mspsim.ui.WindowManager;
+import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.ServiceComponent;
 
-public class SkyGui extends JComponent {
+public class SkyGui extends JComponent implements ServiceComponent {
 
   /**
    * 
    */
   private static final long serialVersionUID = 7753659717805292786L;
+  
+  private ServiceComponent.Status status = Status.STOPPED;
   
   public static final int GREEN_Y = 40;
   public static final int BLUE_Y = 46;
@@ -80,12 +82,22 @@ public class SkyGui extends JComponent {
   private SerialMon serial;
 
   private ImageIcon skyImage;
-  private JFrame window;
+  private ManagedWindow window;
   private MoteIVNode node;
+
+  private ComponentRegistry registry;
+
+  private String name;
 
   public SkyGui(MoteIVNode node) {
     this.node = node;
+  }
 
+  public String getName() {
+    return name;
+  }
+  
+  public void start() {
     setBackground(Color.black);
     setOpaque(true);
 
@@ -105,23 +117,13 @@ public class SkyGui extends JComponent {
     setPreferredSize(new Dimension(skyImage.getIconWidth(),
 				   skyImage.getIconHeight()));
 
-    window = new JFrame("Sky");
+    WindowManager wm = (WindowManager) registry.getComponent("WindowManager");
+    window = wm.createWindow("Sky");
 //     window.setSize(190,240);
     window.add(this);
-    WindowUtils.restoreWindowBounds("SkyGui", window);
-    WindowUtils.addSaveOnShutdown("SkyGui", window);
+//    WindowUtils.restoreWindowBounds("SkyGui", window);
+//    WindowUtils.addSaveOnShutdown("SkyGui", window);
     window.setVisible(true);
-
-    window.addKeyListener(new KeyAdapter() {
-
-      public void keyPressed(KeyEvent key) {
-//      System.out.println("Key Pressed: " + key.getKeyChar());
-        if (key.getKeyChar() == 'd') {
-          SkyGui.this.node.setDebug(!SkyGui.this.node.getDebug());
-        }
-      }
-
-    });
 
     MouseAdapter mouseHandler = new MouseAdapter() {
 
@@ -155,8 +157,8 @@ public class SkyGui extends JComponent {
 	  }
 	}
       };
-//     window.addMouseMotionListener(mouseHandler);
-    window.addMouseListener(mouseHandler);
+
+    this.addMouseListener(mouseHandler);
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();
@@ -165,6 +167,7 @@ public class SkyGui extends JComponent {
       serial = new SerialMon((USART)usart, "USART1 Port Output");
       ((USART) usart).setUSARTListener(serial);
     }
+    status = Status.STARTED;
   }
 
   protected void paintComponent(Graphics g) {
@@ -201,6 +204,18 @@ public class SkyGui extends JComponent {
       g.fillOval(LED_X, BLUE_Y, 4, 3);
     }
     g.setColor(old);
+  }
+
+  public Status getStatus() {
+    return status;
+  }
+
+  public void init(String name, ComponentRegistry registry) {
+    this.name = name;
+    this.registry = registry;
+  }
+
+  public void stop() {    
   }
 
 }
