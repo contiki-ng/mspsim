@@ -133,6 +133,7 @@ private String name;
       chartPanel.setAxisChart(maxStackChart);
 
       add(chartPanel, BorderLayout.CENTER);
+      chartPanel.setMinimumSize(new Dimension(320, 200));
       setPreferredSize(new Dimension(320, 200));
       setSize(320, 200);
       setMinimumSize(new Dimension(320, 200));

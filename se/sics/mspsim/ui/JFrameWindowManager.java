@@ -17,6 +17,7 @@ public class JFrameWindowManager implements WindowManager {
                     WindowUtils.addSaveOnShutdown(name, window);
                 }
                 window.add(component);
+                window.pack();
             }
             public void setVisible(boolean b) {
                 window.setVisible(b);
