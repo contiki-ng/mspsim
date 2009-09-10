@@ -191,7 +191,7 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
 
     if (!config.getPropertyAsBoolean("nogui", true)) {
       gui = new SkyGui(this);
-      registry.registerComponent("skygui", gui);
+      registry.registerComponent("nodegui", gui);
 
       // A HACK for some "graphs"!!!
       DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
