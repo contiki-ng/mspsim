@@ -174,6 +174,15 @@ public class CommandContext {
     }
   }
 
+  public boolean getOption(String optionName) {
+      for (int i = 0; i < args.length; i++) {
+          if (args[i].equals("-" + optionName)) {
+              return true;
+          }
+      }
+      return false;
+  }
+  
   public boolean getArgumentAsBoolean(int index) {
     String v = getArgument(index);
     return "true".equalsIgnoreCase(v) || "1".equals(v);

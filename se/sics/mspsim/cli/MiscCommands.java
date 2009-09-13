@@ -388,16 +388,20 @@ public class MiscCommands implements CommandBundle {
       }
     });
     
-    handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "") {
+    handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "[-registry]") {
         public int executeCommand(CommandContext context) {
             ArgumentManager config = (ArgumentManager) registry.getComponent("config");
             context.out.println("--------- System info ----------\n");
             context.out.println("MSPSim version: " + MSP430Constants.VERSION);
+            context.out.println("Java version  : " + System.getProperty("java.version") + " " +
+                    System.getProperty("java.vendor"));
             context.out.println("Firmware      : " + config.getProperty("firmwareFile"));
             context.out.println("AutoloadScript: " + config.getProperty("autoloadScript"));
             context.out.println();
-            context.out.println("--------- Registry info --------\n");
-            registry.printRegistry(context.out);
+            if (context.getOption("registry")) {
+                context.out.println("--------- Registry info --------\n");
+                registry.printRegistry(context.out);
+            }
             return 0;
         }
     });
