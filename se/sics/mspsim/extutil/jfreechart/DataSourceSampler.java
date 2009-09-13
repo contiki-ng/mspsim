@@ -25,6 +25,14 @@ public class DataSourceSampler implements ActionListener {
     timer = new Timer(interval, this);
     timer.start();
   }
+
+  public void stop() {
+      timer.stop();
+  }
+  
+  public void start() {
+      timer.start();
+  }
   
   public TimeSource addDataSource(DataSource source, TimeSeries ts) {
     TimeSource times = new TimeSource(cpu, source, ts);

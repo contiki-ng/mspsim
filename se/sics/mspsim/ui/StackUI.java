@@ -80,7 +80,7 @@ public class StackUI extends JPanel implements CPUMonitor, ServiceComponent {
 
   private boolean update = false;
 
-private Status status;
+private Status status = Status.STOPPED;
 
 private ComponentRegistry registry;
 

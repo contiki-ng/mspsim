@@ -8,8 +8,8 @@
 # install ContikiChecker
 # contikichecker
 
-#start the nodegui serice
+#start the nodegui service
 service controlgui start
 service nodegui start
-service stackui start
+#service stackchart start
 start

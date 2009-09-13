@@ -147,7 +147,7 @@ public abstract class GenericNode extends Chip implements Runnable {
       // Setup control and other UI components
       ControlUI control = new ControlUI();
       registry.registerComponent("controlgui", control);
-      registry.registerComponent("stackui", new StackUI(cpu));
+      registry.registerComponent("stackchart", new StackUI(cpu));
       HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
       if (firmwareFile != null) {
         // Add the firmware location to the search path

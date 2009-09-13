@@ -2,7 +2,6 @@ package se.sics.mspsim.extutil.jfreechart;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -14,16 +13,29 @@ import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.ui.WindowUtils;
+import se.sics.mspsim.ui.ManagedWindow;
+import se.sics.mspsim.ui.WindowManager;
+import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DataSource;
+import se.sics.mspsim.util.ServiceComponent;
 import se.sics.mspsim.util.StackMonitor;
+import se.sics.mspsim.util.ServiceComponent.Status;
 
 @SuppressWarnings("serial")
-public class DataChart extends JPanel {
+public class DataChart extends JPanel implements ServiceComponent {
 
+  private enum Mode {NONE, STACK, DUTY};
+  private Mode mode = Mode.NONE;
+  
   private TimeSeriesCollection dataset;
-
-  public DataChart(String title, String yaxis) {
+  private ComponentRegistry registry;
+  private ManagedWindow jw;
+  private MSP430 cpu;
+  private DataSourceSampler dss;
+  private Status status = Status.STOPPED;
+  private String name = null;
+  
+  public DataChart(ComponentRegistry registry, String title, String yaxis) {
     DateAxis domain = new DateAxis("Time");
     NumberAxis range = new NumberAxis(yaxis);
     XYPlot xyplot = new XYPlot();
@@ -64,36 +76,43 @@ public class DataChart extends JPanel {
     dataset.addSeries(ts);
   }
 
-  private JFrame openFrame(String name) {
-    JFrame jw = new JFrame(name);
+  private ManagedWindow openFrame(String name) {
+    WindowManager wm = (WindowManager) registry.getComponent("windowManager");
+      ManagedWindow jw = wm.createWindow(name);
     jw.add(this);
-    WindowUtils.restoreWindowBounds(name, jw);
-    WindowUtils.addSaveOnShutdown(name, jw);
-//     jw.setBounds(100, 100, 400, 200);
     return jw;
   }
 
+  
+  
   public void setupStackFrame(MSP430 cpu) {
-    JFrame jw = openFrame("Stack Monitor");
-    StackMonitor sm = new StackMonitor(cpu);
-    DataSourceSampler dss = new DataSourceSampler(cpu);
-    TimeSeries ts = new TimeSeries("Max Stack", Millisecond.class);
-    ts.setMaximumItemCount(200);
-    addTimeSeries(ts);
-    dss.addDataSource(sm.getMaxSource(), ts);
-    ts = new TimeSeries("Stack", Millisecond.class);
-    ts.setMaximumItemCount(200);
-    addTimeSeries(ts);
-    dss.addDataSource(sm.getSource(), ts);
-    jw.setVisible(true);
+    mode = Mode.STACK;
+    this.cpu = cpu;
+  }
+  
+  private void openStackFrame() {
+      if (jw == null) {
+          jw = openFrame("Stack Monitor");
+          StackMonitor sm = new StackMonitor(cpu);
+          DataSourceSampler dss = new DataSourceSampler(cpu);
+          TimeSeries ts = new TimeSeries("Max Stack", Millisecond.class);
+          ts.setMaximumItemCount(200);
+          addTimeSeries(ts);
+          dss.addDataSource(sm.getMaxSource(), ts);
+          ts = new TimeSeries("Stack", Millisecond.class);
+          ts.setMaximumItemCount(200);
+          addTimeSeries(ts);
+          dss.addDataSource(sm.getSource(), ts);
+      }
   }
 
   public DataSourceSampler setupChipFrame(MSP430 cpu) {
-    JFrame jw = openFrame("Duty-Cycle Monitor");
-    DataSourceSampler dss = new DataSourceSampler(cpu);
-    dss.setInterval(50);
-    jw.setVisible(true);
-    return dss;
+      mode = Mode.DUTY;
+      this.cpu = cpu;
+      jw = openFrame("Duty-Cycle Monitor");
+      dss = new DataSourceSampler(cpu);
+      dss.setInterval(50);
+      return dss;
   }
 
   public void addDataSource(DataSourceSampler dss, String name, DataSource src) {
@@ -101,5 +120,38 @@ public class DataChart extends JPanel {
     ts.setMaximumItemCount(200);
     addTimeSeries(ts);
     dss.addDataSource(src, ts);
+  }
+
+  public Status getStatus() {
+      return status;
+  }
+
+  public void init(String name, ComponentRegistry registry) {
+      this.registry = registry;
+      this.name = name;
+  }
+
+  public void start() {
+      if (mode == Mode.STACK) {
+          openStackFrame();
+      } else {
+          dss.start();
+      }
+      jw.setVisible(true);
+      status = Status.STARTED;
+  }
+
+  public void stop() {
+      jw.setVisible(false);
+      if (mode == Mode.STACK) {
+          // ?
+      } else {
+          dss.stop();
+      }
+      status = Status.STOPPED;
+  }
+  
+  public String getName() {
+      return name;
   }
 }

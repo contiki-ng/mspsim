@@ -79,7 +79,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
   private Action stepAction;
   private ComponentRegistry registry;
 
-private Status status;
+private Status status = Status.STOPPED;
 
 private String name;
 

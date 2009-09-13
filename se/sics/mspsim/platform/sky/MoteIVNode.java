@@ -194,7 +194,8 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
       registry.registerComponent("nodegui", gui);
 
       // A HACK for some "graphs"!!!
-      DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+      DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
+      registry.registerComponent("dutychart", dataChart);
       DataSourceSampler dss = dataChart.setupChipFrame(cpu);
       dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getName(), 0, OperatingModeStatistics.OP_INVERT));
       dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
