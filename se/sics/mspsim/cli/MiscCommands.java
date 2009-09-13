@@ -312,7 +312,7 @@ public class MiscCommands implements CommandBundle {
       }
     });
     
-    handler.registerCommand("service", new BasicCommand("handle service plugins", "[class name|service name] [start|stop|install]") {
+    handler.registerCommand("service", new BasicCommand("handle service plugins", "[class name|service name] [start|stop]") {
       @Override
       public int executeCommand(CommandContext context) {
         if (context.getArgumentCount() == 0) {
@@ -342,8 +342,8 @@ public class MiscCommands implements CommandBundle {
           } else if ("stop".equals(operation)) {
             ServiceComponent sc = getServiceForName(registry, name);
             if (sc != null) {
-              sc.start();
-              context.out.println("service " + sc.getName() + " started");
+              sc.stop();
+              context.out.println("service " + sc.getName() + " stopped");
             } else {
               context.out.println("can not find service" + name);
             }
