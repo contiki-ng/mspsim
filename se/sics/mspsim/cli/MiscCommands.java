@@ -147,14 +147,6 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    handler.registerCommand("quit", new BasicCommand("exit MSPSim", "") {
-      public int executeCommand(CommandContext context) {
-        /* TODO: flush all files, etc.... */
-        System.exit(0);
-        return 0;
-      }
-    });
-
     handler.registerCommand("echo", new BasicCommand("echo arguments", "") {
       public int executeCommand(CommandContext context) {
         StringBuilder sb = new StringBuilder();
@@ -169,9 +161,13 @@ public class MiscCommands implements CommandBundle {
     
     
 
-    handler.registerCommand("source", new BasicCommand("run script", "<filename>") {
+    handler.registerCommand("source", new BasicCommand("run script", "[-v] <filename>") {
       public int executeCommand(CommandContext context) {
-        File fp = new File(context.getArgument(0));
+          boolean verbose = false;
+          if (context.getArgumentCount() > 1) {
+              verbose = "-v".equals(context.getArgument(0));
+          }
+        File fp = new File(context.getArgument(context.getArgumentCount() - 1));
         if (!fp.canRead()) {
           context.err.println("could not find the script file '" + context.getArgument(0) + "'.");
           return 1;
@@ -182,6 +178,7 @@ public class MiscCommands implements CommandBundle {
           try {
             String line;
             while ((line = input.readLine()) != null) {
+              if (verbose) context.out.println(line);
               context.executeCommand(line);
             }
           } finally {
@@ -404,6 +401,14 @@ public class MiscCommands implements CommandBundle {
             return 0;
         }
     });
+
+    handler.registerCommand("quit", new BasicCommand("exit MSPSim", "") {
+        public int executeCommand(CommandContext context) {
+          /* TODO: flush all files, etc.... */
+          System.exit(0);
+          return 0;
+        }
+      });
 
     handler.registerCommand("exit", new BasicCommand("exit MSPSim", "") {
         public int executeCommand(CommandContext context) {
