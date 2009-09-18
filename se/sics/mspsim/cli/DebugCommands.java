@@ -82,6 +82,7 @@ public class DebugCommands implements CommandBundle {
               new CPUMonitor() {
                 public void cpuAction(int type, int adr, int data) {
                   context.out.println("*** Break at $" + Utils.hex16(adr));
+		  cpu.stop();
                 }
           });
           context.out.println("Breakpoint set at $" + Utils.hex16(baddr));

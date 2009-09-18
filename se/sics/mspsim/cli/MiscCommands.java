@@ -260,7 +260,7 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("exec", new ExecCommand());
 
-    handler.registerCommand("trig", new BasicLineCommand("trigg command when input match regexp", "<command>") {
+    handler.registerCommand("trig", new BasicLineCommand("trigg command when getting input", "<command>") {
       String command = null;
       CommandContext context;
       public int executeCommand(CommandContext context) {
