@@ -169,7 +169,7 @@ public class ESBNode extends GenericNode implements PortListener {
       gui = new ESBGui(this);
 
       // A HACK for some "graphs"!!!
-      DataChart dataChart =  new DataChart("Duty Cycle", "Duty Cycle");
+      DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
       DataSourceSampler dss = dataChart.setupChipFrame(cpu);
       dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
