@@ -44,8 +44,11 @@ import java.io.PrintStream;
 import se.sics.mspsim.util.ArrayUtils;
 
 /**
- * @author Joakim
- *
+ * @author Joakim Eriksson, SICS
+ * TODO: add a detailed state too (including a listener). State is not necessarily 
+ * related to energy consumption, etc. but more detailed state of the Chip.
+ * LPM1,2,3 / ON is OperatingModes as well as Transmitting, Listening and Off.
+ * State can be things such as search for SFD (which is in mode Listen for CC2420).
  */
 public abstract class Chip implements Loggable, EventSource {
 

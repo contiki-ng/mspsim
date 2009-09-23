@@ -247,6 +247,10 @@ public class DebugCommands implements CommandBundle {
           public int executeCommand(CommandContext context) {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
             long cyc = cpu.cycles;
+            if (cpu.isRunning()) {
+                context.err.println("Can not single step when emulation is running.");
+                return -1;
+            }
             try {
               node.step(nr);
             } catch (Exception e) {
