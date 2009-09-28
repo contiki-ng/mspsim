@@ -43,6 +43,7 @@ package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import javax.swing.AbstractListModel;
@@ -80,6 +81,7 @@ public class DebugUI extends JPanel {
     disList = new JList(listModel = new DbgListModel());
     disList.setFont(new Font("courier", 0, 12));
     disList.setCellRenderer(new MyCellRenderer());
+    disList.setPreferredSize(new Dimension(500, 350));
     add(disList, BorderLayout.CENTER);
 
     if (showRegs) {

@@ -652,6 +652,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         } else {
           if (!ramRead) {
             memory[address++] = data;
+            if (address >= 0x180) {
+              logger.warning(this, "CC2420: Warning - RAM position too big - wrapping!");
+              address = 0;
+            }
             if (DEBUG && address == RAM_PANID + 2) {
               log("Pan ID set to: 0x" +
                   Utils.hex8(memory[RAM_PANID]) +
@@ -660,6 +664,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           } else {
             //log("Read RAM Addr: " + address + " Data: " + memory[address]);  
             source.byteReceived(memory[address++]);
+            if (address >= 0x180) {
+              logger.warning(this, "CC2420: Warning - RAM position too big - wrapping!");
+              address = 0;
+            }      
             return;
           }
         }
