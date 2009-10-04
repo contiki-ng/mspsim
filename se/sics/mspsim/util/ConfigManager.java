@@ -47,6 +47,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.URL;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -332,4 +333,9 @@ public class ConfigManager {
     return "true".equals(value) || "yes".equals(value) || "1".equals(value);
   }
 
+  public void print(PrintStream out) {
+      properties.list(out);
+  }
+
+  
 } // ConfigManager

@@ -58,6 +58,7 @@ import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.ConfigManager;
 import se.sics.mspsim.util.PluginRepository;
 import se.sics.mspsim.util.ServiceComponent;
 import se.sics.mspsim.util.Utils;
@@ -388,7 +389,7 @@ public class MiscCommands implements CommandBundle {
       }
     });
     
-    handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "[-registry]") {
+    handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "[-registry] [-config]") {
         public int executeCommand(CommandContext context) {
             ArgumentManager config = (ArgumentManager) registry.getComponent("config");
             context.out.println("--------- System info ----------\n");
@@ -401,6 +402,10 @@ public class MiscCommands implements CommandBundle {
             if (context.getOption("registry")) {
                 context.out.println("--------- Registry info --------\n");
                 registry.printRegistry(context.out);
+            }
+            if (context.getOption("config")) {
+                context.out.println("--------- Configuration ---------\n");
+                config.print(context.out);
             }
             return 0;
         }
@@ -421,6 +426,16 @@ public class MiscCommands implements CommandBundle {
         }
     });
 
+    handler.registerCommand("set", new BasicCommand("set a config parameter", "<parameter> <value>") {
+        public int executeCommand(CommandContext context) {
+            ConfigManager config = (ConfigManager) registry.getComponent("config");
+            config.setProperty(context.getArgument(0), context.getArgument(1));
+            context.out.println("set " + context.getArgument(0) + " to " + context.getArgument(1));
+            return 0;
+        }
+    });
+
+    
   }
 
   private static ServiceComponent getServiceForName(ComponentRegistry registry, String name) {

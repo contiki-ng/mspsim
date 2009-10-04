@@ -39,6 +39,7 @@
  *           $Revision$
  */
 package se.sics.mspsim.util;
+import java.io.PrintStream;
 import java.util.ArrayList;
 
 /**

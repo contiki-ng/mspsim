@@ -43,6 +43,34 @@ package se.sics.mspsim.util;
 public class Utils {
   private static final String str16 = "0000000000000000";
 
+  public static final int BYTE = 0;
+  public static final int UBYTE = 1;
+  public static final int WORD = 2;
+  public static final int UWORD = 3;
+  
+  public static final int ASCII = 1;
+  public static final int HEX = 2;
+  public static final int DEC = 3;
+  
+  public static int size(int type) {
+      return 1 + (type / 2);
+  }
+  
+  public static String toString(int data, int type, int mode) {
+      int size = 1 + type / 2;
+      switch (mode) {
+      case    ASCII:
+          if (data >= 32 && data <= 127) {
+              return "" + ((char) data);
+          } else {
+              return ".";
+          }
+      case    HEX: 
+          return (size == 2 ? Utils.hex16(data):Utils.hex8(data));
+      }
+      return "" + data;
+  }
+  
   public static String binary8(int data) {
     String s = Integer.toString(data, 2);
     if (s.length() < 8) {
@@ -196,6 +224,7 @@ public class Utils {
     }
     return true;
   }
+
 
 //  public static void main(String[] args) {
 //    System.out.println("Hex 47 = " + hex8(47));

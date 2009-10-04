@@ -316,38 +316,49 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_entries> [type]") {
+        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_entries> [type] [hex|char]") {
           public int executeCommand(final CommandContext context) {
             int start = context.getArgumentAsAddress(0);
             int count = context.getArgumentAsInt(1);
-            int size = 1; // unsigned byte
+            int mode = Utils.DEC;
+            int type = Utils.UBYTE;
             boolean signed = false;
             if (context.getArgumentCount() > 2) {
-              String tS = context.getArgument(2);
-              if ("byte".equals(tS)) {
-                signed = true;
-              } else if ("word".equals(tS)) {
-                signed = true;
-                size = 2;
-              } else if ("uword".equals(tS)) {
-                size = 2;
-              }
+                int pos = 2;
+                int acount = context.getArgumentCount();
+                if (acount > 4) acount = 4;
+                while (pos < acount) {
+                    String tS = context.getArgument(pos++);
+                    if ("ubyte".equals(tS)) {
+                    } else if ("byte".equals(tS)) {
+                        type = Utils.BYTE;
+                    } else if ("word".equals(tS)) {
+                        type = Utils.WORD;
+                    } else if ("uword".equals(tS)) {
+                        type = Utils.UWORD;
+                    } else if ("hex".equals(tS)) {
+                        mode = Utils.HEX;
+                    } else if ("char".equals(tS)) {
+                        mode = Utils.ASCII;
+                        type = Utils.BYTE;
+                    }
+                }
             }
             // Does not yet handle signed data...
             for (int i = 0; i < count; i++) {
-              int data = 0;
-              data = cpu.memory[start++];
-              if (size == 2) {
-                data = data  + (cpu.memory[start++] << 8);
-              }
-              context.out.print(" " + data);
+                int data = 0;
+                data = cpu.memory[start++];
+                if (Utils.size(type) == 2) {
+                    data = data  + (cpu.memory[start++] << 8);
+                }
+                context.out.print((mode != Utils.ASCII ? " " : "") + Utils.toString(data, type, mode));
             }
             context.out.println();
             return 0;
           }
         });
 
-        ch.registerCommand("set", new BasicCommand("set memory", "<address> <value> [type]") {
+        ch.registerCommand("mset", new BasicCommand("set memory", "<address> <value> [type]") {
           public int executeCommand(final CommandContext context) {
             int adr = context.getArgumentAsAddress(0);
             int val = context.getArgumentAsInt(1);
@@ -399,7 +410,7 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("xset", new BasicCommand("set memory", "<address> <value> [type]") {
+        ch.registerCommand("xmset", new BasicCommand("set memory", "<address> <value> [type]") {
           public int executeCommand(final CommandContext context) {
             Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
             if (xmem == null) {
