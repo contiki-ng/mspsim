@@ -41,6 +41,9 @@
 package se.sics.mspsim.net;
 
 import java.io.PrintStream;
+
+import se.sics.jipv6.core.AbstractPacketHandler;
+import se.sics.jipv6.core.Packet;
 import se.sics.mspsim.chip.RFListener;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.TimeEvent;
@@ -105,10 +108,6 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
   }
 
   
-  public void packetReceived(Packet container) {
-    // Never any packets received here...
-  }
-
   public void printPacket(PrintStream out, Packet packet) {
     int payloadLen = packet.getAttributeAsInt(CC2420_LEN);
     out.print("CC2420 | len:" + payloadLen + " | ");
@@ -121,7 +120,6 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
     out.println();
   }
 
-  
   public void sendPacket(Packet packet) {
     final Packet sendPacket = packet;
     byte[] size = new byte[1];
@@ -152,5 +150,8 @@ public class CC2420PacketHandler extends AbstractPacketHandler implements RFList
 
   public void setOutput(PrintStream out) {
     this.out = out;
+  }
+
+  public void packetReceived(Packet container) {
   }
 }
