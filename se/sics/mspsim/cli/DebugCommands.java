@@ -219,6 +219,10 @@ public class DebugCommands implements CommandBundle {
         public int executeCommand(final CommandContext context) {
           int adr = context.getArgumentAsAddress(0);
           DebugInfo di = getELF().getDebugInfo(adr);
+          if (di == null) {
+            /* quick hack to test next address too... - since something seems to be off by one sometimes... */
+            di = getELF().getDebugInfo(adr + 1);
+          }
           if (di != null) {
             di.getLine();
             context.out.println(di);
@@ -358,15 +362,37 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("mset", new BasicCommand("set memory", "<address> <value> [type]") {
+        ch.registerCommand("mset", new BasicCommand("set memory", "<address> [type] <value> ... <value>") {
           public int executeCommand(final CommandContext context) {
+            int count = context.getArgumentCount();
             int adr = context.getArgumentAsAddress(0);
-            int val = context.getArgumentAsInt(1);
-            boolean word = val > 0xff;
-            try {
-              cpu.write(adr, val, word);
-            } catch (EmulationException e) {
-              e.printStackTrace(context.out);
+            String arg2 = context.getArgument(1);
+            int type = Utils.BYTE;
+            int mode = Utils.DEC;
+            boolean typeRead = false;
+            if (count > 2) {
+              if ("char".equals(arg2)) {
+                mode = Utils.ASCII;
+                typeRead = true;
+                System.out.println("Found type char");
+              }
+            }
+            for (int i = typeRead ? 2 : 1; i < count; i++) {
+              if (mode == Utils.DEC) {
+                int val = context.getArgumentAsInt(i);
+                boolean word = val > 0xff;
+                try {
+                  cpu.write(adr, val, word);
+                  adr += word ? 2 : 1;
+                } catch (EmulationException e) {
+                  e.printStackTrace(context.out);
+                }
+              } else if (mode == Utils.ASCII) {
+                String data = context.getArgument(i);
+                for (int j = 0; j < data.length(); j++) {
+                  cpu.write(adr++, data.charAt(j) & 0xff, false);                    
+                }
+              }
             }
             return 0;
           }});
