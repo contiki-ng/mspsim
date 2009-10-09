@@ -15,7 +15,6 @@ CC=javac
 JAVA=java
 JAR=jar
 RM=rm -f
-CP=cp
 
 ###############################################################
 # System dependent
@@ -45,7 +44,10 @@ endif
 # Arguments
 ###############################################################
 
-CLASSPATH=.$(SEPARATOR)lib/jfreechart-1.0.11.jar$(SEPARATOR)lib/jcommon-1.0.14.jar
+EMPTY :=
+SPACE := ${EMPTY} ${EMPTY}
+LIBS := ${wildcard lib/*.jar}
+CLASSPATH=${subst ${SPACE},${SEPARATOR},. ${LIBS}}
 CCARGS=-deprecation -classpath "${CLASSPATH}"
 
 JAVAARGS=-classpath "${CLASSPATH}"
@@ -68,7 +70,7 @@ CPUTEST := tests/cputest.firmware
 SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS}
 
-PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core platform platform/esb platform/sky cli ui util chip net plugin extutil/highlight extutil/jfreechart}
+PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli platform platform/esb platform/sky plugin profiler net ui util extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -94,7 +96,7 @@ JarManifest.txt:
 	@echo >>$@ "Manifest-Version: 1.0"
 	@echo >>$@ "Sealed: true"
 	@echo >>$@ "Main-Class: se.sics.mspsim.Main"
-	@echo >>$@ "Class-path: lib/jfreechart-1.0.11.jar lib/jcommon-1.0.14.jar"
+	@echo >>$@ "Class-path: ${LIBS}"
 
 help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
