@@ -12,4 +12,5 @@
 service controlgui start
 service nodegui start
 #service stackchart start
+rflistener output CC2420 > rfdata.txt
 start

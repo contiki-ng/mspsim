@@ -5,10 +5,10 @@ package se.sics.mspsim.cli;
 
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.net.CC2420PacketHandler;
-import se.sics.mspsim.net.IEEE802154Handler;
-import se.sics.mspsim.net.IPStack;
-import se.sics.mspsim.net.LoWPANHandler;
-import se.sics.mspsim.net.TSPClient;
+import se.sics.jipv6.mac.IEEE802154Handler;
+import se.sics.jipv6.mac.LoWPANHandler;
+import se.sics.jipv6.core.IPStack;
+import se.sics.jipv6.tunnel.TSPClient;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.Utils;
 
@@ -33,6 +33,8 @@ public class NetCommands implements CommandBundle {
         listener.addUpperLayerHandler(0, ieeeHandler);
         ieeeHandler.setLowerLayerHandler(listener);
         ipStack = new IPStack();
+        byte[] macAddr = new byte[] {0x2,0x12,0x74,0x00,0x11,0x11,0x12,0x12};
+        ipStack.setLinkLayerAddress(macAddr);
         ipStack.setRouter(true);
         LoWPANHandler lowpanHandler = new LoWPANHandler();
         lowpanHandler.setIPStack(ipStack);

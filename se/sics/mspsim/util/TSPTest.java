@@ -1,11 +1,11 @@
 package se.sics.mspsim.util;
 
-import se.sics.mspsim.net.AbstractPacketHandler;
-import se.sics.mspsim.net.ICMP6Packet;
-import se.sics.mspsim.net.IPStack;
-import se.sics.mspsim.net.IPv6Packet;
-import se.sics.mspsim.net.Packet;
-import se.sics.mspsim.net.TSPClient;
+import se.sics.jipv6.core.AbstractPacketHandler;
+import se.sics.jipv6.core.ICMP6Packet;
+import se.sics.jipv6.core.IPStack;
+import se.sics.jipv6.core.IPv6Packet;
+import se.sics.jipv6.core.Packet;
+import se.sics.jipv6.tunnel.TSPClient;
 
 public class TSPTest extends AbstractPacketHandler implements Runnable {
 
