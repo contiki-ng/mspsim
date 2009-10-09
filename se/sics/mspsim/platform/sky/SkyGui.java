@@ -119,7 +119,6 @@ public class SkyGui extends JComponent implements ServiceComponent {
 
     WindowManager wm = (WindowManager) registry.getComponent("windowManager");
     window = wm.createWindow("SkyGui");
-    setSize(190, 240);
     window.add(this);
     window.setVisible(true);
 
@@ -132,10 +131,11 @@ public class SkyGui extends JComponent implements ServiceComponent {
 	public void mousePressed(MouseEvent e) {
 	  int x = e.getX();
 	  int y = e.getY();
-	  if (x > 126 && x < 138) {
-	    if (y > 65 && y < 76) {
-	      SkyGui.this.node.setButton(buttonDown = true);
-	    } else if (y > 95 && y < 107) {
+	  if (x > 122 && x < 135) {
+	    if (y > 41 && y < 55) {
+	      buttonDown = true;
+	      SkyGui.this.node.setButton(true);
+	    } else if (y > 72 && y < 85) {
 	      resetDown = true;
 	    }
 	  }
@@ -143,13 +143,14 @@ public class SkyGui extends JComponent implements ServiceComponent {
 
 	public void mouseReleased(MouseEvent e) {
 	  if (buttonDown) {
-	    SkyGui.this.node.setButton(buttonDown = false);
+	    buttonDown = false;
+	    SkyGui.this.node.setButton(false);
 
 	  } else if (resetDown) {
 	    int x = e.getX();
 	    int y = e.getY();
 	    resetDown = false;
-	    if (x > 126 && x < 138 && y > 95 && y < 107) {
+	    if (x > 122 && x < 135 && y > 72 && y < 85) {
 	      SkyGui.this.node.getCPU().reset();
 	    }
 	  }
