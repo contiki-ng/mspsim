@@ -375,11 +375,15 @@ public class DebugCommands implements CommandBundle {
                 mode = Utils.ASCII;
                 typeRead = true;
               }
+              if ("word".equals(arg2)) {
+                type = Utils.WORD;
+                typeRead = true;
+              }
             }
             for (int i = typeRead ? 2 : 1; i < count; i++) {
               if (mode == Utils.DEC) {
                 int val = context.getArgumentAsInt(i);
-                boolean word = val > 0xff;
+                boolean word = Utils.size(type) == 2 | val > 0xff;
                 try {
                   cpu.write(adr, val, word);
                   adr += word ? 2 : 1;
