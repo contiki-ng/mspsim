@@ -362,7 +362,7 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("mset", new BasicCommand("set memory", "<address> [type] <value> ... <value>") {
+        ch.registerCommand("mset", new BasicCommand("set memory", "<address> [type] <value> [value ...]") {
           public int executeCommand(final CommandContext context) {
             int count = context.getArgumentCount();
             int adr = context.getArgumentAsAddress(0);
@@ -374,7 +374,6 @@ public class DebugCommands implements CommandBundle {
               if ("char".equals(arg2)) {
                 mode = Utils.ASCII;
                 typeRead = true;
-                System.out.println("Found type char");
               }
             }
             for (int i = typeRead ? 2 : 1; i < count; i++) {
