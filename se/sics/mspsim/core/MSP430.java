@@ -193,6 +193,13 @@ public class MSP430 extends MSP430Core {
    */
   long lastReturnedMicros;
   long lastMicrosCycles;
+  boolean microClockReady = false;
+
+  /* when DCO has changed speed, this method will be called */
+  protected void dcoReset() {
+      microClockReady = false;
+  }
+  
   /* 
    * Perform a single step (even if in LPM) but no longer than to maxCycles + 1 instr
    * Note: jumpMicros just jump the clock until that time
@@ -204,14 +211,15 @@ public class MSP430 extends MSP430Core {
     }
 
     if (jumpMicros < 0) {
-      throw new IllegalArgumentException("Can not execute a shorter time than 1 micro second: " +
+      throw new IllegalArgumentException("Can not jump a negative time: " +
           jumpMicros);
     }
     /* quick hack - if microdelta == 0 => ensure that we have correct zery cycles
      */
-    if (lastMicrosDelta == 0) {
+    if (!microClockReady) {
       System.out.println("Setting cycles to zero at " + cycles);
       lastMicrosCycles = cycles;
+      microClockReady = true;
     }
     
     // Note: will be reset during DCO-syncs... => problems ???

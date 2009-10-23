@@ -529,7 +529,7 @@ public class DebugCommands implements CommandBundle {
         	    int size = cpu.getTraceSize();
         	    DisAsm disAsm = cpu.getDisAsm();
         	    for (int i = 0; i < size; i++) {
-        		int pc = cpu.getBackTrace(i);
+        		int pc = cpu.getBackTrace(size - 1 - i);
         		DbgInstruction inst = disAsm.getDbgInstruction(pc, cpu);
         		inst.setPos(pc);
 			System.out.println(inst);

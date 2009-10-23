@@ -416,8 +416,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //    " current: " + frequency + " DCO_FAC = " + currentDCOFactor);
     if (DEBUG)
       System.out.println("Set smclkFrq: " + smclkFrq);
+    dcoReset();
   }
 
+  /* called after dcoReset */
+  protected void dcoReset() {
+  }
+  
   // returns global time counted in max speed of DCOs (~5Mhz)
   public long getTime() {
     long diff = cycles - lastCyclesTime;

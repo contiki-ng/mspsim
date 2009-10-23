@@ -20,7 +20,6 @@ public class NetCommands implements CommandBundle {
 
   private IPStack ipStack;
   public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
-
     handler.registerCommand("ipstack", new BasicLineCommand("setup 802.15.4/IP stack", "") {
       CC2420PacketHandler listener;
       CommandContext context;
