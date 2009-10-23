@@ -42,7 +42,10 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 
-import se.sics.mspsim.util.*;
+import se.sics.mspsim.util.ArrayUtils;
+import se.sics.mspsim.util.ComponentRegistry;
+import se.sics.mspsim.util.MapTable;
+import se.sics.mspsim.util.SimpleProfiler;
 
 public class MSP430 extends MSP430Core {
 
@@ -147,7 +150,7 @@ public class MSP430 extends MSP430Core {
   }
 
   public long step() throws EmulationException {
-    return step(0);
+    return stepMicros(1, 1);
   }
 
   public long stepInstructions(int count) throws EmulationException {
@@ -185,13 +188,55 @@ public class MSP430 extends MSP430Core {
     return cycles;
   }
   
+  /* this represents the micros time that was "promised" last time */
+  /* NOTE: this is a delta compared to "current micros" 
+   */
+  long lastReturnedMicros;
+  long lastMicrosCycles;
   /* 
    * Perform a single step (even if in LPM) but no longer than to maxCycles + 1 instr
+   * Note: jumpMicros just jump the clock until that time
+   * executeMicros also check eventQ, etc and executes instructions
    */
-  public long step(long maxCycles) throws EmulationException {
+  public long stepMicros(long jumpMicros, long executeMicros) throws EmulationException {
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
+
+    if (jumpMicros < 0) {
+      throw new IllegalArgumentException("Can not execute a shorter time than 1 micro second: " +
+          jumpMicros);
+    }
+    /* quick hack - if microdelta == 0 => ensure that we have correct zery cycles
+     */
+    if (lastMicrosDelta == 0) {
+      System.out.println("Setting cycles to zero at " + cycles);
+      lastMicrosCycles = cycles;
+    }
+    
+    // Note: will be reset during DCO-syncs... => problems ???
+    lastMicrosDelta += jumpMicros;
+
+    /* check that we did not miss any events (by comparing with last return value) */
+    long maxCycles = lastMicrosCycles + (lastMicrosDelta * dcoFrq) / 1000000;
+    if (cpuOff) {
+      if(maxCycles > nextEventCycles) {
+        /* back this time again... */
+        lastMicrosDelta -= jumpMicros;
+        throw new IllegalArgumentException("Jumping to a time that is further than possible in LPM maxCycles:" + 
+            maxCycles + " cycles: " + cycles);
+      }
+    } else if (maxCycles > cycles) {
+      /* back this time again... */
+      lastMicrosDelta -= jumpMicros;
+      throw new IllegalArgumentException("Jumping to a time that is further than possible not LPM maxCycles:" + 
+          maxCycles + " cycles: " + cycles);
+    }
+    
+    /* run until this cycle time */
+    maxCycles = lastMicrosCycles + ((lastMicrosDelta + executeMicros) * dcoFrq) / 1000000;
+    System.out.println("Current cycles: " + cycles + " additional micros: " + (jumpMicros) +
+          " exec micros: " + executeMicros + " => Execute until cycles: " + maxCycles);
 
     // -------------------------------------------------------------------
     // Debug information
@@ -210,11 +255,6 @@ public class MSP430 extends MSP430Core {
       /* max one emulated instruction or maxCycles if in LPM */
       while (cycles < maxCycles && !(emuOP = emulateOP(maxCycles))) {
       }
-    } else {
-      int ctr = 0;
-      while (!(emuOP = emulateOP(-1)) && ctr++ < 10000) {
-        /* Stuck in LPM - hopefully not more than 10000 times*/
-        }
     }
 
     if (emuOP) {
@@ -231,9 +271,14 @@ public class MSP430 extends MSP430Core {
 	      tracePos = 0;
       }
     }
-    return cycles;
-}
-
+    if (cpuOff) {
+      lastReturnedMicros = (1000000 * (nextEventCycles - cycles)) / dcoFrq;
+    } else {
+      lastReturnedMicros = 0;
+    }
+    return lastReturnedMicros;
+  }
+  
   public void stop() {
     setRunning(false);
   }

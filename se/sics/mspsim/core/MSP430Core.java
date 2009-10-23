@@ -102,22 +102,23 @@ public class MSP430Core extends Chip implements MSP430Constants {
   InterruptHandler servicedInterruptUnit = null;
 
   private boolean interruptsEnabled = false;
-  private boolean cpuOff = false;
+  protected boolean cpuOff = false;
 
   // Not private since they are needed (for fast access...)
-  private int dcoFrq = 2500000;
+  protected int dcoFrq = 2500000;
   int aclkFrq = 32768;
   int smclkFrq = dcoFrq;
 
   long lastCyclesTime = 0;
   long lastVTime = 0;
   long currentTime = 0;
+  long lastMicrosDelta;
   double currentDCOFactor = 1.0;
   
   // Clk A can be "captured" by timers - needs to be handled close to CPU...?
   private int clkACaptureMode = CLKCAPTURE_NONE;
   // Other clocks too...
-  private long nextEventCycles;
+  long nextEventCycles;
   private EventQueue vTimeEventQueue = new EventQueue();
   private long nextVTimeEventCycles;
 
@@ -407,6 +408,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // update last virtual time before updating DCOfactor
     lastVTime = getTime();
     lastCyclesTime = cycles;
+    lastMicrosDelta = 0;
     
     currentDCOFactor = 1.0 * BasicClockModule.MAX_DCO_FRQ / frequency;
 
@@ -436,6 +438,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   
+  /**
+   * getCyclesToNext - returns the number of cycles that it will take before next
+   * execution of an event or zero if CPU is running.
+   * @return number of cycles left before next event executes or 0 if CPU is on.
+   */
+  public long getCyclesToNext() {
+    if (!cpuOff) return 0;
+    return cycles - nextEventCycles;
+  }
   
   private void executeEvents() {
     if (cycles >= nextVTimeEventCycles) {

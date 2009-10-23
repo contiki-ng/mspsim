@@ -265,6 +265,28 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
+
+        ch.registerCommand("stepmicro", new BasicCommand("single the CPU specified no micros", "<micro skip> <micro step>") {
+          public int executeCommand(CommandContext context) {
+            int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
+            long cyc = cpu.cycles;
+            if (cpu.isRunning()) {
+                context.err.println("Can not single step when emulation is running.");
+                return -1;
+            }
+            long nxt = 0;
+            try {
+              nxt = cpu.stepMicros(context.getArgumentAsLong(0), context.getArgumentAsLong(1));
+            } catch (Exception e) {
+              e.printStackTrace(context.out);
+            }
+            context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)) +
+                " in " + (cpu.cycles - cyc) + " cycles (" + cpu.cycles + ") - next exec time: " + nxt);
+            return 0;
+          }
+        });
+
+        
         ch.registerCommand("stack", new BasicCommand("show stack info", "") {
           public int executeCommand(CommandContext context) {
             int stackEnd = context.getMapTable().heapStartAddress;
