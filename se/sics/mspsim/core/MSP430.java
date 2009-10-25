@@ -259,31 +259,25 @@ public class MSP430 extends MSP430Core {
 
 
     boolean emuOP = false;
-    if (maxCycles > 0) {
-      /* max one emulated instruction or maxCycles if in LPM */
-      while (cycles < maxCycles && !(emuOP = emulateOP(maxCycles))) {
-      }
+    while (cycles < maxCycles) {
+        if (emuOP = emulateOP(maxCycles)) {
+            if (execCounter != null) {
+                execCounter[reg[PC]]++;
+            }
+            if (trace != null) {
+                trace[tracePos++] = reg[PC];
+                if (tracePos > trace.length)
+                    tracePos = 0;
+            }
+        }
     }
 
-    if (emuOP) {
-      if ((instCtr % 10000007) == 0 && !debug) {
-	printCPUSpeed(reg[PC]);
-      }
-
-      if (execCounter != null) {
-	execCounter[reg[PC]]++;
-      }
-      if (trace != null) {
-	  trace[tracePos++] = reg[PC];
-	  if (tracePos > trace.length)
-	      tracePos = 0;
-      }
-    }
     if (cpuOff) {
       lastReturnedMicros = (1000000 * (nextEventCycles - cycles)) / dcoFrq;
     } else {
       lastReturnedMicros = 0;
     }
+    
     return lastReturnedMicros;
   }
   
