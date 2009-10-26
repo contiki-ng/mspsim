@@ -51,6 +51,7 @@ import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ArgumentManager;
+import se.sics.mspsim.util.OperatingModeStatistics;
 
 public class ESBNode extends GenericNode implements PortListener {
 
@@ -75,8 +76,7 @@ public class ESBNode extends GenericNode implements PortListener {
   public boolean yellowLed;
 
   private TR1001 radio;
-  public ESBGui gui;
-
+  private ESBGui gui;
 
   /**
    * Creates a new <code>ESBNode</code> instance.
@@ -109,16 +109,10 @@ public class ESBNode extends GenericNode implements PortListener {
     if (source == port2) {
 //       System.out.println("ESBNode.PORT2: 0x" + Integer.toString(data,16));
       redLed = (data & RED_LED) == 0;
-      if (DEBUG && greenLed != ((data & GREEN_LED) == 0)) {
-	System.out.println("Green toggled!");
-      }
       greenLed = (data & GREEN_LED) == 0;
-      if (DEBUG && yellowLed != ((data & YELLOW_LED) == 0)) {
-	System.out.println("Yellow toggled!");
-      }
       yellowLed = (data & YELLOW_LED) == 0;
       if (gui != null) {
-	gui.repaint();
+	gui.ledsChanged();
 	gui.beeper.beepOn((data & BEEPER) != 0);
       }
 
@@ -167,10 +161,13 @@ public class ESBNode extends GenericNode implements PortListener {
     
     if (!config.getPropertyAsBoolean("nogui", true)) {
       gui = new ESBGui(this);
+      registry.registerComponent("nodegui", gui);
 
       // A HACK for some "graphs"!!!
       DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
+      registry.registerComponent("dutychart", dataChart);
       DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getName(), 0, OperatingModeStatistics.OP_INVERT));
       dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
       dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));

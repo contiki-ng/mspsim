@@ -41,38 +41,36 @@
 
 package se.sics.mspsim.platform.esb;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
-import java.net.URL;
+
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
 import javax.swing.ImageIcon;
-import javax.swing.JComponent;
-import javax.swing.JFrame;
+
 import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADCInput;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.USART;
+import se.sics.mspsim.platform.AbstractNodeGUI;
 import se.sics.mspsim.ui.SerialMon;
-import se.sics.mspsim.ui.WindowUtils;
 
-public class ESBGui extends JComponent implements ADCInput {
+public class ESBGui extends AbstractNodeGUI implements ADCInput {
 
   private static final long serialVersionUID = -139331418649524704L;
 
-  public static final int GREEN_X = 3;
-  public static final int YELLOW_X = 10;
-  public static final int RED_X = 17;
+  public static final int GREEN_X = 2;
+  public static final int YELLOW_X = 9;
+  public static final int RED_X = 16;
   public static final int LED_Y = 4;
+  private static final Rectangle LED_BOUNDS = new Rectangle(GREEN_X - 2, LED_Y - 4, RED_X + 6, LED_Y + 10);
 
   public static final Color RED_TRANS = new Color(0xff,0x40,0x40,0xa0);
   public static final Color YELLOW_TRANS = new Color(0xff, 0xff, 0x00, 0xa0);
@@ -85,11 +83,12 @@ public class ESBGui extends JComponent implements ADCInput {
   private static final float SAMPLE_RATE = 22050;
   private static final int DL_BUFFER_SIZE = 2200;
 
+  private MouseMotionAdapter mouseMotionListener;
+  private MouseAdapter mouseListener;
+
   private SerialMon serial;
   Beeper beeper;
 
-  private ImageIcon esbImage;
-  private JFrame window;
   private ESBNode node;
   private boolean buttonDown = false;
   private boolean resetDown = false;
@@ -97,45 +96,13 @@ public class ESBGui extends JComponent implements ADCInput {
   private TargetDataLine inDataLine;
 
   public ESBGui(ESBNode esbNode) {
-    this.node = esbNode;
+      super("images/esb.jpg");
+      this.node = esbNode;
+  }
 
-    setBackground(Color.black);
-    setOpaque(true);
-
-    URL imageURL = ESBGui.class.getResource("images/esb.jpg");
-    if (imageURL == null) {
-      imageURL = ESBGui.class.getResource("/images/esb.jpg");
-    }
-    if (imageURL != null) {
-      esbImage = new ImageIcon(imageURL);
-    } else {
-      esbImage = new ImageIcon("images/esb.jpg");
-    }
-    if (esbImage.getIconWidth() == 0 || esbImage.getIconHeight() == 0) {
-      // Image not found
-      throw new IllegalStateException("image not found");
-    }
-    setPreferredSize(new Dimension(esbImage.getIconWidth(),
-				   esbImage.getIconHeight()));
-
-    window = new JFrame("ESB");
-//     window.setSize(190,240);
-    window.add(this);
-    WindowUtils.restoreWindowBounds("ESBGui", window);
-    WindowUtils.addSaveOnShutdown("ESBGui", window);
-    window.setVisible(true);
-
-    window.addKeyListener(new KeyAdapter() {
-
-      public void keyPressed(KeyEvent key) {
-        if (key.getKeyChar() == 'd') {
-          node.setDebug(!node.getDebug());
-        }
-      }
-
-    });
- 
-    addMouseMotionListener(new MouseMotionAdapter() {
+  @Override
+  protected void startGUI() {
+    mouseMotionListener = new MouseMotionAdapter() {
       public void mouseMoved(MouseEvent e) {
         //    System.out.println("Mouse moved: " + e.getX() + "," + e.getY());
         int x = e.getX();
@@ -143,46 +110,62 @@ public class ESBGui extends JComponent implements ADCInput {
         node.setPIR(x > 18 && x < 80 && y > 35 && y < 100);
         node.setVIB(x > 62 && x < 95 && y > 160 && y < 178);
       }
-    });
-    addMouseListener(new MouseAdapter() {
+    };
+    addMouseMotionListener(mouseMotionListener);
+
+    mouseListener = new MouseAdapter() {
       // For the button sensor on the ESB nodes.
       public void mousePressed(MouseEvent e) {
-        int x = e.getX();
-        int y = e.getY();
-        if (y > 152 && y < 168) {
-          if (x > 0 && x < 19) {
-            node.setButton(buttonDown = true);
-          } else {
-            int w = esbImage.getIconWidth();
-            if (x > w - 20 && x < w) {
-              resetDown = true;
+        if (e.getButton() == MouseEvent.BUTTON1) {
+          int x = e.getX();
+          int y = e.getY();
+//        System.err.println("PRESSED AT " + x + "," + y
+//                + "  IMAGE=" + getNodeImage().getIconWidth()
+//                + "x" + getNodeImage().getIconHeight() +
+//                "  SIZE=" + getWidth() + "x" + getHeight());
+
+          if (y > 152 && y < 168) {
+            if (x > 0 && x < 19) {
+              buttonDown = true;
+              node.setButton(true);
+            } else {
+              int w = getNodeImage().getIconWidth();
+              if (x > w - 20 && x < w) {
+                resetDown = true;
+              }
             }
           }
         }
       }
 
       public void mouseReleased(MouseEvent e) {
-        if (buttonDown) {
-          node.setButton(buttonDown = false);
-        } else if (resetDown) {
-          int x = e.getX();
-          int y = e.getY();
-          if (y > 152 && y < 168) {
-            int w = esbImage.getIconWidth();
-            if (x > w - 20 && x < w) {
-              node.getCPU().reset();
+        if (e.getButton() == MouseEvent.BUTTON1) {
+          if (buttonDown) {
+            buttonDown = false;
+            node.setButton(false);
+          } else if (resetDown) {
+            int x = e.getX();
+            int y = e.getY();
+            if (y > 152 && y < 168) {
+              int w = getNodeImage().getIconWidth();
+              if (x > w - 20 && x < w) {
+                node.getCPU().reset();
+              }
             }
+            resetDown = false;
           }
-          resetDown = false;
         }
       }
-    });
+    };
+    addMouseListener(mouseListener);
 
     // Add some windows for listening to serial output
     MSP430 cpu = node.getCPU();
     IOUnit usart = cpu.getIOUnit("USART 1");
     if (usart instanceof USART) {
-      serial = new SerialMon((USART)usart, "RS232 Port Output");
+      if (serial == null) {
+        serial = new SerialMon((USART)usart, "RS232 Port Output");
+      }
       ((USART) usart).setUSARTListener(serial);
     }
 
@@ -190,31 +173,41 @@ public class ESBGui extends JComponent implements ADCInput {
     if (adc instanceof ADC12) {
       ((ADC12) adc).setADCInput(0, this);
     }
-    
-    beeper = new Beeper();
-    
-    // Just a test... TODO: remove!!!
-    AudioFormat af = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
-    DataLine.Info dlin =
-      new DataLine.Info(TargetDataLine.class, af, DL_BUFFER_SIZE);
 
+    beeper = new Beeper();
+
+    // Just a test... TODO: remove!!!
     try {
+      AudioFormat af = new AudioFormat(SAMPLE_RATE, 16, 1, true, false);
+      DataLine.Info dlin =
+          new DataLine.Info(TargetDataLine.class, af, DL_BUFFER_SIZE);
       inDataLine = (TargetDataLine) AudioSystem.getLine(dlin);
 
       if (inDataLine == null) {
-        System.out.println("No in dataline");
+        System.out.println("No input dataline");
       } else {
         System.out.println("Format: " + inDataLine.getFormat());
         inDataLine.open(inDataLine.getFormat(), DL_BUFFER_SIZE);
         inDataLine.start();
       }
     } catch (Exception e) {
-      System.out.println("Problem while getting data line ");
-      e.printStackTrace();
+      System.err.println("Failed to get audio data line: " + e.getMessage());
     }
   }
 
-  byte[] data = new byte[4];
+  @Override
+  protected void stopGUI() {
+      removeMouseMotionListener(mouseMotionListener);
+      removeMouseListener(mouseListener);
+
+      // TODO cleanup
+  }
+
+  public void ledsChanged() {
+      repaint(LED_BOUNDS);
+  }
+
+  private byte[] data = new byte[4];
   public int nextData() {
     if (inDataLine != null) {
       inDataLine.read(data, 0, 4);
@@ -226,6 +219,7 @@ public class ESBGui extends JComponent implements ADCInput {
   protected void paintComponent(Graphics g) {
     Color old = g.getColor();
     int w = getWidth(), h = getHeight();
+    ImageIcon esbImage = getNodeImage();
     int iw = esbImage.getIconWidth(), ih = esbImage.getIconHeight();
     esbImage.paintIcon(this, g, 0, 0);
     // Clear all areas not covered by the image

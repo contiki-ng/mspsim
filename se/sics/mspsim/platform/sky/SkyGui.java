@@ -41,30 +41,21 @@
 
 package se.sics.mspsim.platform.sky;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.net.URL;
+
 import javax.swing.ImageIcon;
-import javax.swing.JComponent;
+
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.USART;
-import se.sics.mspsim.ui.ManagedWindow;
+import se.sics.mspsim.platform.AbstractNodeGUI;
 import se.sics.mspsim.ui.SerialMon;
-import se.sics.mspsim.ui.WindowManager;
-import se.sics.mspsim.util.ComponentRegistry;
-import se.sics.mspsim.util.ServiceComponent;
 
-public class SkyGui extends JComponent implements ServiceComponent {
+public class SkyGui extends AbstractNodeGUI {
 
-  /**
-   * 
-   */
   private static final long serialVersionUID = 7753659717805292786L;
-  
-  private ServiceComponent.Status status = Status.STOPPED;
   
   public static final int GREEN_Y = 40;
   public static final int BLUE_Y = 46;
@@ -81,47 +72,14 @@ public class SkyGui extends JComponent implements ServiceComponent {
 
   private SerialMon serial;
 
-  private ImageIcon skyImage;
-  private ManagedWindow window;
   private MoteIVNode node;
 
-  private ComponentRegistry registry;
-
-  private String name;
-
   public SkyGui(MoteIVNode node) {
+    super("images/sky.jpg");
     this.node = node;
   }
 
-  public String getName() {
-    return name;
-  }
-  
-  public void start() {
-    setBackground(Color.black);
-    setOpaque(true);
-
-    URL imageURL = SkyGui.class.getResource("images/sky.jpg");
-    if (imageURL == null) {
-      imageURL = SkyGui.class.getResource("/images/sky.jpg");
-    }
-    if (imageURL != null) {
-      skyImage = new ImageIcon(imageURL);
-    } else {
-      skyImage = new ImageIcon("images/sky.jpg");
-    }
-    if (skyImage.getIconWidth() == 0 || skyImage.getIconHeight() == 0) {
-      // Image not found
-      throw new IllegalStateException("image not found");
-    }
-    setPreferredSize(new Dimension(skyImage.getIconWidth(),
-				   skyImage.getIconHeight()));
-
-    WindowManager wm = (WindowManager) registry.getComponent("windowManager");
-    window = wm.createWindow("SkyGui");
-    window.add(this);
-    window.setVisible(true);
-
+  protected void startGUI() {
     MouseAdapter mouseHandler = new MouseAdapter() {
 
 	private boolean buttonDown = false;
@@ -166,11 +124,11 @@ public class SkyGui extends JComponent implements ServiceComponent {
       serial = new SerialMon((USART)usart, "USART1 Port Output");
       ((USART) usart).setUSARTListener(serial);
     }
-    status = Status.STARTED;
   }
 
   protected void paintComponent(Graphics g) {
     Color old = g.getColor();
+    ImageIcon skyImage = getNodeImage();
     int w = getWidth(), h = getHeight();
     int iw = skyImage.getIconWidth(), ih = skyImage.getIconHeight();
     skyImage.paintIcon(this, g, 0, 0);
@@ -205,16 +163,7 @@ public class SkyGui extends JComponent implements ServiceComponent {
     g.setColor(old);
   }
 
-  public Status getStatus() {
-    return status;
-  }
-
-  public void init(String name, ComponentRegistry registry) {
-    this.name = name;
-    this.registry = registry;
-  }
-
-  public void stop() {    
+  protected void stopGUI() {    
   }
 
 }
