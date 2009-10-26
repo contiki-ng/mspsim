@@ -580,7 +580,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Needs to be last since these can add events...
     resetIOUnits();
   
-    profiler.clearProfile();
+    if (profiler != null) {
+        profiler.clearProfile();
+    }
   }
 
   public void setWarningMode(EmulationLogger.WarningMode mode) {
