@@ -244,6 +244,7 @@ public class ADC12 extends IOUnit {
       adc12Pos = (adc12Pos + 1) & 0x0f;
     }
     int delay = adcDiv * (shTime0 + 13);
+    
     core.scheduleTimeEvent(adcTrigger, adcTrigger.time + delay);
   }
   

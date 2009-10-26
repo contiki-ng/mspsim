@@ -43,6 +43,7 @@ package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
+import se.sics.mspsim.core.EmulationLogger.WarningMode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.MapTable;
@@ -524,6 +525,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (nextEventCycles > nextVTimeEventCycles) {
         nextEventCycles = nextVTimeEventCycles;
       }
+      /* Warn if someone schedules a time backwards in time... */
+      if (cycles > nextVTimeEventCycles) {
+        logger.warning(this, "Scheduling time event backwards in time!!!");
+        throw new IllegalStateException("Cycles are passed desired future time...");
+      }
     }
   }
   
@@ -811,7 +817,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // -------------------------------------------------------------------
     // Event processing
     // -------------------------------------------------------------------
-    if (cycles >= nextEventCycles) {
+    while (cycles >= nextEventCycles) {
       executeEvents();
     }
     
@@ -1357,8 +1363,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
 
     //System.out.println("CYCLES AFTER: " + cycles);
-
+    
     cpuCycles += cycles - startCycles;
+    
     return true;
   }
   
