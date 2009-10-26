@@ -814,12 +814,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int pc = readRegister(PC);
     long startCycles = cycles;
 
-    // -------------------------------------------------------------------
-    // Event processing
-    // -------------------------------------------------------------------
-    while (cycles >= nextEventCycles) {
-      executeEvents();
-    }
     
     // -------------------------------------------------------------------
     // Interrupt processing [after the last instruction was executed]
@@ -832,6 +826,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (cpuOff || flash.blocksCPU()) {
       //       System.out.println("Jumping: " + (nextIOTickCycles - cycles));
       // nextEventCycles must exist, otherwise CPU can not wake up!?
+
+      // If CPU is not active we must run the events here!!!
+      // this can trigger interrupts that wake the CPU
+      // -------------------------------------------------------------------
+      // Event processing
+      // -------------------------------------------------------------------
+      while (cycles >= nextEventCycles) {
+        executeEvents();
+      }
+      
       if (maxCycles >= 0 && maxCycles < nextEventCycles) {
         // Should it just freeze or take on extra cycle step if cycles > max?
         cycles = cycles < maxCycles ? maxCycles : cycles;
@@ -1363,6 +1367,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
 
     //System.out.println("CYCLES AFTER: " + cycles);
+
+    // -------------------------------------------------------------------
+    // Event processing (when CPU is awake)
+    // -------------------------------------------------------------------
+    while (cycles >= nextEventCycles) {
+      executeEvents();
+    }
     
     cpuCycles += cycles - startCycles;
     
