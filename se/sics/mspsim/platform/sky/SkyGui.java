@@ -75,7 +75,7 @@ public class SkyGui extends AbstractNodeGUI {
   private MoteIVNode node;
 
   public SkyGui(MoteIVNode node) {
-    super("images/sky.jpg");
+    super("SkyGui", "images/sky.jpg");
     this.node = node;
   }
 

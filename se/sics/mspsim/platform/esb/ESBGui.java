@@ -96,7 +96,7 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
   private TargetDataLine inDataLine;
 
   public ESBGui(ESBNode esbNode) {
-      super("images/esb.jpg");
+      super("ESBGui", "images/esb.jpg");
       this.node = esbNode;
   }
 

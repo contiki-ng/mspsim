@@ -58,6 +58,7 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
 
     private static final long serialVersionUID = 1435276301923987019L;
 
+    private final String windowName;
     private final String nodeImageName;
 
     private String name;
@@ -68,7 +69,9 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
 
     private ServiceComponent.Status status = Status.STOPPED;
 
-    protected AbstractNodeGUI(String imageName) {
+
+    protected AbstractNodeGUI(String windowName, String imageName) {
+        this.windowName = windowName;
         this.nodeImageName = imageName;
         setBackground(Color.black);
         setOpaque(true);
@@ -120,7 +123,7 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
                                        nodeImage.getIconHeight()));
 
         WindowManager wm = (WindowManager) registry.getComponent("windowManager");
-        window = wm.createWindow("NodeGUI");
+        window = wm.createWindow(windowName);
         window.add(this);
 
         startGUI();
