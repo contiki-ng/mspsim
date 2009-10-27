@@ -98,11 +98,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
       if (error) {
         // Stop any commands that have been started
         for (index++; index < commands.length; index++) {
-          Command command = commands[index].getCommand();
-          if (command instanceof AsyncCommand && !commands[index].hasExited()) {
-            AsyncCommand ac = (AsyncCommand) command;
-            ac.stopCommand(commands[index]);
-          }
+            commands[index].stopCommand();
         }
         return 1;
       } else if (pid >= 0) {
@@ -275,8 +271,8 @@ public class CommandHandler implements ActiveComponent, LineListener {
   }
 
   public void exit(CommandContext commandContext, int exitCode, int pid) {
-    if (pid >= 0) {
-      removePid(pid);
+    if (pid < 0 || !removePid(pid)) {
+      commandContext.stopCommand();
     }
   }
 
@@ -298,12 +294,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
   private boolean exitCommands(CommandContext[] contexts) {
       if (contexts != null) {
           for (int i = 0; i < contexts.length; i++) {
-              Command command = contexts[i].getCommand();
-              // Stop any commands that have not yet been stopped...
-              if (command instanceof AsyncCommand && !contexts[i].hasExited()) {
-                  AsyncCommand ac = (AsyncCommand) command;
-                  ac.stopCommand(contexts[i]);
-              }
+              contexts[i].stopCommand();
           }
           return true;
       }

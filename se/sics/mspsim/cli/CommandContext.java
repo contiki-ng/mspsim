@@ -39,10 +39,22 @@ public class CommandContext {
     this.err = err;
   }
   
-  Command getCommand( ) {
+  Command getCommand() {
     return command;
   }
-  
+
+  // Called by CommandHandler to stop this command.
+  void stopCommand() {
+    if (!exited) {
+      exited = true;
+
+      if (command instanceof AsyncCommand) {
+        AsyncCommand ac = (AsyncCommand) command;
+        ac.stopCommand(this);
+      }
+    }
+  }
+
   String getCommandLine() {
     return commandLine;
   }
@@ -63,6 +75,14 @@ public class CommandContext {
     // TODO: Clean up can be done now!
     exited = true;
     commandHandler.exit(this, exitCode, pid);
+  }
+
+  // Requests that this command chain should be killed. Used by for example
+  // FileTarget to close all connected commands when the file is closed.
+  void kill() {
+    if (!exited) {
+      commandHandler.exit(this, -9, pid);
+    }
   }
 
   public MapTable getMapTable() {
@@ -112,12 +132,11 @@ public class CommandContext {
       int register = Integer.parseInt(reg);
       if (register >= 0 && register <= 15) {
         return register;
-      } else {
-        err.println("illegal register: " + symbol);
       }
     } catch (Exception e) {
-      err.println("illegal register: " + symbol);
+      // Ignore
     }
+    err.println("illegal register: " + symbol);
     return -1;
   }
 
