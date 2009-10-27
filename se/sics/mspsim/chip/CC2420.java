@@ -40,7 +40,10 @@
 
 package se.sics.mspsim.chip;
 
+import java.util.Arrays;
+
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.EmulationLogger.WarningMode;
 import se.sics.mspsim.util.Utils;
 
 public class CC2420 extends Chip implements USARTListener, RFListener, RFSource {
@@ -146,7 +149,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public static final int CCAMUX_CCA = 0;
   public static final int CCAMUX_XOSC16M_STABLE = 24;
 
-
+  // MDMCTRO0 values
+  public static final int ADR_DECODE = (1 << 11);
+  public static final int ADR_AUTOCRC = (1 << 5);
+  public static final int AUTOACK = (1 << 4);
+  public static final int PREAMBLE_LENGTH = 0x0f;
+  
   // RAM Addresses
   public static final int RAM_TXFIFO	= 0x000;
   public static final int RAM_RXFIFO	= 0x080;
@@ -184,7 +192,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
      TX_PREAMBLE(34),
      TX_FRAME(37),
      TX_ACK_CALIBRATE(48),
-     TX_ACK_PREABLE(49),
+     TX_ACK_PREAMBLE(49),
      TX_ACK(52),
      TX_UNDERFLOW(56);
 
@@ -199,11 +207,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   };
   
   // FCF High
-  public static final int FRAME_TYPE = 0xC0;
-  public static final int SECURITY_ENABLED = (1<<6);
-  public static final int FRAME_PENDING = (1<<5);
-  public static final int ACK_REQUEST = (1<<4);
-  public static final int INTRA_PAN = (1<<3);
+  public static final int FRAME_TYPE = 0x07;
+  public static final int SECURITY_ENABLED = (1<<3);
+  public static final int ACK_REQUEST = (1<<5);
+  public static final int INTRA_PAN = (1<<6);
   // FCF Low
   public static final int DESTINATION_ADDRESS_MODE = 0x30;
   public static final int SOURCE_ADDRESS_MODE = 0x3;
@@ -243,6 +250,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private static int RSSI_OFFSET = -45; /* cc2420 datasheet */
   /* current CCA value */
   private boolean cca = false;
+  
+  /* if autoack is configured or if */
+  private boolean autoAck = false;
+  private boolean shouldAck = false;
   
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -308,6 +319,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     }
   };
 
+  private TimeEvent ackEvent = new TimeEvent(0) {
+      public void execute(long t) {
+        ackNext();
+      }
+    };
+  
   private TimeEvent shrEvent = new TimeEvent(0) {
     public void execute(long t) {
       shrNext();
@@ -328,6 +345,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       case RX_WAIT:
         setState(RadioState.RX_SFD_SEARCH);
         break;
+
+      case TX_ACK_CALIBRATE:
+          setState(RadioState.TX_ACK_PREAMBLE);
+          break;
       }
     }
   };
@@ -340,13 +361,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   private StateListener stateListener = null;
+  private int ackPos;
+  /* type = 2 (ACK), third byte needs to be sequence number... */
+  private int[] ackBuf = {0x02, 0x00, 0x00, 0x00, 0x00};
 
   public void setStateListener(StateListener listener) {
     stateListener = listener;
   }
 
   public RadioState getState() {
-    return stateMachine;
+      return stateMachine;
   }
 
   // TODO: super(cpu) and chip autoregister chips into the CPU.
@@ -434,6 +458,27 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       setMode(MODE_TXRX_OFF);
       updateCCA();
       break;
+      
+    case TX_ACK_CALIBRATE:
+        /* TX active during ACK ? */
+        status |= STATUS_TX_ACTIVE;
+        setSymbolEvent(12 + 2);
+        setMode(MODE_TXRX_ON);
+      break;
+    case TX_ACK_PREAMBLE:
+        /* same as normal preamble ?? */
+        shrPos = 0;
+        SHR[0] = 0;
+        SHR[1] = 0;
+        SHR[2] = 0;
+        SHR[3] = 0;
+        SHR[4] = 0x7A;
+        shrNext();
+        break;
+    case TX_ACK:
+        ackPos = 0;
+        ackNext();
+        break;
     }
 
     /* Notify state listener */
@@ -491,19 +536,39 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
           // Should take a RSSI value as input or use a set-RSSI value...
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
-          // Set CRC ok and add a correlation
+          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | 0x80;
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
           if (DEBUG) log("RX: Complete: packetStart: " + 
               lastPacketStart);
-          setState(RadioState.RX_WAIT);
+
+          /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
+          if ((autoAck && checkAutoack()) || shouldAck) {
+              setState(RadioState.TX_ACK_CALIBRATE);
+          } else {
+              setState(RadioState.RX_WAIT);
+          }
         }
       }
     }
   }
 
+  private boolean checkAutoack() {
+      boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;
+      if (!ackReq) return false;
+      /* here we need to check that this address is correct compared to the stored address */
+      int addrSize = 8; /* this is hard coded to a long address - can be short!!! */
+      int addrPos = lastPacketStart + 2 + 1; // where starts the destination address of the packet!!!??
+      for (int i = 0; i < addrSize; i++) {
+          if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + (addrPos + i) & 127]) {
+              return false;
+          }
+      }
+      return false;
+  }
+  
   public void dataReceived(USART source, int data) {
     int oldStatus = status;
     if (DEBUG) {
@@ -778,7 +843,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     if(shrPos == 5) {
       // Set SFD high
       setSFD(true);
-      setState(RadioState.TX_FRAME);
+      if (stateMachine == RadioState.TX_PREAMBLE) {
+          setState(RadioState.TX_FRAME);
+      } else if (stateMachine == RadioState.TX_ACK_PREAMBLE) {
+          setState(RadioState.TX_ACK);
+      } else {
+          log("Can not move to TX_FRAME or TX_ACK after preamble since radio is in wrong mode: " +
+                  stateMachine);
+      }
     } else {
       if (listener != null) {
         if (DEBUG) log("transmitting byte: " + Utils.hex8(SHR[shrPos]));
@@ -816,6 +888,26 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       txfifoFlush = true;
     }
   }
+  
+  private void ackNext() {
+      if (ackPos < ackBuf.length) {
+          if (listener != null) {
+              if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
+              listener.receivedByte((byte)(ackBuf[ackPos] & 0xFF));
+          }
+          ackPos++;
+          // Two symbol periods to send a byte...
+          cpu.scheduleTimeEventMillis(ackEvent, SYMBOL_PERIOD * 2);
+      } else {
+          if (DEBUG) log("Completed Transmission of ACK.");
+          status &= ~STATUS_TX_ACTIVE;
+          setSFD(false);
+          setState(RadioState.RX_CALIBRATE);
+          /* Back to RX ON */
+          setMode(MODE_RX_ON);
+      }
+  }
+
 
   private void setSymbolEvent(int symbols) {
     double period = SYMBOL_PERIOD * symbols;
