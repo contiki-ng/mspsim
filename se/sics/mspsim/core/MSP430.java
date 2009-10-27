@@ -205,6 +205,7 @@ public class MSP430 extends MSP430Core {
    * Note: jumpMicros just jump the clock until that time
    * executeMicros also check eventQ, etc and executes instructions
    */
+  long maxCycles = 0;
   public long stepMicros(long jumpMicros, long executeMicros) throws EmulationException {
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
@@ -217,16 +218,15 @@ public class MSP430 extends MSP430Core {
     /* quick hack - if microdelta == 0 => ensure that we have correct zery cycles
      */
     if (!microClockReady) {
-      System.out.println("Setting cycles to zero at " + cycles);
-      lastMicrosCycles = cycles;
-      microClockReady = true;
+      lastMicrosCycles = maxCycles;
     }
     
     // Note: will be reset during DCO-syncs... => problems ???
     lastMicrosDelta += jumpMicros;
 
+    if (microClockReady) {
     /* check that we did not miss any events (by comparing with last return value) */
-    long maxCycles = lastMicrosCycles + (lastMicrosDelta * dcoFrq) / 1000000;
+    maxCycles = lastMicrosCycles + (lastMicrosDelta * dcoFrq) / 1000000;
     if (cpuOff) {
       if(maxCycles > nextEventCycles) {
         /* back this time again... */
@@ -240,11 +240,14 @@ public class MSP430 extends MSP430Core {
       throw new IllegalArgumentException("Jumping to a time that is further than possible not LPM maxCycles:" + 
           maxCycles + " cycles: " + cycles);
     }
-    
+
+    }
+    microClockReady = true;
+
     /* run until this cycle time */
     maxCycles = lastMicrosCycles + ((lastMicrosDelta + executeMicros) * dcoFrq) / 1000000;
-    System.out.println("Current cycles: " + cycles + " additional micros: " + (jumpMicros) +
-          " exec micros: " + executeMicros + " => Execute until cycles: " + maxCycles);
+    /*System.out.println("Current cycles: " + cycles + " additional micros: " + (jumpMicros) +
+          " exec micros: " + executeMicros + " => Execute until cycles: " + maxCycles);*/
 
     // -------------------------------------------------------------------
     // Debug information
@@ -259,15 +262,16 @@ public class MSP430 extends MSP430Core {
 
 
     boolean emuOP = false;
-    while (cycles < maxCycles) {
+    while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
         if (emuOP = emulateOP(maxCycles)) {
             if (execCounter != null) {
                 execCounter[reg[PC]]++;
             }
             if (trace != null) {
-                trace[tracePos++] = reg[PC];
-                if (tracePos > trace.length)
-                    tracePos = 0;
+              if (tracePos > trace.length) {
+                tracePos = 0;
+              }
+              trace[tracePos++] = reg[PC];
             }
         }
     }
@@ -278,6 +282,13 @@ public class MSP430 extends MSP430Core {
       lastReturnedMicros = 0;
     }
     
+    if(cycles < maxCycles) {
+      throw new RuntimeException("cycles < maxCycles : " + cycles + " < " + maxCycles);
+    }
+    if(lastReturnedMicros < 0) {
+      throw new RuntimeException("lastReturnedMicros < 0 : " + lastReturnedMicros);
+    }
+
     return lastReturnedMicros;
   }
   
