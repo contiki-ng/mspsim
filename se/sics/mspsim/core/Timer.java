@@ -365,7 +365,11 @@ public class Timer extends IOUnit {
       /* needs the TimerA clock speed here... */
       int aTicks = clockSpeed / core.aclkFrq;
       updateCounter(cycles);
-      if (counter % aTicks > aTicks / 2) {
+      
+      /* only calculate this if clock runs faster then ACLK - otherwise it
+       * this will be dividing by zero... 
+       */
+      if (aTicks > 0 && counter % aTicks > aTicks / 2) {
         input = true;
       }
     }
