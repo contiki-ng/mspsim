@@ -1149,17 +1149,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     registers[register] = data;
   }
 
-  /* External API for radio mediums - will change to setRSSI only later...*/
-  public void setCCA(boolean clear) {
-    if (DEBUG) log("*** CCA set to: " + clear + " ignored....");
-//    if (clear) {
-//      rssi = 0;
-//    } else { 
-//      rssi = 127;
-//    }
-//    updateCCA();
-  }
-
   /*****************************************************************************
    * Chip APIs
    *****************************************************************************/
