@@ -40,10 +40,8 @@
 
 package se.sics.mspsim.chip;
 
-import java.util.Arrays;
-
 import se.sics.mspsim.core.*;
-import se.sics.mspsim.core.EmulationLogger.WarningMode;
+import se.sics.mspsim.util.CCITT_CRC;
 import se.sics.mspsim.util.Utils;
 
 public class CC2420 extends Chip implements USARTListener, RFListener, RFSource {
@@ -364,6 +362,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int ackPos;
   /* type = 2 (ACK), third byte needs to be sequence number... */
   private int[] ackBuf = {0x02, 0x00, 0x00, 0x00, 0x00};
+  private CCITT_CRC rxCrc = new CCITT_CRC();
+  private CCITT_CRC txCrc = new CCITT_CRC();
 
   public void setStateListener(StateListener listener) {
     stateListener = listener;
@@ -519,25 +519,43 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     } else if(stateMachine == RadioState.RX_FRAME) {
       if(rxfifoLen == 128) {
         setRxOverflow();
-      } else {		  
+      } else {
         memory[RAM_RXFIFO + rxfifoWritePos] = data & 0xFF;
         rxfifoWritePos = (rxfifoWritePos + 1) & 127;
         rxfifoLen++;
 
         if(rxread == 0) {
+          rxCrc.setCRC(0);
           rxlen = data & 0xff;
           if (DEBUG) log("RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
           setFIFO(true);
         }
 
+        /* as long as we are not in the FCF (CRC) we count CRC */
+        if (rxread < rxlen - 2) {
+            rxCrc.add(data & 0xff);
+        }
+        
         if(rxread++ == rxlen) {
           // In RX mode, FIFOP goes high, if threshold is higher than frame length....
 
+          // Here we check the CRC of the packet!
+          //System.out.println("Reading from " + ((rxfifoWritePos + 128 - 2) & 127));
+          int crc = memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] << 8;
+          crc += memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
+  
+//          if (crc == rxCrc.getCRC()) {
+//              System.out.println("CRC OK");
+//          } else {
+//              //System.out.println("CRC not OK: recv:" + crc + " calc: " + rxCrc.getCRC());
+//          }
           // Should take a RSSI value as input or use a set-RSSI value...
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | 0x80;
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | (crc == rxCrc.getCRC() ? 0x80 : 0);
+
+          // FIFOP should not be set if CRC is not ok??? - depends on autoCRC!
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
@@ -609,6 +627,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         // Assuming that the status always is sent back???
         //source.byteReceived(status);
         break;
+                
       case WRITE_REGISTER:
         if (pos == 0) {
           source.byteReceived(registers[address] >> 8);
@@ -843,6 +862,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     if(shrPos == 5) {
       // Set SFD high
       setSFD(true);
+      
       if (stateMachine == RadioState.TX_PREAMBLE) {
           setState(RadioState.TX_FRAME);
       } else if (stateMachine == RadioState.TX_ACK_PREAMBLE) {
@@ -863,6 +883,19 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private void txNext() {
     if(txfifoPos <= memory[RAM_TXFIFO]) {
+      if (txfifoPos == 0) {
+          txCrc.setCRC(0);
+          int len = memory[RAM_TXFIFO] & 0xff;
+          for (int i = 0; i < memory[RAM_TXFIFO] - 2; i++) {
+            txCrc.add(memory[RAM_TXFIFO + i] & 0xff);
+          }
+//          System.out.println("Setting TX CRC to: " + txCrc.getCRC());
+          /* this is not correct - will probably not be compliant with the order
+           * that the actual CC2420 sends the CRC...
+           */
+          memory[RAM_TXFIFO + len - 1] = txCrc.getCRC() >> 8;
+          memory[RAM_TXFIFO + len] = txCrc.getCRC() & 0xff;
+      }
       if (txfifoPos > 0x7f) {
         log("Warning: packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
       }

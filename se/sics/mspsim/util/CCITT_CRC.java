@@ -42,6 +42,10 @@ public class CCITT_CRC {
     return crc;
   }
   
+  public void setCRC(int val) {
+    crc = val;  
+  }
+  
   public void clr() {
     crc = 0xffff;
   }
@@ -52,7 +56,7 @@ public class CCITT_CRC {
     newCrc ^= (newCrc & 0xff) >> 4;
     newCrc ^= (newCrc << 12);
     newCrc ^= (newCrc & 0xff) << 5;
-    crc = newCrc;
+    crc = newCrc & 0xffff;
     return crc;
   }
   
