@@ -66,6 +66,7 @@ SKYFIRMWARE = ${FIRMWAREFILE}
 endif
 
 CPUTEST := tests/cputest.firmware
+TIMERTEST := tests/timertest.firmware
 
 SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS}
@@ -122,7 +123,12 @@ test:	cputest
 cputest:	$(CPUTEST)
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.Test $(CPUTEST)
 
+timertest:	$(TIMERTEST)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.Test $(TIMERTEST)
+
 $(CPUTEST):
+	(cd tests && $(MAKE))
+$(TIMERTEST):
 	(cd tests && $(MAKE))
 
 mtest:	compile $(CPUTEST)

@@ -43,7 +43,6 @@ package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
-import se.sics.mspsim.core.EmulationLogger.WarningMode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.MapTable;
@@ -342,7 +341,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //      if (((value & GIE) == GIE) != interruptsEnabled) {
 //        System.out.println("InterruptEnabled changed: " + !interruptsEnabled);
 //      }
+      boolean oldIE = interruptsEnabled;
       interruptsEnabled = ((value & GIE) == GIE);
+
+      if (oldIE == false && interruptsEnabled && servicedInterrupt >= 0) {
+          System.out.println("*** Interrupts enabled while in interrupt : " +
+                  servicedInterrupt + " PC: " + Utils.hex16(reg[PC]));
+          /* must handle pending immediately */
+          handlePendingInterrupts();
+      }
+      
       cpuOff = ((value & CPUOFF) == CPUOFF);
       if (cpuOff != oldCpuOff) {
 // 	System.out.println("LPM CPUOff: " + cpuOff + " cycles: " + cycles);
@@ -1031,6 +1039,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	break;
       case RETI:
 	// Put Top of stack to Status DstRegister (TOS -> SR)
+        servicedInterrupt = -1; /* needed before write to SR!!! */
 	sp = readRegister(SP);
 	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
 	// TOS -> PC

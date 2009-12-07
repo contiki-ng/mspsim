@@ -30,7 +30,8 @@ SOURCES := msp430setup.c
 OBJECTS := $(SOURCES:.c=.o)
 
 #all:	cputest.ihex
-all:	cputest.firmware
+all:	cputest.firmware timertest.firmware
+
 
 %.firmware:	%.co $(OBJECTS)
 	$(CC) -mmcu=$(MCU) -Wl,-Map=$(@:.firmware=.map) $(CFLAGS) -o $@ $^
