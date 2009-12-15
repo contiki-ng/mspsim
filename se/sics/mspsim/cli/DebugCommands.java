@@ -94,9 +94,10 @@ public class DebugCommands implements CommandBundle {
       });
 
       ch.registerCommand("watch",
-          new BasicAsyncCommand("add a write/read watch to a given address or symbol", "<address or symbol> [char | break]") {
+          new BasicAsyncCommand("add a write/read watch to a given address or symbol", "<address or symbol> [length] [char | hex | break]") {
         int mode = 0;
         int address = 0;
+        int length = 1;
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           if (baddr == -1) {
@@ -104,36 +105,55 @@ public class DebugCommands implements CommandBundle {
             return -1;
           }
           if (context.getArgumentCount() > 1) {
-            String modeStr = context.getArgument(1);
-            if ("char".equals(modeStr)) {
-              mode = 1;
-            } else if ("break".equals(modeStr)) {
-              mode = 2;
+              for (int i = 1; i < context.getArgumentCount(); i++) {
+                  String modeStr = context.getArgument(i);
+                  if (Character.isDigit(modeStr.charAt(0))) {
+                      length = Integer.parseInt(modeStr);
+                  } else if ("char".equals(modeStr)) {
+                      mode = 1;
+                  } else if ("break".equals(modeStr)) {
+                      mode = 2;
+                  } else if ("hex".equals(modeStr)) {
+                      mode = 3;
+                  }
+              }
+          }
+          CPUMonitor monitor = new CPUMonitor() {
+              public void cpuAction(int type, int adr, int data) {
+                  if (mode == 0 || mode == 2) {
+                      int pc = cpu.readRegister(0);
+                      String adrStr = getSymOrAddr(context, adr);
+                      String pcStr = getSymOrAddrELF(getELF(), pc);
+                      String op = "op";
+                      if (type == MEMORY_READ) {
+                          op = "Read";
+                      } else if (type == MEMORY_WRITE){
+                          op = "Write";
+                      }
+                      context.out.println("*** " + op + " from " + pcStr +
+                              ": " + adrStr + " = " + data);
+                      if (mode == 2) {
+                          cpu.stop();
+                      }
+                  } else {
+                      if (length > 1) {
+                          for (int i = address; i < address + length; i++) {
+                              context.out.print(Utils.toString(cpu.memory[i], Utils.BYTE, mode == 1 ? Utils.ASCII : Utils.HEX));
+                          }
+                          context.out.println();
+                      } else {
+                          context.out.print(Utils.toString(data, Utils.BYTE, mode == 1 ? Utils.ASCII : Utils.HEX));
+                      }
+                  }
+              }
+          };
+
+          cpu.setBreakPoint(address = baddr, monitor);
+          if (length > 1) {
+              for (int i = 1; i < length; i++) {
+                  cpu.setBreakPoint(address + i, monitor);
             }
           }
-          cpu.setBreakPoint(address = baddr,
-              new CPUMonitor() {
-            public void cpuAction(int type, int adr, int data) {
-              if (mode == 0 || mode == 2) {
-                int pc = cpu.readRegister(0);
-                String adrStr = getSymOrAddr(context, adr);
-                String pcStr = getSymOrAddrELF(getELF(), pc);
-                String op = "op";
-                if (type == MEMORY_READ) {
-                  op = "Read";
-                } else if (type == MEMORY_WRITE){
-                  op = "Write";
-                }
-                context.out.println("*** " + op + " from " + pcStr +
-                    ": " + adrStr + " = " + data);
-                if (mode == 2) {
-                  cpu.stop();
-                }
-              } else {
-                context.out.print((char) data);
-              }
-            }
-          });
           context.out.println("Watch set at $" + Utils.hex16(baddr));
           return 0;
         }
