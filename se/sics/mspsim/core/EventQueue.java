@@ -41,6 +41,8 @@
 
 package se.sics.mspsim.core;
 
+import java.io.PrintStream;
+
 public class EventQueue {
 
   private TimeEvent first;
@@ -156,14 +158,14 @@ public class EventQueue {
     eventCount = 0;
   }
   
-  public void print() {
+  public void print(PrintStream out) {
     TimeEvent t = first;
-    System.out.print("nxt: " + nextTime + " [");
+    out.print("nxt: " + nextTime + " [");
     while(t != null) {
-      System.out.print(t.getShort());
+      out.print(t.getShort());
       t = t.nextEvent;
-      if (t != null) System.out.print(", ");
+      if (t != null) out.print(", ");
     }
-    System.out.println("]");
+    out.println("]");
   }
 } // LLEventQueue

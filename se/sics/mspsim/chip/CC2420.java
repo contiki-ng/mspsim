@@ -288,7 +288,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private MSP430Core cpu;
 
-  private TimeEvent oscillatorEvent = new TimeEvent(0) {
+  private TimeEvent oscillatorEvent = new TimeEvent(0, "CC2420 OSC") {
     public void execute(long t) {
       status |= STATUS_XOSC16M_STABLE;
       if(DEBUG) log("Oscillator Stable Event.");
@@ -301,7 +301,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     }
   };
 
-  private TimeEvent vregEvent = new TimeEvent(0) {
+  private TimeEvent vregEvent = new TimeEvent(0, "CC2420 VREG") {
     public void execute(long t) {
       if(DEBUG) log("VREG Started at: " + t + " cyc: " +
           cpu.cycles + " " + getTime());
@@ -311,25 +311,25 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     }
   };
 
-  private TimeEvent sendEvent = new TimeEvent(0) {
+  private TimeEvent sendEvent = new TimeEvent(0, "CC2420 Send") {
     public void execute(long t) {
       txNext();
     }
   };
 
-  private TimeEvent ackEvent = new TimeEvent(0) {
+  private TimeEvent ackEvent = new TimeEvent(0, "CC2420 Ack") {
       public void execute(long t) {
         ackNext();
       }
     };
   
-  private TimeEvent shrEvent = new TimeEvent(0) {
+  private TimeEvent shrEvent = new TimeEvent(0, "CC2420 SHR") {
     public void execute(long t) {
       shrNext();
     }
   };
 
-  private TimeEvent symbolEvent = new TimeEvent(0) {
+  private TimeEvent symbolEvent = new TimeEvent(0, "CC2420 Symbol") {
     public void execute(long t) {
       switch(stateMachine) {
       case RX_CALIBRATE:

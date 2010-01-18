@@ -212,7 +212,7 @@ public class Timer extends IOUnit {
   private final int ccr0Vector;
   private final MSP430Core core;
 
-  private TimeEvent timerTrigger = new TimeEvent(0) {
+  private TimeEvent timerTrigger = new TimeEvent(0, "TimerTrigger") {
     public void execute(long t) {
 //      System.out.println(getName() + " **** executing update timers at " + t + " cycles=" + core.cycles);
       updateTimers(core.cycles);
@@ -240,12 +240,14 @@ public class Timer extends IOUnit {
     }
     if (srcMap == TIMER_Ax149) {
       name = "Timer A";
+      timerTrigger.name += " A";
       tiv = TAIV;
       timerOverflow = 0x0a;
       ccr0Vector = TACCR0_VECTOR;
       ccr1Vector = TACCR1_VECTOR;
     } else {
       name = "Timer B";
+      timerTrigger.name += " B";
       tiv = TBIV;
       timerOverflow = 0x0e;
       ccr0Vector = TBCCR0_VECTOR;
@@ -793,6 +795,7 @@ public class Timer extends IOUnit {
     }
   }
   
+  private long lastTrigger = 0;
   private void calculateNextEventTime(long cycles) {
     if (mode == STOP) {
       // If nothing is "running" there is no point scheduling...
@@ -812,13 +815,19 @@ public class Timer extends IOUnit {
       time = cycles + 1000;
     }
     
+//    if (time == nextTimerTrigger && timerTrigger.time >= nextTimerTrigger) {
+//        System.out.println(getName() + ": TIMER WRAP!   " + (time - cycles) + " " +
+//                (timerTrigger.time - cycles) + " last: " + (cycles - lastTrigger) + " TAR: " + counter);
+//    }
+    lastTrigger = cycles;
+    
     if (timerTrigger.scheduledIn == null) {
 //      System.out.println(getName() + " new trigger (nothing sch) ..." + time + " re:" +
 //             smallest + " => " + (smallest > 0 ? expCaptureTime[smallest] + " > " + expCompare[smallest]: 
 //             nextTimerTrigger) + " C:"+ cycles);
       core.scheduleCycleEvent(timerTrigger, time);
     } else if (timerTrigger.time > time) {
-//      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
+        //      System.out.println(getName() + " new trigger (new time)..." + time + " C:"+ cycles);
       core.scheduleCycleEvent(timerTrigger, time);
     }
   }

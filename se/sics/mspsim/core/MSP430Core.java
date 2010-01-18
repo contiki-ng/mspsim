@@ -451,17 +451,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return 1000.0 * getTime() / BasicClockModule.MAX_DCO_FRQ;
   }
   
-  
-  /**
-   * getCyclesToNext - returns the number of cycles that it will take before next
-   * execution of an event or zero if CPU is running.
-   * @return number of cycles left before next event executes or 0 if CPU is on.
-   */
-  public long getCyclesToNext() {
-    if (!cpuOff) return 0;
-    return cycles - nextEventCycles;
-  }
-  
   private void executeEvents() {
     if (cycles >= nextVTimeEventCycles) {
       if (vTimeEventQueue.eventCount == 0) {
@@ -554,7 +543,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return time;
   }
 
-  
+  public void printEventQueues(PrintStream out) {
+      out.println("Current cycles: " + cycles + "  virtual time:" + getTime());
+      out.println("Cycle event queue: (next time: " + nextCycleEventCycles + ")");
+      cycleEventQueue.print(out);
+      out.println("Virtual time event queue: (next time: " + nextVTimeEventCycles + ")");
+      vTimeEventQueue.print(out);
+  }
   
   // Should also return active units...
   public IOUnit getIOUnit(String name) {

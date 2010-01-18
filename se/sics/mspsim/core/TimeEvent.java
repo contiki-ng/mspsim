@@ -79,7 +79,7 @@ public abstract class TimeEvent {
   public abstract void execute(long t);
 
   public String getShort() {
-    return "" + time + (name != null ? ": " + name : "");
+    return "" + time + ": " + (name != null ? name : this.getClass().getName());
   }
 
 } // TimeEvent

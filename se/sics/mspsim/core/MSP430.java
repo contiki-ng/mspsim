@@ -231,8 +231,9 @@ public class MSP430 extends MSP430Core {
       if(maxCycles > nextEventCycles) {
         /* back this time again... */
         lastMicrosDelta -= jumpMicros;
+        printEventQueues(System.out);
         throw new IllegalArgumentException("Jumping to a time that is further than possible in LPM maxCycles:" + 
-            maxCycles + " cycles: " + cycles);
+            maxCycles + " cycles: " + cycles + " nextEventCycles: " + nextEventCycles);
       }
     } else if (maxCycles > cycles) {
       /* back this time again... */
