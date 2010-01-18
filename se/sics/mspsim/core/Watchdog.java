@@ -75,7 +75,7 @@ public class Watchdog extends IOUnit {
   private boolean sourceACLK = false;
 
   
-  private TimeEvent wdtTrigger = new TimeEvent(0) {
+  private TimeEvent wdtTrigger = new TimeEvent(0, "Watchdog") {
     public void execute(long t) {
 //      System.out.println(getName() + " **** executing update timers at " + t + " cycles=" + core.cycles);
       triggerWDT(t);

@@ -43,6 +43,8 @@ package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
+import com.sun.xml.internal.fastinfoset.tools.PrintTable;
+
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.MapTable;
@@ -345,8 +347,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
       interruptsEnabled = ((value & GIE) == GIE);
 
       if (oldIE == false && interruptsEnabled && servicedInterrupt >= 0) {
-          System.out.println("*** Interrupts enabled while in interrupt : " +
-                  servicedInterrupt + " PC: " + Utils.hex16(reg[PC]));
+//          System.out.println("*** Interrupts enabled while in interrupt : " +
+//                  servicedInterrupt + " PC: " + Utils.hex16(reg[PC]));
           /* must handle pending immediately */
           handlePendingInterrupts();
       }
