@@ -42,9 +42,6 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
-
-import com.sun.xml.internal.fastinfoset.tools.PrintTable;
-
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapEntry;
 import se.sics.mspsim.util.MapTable;
