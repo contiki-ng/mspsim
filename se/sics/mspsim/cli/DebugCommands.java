@@ -560,6 +560,14 @@ public class DebugCommands implements CommandBundle {
               return 0;
             }
           });        
+
+        ch.registerCommand("events", new BasicCommand("print event queues", "") {
+            @Override
+            public int executeCommand(CommandContext context) {
+                cpu.printEventQueues(context.out);
+              return 0;
+            }
+          });        
       }
     }
   }
