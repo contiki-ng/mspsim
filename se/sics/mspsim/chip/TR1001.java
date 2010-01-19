@@ -47,7 +47,7 @@ import se.sics.mspsim.core.USARTListener;
 /**
  *
  */
-public class TR1001 extends Chip implements RFListener {
+public class TR1001 extends Chip implements RFListener, RFSource {
 
   public static final int MODE_TXRX_OFF = 0x00;
   public static final int MODE_RX_ON = 0x01;
