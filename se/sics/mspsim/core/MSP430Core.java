@@ -93,14 +93,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // From the possible interrupt sources - to be able to indicate is serviced.
   private InterruptHandler interruptSource[] = new IOUnit[16];
 
-  private int interruptMax = -1;
+  protected int interruptMax = -1;
   // Op/instruction represents the last executed OP / instruction
   private int op;
   public int instruction;
   int servicedInterrupt = -1;
   InterruptHandler servicedInterruptUnit = null;
 
-  private boolean interruptsEnabled = false;
+  protected boolean interruptsEnabled = false;
   protected boolean cpuOff = false;
 
   // Not private since they are needed (for fast access...)
@@ -834,7 +834,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // If CPU is not active we must run the events here!!!
       // this can trigger interrupts that wake the CPU
       // -------------------------------------------------------------------
-      // Event processing
+      // Event processing - note: This can trigger IRQs!
       // -------------------------------------------------------------------
       while (cycles >= nextEventCycles) {
         executeEvents();

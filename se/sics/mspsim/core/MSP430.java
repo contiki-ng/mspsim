@@ -277,7 +277,7 @@ public class MSP430 extends MSP430Core {
         }
     }
 
-    if (cpuOff) {
+    if (cpuOff && !(interruptsEnabled && servicedInterrupt == -1 && interruptMax >= 0)) {
       lastReturnedMicros = (1000000 * (nextEventCycles - cycles)) / dcoFrq;
       if (lastReturnedMicros > 10000) {
           System.out.println("More than 10 ms: " + lastReturnedMicros / 1000000.0 + " s");
