@@ -154,7 +154,7 @@ public class DebugCommands implements CommandBundle {
                   cpu.setBreakPoint(address + i, monitor);
             }
           }
-          context.out.println("Watch set at $" + Utils.hex16(baddr));
+          context.err.println("Watch set at $" + Utils.hex16(baddr));
           return 0;
         }
 
@@ -365,6 +365,11 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_entries> [type] [hex|char]") {
           public int executeCommand(final CommandContext context) {
             int start = context.getArgumentAsAddress(0);
+            if (start < 0) {
+              context.err.println("Illegal start address: "
+                                  + context.getArgument(0));
+              return 1;
+            }
             int count = context.getArgumentAsInt(1);
             int mode = Utils.DEC;
             int type = Utils.UBYTE;
