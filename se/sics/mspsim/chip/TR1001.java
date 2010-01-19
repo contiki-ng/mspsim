@@ -40,23 +40,46 @@
 
 package se.sics.mspsim.chip;
 import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 
 /**
  *
  */
-public class TR1001 extends Chip implements USARTListener {
+public class TR1001 extends Chip implements RFListener {
 
   public static final int MODE_TXRX_OFF = 0x00;
   public static final int MODE_RX_ON = 0x01;
   public static final int MODE_TXRX_ON = 0x02;
   public static final int MODE_MAX = MODE_TXRX_ON;
-
+  private static final String[] MODE_NAMES = new String[] {
+    "off", "listen", "transmit"
+  };
   private final USART usart;
+  private RFListener rfListener;
 
-  public TR1001(USART usart) {
+  public TR1001(MSP430Core cpu, USART usart) {
     this.usart = usart;
+    setModeNames(MODE_NAMES);
+    setMode(MODE_TXRX_OFF);
+    cpu.addChip(this);
+    usart.setUSARTListener(new USARTListener() {
+
+      public void dataReceived(USART source, int data) {
+        RFListener listener = rfListener;
+        if (getMode() != MODE_TXRX_ON) {
+          // Radio is turned off during transmission
+          if (DEBUG) {
+            log(" ----- TR1001 OFF DURING TRANSMISSION -----");
+          }
+        } else if (listener != null) {
+          listener.receivedByte((byte) (data & 0xff));
+        }
+      }
+
+      public void stateChanged(int state) {
+      }});
   }
 
   @Override
@@ -73,10 +96,29 @@ public class TR1001 extends Chip implements USARTListener {
     return MODE_MAX;
   }
 
-  public void dataReceived(USART source, int data) {
+  public void setRFListener(RFListener rfListener) {
+    this.rfListener = rfListener;
   }
 
-  public void stateChanged(int state) {
+  /* Receive a byte from the radio medium
+   * @see se.sics.mspsim.chip.RFListener#receivedByte(byte)
+   */
+  public void receivedByte(byte data) {
+    if (getMode() == MODE_TXRX_OFF) {
+      // Radio turned off
+      if (DEBUG) {
+        log(" ----- TR1001 OFF DURING RECEPTION -----");
+      }
+
+    } else if (usart.isReceiveFlagCleared()) {
+      /* logger.info("----- TR1001 RECEIVED BYTE -----"); */
+      usart.byteReceived(data);
+
+    } else {
+      if (DEBUG) {
+        log(" ----- TR1001 RECEIVED BYTE TOO EARLY -----");
+      }
+    }
   }
 
 }

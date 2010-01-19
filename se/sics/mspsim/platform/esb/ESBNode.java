@@ -147,8 +147,7 @@ public class ESBNode extends GenericNode implements PortListener {
 
     IOUnit usart0 = cpu.getIOUnit("USART 0");
     if (usart0 instanceof USART) {
-      radio = new TR1001((USART)usart0);
-      ((USART) usart0).setUSARTListener(radio);
+      radio = new TR1001(cpu, (USART) usart0);
     }
   }
 
