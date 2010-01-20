@@ -212,6 +212,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   // FCF Low
   public static final int DESTINATION_ADDRESS_MODE = 0x30;
   public static final int SOURCE_ADDRESS_MODE = 0x3;
+
+  // Position of SEQ-NO in ACK packet...
+  public static final int ACK_SEQPOS = 3;
   
   private RadioState stateMachine = RadioState.VREG_OFF;
 
@@ -252,6 +255,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   /* if autoack is configured or if */
   private boolean autoAck = false;
   private boolean shouldAck = false;
+  private boolean addressDecode = false;
+  private boolean autoCRC = false;
   
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -361,7 +366,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private StateListener stateListener = null;
   private int ackPos;
   /* type = 2 (ACK), third byte needs to be sequence number... */
-  private int[] ackBuf = {0x02, 0x00, 0x00, 0x00, 0x00};
+  private int[] ackBuf = {0x05, 0x02, 0x00, 0x00, 0x00, 0x00};
   private CCITT_CRC rxCrc = new CCITT_CRC();
   private CCITT_CRC txCrc = new CCITT_CRC();
 
@@ -564,6 +569,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
           /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
           if ((autoAck && checkAutoack()) || shouldAck) {
+              ackBuf[ACK_SEQPOS] = memory[RAM_RXFIFO + lastPacketStart + 2]; /* find the seq no!!! */
               setState(RadioState.TX_ACK_CALIBRATE);
           } else {
               setState(RadioState.RX_WAIT);
@@ -584,7 +590,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
               return false;
           }
       }
-      return false;
+      return true;
   }
   
   public void dataReceived(USART source, int data) {
@@ -633,20 +639,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           source.byteReceived(registers[address] >> 8);
           // set the high bits
           registers[address] = (registers[address] & 0xff) | (data << 8);
-          pos = 1; 
+          pos = 1;
         } else {
           source.byteReceived(registers[address] & 0xff);
           // set the low bits
           registers[address] = (registers[address] & 0xff00) | data;
-          if (address == REG_IOCFG0) {
-            setFIFOP(false);
-          }
 
           if (DEBUG) {
             log("wrote to " + Utils.hex8(address) + " = "
                 + registers[address]);
+          }
+          data = registers[address];
             switch(address) {
             case REG_IOCFG0:
+                setFIFOP(false);
             	log("IOCFG0: " + registers[address]);
             	break;
             case REG_IOCFG1:
@@ -657,8 +663,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 //            	  setCCA(false);
             	updateCCA();
             	break;
+            case REG_MDMCTRL0:
+                addressDecode = (data & ADR_DECODE) != 0;
+                autoCRC = (data & ADR_AUTOCRC) != 0;
+                autoAck = (data & AUTOACK) != 0;
+                break;
             }
-          }
           /* register written - go back to wating... */
           state = SpiState.WAITING;
         }
