@@ -1,6 +1,6 @@
 package se.sics.mspsim.cli;
 
-public abstract class Command implements Cloneable {
+public abstract class Command {
 
   /**
    * Returns a text describing this command. First line is a short description that may be followed by
@@ -22,7 +22,8 @@ public abstract class Command implements Cloneable {
 
   public abstract int executeCommand(CommandContext context);
 
-  public Object clone() throws CloneNotSupportedException {
-    return super.clone();
+  /* default behavior is that it returns *this* instance (which might be bad in some cases) */
+  public Object getInstance() {
+      return this;
   }
 }

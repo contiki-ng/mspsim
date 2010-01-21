@@ -44,9 +44,19 @@ package se.sics.mspsim.cli;
  * @author joakim
  *
  */
-public abstract class BasicAsyncCommand extends BasicCommand implements AsyncCommand {
+public abstract class BasicAsyncCommand extends BasicCommand implements AsyncCommand, Cloneable {
 
   public BasicAsyncCommand(String cmdHelp, String argHelp) {
     super(cmdHelp, argHelp);
+  }
+  
+  public Command getInstance() {
+      try {
+          return (Command) this.clone();
+      } catch (CloneNotSupportedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+      }
+      return null;
   }
 }

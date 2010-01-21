@@ -126,12 +126,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
   private Command getCommand(String cmd)  {
     Command command = commands.get(cmd);
     if (command != null) {
-      try {
-        return (Command) command.clone();
-      } catch (CloneNotSupportedException e) {
-        e.printStackTrace(err);
-        return null;
-      }
+        return (Command) command.getInstance();
     }
     File scriptFile = new File(scriptDirectory, cmd);
     if (scriptFile.isFile() && scriptFile.canRead()) {

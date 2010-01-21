@@ -389,7 +389,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     rxfifoReadPos = 0;
     rxfifoWritePos = 0;
     overflow = false;
+    reset();
     cpu.addChip(this);
+  }
+  
+  private void reset() {
+      setReg(REG_MDMCTRL0, 0x0ae2);
   }
   
   private boolean setState(RadioState state) {
@@ -405,6 +410,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       flushRX();
       flushTX();
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
+      reset();
       setMode(MODE_POWER_OFF);
       updateCCA();
       break;
@@ -413,6 +419,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       rxfifoReadPos = 0;
       rxfifoWritePos = 0;
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
+      reset();
       setMode(MODE_POWER_OFF);
       updateCCA();
       break;
@@ -579,6 +586,29 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     }
   }
 
+  private void setReg(int address, int data) {
+      registers[address] = data;
+      switch(address) {
+      case REG_IOCFG0:
+          setFIFOP(false);
+          log("IOCFG0: " + registers[address]);
+          break;
+      case REG_IOCFG1:
+          log("IOCFG1: SFDMUX "
+                          + ((registers[address] & SFDMUX) >> SFDMUX)
+                          + " CCAMUX: " + (registers[address] & CCAMUX));
+//        if( (registers[address] & CCAMUX) == CCA_CCA)
+//          setCCA(false);
+          updateCCA();
+          break;
+      case REG_MDMCTRL0:
+          addressDecode = (data & ADR_DECODE) != 0;
+          autoCRC = (data & ADR_AUTOCRC) != 0;
+          autoAck = (data & AUTOACK) != 0;
+          break;
+      }
+  }
+  
   private boolean checkAutoack() {
       boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;
       if (!ackReq) return false;
@@ -650,25 +680,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                 + registers[address]);
           }
           data = registers[address];
-            switch(address) {
-            case REG_IOCFG0:
-                setFIFOP(false);
-            	log("IOCFG0: " + registers[address]);
-            	break;
-            case REG_IOCFG1:
-            	log("IOCFG1: SFDMUX "
-            			+ ((registers[address] & SFDMUX) >> SFDMUX)
-            			+ " CCAMUX: " + (registers[address] & CCAMUX));
-//            	if( (registers[address] & CCAMUX) == CCA_CCA)
-//            	  setCCA(false);
-            	updateCCA();
-            	break;
-            case REG_MDMCTRL0:
-                addressDecode = (data & ADR_DECODE) != 0;
-                autoCRC = (data & ADR_AUTOCRC) != 0;
-                autoAck = (data & AUTOACK) != 0;
-                break;
-            }
+          setReg(address, data);
           /* register written - go back to wating... */
           state = SpiState.WAITING;
         }
@@ -1212,6 +1224,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     " FIFOP: " + fifoP + " FIFO: " + currentFIFO + " SFD: " + currentSFD + 
     "\n Radio State: " + stateMachine + " rxFifoLen: " + rxfifoLen + " rxFifoWritePos: " +
       rxfifoWritePos + " rxFifoReadPos: " + rxfifoReadPos +
+    "\n AutoACK: " + autoAck + " AddrDecode: " + addressDecode + " AutoCRC: " + autoCRC +
     "\n SPI State: " + state +
     "\n Channel: " + activeChannel +
     "\n";
