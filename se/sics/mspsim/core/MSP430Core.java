@@ -604,7 +604,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (triggerIR) {
       interruptSource[interrupt] = source;
 
-      if (debugInterrupts ) {
+      if (debugInterrupts) {
         if (source != null) {
           System.out.println("### Interrupt flagged ON by " + source.getName() + " prio: " + interrupt);
         } else {
