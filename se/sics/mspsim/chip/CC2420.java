@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, 2008, 2009 Swedish Institute of Computer Science.
+ * Copyright (c) 2007, 2008, 2009, 2010 Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -425,7 +425,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       break;
 
     case RX_CALIBRATE:
-      setSymbolEvent(12);
+      /* should be 12 according to specification */
+      setSymbolEvent(8);
       setMode(MODE_RX_ON);
       break;
 
@@ -557,11 +558,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           int crc = memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] << 8;
           crc += memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
   
-//          if (crc == rxCrc.getCRC()) {
-//              System.out.println("CRC OK");
-//          } else {
-//              //System.out.println("CRC not OK: recv:" + crc + " calc: " + rxCrc.getCRC());
-//          }
+          if (crc == rxCrc.getCRC()) {
+              System.out.println("CRC OK");
+          } else {
+              System.out.println("CRC not OK: recv:" + crc + " calc: " + rxCrc.getCRC());
+          }
           // Should take a RSSI value as input or use a set-RSSI value...
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
@@ -575,6 +576,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
               lastPacketStart);
 
           /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
+          //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
           if ((autoAck && checkAutoack()) || shouldAck) {
               ackBuf[ACK_SEQPOS] = memory[RAM_RXFIFO + lastPacketStart + 2]; /* find the seq no!!! */
               setState(RadioState.TX_ACK_CALIBRATE);
@@ -614,9 +616,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       if (!ackReq) return false;
       /* here we need to check that this address is correct compared to the stored address */
       int addrSize = 8; /* this is hard coded to a long address - can be short!!! */
-      int addrPos = lastPacketStart + 2 + 1; // where starts the destination address of the packet!!!??
+      int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
       for (int i = 0; i < addrSize; i++) {
-          if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + (addrPos + i) & 127]) {
+          /*          System.out.println("checkAutoack i " + i + " mem " +
+                      memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);*/
+          if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
               return false;
           }
       }
@@ -884,7 +888,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     if(shrPos == 5) {
       // Set SFD high
       setSFD(true);
-      
+
       if (stateMachine == RadioState.TX_PREAMBLE) {
           setState(RadioState.TX_FRAME);
       } else if (stateMachine == RadioState.TX_ACK_PREAMBLE) {
@@ -943,11 +947,25 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       txfifoFlush = true;
     }
   }
-  
+
   private void ackNext() {
       if (ackPos < ackBuf.length) {
+          if(ackPos == 0) {
+              txCrc.setCRC(0);
+              int len = 3;
+              for (int i = 0; i < len; i++) {
+                  txCrc.add(ackBuf[i] & 0xff);
+              }
+              //          System.out.println("Setting TX CRC to: " + txCrc.getCRC());
+              /* this is not correct - will probably not be compliant with the order
+               * that the actual CC2420 sends the CRC...
+               */
+              ackBuf[4] = txCrc.getCRC() >> 8;
+              ackBuf[5] = txCrc.getCRC() & 0xff;
+          }
           if (listener != null) {
               if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
+
               listener.receivedByte((byte)(ackBuf[ackPos] & 0xFF));
           }
           ackPos++;
@@ -1234,4 +1252,3 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
   
 } // CC2420
-
