@@ -166,6 +166,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public static final int RAM_PANID	= 0x168;
   public static final int RAM_SHORTADDR	= 0x16A;
 
+  public static final int SHORT_ADDRESS = 2;
+  public static final int LONG_ADDRESS = 3;
+
+  
   // The Operation modes of the CC2420
   public static final int MODE_TXRX_OFF = 0x00;
   public static final int MODE_RX_ON = 0x01;
@@ -611,17 +615,35 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       }
   }
   
+  /* TODO: refactor into two different methods on for ADDR_DECODE / ADDR_RECOG one for autoack. */
+  /* Also add PAN_ID checks */
   private boolean checkAutoack() {
+      /* ack request or not ? */
       boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;
       if (!ackReq) return false;
-      /* here we need to check that this address is correct compared to the stored address */
-      int addrSize = 8; /* this is hard coded to a long address - can be short!!! */
-      int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
-      for (int i = 0; i < addrSize; i++) {
-          /*          System.out.println("checkAutoack i " + i + " mem " +
+
+      /* check addressing mode */
+      int destAddrMode = (memory[RAM_RXFIFO + lastPacketStart + 1] >> 2) & 3;
+      if (destAddrMode == LONG_ADDRESS) {
+          /* here we need to check that this address is correct compared to the stored address */
+          int addrSize = 8; /* this is hard coded to a long address - can be short!!! */
+          int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
+          for (int i = 0; i < addrSize; i++) {
+              /*          System.out.println("checkAutoack i " + i + " mem " +
                       memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);*/
-          if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
-              return false;
+              if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
+                  return false;
+              }
+          }
+      } else {
+          /* should check short address */
+          int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
+          for (int i = 0; i < 2; i++) {
+              /*          System.out.println("checkAutoack i " + i + " mem " +
+                      memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);*/
+              if (memory[RAM_SHORTADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
+                  return false;
+              }
           }
       }
       return true;
