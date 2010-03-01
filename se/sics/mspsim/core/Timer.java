@@ -791,6 +791,21 @@ public class Timer extends IOUnit {
   }
   
   void resetCounter(long cycles) {
+      double divider = 1.0;
+      if (clockSource == SRC_ACLK) {
+          // Should later be divided with DCO clock?
+          divider = 1.0 * core.smclkFrq / core.aclkFrq;
+      }
+      divider = divider * inputDivider;
+        
+      // These calculations assume that we have a big counter that counts from
+      // last reset and upwards (without any roundoff errors).
+      // tick - represent the counted value since last "reset" of some kind
+      // counterAcc - represent the value of the counter at the last reset.
+      long cycctr = cycles - counterStart;
+      double tick = cycctr / divider;
+      counterPassed = (int) (divider * (tick - (long) (tick)));
+      
     counterStart = cycles - counterPassed;
     // set counterACC to the last returned value (which is the same
     // as bigCounter except that it is "moduloed" to a smaller value
