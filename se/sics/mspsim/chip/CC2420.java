@@ -547,11 +547,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           if (DEBUG) log("RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
           setFIFO(true);
-        }
-
-        /* as long as we are not in the FCF (CRC) we count CRC */
-        if (rxread < rxlen - 2) {
-            rxCrc.add(data & 0xff);
+        } else if (rxread < rxlen - 2) {
+          /* As long as we are not in the length or FCF (CRC) we count CRC */
+          rxCrc.add(data & 0xff);
         }
         
         if(rxread++ == rxlen) {
@@ -562,10 +560,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           int crc = memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] << 8;
           crc += memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
   
-          if (crc == rxCrc.getCRC()) {
-              System.out.println("CRC OK");
-          } else {
-              System.out.println("CRC not OK: recv:" + crc + " calc: " + rxCrc.getCRC());
+          if (DEBUG && crc != rxCrc.getCRC()) {
+              log("CRC not OK: recv:" + crc + " calc: " + rxCrc.getCRC());
           }
           // Should take a RSSI value as input or use a set-RSSI value...
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
@@ -934,7 +930,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       if (txfifoPos == 0) {
           txCrc.setCRC(0);
           int len = memory[RAM_TXFIFO] & 0xff;
-          for (int i = 0; i < memory[RAM_TXFIFO] - 2; i++) {
+          for (int i = 1; i < len - 2; i++) {
             txCrc.add(memory[RAM_TXFIFO + i] & 0xff);
           }
 //          System.out.println("Setting TX CRC to: " + txCrc.getCRC());
@@ -975,7 +971,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           if(ackPos == 0) {
               txCrc.setCRC(0);
               int len = 3;
-              for (int i = 0; i < len; i++) {
+              for (int i = 1; i < len; i++) {
                   txCrc.add(ackBuf[i] & 0xff);
               }
               //          System.out.println("Setting TX CRC to: " + txCrc.getCRC());
