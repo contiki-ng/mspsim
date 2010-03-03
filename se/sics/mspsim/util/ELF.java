@@ -400,7 +400,7 @@ public class ELF {
           if (file == null) {
             file = currentFile;
           }
-	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, 0, symbolName, file,
+	  map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, size, symbolName, file,
 	      bind == ELFSection.SYMBIND_LOCAL));
 	} else {
 	  if (DEBUG) {

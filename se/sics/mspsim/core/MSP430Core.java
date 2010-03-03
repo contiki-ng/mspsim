@@ -836,10 +836,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // -------------------------------------------------------------------
       // Event processing - note: This can trigger IRQs!
       // -------------------------------------------------------------------
+      /* This can flag an interrupt! */
       while (cycles >= nextEventCycles) {
         executeEvents();
       }
-      
+
+      if (interruptsEnabled && interruptMax > 0) {
+          /* can not allow for jumping to nextEventCycles since that would jump too far */
+          return false;
+      }
+
       if (maxCycles >= 0 && maxCycles < nextEventCycles) {
         // Should it just freeze or take on extra cycle step if cycles > max?
         cycles = cycles < maxCycles ? maxCycles : cycles;

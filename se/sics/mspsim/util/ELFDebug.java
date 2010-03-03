@@ -40,13 +40,20 @@
 package se.sics.mspsim.util;
 import java.util.ArrayList;
 
+import se.sics.mspsim.debug.StabFile;
+
 public class ELFDebug {
 
   private Stab[] stabs;
 
   public static final int N_FUN = 0x24;
+  public static final int N_STSYM = 0x26; // Data segment file-scope variable; 
+  public static final int N_LCSYM = 0x28; // BSS segment file-scope variable;
+  public static final int N_REG_PARAM= 0x40;
+  public static final int N_VAR_PARAM= 0xa0;
   public static final int N_SLINE = 0x44;
   public static final int N_SO = 0x64; // filename and path
+  public static final int N_LSYM = 0x80; // stack var, typdef or struct
 
   public static final boolean DEBUG = false;
 
@@ -77,13 +84,37 @@ public class ELFDebug {
 
       if (DEBUG) {
 	System.out.println("Stab: " + Utils.hex8(type) +
-			   " " + stabData + " o:" + other
+			   " '" + stabData + "' o:" + other
 			   + " d:" + desc + " v:" + value);
       }
       addr += dbgStab.entSize;
     }
+    getStabFiles();
   }
 
+  public StabFile[] getStabFiles() {
+      ArrayList files = new ArrayList();
+      StabFile currentFile = null;
+      for (int i = 0, n = stabs.length; i < n; i++) {
+          Stab stab = stabs[i];
+          switch(stab.type) {
+          case N_SO:
+              if (currentFile == null || currentFile.startAddress != stab.value) {
+                  /* end of file ? */
+                  currentFile = new StabFile();
+                  files.add(currentFile);
+                  currentFile.startAddress = stab.value;
+                  currentFile.stabIndex = i;
+                  currentFile.handleStabs(stabs);
+                  System.out.println("Found: " + currentFile);
+              }
+              break;
+          }
+      }
+      return (StabFile[]) files.toArray(new StabFile[0]);
+  }
+  
+  
   /* Just pick up file + some other things */
   public DebugInfo getDebugInfo(int address) {
     String currentPath = null;
@@ -253,13 +284,13 @@ public class ELFDebug {
     return sourceFilesArray;
   }
 
-  private static class Stab {
+  public static class Stab {
 
-    String data;
-    int type;
-    int other;
-    int desc;
-    int value;
+    public String data;
+    public int type;
+    public int other;
+    public int desc;
+    public int value;
 
     Stab(String data, int type, int other, int desc, int value) {
       this.data = data;

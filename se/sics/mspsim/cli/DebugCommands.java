@@ -229,7 +229,8 @@ public class DebugCommands implements CommandBundle {
             int address = mapEntry.getAddress();
             context.out.println(" " + mapEntry.getName() + " at $" +
                 Utils.hex16(address) + " (" + Utils.hex8(cpu.memory[address]) +
-                  " " + Utils.hex8(cpu.memory[address + 1]) + ")");
+                  " " + Utils.hex8(cpu.memory[address + 1]) + ") " + mapEntry.getType() +
+                  " in file " + mapEntry.getFile());
           }
           return 0;
         }
