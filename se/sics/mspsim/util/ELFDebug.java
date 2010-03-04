@@ -89,7 +89,7 @@ public class ELFDebug {
       }
       addr += dbgStab.entSize;
     }
-    getStabFiles();
+    // getStabFiles();
   }
 
   public StabFile[] getStabFiles() {
@@ -298,6 +298,11 @@ public class ELFDebug {
       this.other = other;
       this.desc = desc;
       this.value = value;
+    }
+    
+   public String toString() {
+        return "" + Integer.toHexString(type) + " " + data +
+            "   [" + other + "," + desc + "," + value + "]";
     }
   }
 

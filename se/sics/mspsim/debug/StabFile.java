@@ -1,6 +1,7 @@
 package se.sics.mspsim.debug;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import se.sics.mspsim.util.ELFDebug;
@@ -17,12 +18,14 @@ public class StabFile {
     public int stabIndex;
     
     private ArrayList<StabFunction> functions = new ArrayList<StabFunction>();
+    private HashMap<String, StabType> types = new HashMap<String,StabType>();
     private StabFunction lastFunction;
     
     public void handleStabs(Stab[] stabs) {
         int i = stabIndex;
         while(i < stabs.length) {
             ELFDebug.Stab stab = stabs[i];
+            System.out.println("Handling stab: " + stab);
             switch(stab.type) {
             case ELFDebug.N_SO:
                 if (stab.value != startAddress) {
@@ -40,12 +43,23 @@ public class StabFile {
             case ELFDebug.N_FUN:
                 i += addFunction(i, stabs);
                 break;
+            case ELFDebug.N_LSYM:
+                i += addType(i, stabs);
+                break;
             default:
                 i++;
             }
         }
     }
     
+    private int addType(int i, Stab[] stabs) {
+        Stab stab = stabs[i];
+        StabType type = new StabType(stab, types);
+        types.put(type.name, type);
+        types.put(type.internalName, type);
+        return 1;
+    }
+
     private int addFunction(int i, Stab[] stabs) {
         int index = i;
         Stab stab = stabs[index];
