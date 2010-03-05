@@ -41,6 +41,8 @@
 
 package se.sics.mspsim.core;
 
+import org.jfree.chart.needle.ShipNeedle;
+
 public class USART extends IOUnit implements SFRModule {
 
   public static final boolean DEBUG = false; //true;
@@ -160,7 +162,7 @@ public class USART extends IOUnit implements SFRModule {
     clrBitIFG(urxifg);
     setBitIFG(utxifg); /* empty at start! */
     utctl |= UTCTL_TXEMPTY;
-    cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+    // cpu.scheduleCycleEvent(txTrigger, nextTXReady);
     txEnabled = false;
     rxEnabled = false;
   }
@@ -352,7 +354,7 @@ public class USART extends IOUnit implements SFRModule {
   // Interrupt was serviced...
   public void interruptServiced(int vector) {
     /* NOTE: this is handled by SFR : clear IFG bit if interrupt is serviced */
-//    System.out.println("SFR irq");
+//      System.out.println(getName() + " SFR irq " + vector + " " + txShiftReg + " " + getIFG());
   }
 
   private void handleTransmit(long cycles) {

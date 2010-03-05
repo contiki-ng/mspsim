@@ -115,9 +115,8 @@ public class SFR extends IOUnit {
     case ME1:
     case ME2:
       updateME(address - ME1, value);
-    default:
-      memory[address] = value;
     }
+    memory[address] = value;
   }
 
   // read
@@ -247,7 +246,7 @@ public class SFR extends IOUnit {
     /* clear the bits that correspond to this vector! */
     int pos = irqTriggeredPos[vector];
     int bit = pos & 7;
-    if (pos > 8) {
+    if (pos < 8) {
       ifg1 &= ~(1 << bit);
     } else {
       ifg2 &= ~(1 << bit);
