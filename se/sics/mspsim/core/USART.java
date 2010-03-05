@@ -157,7 +157,8 @@ public class USART extends IOUnit implements SFRModule {
     nextTXReady = cpu.cycles + 100;
     txShiftReg = nextTXByte = -1;
     transmitting = false;
-    clrBitIFG(utxifg | urxifg);
+    clrBitIFG(urxifg);
+    setBitIFG(utxifg); /* empty at start! */
     utctl |= UTCTL_TXEMPTY;
     cpu.scheduleCycleEvent(txTrigger, nextTXReady);
     txEnabled = false;
@@ -360,21 +361,23 @@ public class USART extends IOUnit implements SFRModule {
         }
         /* nothing more to transmit after this - stop transmission */
         if (nextTXByte == -1) {
+            /* TXEMPTY means both TXBUF and shiftreg empty */
             utctl |= UTCTL_TXEMPTY;
             transmitting = false;
             txShiftReg = -1;
         }
     }
+
     /* any more chars to transmit? */
     if (nextTXByte != -1) {
         txShiftReg = nextTXByte;
         nextTXByte = -1;
+        /* txbuf always empty after this */
+        setBitIFG(utxifg);
         transmitting = true;
         nextTXReady = cycles + tickPerByte + 1;
-        cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+        cpu.scheduleCycleEvent(txTrigger, nextTXReady);        
     }
-    /* txbuf always empty after this?! */
-    setBitIFG(utxifg);
 
     if (DEBUG) {
       if (isIEBitsSet(utxifg)) {
