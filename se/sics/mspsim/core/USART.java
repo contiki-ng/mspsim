@@ -176,10 +176,16 @@ public class USART extends IOUnit implements SFRModule {
   }
   
   private void setBitIFG(int bits) {
+//    if ((bits & utxifg) > 0) {
+//        System.out.println(getName() + " Set utxifg");
+//    }
     sfr.setBitIFG(uartID, bits);
   }
 
   private void clrBitIFG(int bits) {
+//      if ((bits & utxifg) > 0) {
+//          System.out.println(getName() + " Clear utxifg");
+//      }
     sfr.clrBitIFG(uartID, bits);
   }
 

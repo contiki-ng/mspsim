@@ -224,7 +224,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
     passIO = 6;
     
-    // Basic clock syst.
+    // SFR and Basic clock system.
+    ioUnits[passIO++] = sfr;
     ioUnits[passIO++] = bcs;
 
     // Usarts
@@ -239,7 +240,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     ADC12 adc12 = new ADC12(this);
     ioUnits[passIO++] = adc12;
 
-    ioUnits[passIO++] = sfr;
     
     for (int i = 0, n = 16; i < n; i++) {
       memOut[0x80 + i] = adc12;
