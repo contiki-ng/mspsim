@@ -213,6 +213,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public static final int SECURITY_ENABLED = (1<<3);
   public static final int ACK_REQUEST = (1<<5);
   public static final int INTRA_PAN = (1<<6);
+
+  public static final int TYPE_BEACON_FRAME = 0x00;
+  public static final int TYPE_DATA_FRAME = 0x01;
+  public static final int TYPE_ACK_FRAME = 0x02;
+  
   // FCF Low
   public static final int DESTINATION_ADDRESS_MODE = 0x30;
   public static final int SOURCE_ADDRESS_MODE = 0x3;
@@ -373,6 +378,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int[] ackBuf = {0x05, 0x02, 0x00, 0x00, 0x00, 0x00};
   private CCITT_CRC rxCrc = new CCITT_CRC();
   private CCITT_CRC txCrc = new CCITT_CRC();
+private int rxPacketStart;
 
   public void setStateListener(StateListener listener) {
     stateListener = listener;
@@ -506,6 +512,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     return true;
   }
 
+  /* variables for the address recognigion */
+  int destinationAddressMode = 0;
+  boolean decodeAddress = false;
   /* Receive a byte from the radio medium
    * @see se.sics.mspsim.chip.RFListener#receivedByte(byte)
    */
@@ -544,14 +553,74 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         if(rxread == 0) {
           rxCrc.setCRC(0);
           rxlen = data & 0xff;
+          rxPacketStart = rxfifoWritePos;
+          decodeAddress = false;
           if (DEBUG) log("RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
           setFIFO(true);
         } else if (rxread < rxlen - 2) {
           /* As long as we are not in the length or FCF (CRC) we count CRC */
           rxCrc.add(data & 0xff);
+          
+          if (rxread == 2) {
+              if (TYPE_DATA_FRAME == (memory[RAM_RXFIFO + rxPacketStart] & FRAME_TYPE)) {
+                  decodeAddress = addressDecode & (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
+                  destinationAddressMode = (memory[RAM_RXFIFO + (rxPacketStart + 1)] >> 2) & 3;
+              }
+          }
+          if (decodeAddress) {
+              boolean flushPacket = false;
+              /* here we decode the address !!! */
+              if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
+                  /* here we need to check that this address is correct compared to the stored address */
+                  int addrPos = rxPacketStart + 5; // where starts the destination address of the packet!!!??
+                  for (int i = 0; i < 8; i++) {
+                      if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
+                          flushPacket = true;
+                      }
+                  }
+                  System.out.print("*** Packet matched long address: " + !flushPacket + " Adr:");
+                  for (int i = 0; i < 8; i++) {
+                      System.out.print(Utils.hex8(memory[RAM_RXFIFO + ((addrPos + i) & 127)]) + ":");
+                  }
+                  System.out.println("  " + memory[RAM_IEEEADDR]);
+                  decodeAddress = false;
+              } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
+                  /* should check short address */
+                  int addrPos = rxPacketStart + 5; // where starts the destination address of the packet!!!??
+                  boolean bc = true;
+                  for (int i = 0; i < 2; i++) {
+                      int addrData = memory[RAM_RXFIFO + ((addrPos + i) & 127)];
+                      if (bc && addrData != 0xff) {
+                          bc = false;
+                      }
+                      if (memory[RAM_SHORTADDR + i] != addrData) {
+                          flushPacket = true;
+                      }
+                  }
+                  if (bc) flushPacket = false;
+                  System.out.print("*** Packet matched short address: " + !flushPacket + " Adr:");
+                  for (int i = 0; i < 2; i++) {
+                      System.out.print(Utils.hex8(memory[RAM_RXFIFO + ((addrPos + i) & 127)]) + ":");
+                  }
+                  System.out.println("  " + memory[RAM_IEEEADDR]);
+                  decodeAddress = false;
+              }
+              if (flushPacket) {
+                  System.out.println("*** Packet not for me => flush packet...");
+                  // Immediately jump to SFD Search again... something more???
+                  /* reset state */
+                  rxfifoLen = rxfifoLen - rxread;
+                  rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
+                  System.out.println("Reset to: " + rxfifoWritePos + " rxRead" + rxfifoReadPos);
+                  setSFD(false);
+                  setFIFOP(false);
+                  setFIFO(false);
+                  setState(RadioState.RX_SFD_SEARCH);
+              }
+          }
         }
-        
+                
         if(rxread++ == rxlen) {
           // In RX mode, FIFOP goes high, if threshold is higher than frame length....
 
@@ -572,7 +641,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
-          if (DEBUG) log("RX: Complete: packetStart: " + 
+          if (true || DEBUG) log("RX: Complete: packetStart: " + 
               lastPacketStart);
 
           /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
@@ -615,18 +684,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   /* Also add PAN_ID checks */
   private boolean checkAutoack() {
       /* ack request or not ? */
-      boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;
+      boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;      
       if (!ackReq) return false;
 
+      System.out.println("Ack requested!!!");
+      
       /* check addressing mode */
-      int destAddrMode = (memory[RAM_RXFIFO + lastPacketStart + 1] >> 2) & 3;
+      int destAddrMode = (memory[RAM_RXFIFO + (lastPacketStart + 1) & 127] >> 2) & 3;
       if (destAddrMode == LONG_ADDRESS) {
           /* here we need to check that this address is correct compared to the stored address */
           int addrSize = 8; /* this is hard coded to a long address - can be short!!! */
           int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
           for (int i = 0; i < addrSize; i++) {
-              /*          System.out.println("checkAutoack i " + i + " mem " +
-                      memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);*/
+              System.out.println("checkAutoack i " + i + " mem " +
+                      memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);
               if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
                   return false;
               }
@@ -635,13 +706,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           /* should check short address */
           int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
           for (int i = 0; i < 2; i++) {
-              /*          System.out.println("checkAutoack i " + i + " mem " +
-                      memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);*/
+              System.out.println("checkAutoack i " + i + " mem " +
+                      memory[RAM_SHORTADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);
               if (memory[RAM_SHORTADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
                   return false;
               }
           }
       }
+      System.out.println("Sending Auto ACK " + memory[RAM_IEEEADDR]);
       return true;
   }
   
