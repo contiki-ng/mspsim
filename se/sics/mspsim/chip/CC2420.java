@@ -565,7 +565,7 @@ private int rxPacketStart;
           if (rxread == 2) {
               if (TYPE_DATA_FRAME == (memory[RAM_RXFIFO + rxPacketStart] & FRAME_TYPE)) {
                   decodeAddress = addressDecode & (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
-                  destinationAddressMode = (memory[RAM_RXFIFO + (rxPacketStart + 1)] >> 2) & 3;
+                  destinationAddressMode = (memory[RAM_RXFIFO + ((rxPacketStart + 1) & 127)] >> 2) & 3;
               }
           }
           if (decodeAddress) {
@@ -579,11 +579,6 @@ private int rxPacketStart;
                           flushPacket = true;
                       }
                   }
-                  System.out.print("*** Packet matched long address: " + !flushPacket + " Adr:");
-                  for (int i = 0; i < 8; i++) {
-                      System.out.print(Utils.hex8(memory[RAM_RXFIFO + ((addrPos + i) & 127)]) + ":");
-                  }
-                  System.out.println("  " + memory[RAM_IEEEADDR]);
                   decodeAddress = false;
               } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
                   /* should check short address */
@@ -599,20 +594,13 @@ private int rxPacketStart;
                       }
                   }
                   if (bc) flushPacket = false;
-                  System.out.print("*** Packet matched short address: " + !flushPacket + " Adr:");
-                  for (int i = 0; i < 2; i++) {
-                      System.out.print(Utils.hex8(memory[RAM_RXFIFO + ((addrPos + i) & 127)]) + ":");
-                  }
-                  System.out.println("  " + memory[RAM_IEEEADDR]);
                   decodeAddress = false;
               }
               if (flushPacket) {
-                  System.out.println("*** Packet not for me => flush packet...");
                   // Immediately jump to SFD Search again... something more???
                   /* reset state */
                   rxfifoLen = rxfifoLen - rxread;
                   rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
-                  System.out.println("Reset to: " + rxfifoWritePos + " rxRead" + rxfifoReadPos);
                   setSFD(false);
                   setFIFOP(false);
                   setFIFO(false);
@@ -641,8 +629,8 @@ private int rxPacketStart;
           setFIFOP(true);
           setSFD(false);
           lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
-          if (true || DEBUG) log("RX: Complete: packetStart: " + 
-              lastPacketStart);
+          if (DEBUG) log("RX: Complete: packetStart: " + 
+              lastPacketStart + " rxPStart: " + rxPacketStart);
 
           /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
           //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
@@ -680,40 +668,11 @@ private int rxPacketStart;
       }
   }
   
-  /* TODO: refactor into two different methods on for ADDR_DECODE / ADDR_RECOG one for autoack. */
-  /* Also add PAN_ID checks */
+  /* any packet that has autoack request will be acked! */
   private boolean checkAutoack() {
       /* ack request or not ? */
       boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;      
       if (!ackReq) return false;
-
-      System.out.println("Ack requested!!!");
-      
-      /* check addressing mode */
-      int destAddrMode = (memory[RAM_RXFIFO + (lastPacketStart + 1) & 127] >> 2) & 3;
-      if (destAddrMode == LONG_ADDRESS) {
-          /* here we need to check that this address is correct compared to the stored address */
-          int addrSize = 8; /* this is hard coded to a long address - can be short!!! */
-          int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
-          for (int i = 0; i < addrSize; i++) {
-              System.out.println("checkAutoack i " + i + " mem " +
-                      memory[RAM_IEEEADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);
-              if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
-                  return false;
-              }
-          }
-      } else {
-          /* should check short address */
-          int addrPos = lastPacketStart + 5; // where starts the destination address of the packet!!!??
-          for (int i = 0; i < 2; i++) {
-              System.out.println("checkAutoack i " + i + " mem " +
-                      memory[RAM_SHORTADDR + i] + " != " + memory[RAM_RXFIFO + ((addrPos + i) & 127)]);
-              if (memory[RAM_SHORTADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
-                  return false;
-              }
-          }
-      }
-      System.out.println("Sending Auto ACK " + memory[RAM_IEEEADDR]);
       return true;
   }
   
