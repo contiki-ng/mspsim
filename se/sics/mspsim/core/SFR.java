@@ -68,12 +68,14 @@ public class SFR extends IOUnit {
   private SFRModule[] sfrModule = new SFRModule[16];
   private int[] irqVector = new int[16];
   private boolean[] irqTriggered = new boolean[16];
+  private boolean[] autoclear = new boolean[16];
   private int[] irqTriggeredPos = new int[16];
   
   public SFR(MSP430Core cpu, int[] memory) {
     super(memory, 0);
     this.cpu = cpu;
     this.memory = memory;
+    reset(0);
   }
 
   public void reset(int type) {
@@ -83,8 +85,10 @@ public class SFR extends IOUnit {
     ifg2 = 0;
     me1 = 0;
     me2 = 0;
+    /* no IRQ - but all are autoclear */
     for (int i = 0; i < irqTriggered.length; i++) {
       irqTriggered[i] = false;
+      autoclear[i] = true;
     }
   }
 
@@ -241,15 +245,22 @@ public class SFR extends IOUnit {
     else return ifg2;
   }
 
+  public void setAutoclear(int vector, boolean b) {
+      autoclear[vector] = b;
+  }
+
+  
   public void interruptServiced(int vector) {
     irqTriggered[vector] = false;
-    /* clear the bits that correspond to this vector! */
     int pos = irqTriggeredPos[vector];
-    int bit = pos & 7;
-    if (pos < 8) {
-      ifg1 &= ~(1 << bit);
-    } else {
-      ifg2 &= ~(1 << bit);
+    if (autoclear[vector]) {
+        /* clear the bits that correspond to this vector! */
+        int bit = pos & 7;
+        if (pos < 8) {
+            ifg1 &= ~(1 << bit);
+        } else {
+            ifg2 &= ~(1 << bit);
+        }
     }
     cpu.flagInterrupt(vector, this, false);
     if (sfrModule[pos] != null) {
@@ -260,4 +271,5 @@ public class SFR extends IOUnit {
   public String getName() {
     return "SpecialFunctionRegister, SFR";
   }
+
 } // SFR

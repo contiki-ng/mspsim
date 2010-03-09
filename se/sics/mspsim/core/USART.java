@@ -41,8 +41,6 @@
 
 package se.sics.mspsim.core;
 
-import org.jfree.chart.needle.ShipNeedle;
-
 public class USART extends IOUnit implements SFRModule {
 
   public static final boolean DEBUG = false; //true;
@@ -80,9 +78,11 @@ public class USART extends IOUnit implements SFRModule {
   public static final int USART1_RX_BIT = 4;
   public static final int USART1_TX_BIT = 5;
 
+  
+  
   // Flags.
   public static final int UTCTL_TXEMPTY = 0x01;
-  
+  public static final int UTCTL_URXSE = 0x08;
 
   private USARTListener listener;
 
@@ -151,7 +151,6 @@ public class USART extends IOUnit implements SFRModule {
       txbit = USART1_TX_BIT;
       rxVector = USART1_RX_VEC;
     }
-    
     reset(0);
   }
 
@@ -162,7 +161,6 @@ public class USART extends IOUnit implements SFRModule {
     clrBitIFG(urxifg);
     setBitIFG(utxifg); /* empty at start! */
     utctl |= UTCTL_TXEMPTY;
-    // cpu.scheduleCycleEvent(txTrigger, nextTXReady);
     txEnabled = false;
     rxEnabled = false;
   }
@@ -233,6 +231,11 @@ public class USART extends IOUnit implements SFRModule {
         if (DEBUG) {
           System.out.println(getName() + " Selected SMCLK as source");
         }
+      }
+      if ((data & UTCTL_URXSE) == UTCTL_URXSE) {
+          sfr.setAutoclear(rxVector, false);
+      } else {
+          sfr.setAutoclear(rxVector, true);
       }
       updateBaudRate();
       break;
@@ -308,11 +311,11 @@ public class USART extends IOUnit implements SFRModule {
       // When byte is read - the interruptflag is cleared!
       // and error status should also be cleared later...
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-        System.out.println(getName() + " clearing rx interrupt flag " + cpu.getPC() + " byte: " + tmp);
+          System.out.println(getName() + " clearing rx interrupt flag " + cpu.getPC() + " byte: " + tmp);
       }
       clrBitIFG(urxifg);
       if (listener != null) {
-        listener.stateChanged(USARTListener.RXFLAG_CLEARED);
+          listener.stateChanged(USARTListener.RXFLAG_CLEARED);
       }
       return tmp;
     }
@@ -407,7 +410,7 @@ public class USART extends IOUnit implements SFRModule {
     if (!rxEnabled) return;
     
     if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-      System.out.println(getName() + " byteReceived: " + b);
+      System.out.println(getName() + " byteReceived: " + b + " " + (char) b);
     }
     urxbuf = b & 0xff;
     // Indicate interrupt also!
