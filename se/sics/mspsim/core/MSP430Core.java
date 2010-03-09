@@ -583,7 +583,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     resetIOUnits();
   
     if (profiler != null) {
-        profiler.clearProfile();
+        profiler.resetProfile();
     }
   }
 

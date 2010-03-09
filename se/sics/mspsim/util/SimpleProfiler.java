@@ -224,7 +224,12 @@ public class SimpleProfiler implements Profiler, EventListener {
     /* what if interrupt from interrupt ? */
     servicedInterrupt = -1;
   }
-  
+
+  public void resetProfile() {
+    clearProfile();
+    cSP = 0;
+  }
+
   public void clearProfile() {
     if (profileData != null) {
       CallEntry[] entries =
@@ -241,6 +246,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       }
     }
   }  
+
   public void printProfile(PrintStream out) {
     printProfile(out, new Properties());
   }
@@ -322,9 +328,10 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
 
   public void printStackTrace(PrintStream out) {
-    out.println("Stack Trace: number of calls: " + cSP);
-    for (int i = 0; i < cSP; i++) {
-      out.println("  " + callStack[cSP - i - 1].function.getInfo());
+    int stackCount = cSP;
+    out.println("Stack Trace: number of calls: " + stackCount);
+    for (int i = 0; i < stackCount; i++) {
+      out.println("  " + callStack[stackCount - i - 1].function.getInfo());
     }
   }
   

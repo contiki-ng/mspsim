@@ -58,7 +58,8 @@ public interface Profiler {
   public void profileReturn(long cycles);
   public void profileInterrupt(int vector, long cycles);
   public void profileRETI(long cycles);
-  
+
+  public void resetProfile();
   public void clearProfile();
 
   public void addCallListener(CallListener listener);
