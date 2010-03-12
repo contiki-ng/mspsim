@@ -140,6 +140,15 @@ public class SHT11 extends Chip {
       writeLen = 3;
     }};
 
+    
+  public void setTemperature(int temp) {
+     this.temp = temp;
+  }
+  
+  public void setHumidity(int humidity) {
+      this.humid = humidity;
+  }
+    
     // TODO: super(cpu) and chip autoregister chips into the CPU.
   public SHT11(MSP430Core core) {
     cpu = core;
