@@ -558,7 +558,7 @@ private int rxPacketStart;
           if (DEBUG) log("RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
           setFIFO(true);
-        } else if (rxread < rxlen - 2) {
+        } else if (rxread < rxlen - 1) {
           /* As long as we are not in the length or FCF (CRC) we count CRC */
           rxCrc.addBitrev(data & 0xff);
           
@@ -617,13 +617,14 @@ private int rxPacketStart;
           int crc = memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] << 8;
           crc += memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
   
-          if (DEBUG && crc != rxCrc.getCRCBitrev()) {
-              log("CRC not OK: recv:" + crc + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
+          if (true && crc != rxCrc.getCRCBitrev()) {
+              System.out.println("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
           }
           // Should take a RSSI value as input or use a set-RSSI value...
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
+              (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
 
           // FIFOP should not be set if CRC is not ok??? - depends on autoCRC!
           setFIFOP(true);
