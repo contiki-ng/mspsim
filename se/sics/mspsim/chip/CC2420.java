@@ -560,7 +560,7 @@ private int rxPacketStart;
           setFIFO(true);
         } else if (rxread < rxlen - 2) {
           /* As long as we are not in the length or FCF (CRC) we count CRC */
-          rxCrc.add(data & 0xff);
+          rxCrc.addBitrev(data & 0xff);
           
           if (rxread == 2) {
               if (TYPE_DATA_FRAME == (memory[RAM_RXFIFO + rxPacketStart] & FRAME_TYPE)) {
@@ -617,13 +617,13 @@ private int rxPacketStart;
           int crc = memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] << 8;
           crc += memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
   
-          if (DEBUG && crc != rxCrc.getCRC()) {
-              log("CRC not OK: recv:" + crc + " calc: " + rxCrc.getCRC());
+          if (DEBUG && crc != rxCrc.getCRCBitrev()) {
+              log("CRC not OK: recv:" + crc + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
           }
           // Should take a RSSI value as input or use a set-RSSI value...
           memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
           // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | (crc == rxCrc.getCRC() ? 0x80 : 0);
+          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 | (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
 
           // FIFOP should not be set if CRC is not ok??? - depends on autoCRC!
           setFIFOP(true);
@@ -961,15 +961,11 @@ private int rxPacketStart;
       if (txfifoPos == 0) {
           txCrc.setCRC(0);
           int len = memory[RAM_TXFIFO] & 0xff;
-          for (int i = 1; i < len - 2; i++) {
-            txCrc.add(memory[RAM_TXFIFO + i] & 0xff);
+          for (int i = 1; i < len - 1; i++) {
+            txCrc.addBitrev(memory[RAM_TXFIFO + i] & 0xff);
           }
-//          System.out.println("Setting TX CRC to: " + txCrc.getCRC());
-          /* this is not correct - will probably not be compliant with the order
-           * that the actual CC2420 sends the CRC...
-           */
-          memory[RAM_TXFIFO + len - 1] = txCrc.getCRC() >> 8;
-          memory[RAM_TXFIFO + len] = txCrc.getCRC() & 0xff;
+          memory[RAM_TXFIFO + len - 1] = txCrc.getCRCHi();
+          memory[RAM_TXFIFO + len] = txCrc.getCRCLow();
       }
       if (txfifoPos > 0x7f) {
         log("Warning: packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
@@ -1003,14 +999,10 @@ private int rxPacketStart;
               txCrc.setCRC(0);
               int len = 3;
               for (int i = 1; i < len; i++) {
-                  txCrc.add(ackBuf[i] & 0xff);
+                  txCrc.addBitrev(ackBuf[i] & 0xff);
               }
-              //          System.out.println("Setting TX CRC to: " + txCrc.getCRC());
-              /* this is not correct - will probably not be compliant with the order
-               * that the actual CC2420 sends the CRC...
-               */
-              ackBuf[4] = txCrc.getCRC() >> 8;
-              ackBuf[5] = txCrc.getCRC() & 0xff;
+              ackBuf[4] = txCrc.getCRCHi();
+              ackBuf[5] = txCrc.getCRCLow();
           }
           if (listener != null) {
               if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
