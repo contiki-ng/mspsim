@@ -524,6 +524,9 @@ public class Timer extends IOUnit {
     case TCCR5:
     case TCCR6:
       i = (index - TCCR0) / 2;
+      if (i >= noCompare) {
+          throw new EmulationException(getName() + " Reading from CCR register that is not available " + i);
+      }
       val = ccr[i].tccr;
       break;
     default:
@@ -543,6 +546,9 @@ public class Timer extends IOUnit {
    * and other dynamic values
    */
   private void updateTCCTL(int cctl, long cycles) {
+      if (cctl >= noCompare) {
+          throw new EmulationException(getName() + " Trying to write to non-existent CCTL register: " + cctl);
+      }
     // update the CCI depending on speed of clocks...
     boolean input = false;
     /* if ACLK we can calculate edge... */
