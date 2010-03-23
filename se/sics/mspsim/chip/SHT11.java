@@ -86,25 +86,25 @@ public class SHT11 extends Chip {
   
   private MSP430Core cpu;
   
-  private int rev8bits(int v) {
+  private static int rev8bits(int v) {
     int r = 0;
-    int s = 7;
+    int s = 8;
 
-    for (v >>= 1; v > 0; v >>= 1) {
-      r <<= 1;
-      r |= v & 1;
+    while(v > 0) {
+      r = (r << 1) | v & 1;
+      v = (v >> 1) & 0xff;
       s--;
     }
     r <<= s;                  /* Shift when v's highest bits are zero */
-    return r;
+    return r & 0xff;
   }
   
   private int crc8Add(int acc, int data) {
     int i;
-    acc ^= data;
+    acc ^= (data & 0xff);
     for(i = 0; i < 8; i++) {
       if((acc & 0x80) != 0) {
-        acc = (acc << 1) ^ 0x31;
+        acc = ((acc << 1) ^ 0x31) & 0xff;
       } else {
         acc <<= 1;
       }
@@ -116,20 +116,25 @@ public class SHT11 extends Chip {
   private TimeEvent measureEvent = new TimeEvent(0) {
     public void execute(long t) {
       if (readData == CMD_MEASURE_TEMP) {
-        output[0] = temp >> 8;
+        output[0] = (temp >> 8) & 0xff;
         output[1] = temp & 0xff;
       } else if (readData == CMD_MEASURE_HUM) {
-        output[0] = humid >> 8;
+        output[0] = (humid >> 8) & 0xff;
         output[1] = humid & 0xff;
       } else {
         /* Something bad has happened */
         return;
       }
+
+      temp += 1;
+      humid += 1;
+      
       int crc = 0;
       crc = crc8Add(crc, readData);
       crc = crc8Add(crc, output[0]);
       crc = crc8Add(crc, output[1]);
-      if (DEBUG) System.out.println("CRC: " + crc + " rcrc: " + rev8bits(crc));
+      if (DEBUG) System.out.println("CRC: " +
+              Utils.hex8(crc) + " rcrc: " + Utils.hex8(rev8bits(crc)));
       output[2] = rev8bits(crc);
       
       /* finished measuring - signal with LOW! */
@@ -285,6 +290,5 @@ public class SHT11 extends Chip {
 
   public String getName() {
     return "SHT11";
-  }
-
+  } 
 }
