@@ -125,9 +125,6 @@ public class SHT11 extends Chip {
         /* Something bad has happened */
         return;
       }
-
-      temp += 1;
-      humid += 1;
       
       int crc = 0;
       crc = crc8Add(crc, readData);
