@@ -39,6 +39,7 @@
  *           $Revision:$
  */
 package se.sics.mspsim.util;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -50,150 +51,202 @@ import se.sics.mspsim.core.MSP430Core;
 
 public class GDBStubs implements Runnable {
 
-  private final static String OK = "OK";
+    private final static String OK = "OK";
 
-  ServerSocket serverSocket;
-  OutputStream output;
-  MSP430Core cpu;
-  
-  public void setupServer(MSP430Core cpu, int port) {
-    this.cpu = cpu;
-    try {
-      serverSocket = new ServerSocket(port);
-      System.out.println("GDBStubs open server socket port: " + port);
-      new Thread(this).start();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
+    ServerSocket serverSocket;
+    OutputStream output;
+    MSP430Core cpu;
 
-  int[] buffer = new int[256];
-  int len;
-  public void run() {
-    while (true) {
-      try {
-        Socket s = serverSocket.accept();
-
-        DataInputStream input = new DataInputStream(s.getInputStream());
-        output = s.getOutputStream();
-
-        String cmd = "";
-        boolean readCmd = false;
-        int c;
-        while (s != null && ((c = input.read()) != -1)) {
-          System.out.println("GDBStubs: Read  " + c + " => " + (char) c);
-          if (c == '#') {
-            readCmd = false;
-            /* ack the message */
-            output.write('+');
-            handleCmd(cmd, buffer, len);
-            cmd = "";
-            len = 0;
-          }
-          if (readCmd) {
-            cmd += (char) c;
-            buffer[len++] = (c & 0xff);
-          }
-          if (c == '$') {
-            readCmd = true;
-          }
+    public void setupServer(MSP430Core cpu, int port) {
+        this.cpu = cpu;
+        try {
+            serverSocket = new ServerSocket(port);
+            System.out.println("GDBStubs open server socket port: " + port);
+            new Thread(this).start();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-      } catch (IOException e) {
-        e.printStackTrace();
-      } catch (EmulationException e) {
-        e.printStackTrace();
-      }
     }
-  }
 
-  private void handleCmd(String cmd, int[] cmdBytes, int cmdLen) throws IOException, 
-  EmulationException {
-    System.out.println("cmd: " + cmd);
-    char c = cmd.charAt(0);
-    switch(c) {
-    case 'H':
-      sendResponse(OK);
-      break;
-    case 'q':
-      if ("qC".equals(cmd)) {
-        sendResponse("QC1");
-      } else if ("qOffsets".equals(cmd)) {
-        sendResponse("Text=000;Data=000;Bss=000;");
-      }
-      break;
-    case '?':
-      sendResponse("S01");
-      break;
-    case 'g':
-      readRegisters();
-      break;
-    case 'k': // kill
-      sendResponse(OK);
-      break;
-    case 'm':
-    case 'M':
-    case 'X':
-      String cmd2 = cmd.substring(1);
-      String wdata[] = cmd2.split(":");
-      int cPos = cmd.indexOf(':');
-      if (cPos > 0) {
-        /* only until length in first part */
-        cmd2 = wdata[0];
-      }
-      String parts[] = cmd2.split(",");
-      int addr = Integer.decode("0x" + parts[0]);
-      int len = Integer.decode("0x" + parts[1]);
-      String data = "";
-      if (c =='m') {
-        System.out.println("Returning memory from: " + addr + " len = " + len);
-        /* This might be wrong - which is the correct byte order? */
-        for (int i = 0; i < len; i++) {
-          data += Utils.hex8(cpu.memory[addr++] & 0xff);
+    int[] buffer = new int[256];
+    int len;
+
+    public void run() {
+        while (true) {
+            try {
+                Socket s = serverSocket.accept();
+
+                DataInputStream input = new DataInputStream(s.getInputStream());
+                output = s.getOutputStream();
+
+                String cmd = "";
+                boolean readCmd = false;
+                int c;
+                while (s != null && ((c = input.read()) != -1)) {
+                    System.out.println("GDBStubs: Read  " + c + " => "
+                            + (char) c);
+                    if (c == '#') {
+                        readCmd = false;
+                        /* ack the message */
+                        output.write('+');
+                        handleCmd(cmd, buffer, len);
+                        cmd = "";
+                        len = 0;
+                    }
+                    if (readCmd) {
+                        cmd += (char) c;
+                        buffer[len++] = (c & 0xff);
+                    }
+                    if (c == '$') {
+                        readCmd = true;
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (EmulationException e) {
+                e.printStackTrace();
+            }
         }
-        sendResponse(data);
-      } else {
-        System.out.println("Writing to memory at: " + addr + " len = " + len +
-            " with: " + ((wdata.length > 1) ? wdata[1] : ""));
-        cPos++;
-        for (int i = 0; i < len; i++) {
-          System.out.println("Writing: " + cmdBytes[cPos] + " to " + addr + " cpos=" + cPos);
-          cpu.write(addr++, cmdBytes[cPos++], false);
+    }
+
+    private void handleCmd(String cmd, int[] cmdBytes, int cmdLen)
+    throws IOException, EmulationException {
+        System.out.println("cmd: " + cmd);
+        char c = cmd.charAt(0);
+        switch (c) {
+        case 'H':
+            sendResponse(OK);
+            break;
+        case 'q':
+            if ("qC".equals(cmd)) {
+                sendResponse("QC1");
+            } else if ("qOffsets".equals(cmd)) {
+                sendResponse("Text=0;Data=0;Bss=0");
+            } else if ("qfThreadInfo".equals(cmd)){
+                sendResponse("m 01");
+            } else if ("qsThreadInfo".equals(cmd)){
+                sendResponse("l");      
+            } else if ("qSymbol::".equals(cmd)){
+                sendResponse(OK);
+                //} else if ("qThreadExtraInfo,1".equals(cmd)){
+                //              sendResponse(stringToHex("Stoped"));
+            } else {
+                System.out.println("Command unknown");
+                sendResponse("");
+            }
+
+            break;
+        case '?':
+            sendResponse("S01");
+            break;
+        case 'g':
+            readRegisters();
+            break;
+        case 'k': // kill
+            sendResponse(OK);
+            break;
+        case 'm':
+        case 'M':
+        case 'X':
+            String cmd2 = cmd.substring(1);
+            String wdata[] = cmd2.split(":");
+            int cPos = cmd.indexOf(':');
+            if (cPos > 0) {
+                /* only until length in first part */
+                cmd2 = wdata[0];
+            }
+            String parts[] = cmd2.split(",");
+            int addr = Integer.decode("0x" + parts[0]);
+            int len = Integer.decode("0x" + parts[1]);
+            String data = "";
+            if (c == 'm') {
+                System.out.println("Returning memory from: " + addr + " len = "
+                        + len);
+                /* This might be wrong - which is the correct byte order? */
+                for (int i = 0; i < len; i++) {
+                    data += Utils.hex8(cpu.memory[addr++] & 0xff);
+                }
+                sendResponse(data);
+            } else {
+                System.out.println("Writing to memory at: " + addr + " len = "
+                        + len + " with: "
+                        + ((wdata.length > 1) ? wdata[1] : ""));
+                cPos++;
+                for (int i = 0; i < len; i++) {
+                    System.out.println("Writing: " + cmdBytes[cPos] + " to "
+                            + addr + " cpos=" + cPos);
+                    cpu.write(addr++, cmdBytes[cPos++], false);
+                }
+                sendResponse(OK);
+            }
+            break;
+        case 'C':
+            sendResponse("S01");
+            break;
+        default:
+            System.out.println("Command unknown");
+            sendResponse("");
         }
-        sendResponse(OK);
-      }
-      break;
     }
-  }
 
-  private void readRegisters() throws IOException {
-    String regs = "";
-    for (int i = 0; i < 16; i++) {
-      regs += Utils.hex8(cpu.reg[i] & 0xff) + Utils.hex8(cpu.reg[i] >> 8);
+    private void readRegisters() throws IOException {
+        String regs = "";
+        for (int i = 0; i < 16; i++) {
+            regs += Utils.hex8(cpu.reg[i] & 0xff) + Utils.hex8(cpu.reg[i] >> 8);
+        }
+        sendResponse(regs);
     }
-    sendResponse(regs);
-  }
 
-  public void sendResponse(String resp) throws IOException {
-    output.write('$');
-    int cs = 0;
-    if (resp != null) {
-      for (int i = 0; i < resp.length(); i++) {
-	output.write((char) resp.charAt(i));
-	System.out.print(resp.charAt(i));
-	cs += resp.charAt(i);
-      }
+    public static String stringToHex(String base)
+    {
+        StringBuffer buffer = new StringBuffer();
+        int intValue;
+        for(int x = 0; x < base.length(); x++)
+        {
+            int cursor = 0;
+            intValue = base.charAt(x);
+            String binaryChar = new String(Integer.toBinaryString(base.charAt(x)));
+            for(int i = 0; i < binaryChar.length(); i++) {
+                if(binaryChar.charAt(i) == '1') {
+                    cursor += 1;
+                }
+            }
+            if((cursor % 2) > 0) {
+                intValue += 128;
+            }
+            buffer.append(Integer.toHexString(intValue));
+        }
+        return buffer.toString();
     }
-    output.write('#');
-    System.out.print('#');
-    int c = (cs & 0xff) >> 4;
-    if (c < 10) c = c + '0';
-    else c = c - 10 + 'a';
-    output.write((char)c);
-    System.out.print((char)c);
-    c = cs & 15;
-    if (c < 10) c = c + '0';
-    else c = c - 10 + 'a';
-    output.write((char)c);
-    System.out.println((char)c);
-  }
+
+
+    public void sendResponse(String resp) throws IOException {
+        output.write('$');
+        int cs = 0;
+        if (resp != null) {
+            for (int i = 0; i < resp.length(); i++) {
+                output.write((char) resp.charAt(i));
+                System.out.print(resp.charAt(i));
+                cs += resp.charAt(i);
+            }
+        }
+        output.write('#');
+        System.out.print('#');
+        int c = (cs & 0xff) >> 4;
+            if (c < 10) {
+                c = c + '0';
+            } else {
+                c = c - 10 + 'a';
+            }
+            output.write((char) c);
+            System.out.print((char) c);
+            c = cs & 15;
+            if (c < 10) {
+                c = c + '0';
+            } else {
+                c = c - 10 + 'a';
+            }
+            output.write((char) c);
+            System.out.println((char) c);
+    }
 }
