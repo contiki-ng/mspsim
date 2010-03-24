@@ -920,6 +920,10 @@ public class Timer extends IOUnit {
                   (value == IOPort.PIN_LOW && fall)) {
               //      System.out.println("*** Capture on CCR_" + ccrIndex + " " + " value: " +
               //            value);
+              // update counter values and compare register
+              updateCounter(core.cycles);
+              reg.tccr = counter;
+              
               // Set the interrupt flag...
               reg.tcctl |= CC_IFG;
               reg.triggerInterrupt(core.cycles);

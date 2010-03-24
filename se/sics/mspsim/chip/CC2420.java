@@ -266,6 +266,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean shouldAck = false;
   private boolean addressDecode = false;
   private boolean autoCRC = false;
+  private int dsn = 0;
+
   
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -567,6 +569,9 @@ private int rxPacketStart;
                   decodeAddress = addressDecode & (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
                   destinationAddressMode = (memory[RAM_RXFIFO + ((rxPacketStart + 1) & 127)] >> 2) & 3;
               }
+          } else if (rxread == 3) {
+              // save data sequence number
+              dsn = data & 0xff;
           }
           if (decodeAddress) {
               boolean flushPacket = false;
@@ -926,6 +931,9 @@ private int rxPacketStart;
       //log("Strobe Oscillator Off");
       stopOscillator();
       break;
+    case REG_SACK:
+        setState(RadioState.TX_ACK_CALIBRATE);
+        break;
     default:
       if (DEBUG) {
         log("Unknown strobe command: " + data);
@@ -998,7 +1006,9 @@ private int rxPacketStart;
       if (ackPos < ackBuf.length) {
           if(ackPos == 0) {
               txCrc.setCRC(0);
-              int len = 3;
+              // set dsn
+              ackBuf[3] = dsn;
+              int len = 4;
               for (int i = 1; i < len; i++) {
                   txCrc.addBitrev(ackBuf[i] & 0xff);
               }
