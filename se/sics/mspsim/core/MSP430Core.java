@@ -149,10 +149,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[0x180 + i] = tb;
     }
 
-    Watchdog wdt = new Watchdog(this);
-    memOut[0x120] = wdt;
-    memIn[0x120] = wdt;
-
     /* TODO: this range is only valid for the F1611 series (Sky, etc) */
     flash = new Flash(this, memory,
         new FlashRange(0x4000, 0x10000, 512, 64),
@@ -167,6 +163,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[i] = sfr;
       memIn[i] = sfr;
     }
+    Watchdog wdt = new Watchdog(this);
+    memOut[0x120] = wdt;
+    memIn[0x120] = wdt;
 
     memIn[Timer.TAIV] = ta;
     memOut[Timer.TAIV] = ta;

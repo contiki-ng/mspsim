@@ -46,16 +46,19 @@ import se.sics.mspsim.util.Utils;
  * @author joakim
  *
  */
-public class Watchdog extends IOUnit {
+public class Watchdog extends IOUnit implements SFRModule {
   private static final boolean DEBUG = false;
   
   private static final int WDTCTL = 0x120;
 
   private static final int WDTHOLD = 0x80;
   private static final int WDTCNTCL = 0x08;
+  private static final int WDTMSEL = 0x10;
   private static final int WDTSSEL = 0x04;
   private static final int WDTISx = 0x03;
   
+  private static final int WATCHDOG_VECTOR = 10;
+  private static final int WATCHDOG_INTERRUPT_BIT = 0;
   private static final int RESET_VECTOR = 15;
   
   private static final int[] DELAY = {
@@ -74,6 +77,8 @@ public class Watchdog extends IOUnit {
   // Timer ACLK
   private boolean sourceACLK = false;
 
+  // Timer or WDT mode
+  private boolean timerMode = false;
   
   private TimeEvent wdtTrigger = new TimeEvent(0, "Watchdog") {
     public void execute(long t) {
@@ -85,6 +90,7 @@ public class Watchdog extends IOUnit {
   public Watchdog(MSP430Core cpu) {
     super(cpu.memory, 0x120);
     this.cpu = cpu;
+    cpu.getSFR().registerSFDModule(0, WATCHDOG_INTERRUPT_BIT, this, WATCHDOG_VECTOR);
   }
    
   public String getName() {
@@ -92,14 +98,20 @@ public class Watchdog extends IOUnit {
   }
 
   public void interruptServiced(int vector) {
-    cpu.flagInterrupt(RESET_VECTOR, this, false);
+    cpu.flagInterrupt(vector, this, false);
   }
 
   private void triggerWDT(long time) {
-    // Here the WDT triggered!!!
-    System.out.println("WDT trigger - will reset node!");
-    cpu.generateTrace(System.out);
-    cpu.flagInterrupt(RESET_VECTOR, this, true);
+      // Here the WDT triggered!!!
+      if (timerMode) {
+          SFR sfr = cpu.getSFR();
+          sfr.setBitIFG(0, WATCHDOG_INTERRUPT_BIT);
+          scheduleTimer();
+      } else {
+          System.out.println("WDT trigger - will reset node!");
+          cpu.generateTrace(System.out);
+          cpu.flagInterrupt(RESET_VECTOR, this, true);
+      }
   }
   
   public int read(int address, boolean word, long cycles) {
@@ -120,16 +132,11 @@ public class Watchdog extends IOUnit {
           // Clear timer => reset the delay
           delay = DELAY[value & WDTISx];
         }
+        timerMode = (value & WDTMSEL) != 0;
         // Start it if it should be started!
         if (wdtOn) {
           if (DEBUG) System.out.println("Setting WDTCNT to count: " + delay);
-          if (sourceACLK) {
-            if (DEBUG) System.out.println("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
-            targetTime = cpu.scheduleTimeEventMillis(wdtTrigger, 1000.0 * delay / cpu.aclkFrq);
-            } else {
-            if (DEBUG) System.out.println("setting delay in cycles");
-            cpu.scheduleCycleEvent(wdtTrigger, targetTime = cpu.cycles + delay);
-          }
+          scheduleTimer();
         } else {
           // Stop it and remember current "delay" left!
           wdtTrigger.remove();
@@ -141,5 +148,17 @@ public class Watchdog extends IOUnit {
       }
     }
   }
+  private void scheduleTimer() {
+      if (sourceACLK) {
+          if (DEBUG) System.out.println("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
+          targetTime = cpu.scheduleTimeEventMillis(wdtTrigger, 1000.0 * delay / cpu.aclkFrq);
+      } else {
+          if (DEBUG) System.out.println("setting delay in cycles");
+          cpu.scheduleCycleEvent(wdtTrigger, targetTime = cpu.cycles + delay);
+      }
+  }
 
+  public void enableChanged(int reg, int bit, boolean enabled) {
+          System.out.println("*** Watchdog module enabled: " + enabled);
+  }
 }
