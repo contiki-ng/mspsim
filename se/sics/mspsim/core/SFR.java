@@ -46,7 +46,7 @@ package se.sics.mspsim.core;
  */
 public class SFR extends IOUnit {
 
-  private boolean DEBUG = false;//true;
+  private boolean DEBUG = false;
 
   public static final int IE1 = 0;
   public static final int IE2 = 1;
@@ -110,7 +110,7 @@ public class SFR extends IOUnit {
     switch (address) {
     case IE1:
     case IE2:
-      updateIE(address - IE1, value);
+        updateIE(address - IE1, value);
       break;
     case IFG1:
     case IFG2:
@@ -200,12 +200,12 @@ public class SFR extends IOUnit {
         if (sfrModule[pos] != null && !irqTriggered[irqVector[pos]]) {
           /* interrupt goes directly to the module responsible */
           if (DEBUG) System.out.println("SFR: flagging interrupt: " +
-              sfrModule[pos].getName() + " pos: " + pos + " " + (ie & ifg & 1) + " chg: " + change);
+              sfrModule[pos].getName() + " pos: " + pos + " ie: " + (ie & 1) + " ifg:" + (ifg & 1) + " chg: " + change);
           if ((ie & ifg & 1) > 0) {
             int vector = irqVector[pos];
             irqTriggered[vector] = true;
             irqTriggeredPos[vector] = pos;
-            cpu.flagInterrupt(irqVector[pos], this, true);
+            cpu.flagInterrupt(vector, this, true);
           }
           //          cpu.flagInterrupt(irqVector[pos], sfrModule[pos], (ie & ifg & 1) > 0);
         }
@@ -260,6 +260,9 @@ public class SFR extends IOUnit {
             ifg1 &= ~(1 << bit);
         } else {
             ifg2 &= ~(1 << bit);
+        }
+        if (DEBUG) {
+            System.out.println("SFR: cleared interrupt for " + sfrModule[pos] + " vector: " + vector);
         }
     }
     cpu.flagInterrupt(vector, this, false);

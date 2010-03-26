@@ -59,6 +59,7 @@ public class Watchdog extends IOUnit implements SFRModule {
   
   private static final int WATCHDOG_VECTOR = 10;
   private static final int WATCHDOG_INTERRUPT_BIT = 0;
+  private static final int WATCHDOG_INTERRUPT_VALUE = 1 << WATCHDOG_INTERRUPT_BIT;
   private static final int RESET_VECTOR = 15;
   
   private static final int[] DELAY = {
@@ -105,7 +106,7 @@ public class Watchdog extends IOUnit implements SFRModule {
       // Here the WDT triggered!!!
       if (timerMode) {
           SFR sfr = cpu.getSFR();
-          sfr.setBitIFG(0, WATCHDOG_INTERRUPT_BIT);
+          sfr.setBitIFG(0, WATCHDOG_INTERRUPT_VALUE);
           scheduleTimer();
       } else {
           System.out.println("WDT trigger - will reset node!");
@@ -148,6 +149,7 @@ public class Watchdog extends IOUnit implements SFRModule {
       }
     }
   }
+  
   private void scheduleTimer() {
       if (sourceACLK) {
           if (DEBUG) System.out.println("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
