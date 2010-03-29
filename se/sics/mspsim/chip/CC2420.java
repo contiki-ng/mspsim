@@ -571,7 +571,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           
           if (rxread == 2) {
               if (TYPE_DATA_FRAME == (memory[RAM_RXFIFO + rxPacketStart] & FRAME_TYPE)) {
-                  decodeAddress = addressDecode & (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
+                  decodeAddress = addressDecode;
                   ackRequest = (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
                   destinationAddressMode = (memory[RAM_RXFIFO + ((rxPacketStart + 1) & 127)] >> 2) & 3;
               } else {
