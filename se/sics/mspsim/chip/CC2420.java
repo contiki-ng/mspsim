@@ -658,7 +658,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
           if ((autoAck && ackRequest) || shouldAck) {
               System.out.println("Doing Autoack on lastPacket at " + lastPacketStart + " len: " + rxlen 
-                      + " DSN:" + dsn + " =?= " +  memory[(RAM_RXFIFO + lastPacketStart + 2) & 127]);
+                      + " DSN:" + dsn + " =?= " +  memory[RAM_RXFIFO + ((lastPacketStart + 2) & 127)]);
               setState(RadioState.TX_ACK_CALIBRATE);
           } else {
               setState(RadioState.RX_WAIT);
