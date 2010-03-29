@@ -246,6 +246,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean txfifoFlush;	// TXFIFO is automatically flushed on next write
   private int rxfifoWritePos;
   private int rxfifoReadPos;
+  private int rxfifoReadLeft; // number of bytes left to read from current packet
   private int rxfifoLen;
   private int rxlen;
   private int rxread;
@@ -607,8 +608,7 @@ private int rxPacketStart;
                   rxfifoLen = rxfifoLen - rxread;
                   rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
                   setSFD(false);
-                  setFIFOP(false);
-                  setFIFO(false);
+                  setFIFO(rxfifoLen > 0);
                   setState(RadioState.RX_SFD_SEARCH);
               }
           }
@@ -632,9 +632,13 @@ private int rxPacketStart;
               (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
 
           // FIFOP should not be set if CRC is not ok??? - depends on autoCRC!
-          setFIFOP(true);
+          /* set FIFOP only if this is the first received packet 
+           * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP
+           *       fix support for FIFOP threshold  */
+          if (rxfifoLen <= rxlen) {
+              setFIFOP(true);
+          }
           setSFD(false);
-          lastPacketStart = (rxfifoWritePos + 128 - rxlen) & 127;
           if (DEBUG) log("RX: Complete: packetStart: " + 
               lastPacketStart + " rxPStart: " + rxPacketStart);
 
@@ -763,10 +767,18 @@ private int rxPacketStart;
             (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) + " size: " + rxfifoLen);
         source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
 
-        rxfifoReadPos = (rxfifoReadPos + 1) & 127;
-        
         if (rxfifoLen > 0) {
-          rxfifoLen--;
+            /* initiate read of another packet */
+            if (rxfifoReadLeft == 0) {
+                rxfifoReadLeft = (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF);
+            } else if (--rxfifoReadLeft == 0) {
+                /* check if we have another complete packet in buffer... */
+                if (rxfifoLen > 1 && rxfifoLen >= (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + 1) {
+                    if (!overflow) setFIFOP(true);
+                }
+            }
+            rxfifoReadPos = (rxfifoReadPos + 1) & 127;
+            rxfifoLen--;
         }
         // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
         if(rxfifoLen == 0) {
