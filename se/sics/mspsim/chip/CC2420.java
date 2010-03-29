@@ -430,6 +430,7 @@ private int rxPacketStart;
 
     case POWER_DOWN:
       rxfifoReadPos = 0;
+      rxfifoReadLeft = 0;
       rxfifoWritePos = 0;
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       reset();
@@ -632,11 +633,13 @@ private int rxPacketStart;
               (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
 
           // FIFOP should not be set if CRC is not ok??? - depends on autoCRC!
-          /* set FIFOP only if this is the first received packet 
+          /* set FIFOP only if this is the first received packet - e.g. if rxfifoLen is at most rxlen + 1
            * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP
            *       fix support for FIFOP threshold  */
-          if (rxfifoLen <= rxlen) {
+          if (rxfifoLen <= rxlen + 1) {
               setFIFOP(true);
+          } else {
+              System.out.println("Did not set FIFOP rxfifoLen: " + rxfifoLen + " rxlen: " + rxlen);
           }
           setSFD(false);
           if (DEBUG) log("RX: Complete: packetStart: " + 
@@ -768,12 +771,25 @@ private int rxPacketStart;
         source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
 
         if (rxfifoLen > 0) {
-            /* initiate read of another packet */
+            /* first check and clear FIFOP - since we now have read a byte! */
+            // TODO:
+            // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
+            // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
+            // As long as we are in "OVERFLOW" the fifoP is not cleared.
+            if (fifoP && !overflow) {
+              if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
+                  " lastPacketStartPos: " + lastPacketStart);
+              setFIFOP(false);
+            }
+            
+            /* initiate read of another packet - update some variables to keep track of packet reading... */
             if (rxfifoReadLeft == 0) {
                 rxfifoReadLeft = (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF);
+                System.out.println("Initiating read of another packet - len: " + rxfifoReadLeft);
             } else if (--rxfifoReadLeft == 0) {
                 /* check if we have another complete packet in buffer... */
                 if (rxfifoLen > 1 && rxfifoLen >= (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + 1) {
+                    System.out.println("Another packet in buffer!!!");
                     if (!overflow) setFIFOP(true);
                 }
             }
@@ -786,15 +802,6 @@ private int rxPacketStart;
           setFIFO(false);
         }
         
-        // TODO:
-        // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
-        // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
-        // As long as we are in "OVERFLOW" the fifoP is not cleared.
-        if (fifoP && !overflow) {
-          if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
-              " lastPacketStartPos: " + lastPacketStart);
-          setFIFOP(false);
-        }
         return;
       case WRITE_TXFIFO:
         if(txfifoFlush) {
@@ -1070,6 +1077,7 @@ private int rxPacketStart;
       log("Flushing RX len = " + rxfifoLen);
     }
     rxfifoReadPos = 0;
+    rxfifoReadLeft = 0;
     rxfifoWritePos = 0;
     rxfifoLen = 0;
     setSFD(false);

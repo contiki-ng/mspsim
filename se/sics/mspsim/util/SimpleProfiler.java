@@ -470,7 +470,7 @@ public class SimpleProfiler implements Profiler, EventListener {
         tagEntry.calls++;
         tagEntry.cycles += cpu.cycles - tagEntry.lastCycles;
         tagEntry.lastCycles = 0;
-      }      
+      }
     }
   }
 
