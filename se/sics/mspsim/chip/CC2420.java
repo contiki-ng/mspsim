@@ -250,7 +250,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int rxfifoLen;
   private int rxlen;
   private int rxread;
-  private int lastPacketStart;
   private int zeroSymbols;
   private boolean ramRead = false;
 
@@ -578,7 +577,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   decodeAddress = false;
                   ackRequest = false;
               }
-              dsn = data & 0xff;
           } else if (rxread == 3) {
               // save data sequence number
               dsn = data & 0xff;
@@ -652,13 +650,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           }
           setSFD(false);
           if (DEBUG) log("RX: Complete: packetStart: " + 
-              lastPacketStart + " rxPStart: " + rxPacketStart);
+              rxPacketStart + " rxPStart: " + rxPacketStart);
 
           /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
           //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
           if ((autoAck && ackRequest) || shouldAck) {
-              System.out.println("Doing Autoack on lastPacket at " + lastPacketStart + " len: " + rxlen 
-                      + " DSN:" + dsn + " =?= " +  memory[RAM_RXFIFO + ((lastPacketStart + 2) & 127)]);
+              System.out.println("Doing Autoack on lastPacket at " + rxPacketStart + " len: " + rxlen 
+                      + " DSN:" + dsn + " =?= " +  memory[RAM_RXFIFO + ((rxPacketStart + 2) & 127)]);
               setState(RadioState.TX_ACK_CALIBRATE);
           } else {
               setState(RadioState.RX_WAIT);
@@ -780,7 +778,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
             // As long as we are in "OVERFLOW" the fifoP is not cleared.
             if (fifoP && !overflow) {
               if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
-                  " lastPacketStartPos: " + lastPacketStart);
+                  " lastPacketStartPos: " + rxPacketStart);
               setFIFOP(false);
             }
             
