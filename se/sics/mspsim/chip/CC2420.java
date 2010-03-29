@@ -266,6 +266,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean autoAck = false;
   private boolean shouldAck = false;
   private boolean addressDecode = false;
+  private boolean ackRequest = false;
   private boolean autoCRC = false;
   private int dsn = 0;
 
@@ -381,7 +382,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int[] ackBuf = {0x05, 0x02, 0x00, 0x00, 0x00, 0x00};
   private CCITT_CRC rxCrc = new CCITT_CRC();
   private CCITT_CRC txCrc = new CCITT_CRC();
-private int rxPacketStart;
+  private int rxPacketStart;
 
   public void setStateListener(StateListener listener) {
     stateListener = listener;
@@ -558,6 +559,8 @@ private int rxPacketStart;
           rxCrc.setCRC(0);
           rxlen = data & 0xff;
           rxPacketStart = rxfifoWritePos;
+          System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
+
           decodeAddress = false;
           if (DEBUG) log("RX: Start frame length " + rxlen);
           // FIFO pin goes high after length byte is written to RXFIFO
@@ -569,7 +572,11 @@ private int rxPacketStart;
           if (rxread == 2) {
               if (TYPE_DATA_FRAME == (memory[RAM_RXFIFO + rxPacketStart] & FRAME_TYPE)) {
                   decodeAddress = addressDecode & (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
+                  ackRequest = (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
                   destinationAddressMode = (memory[RAM_RXFIFO + ((rxPacketStart + 1) & 127)] >> 2) & 3;
+              } else {
+                  decodeAddress = false;
+                  ackRequest = false;
               }
           } else if (rxread == 3) {
               // save data sequence number
@@ -608,6 +615,7 @@ private int rxPacketStart;
                   /* reset state */
                   rxfifoLen = rxfifoLen - rxread;
                   rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
+                  System.out.println("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos);
                   setSFD(false);
                   setFIFO(rxfifoLen > 0);
                   setState(RadioState.RX_SFD_SEARCH);
@@ -647,7 +655,8 @@ private int rxPacketStart;
 
           /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
           //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
-          if ((autoAck && checkAutoack()) || shouldAck) {
+          if ((autoAck && ackRequest) || shouldAck) {
+              System.out.println("Doing Autoack on lastPacket at " + lastPacketStart + " len: " + rxlen);
               ackBuf[ACK_SEQPOS] = memory[RAM_RXFIFO + lastPacketStart + 2]; /* find the seq no!!! */
               setState(RadioState.TX_ACK_CALIBRATE);
           } else {
@@ -680,15 +689,7 @@ private int rxPacketStart;
           break;
       }
   }
-  
-  /* any packet that has autoack request will be acked! */
-  private boolean checkAutoack() {
-      /* ack request or not ? */
-      boolean ackReq = (memory[RAM_RXFIFO + lastPacketStart] & ACK_REQUEST) != 0;      
-      if (!ackReq) return false;
-      return true;
-  }
-  
+    
   public void dataReceived(USART source, int data) {
     int oldStatus = status;
     if (DEBUG) {
@@ -785,11 +786,13 @@ private int rxPacketStart;
             /* initiate read of another packet - update some variables to keep track of packet reading... */
             if (rxfifoReadLeft == 0) {
                 rxfifoReadLeft = (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF);
-                System.out.println("Initiating read of another packet - len: " + rxfifoReadLeft);
+                System.out.println("Initiating read of another packet - len: " + rxfifoReadLeft +
+                        " fifoLen: " + rxfifoLen);
             } else if (--rxfifoReadLeft == 0) {
                 /* check if we have another complete packet in buffer... */
                 if (rxfifoLen > 1 && rxfifoLen >= (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + 1) {
-                    System.out.println("Another packet in buffer!!!");
+                    System.out.println("Another packet in buffer - Setting FIFOP to true! plen: " +
+                            (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + " fifoLen: " + rxfifoLen);
                     if (!overflow) setFIFOP(true);
                 }
             }
