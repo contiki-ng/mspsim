@@ -612,9 +612,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
               if (flushPacket) {
                   // Immediately jump to SFD Search again... something more???
                   /* reset state */
-                  rxfifoLen = rxfifoLen - rxread;
+                  rxfifoLen = rxfifoLen - (rxread + 1);
                   rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
-                  System.out.println("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos);
+                  System.out.println("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos +
+                          " len:" + rxfifoLen);
                   setSFD(false);
                   setFIFO(rxfifoLen > 0);
                   setState(RadioState.RX_SFD_SEARCH);
