@@ -558,7 +558,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           rxCrc.setCRC(0);
           rxlen = data & 0xff;
           rxPacketStart = rxfifoWritePos;
-          System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
+          //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
 
           decodeAddress = false;
           if (DEBUG) log("RX: Start frame length " + rxlen);
@@ -614,8 +614,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   /* reset state */
                   rxfifoLen = rxfifoLen - (rxread + 1);
                   rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
-                  System.out.println("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos +
-                          " len:" + rxfifoLen);
+//                  System.out.("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos +
+//                          " len:" + rxfifoLen);
                   setSFD(false);
                   setFIFO(rxfifoLen > 0);
                   setState(RadioState.RX_SFD_SEARCH);
@@ -784,13 +784,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
             /* initiate read of another packet - update some variables to keep track of packet reading... */
             if (rxfifoReadLeft == 0) {
                 rxfifoReadLeft = (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF);
-                System.out.println("Initiating read of another packet - len: " + rxfifoReadLeft +
-                        " fifoLen: " + rxfifoLen);
+                System.out.println("Init read of packet - len: " + rxfifoReadLeft +
+                        " fifoLen: " + rxfifoLen + " rxfiforReadPos:" + rxfifoReadPos);
             } else if (--rxfifoReadLeft == 0) {
                 /* check if we have another complete packet in buffer... */
                 if (rxfifoLen > 1 && rxfifoLen >= (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + 1) {
-                    System.out.println("Another packet in buffer - Setting FIFOP to true! plen: " +
-                            (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + " fifoLen: " + rxfifoLen);
+                    System.out.println("More in FIFO - FIFOP = 1! plen: " +
+                            (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + " fifoLen: " + rxfifoLen + 
+                            " fifoPos:" + rxfifoReadPos);
                     if (!overflow) setFIFOP(true);
                 }
             }
@@ -894,6 +895,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     case REG_SRFOFF:
       if (DEBUG) {
         log("Strobe RXTX-OFF!!! at " + cpu.cycles);
+      }
+      if (stateMachine == RadioState.TX_ACK ||
+              stateMachine == RadioState.TX_FRAME ||
+              stateMachine == RadioState.RX_FRAME) {
+          System.out.println("Warning: turning off RXTX during " + stateMachine);
       }
       setState(RadioState.IDLE);
       break;
