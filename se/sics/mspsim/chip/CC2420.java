@@ -41,6 +41,7 @@
 package se.sics.mspsim.chip;
 
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.util.ArrayFIFO;
 import se.sics.mspsim.util.CCITT_CRC;
 import se.sics.mspsim.util.Utils;
 
@@ -237,17 +238,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   // When accessing RAM the second byte of the address contains
   // a flag indicating read/write
   public static final int FLAG_RAM_READ = 0x20;
-
+  private static final int[] BC_ADDRESS = new int[] {0xff, 0xff};
+  
   private SpiState state = SpiState.WAITING;
   private int pos;
   private int address;
   private int shrPos;
   private int txfifoPos;
   private boolean txfifoFlush;	// TXFIFO is automatically flushed on next write
-  private int rxfifoWritePos;
-  private int rxfifoReadPos;
   private int rxfifoReadLeft; // number of bytes left to read from current packet
-  private int rxfifoLen;
   private int rxlen;
   private int rxread;
   private int zeroSymbols;
@@ -268,6 +267,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean ackRequest = false;
   private boolean autoCRC = false;
   private int dsn = 0;
+  private int fcf0 = 0;
+  private int fcf1 = 0;
 
   
   private int activeFrequency = 0;
@@ -381,8 +382,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int[] ackBuf = {0x05, 0x02, 0x00, 0x00, 0x00, 0x00};
   private CCITT_CRC rxCrc = new CCITT_CRC();
   private CCITT_CRC txCrc = new CCITT_CRC();
-  private int rxPacketStart;
 
+  private ArrayFIFO rxFIFO;
+  
   public void setStateListener(StateListener listener) {
     stateListener = listener;
   }
@@ -393,14 +395,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   // TODO: super(cpu) and chip autoregister chips into the CPU.
   public CC2420(MSP430Core cpu) {
+      rxFIFO = new ArrayFIFO(memory, RAM_RXFIFO, 128);
+      
     registers[REG_SNOP] = 0;
     registers[REG_TXCTRL] = 0xa0ff;
     this.cpu = cpu;
     setModeNames(MODE_NAMES);
     setMode(MODE_POWER_OFF);
     fifoP = false;
-    rxfifoReadPos = 0;
-    rxfifoWritePos = 0;
+    rxFIFO.reset();
     overflow = false;
     reset();
     cpu.addChip(this);
@@ -429,9 +432,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       break;
 
     case POWER_DOWN:
-      rxfifoReadPos = 0;
-      rxfifoReadLeft = 0;
-      rxfifoWritePos = 0;
+      rxFIFO.reset();
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
       reset();
       setMode(MODE_POWER_OFF);
@@ -506,11 +507,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         ackPos = 0;
         ackNext();
         break;
+    case RX_FRAME:
+        /* mark position of frame start - for rejecting when address is wrong */
+        rxFIFO.mark();
+        rxread = 0;
+        break;
     }
 
     /* Notify state listener */
     if (stateListener != null) {
-      stateListener.newState(stateMachine);
+        stateListener.newState(stateMachine);
     }
 
     return true;
@@ -523,146 +529,128 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
    * @see se.sics.mspsim.chip.RFListener#receivedByte(byte)
    */
   public void receivedByte(byte data) {
-    // Received a byte from the "air"
+      // Received a byte from the "air"
 
-    log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
-        ((stateMachine == RadioState.RX_SFD_SEARCH || stateMachine == RadioState.RX_FRAME) ? "" : " *** Ignored"));
+      log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
+              ((stateMachine == RadioState.RX_SFD_SEARCH || stateMachine == RadioState.RX_FRAME) ? "" : " *** Ignored"));
 
-    if(stateMachine == RadioState.RX_SFD_SEARCH) {
-      // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
-      if(data == 0) {
-        // Count zero bytes
-        zeroSymbols++;
-      } else if(zeroSymbols >= 4 && data == 0x7A) {
-        // If the received byte is !zero, we have counted 4 zero bytes prior to this one,
-        // and the current received byte == 0x7A (SFD), we're in sync.
-        // In RX mode, SFD goes high when the SFD is received
-        setSFD(true);
-        if (DEBUG) log("RX: Preamble/SFD Synchronized.");
-        rxread = 0;
-        setState(RadioState.RX_FRAME);
-      } else {
-        /* if not four zeros and 0x7A then no zeroes... */
-        zeroSymbols = 0;
-      }
-
-    } else if(stateMachine == RadioState.RX_FRAME) {
-      if(rxfifoLen == 128) {
-        setRxOverflow();
-      } else {
-        memory[RAM_RXFIFO + rxfifoWritePos] = data & 0xFF;
-        rxfifoWritePos = (rxfifoWritePos + 1) & 127;
-        rxfifoLen++;
-
-        if(rxread == 0) {
-          rxCrc.setCRC(0);
-          rxlen = data & 0xff;
-          rxPacketStart = rxfifoWritePos;
-          //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
-
-          decodeAddress = false;
-          if (DEBUG) log("RX: Start frame length " + rxlen);
-          // FIFO pin goes high after length byte is written to RXFIFO
-          setFIFO(true);
-        } else if (rxread < rxlen - 1) {
-          /* As long as we are not in the length or FCF (CRC) we count CRC */
-          rxCrc.addBitrev(data & 0xff);
-          
-          if (rxread == 2) {
-              if (TYPE_DATA_FRAME == (memory[RAM_RXFIFO + rxPacketStart] & FRAME_TYPE)) {
-                  decodeAddress = addressDecode;
-                  ackRequest = (memory[RAM_RXFIFO + rxPacketStart] & ACK_REQUEST) > 0;
-                  destinationAddressMode = (memory[RAM_RXFIFO + ((rxPacketStart + 1) & 127)] >> 2) & 3;
-              } else {
-                  decodeAddress = false;
-                  ackRequest = false;
-              }
-          } else if (rxread == 3) {
-              // save data sequence number
-              dsn = data & 0xff;
+      if(stateMachine == RadioState.RX_SFD_SEARCH) {
+          // Look for the preamble (4 zero bytes) followed by the SFD byte 0x7A
+          if(data == 0) {
+              // Count zero bytes
+              zeroSymbols++;
+          } else if(zeroSymbols >= 4 && data == 0x7A) {
+              // If the received byte is !zero, we have counted 4 zero bytes prior to this one,
+              // and the current received byte == 0x7A (SFD), we're in sync.
+              // In RX mode, SFD goes high when the SFD is received
+              setSFD(true);
+              if (DEBUG) log("RX: Preamble/SFD Synchronized.");
+              setState(RadioState.RX_FRAME);
+          } else {
+              /* if not four zeros and 0x7A then no zeroes... */
+              zeroSymbols = 0;
           }
-          if (decodeAddress) {
-              boolean flushPacket = false;
-              /* here we decode the address !!! */
-              if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
-                  /* here we need to check that this address is correct compared to the stored address */
-                  int addrPos = rxPacketStart + 5; // where starts the destination address of the packet!!!??
-                  for (int i = 0; i < 8; i++) {
-                      if (memory[RAM_IEEEADDR + i] != memory[RAM_RXFIFO + ((addrPos + i) & 127)]) {
-                          flushPacket = true;
+
+      } else if(stateMachine == RadioState.RX_FRAME) {
+          if (overflow) {
+              /* if the CC2420 RX FIFO is in overflow - it needs a flush before receiving again */
+          } else if(rxFIFO.isFull()) {
+              setRxOverflow();
+          } else {
+              rxFIFO.write(data);
+
+              if (rxread == 0) {
+                  rxCrc.setCRC(0);
+                  rxlen = data & 0xff;
+                  //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
+                  decodeAddress = false;
+                  if (DEBUG) log("RX: Start frame length " + rxlen);
+                  // FIFO pin goes high after length byte is written to RXFIFO
+                  setFIFO(true);
+              } else if (rxread < rxlen - 1) {
+                  /* As long as we are not in the length or FCF (CRC) we count CRC */
+                  rxCrc.addBitrev(data & 0xff);
+                  if (rxread == 1) {
+                      fcf0 = data & 0xff;
+                  } else if (rxread == 2) {
+                      fcf1 = data & 0xff;
+                      if (TYPE_DATA_FRAME == (fcf0 & FRAME_TYPE)) {
+                          decodeAddress = addressDecode;
+                          ackRequest = (fcf0 & ACK_REQUEST) > 0;
+                          destinationAddressMode = (fcf1 >> 2) & 3;
+                      } else {
+                          decodeAddress = false;
+                          ackRequest = false;
+                      }
+                  } else if (rxread == 3) {
+                      // save data sequence number
+                      dsn = data & 0xff;
+                  } else if (decodeAddress) {
+                      boolean flushPacket = false;
+                      /* here we decode the address !!! */
+                      if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
+                          /* here we need to check that this address is correct compared to the stored address */
+                          flushPacket = !rxFIFO.tailEquals(memory, RAM_IEEEADDR, 8);
+                          decodeAddress = false;
+                      } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
+                          /* should check short address */
+                          flushPacket = !rxFIFO.tailEquals(BC_ADDRESS, 0, 2) && 
+                                  !rxFIFO.tailEquals(memory, RAM_SHORTADDR, 2);
+                          decodeAddress = false;
+                      }
+                      if (flushPacket) {
+                          // Immediately jump to SFD Search again... something more???
+                          /* reset state */
+                          rxFIFO.restore();
+                          //                  System.out.("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos +
+                          //                          " len:" + rxfifoLen);
+                          setSFD(false);
+                          setFIFO(rxFIFO.length() > 0);
+                          setState(RadioState.RX_SFD_SEARCH);
                       }
                   }
-                  decodeAddress = false;
-              } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
-                  /* should check short address */
-                  int addrPos = rxPacketStart + 5; // where starts the destination address of the packet!!!??
-                  boolean bc = true;
-                  for (int i = 0; i < 2; i++) {
-                      int addrData = memory[RAM_RXFIFO + ((addrPos + i) & 127)];
-                      if (bc && addrData != 0xff) {
-                          bc = false;
-                      }
-                      if (memory[RAM_SHORTADDR + i] != addrData) {
-                          flushPacket = true;
-                      }
-                  }
-                  if (bc) flushPacket = false;
-                  decodeAddress = false;
               }
-              if (flushPacket) {
-                  // Immediately jump to SFD Search again... something more???
-                  /* reset state */
-                  rxfifoLen = rxfifoLen - (rxread + 1);
-                  rxfifoWritePos = (rxPacketStart - 1 + 128) & 127;
-//                  System.out.("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos +
-//                          " len:" + rxfifoLen);
+
+              if(rxread++ == rxlen) {
+                  // In RX mode, FIFOP goes high, if threshold is higher than frame length....
+
+                  // Here we check the CRC of the packet!
+                  //System.out.println("Reading from " + ((rxfifoWritePos + 128 - 2) & 127));
+                  int crc = rxFIFO.get(-2) << 8;
+                  crc += rxFIFO.get(-1); //memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
+
+                  if (true && crc != rxCrc.getCRCBitrev()) {
+                      System.out.println("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
+                  }
+                  // Should take a RSSI value as input or use a set-RSSI value...
+                  rxFIFO.set(-2, registers[REG_RSSI] & 0xff); 
+                  rxFIFO.set(-1, 37 | (crc == rxCrc.getCRCBitrev() ? 0x80 : 0));
+                  //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = ;
+                  //          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
+                  //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
+                  //              (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
+
+                  /* set FIFOP only if this is the first received packet - e.g. if rxfifoLen is at most rxlen + 1
+                   * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP
+                   *       fix support for FIFOP threshold  */
+                  if (rxFIFO.length() <= rxlen + 1) {
+                      setFIFOP(true);
+                  } else {
+                      System.out.println("Did not set FIFOP rxfifoLen: " + rxFIFO.length() + " rxlen: " + rxlen);
+                  }
                   setSFD(false);
-                  setFIFO(rxfifoLen > 0);
-                  setState(RadioState.RX_SFD_SEARCH);
+                  if (DEBUG) log("RX: Complete: packetStart: " + rxFIFO.stateToString());
+
+                  /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
+                  //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
+                  if ((autoAck && ackRequest) || shouldAck) {
+                      setState(RadioState.TX_ACK_CALIBRATE);
+                  } else {
+                      setState(RadioState.RX_WAIT);
+                  }
               }
           }
-        }
-                
-        if(rxread++ == rxlen) {
-          // In RX mode, FIFOP goes high, if threshold is higher than frame length....
-
-          // Here we check the CRC of the packet!
-          //System.out.println("Reading from " + ((rxfifoWritePos + 128 - 2) & 127));
-          int crc = memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] << 8;
-          crc += memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
-  
-          if (true && crc != rxCrc.getCRCBitrev()) {
-              System.out.println("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
-          }
-          // Should take a RSSI value as input or use a set-RSSI value...
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = (registers[REG_RSSI]) & 0xff;
-          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
-          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
-              (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
-
-          // FIFOP should not be set if CRC is not ok??? - depends on autoCRC!
-          /* set FIFOP only if this is the first received packet - e.g. if rxfifoLen is at most rxlen + 1
-           * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP
-           *       fix support for FIFOP threshold  */
-          if (rxfifoLen <= rxlen + 1) {
-              setFIFOP(true);
-          } else {
-              System.out.println("Did not set FIFOP rxfifoLen: " + rxfifoLen + " rxlen: " + rxlen);
-          }
-          setSFD(false);
-          if (DEBUG) log("RX: Complete: packetStart: " + 
-              rxPacketStart + " rxPStart: " + rxPacketStart);
-
-          /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
-          //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
-          if ((autoAck && ackRequest) || shouldAck) {
-              setState(RadioState.TX_ACK_CALIBRATE);
-          } else {
-              setState(RadioState.RX_WAIT);
-          }
-        }
       }
-    }
   }
 
   private void setReg(int address, int data) {
@@ -764,47 +752,40 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         }
         return;
         //break;
-      case READ_RXFIFO:
-        if(DEBUG) log("RXFIFO READ " + rxfifoReadPos + " => " +
-            (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) + " size: " + rxfifoLen);
-        source.byteReceived( (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF) );
+      case READ_RXFIFO: {
+          int fifoData = rxFIFO.read(); 
+          if (DEBUG) log("RXFIFO READ: " + rxFIFO.stateToString());
+          source.byteReceived(fifoData);
 
-        if (rxfifoLen > 0) {
-            /* first check and clear FIFOP - since we now have read a byte! */
-            // TODO:
-            // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
-            // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
-            // As long as we are in "OVERFLOW" the fifoP is not cleared.
-            if (fifoP && !overflow) {
-              if (DEBUG) log("*** FIFOP cleared at: " + rxfifoReadPos +
-                  " lastPacketStartPos: " + rxPacketStart);
+          /* first check and clear FIFOP - since we now have read a byte! */
+          // TODO:
+          // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
+          // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
+          // As long as we are in "OVERFLOW" the fifoP is not cleared.
+          if (fifoP && !overflow) {
+              if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
               setFIFOP(false);
-            }
-            
-            /* initiate read of another packet - update some variables to keep track of packet reading... */
-            if (rxfifoReadLeft == 0) {
-                rxfifoReadLeft = (memory[RAM_RXFIFO + rxfifoReadPos] & 0xFF);
-                System.out.println("Init read of packet - len: " + rxfifoReadLeft +
-                        " fifoLen: " + rxfifoLen + " rxfiforReadPos:" + rxfifoReadPos);
-            } else if (--rxfifoReadLeft == 0) {
-                /* check if we have another complete packet in buffer... */
-                if (rxfifoLen > 1 && rxfifoLen >= (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + 1) {
-                    System.out.println("More in FIFO - FIFOP = 1! plen: " +
-                            (memory[RAM_RXFIFO + (rxfifoReadPos + 1) & 127] & 0xFF) + " fifoLen: " + rxfifoLen + 
-                            " fifoPos:" + rxfifoReadPos);
-                    if (!overflow) setFIFOP(true);
-                }
-            }
-            rxfifoReadPos = (rxfifoReadPos + 1) & 127;
-            rxfifoLen--;
-        }
-        // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
-        if(rxfifoLen == 0) {
-          if (DEBUG) log("Setting FIFO to low (buffer empty)");
-          setFIFO(false);
-        }
-        
-        return;
+          }
+
+          /* initiate read of another packet - update some variables to keep track of packet reading... */
+          if (rxfifoReadLeft == 0) {
+              rxfifoReadLeft = fifoData;
+              System.out.println("Init read of packet - len: " + rxfifoReadLeft +
+                      " fifo: " + rxFIFO.stateToString());
+          } else if (--rxfifoReadLeft == 0) {
+              /* check if we have another complete packet in buffer... */
+              if (rxFIFO.length() > 0 && rxFIFO.length() > rxFIFO.peek(0)) {
+                  System.out.println("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
+                  if (!overflow) setFIFOP(true);
+              }
+          }
+          // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
+          if (rxFIFO.length() == 0) {
+              if (DEBUG) log("Setting FIFO to low (buffer empty)");
+              setFIFO(false);
+          }
+      }
+      return; /* avoid returning the status byte */
       case WRITE_TXFIFO:
         if(txfifoFlush) {
           txCursor = 0;
@@ -1081,12 +1062,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private void flushRX() {
     if (DEBUG) {
-      log("Flushing RX len = " + rxfifoLen);
+      log("Flushing RX len = " + rxFIFO.length());
     }
-    rxfifoReadPos = 0;
-    rxfifoReadLeft = 0;
-    rxfifoWritePos = 0;
-    rxfifoLen = 0;
+    rxFIFO.reset();
     setSFD(false);
     setFIFOP(false);
     setFIFO(false);
@@ -1163,7 +1141,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   
   private void setRxOverflow() {
-    if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxfifoReadPos + " Write Pos: " + rxfifoWritePos);
+    if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxFIFO.stateToString());
     setFIFOP(true);
     setFIFO(false);
     setSFD(false);
@@ -1319,8 +1297,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
     " FIFOP: " + fifoP + " FIFO: " + currentFIFO + " SFD: " + currentSFD + 
-    "\n Radio State: " + stateMachine + " rxFifoLen: " + rxfifoLen + " rxFifoWritePos: " +
-      rxfifoWritePos + " rxFifoReadPos: " + rxfifoReadPos +
+    "\n Radio State: " + stateMachine +
+    "\n RXFIFO: " + rxFIFO.stateToString() +
     "\n AutoACK: " + autoAck + " AddrDecode: " + addressDecode + " AutoCRC: " + autoCRC +
     "\n SPI State: " + state +
     "\n Channel: " + activeChannel +
