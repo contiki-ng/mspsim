@@ -124,7 +124,8 @@ public class Watchdog extends IOUnit implements SFRModule {
     if (address == WDTCTL) {
       if ((value >> 8) == 0x5a) {
         wdtctl = value & 0xff;
-        if (DEBUG) System.out.println(getName() + " Wrote to WDTCTL: " + Utils.hex8(wdtctl));
+        if (DEBUG) System.out.println(getName() + " Wrote to WDTCTL: " + Utils.hex8(wdtctl) + " from " + cpu.getPC());
+        
         // Is it on?
         wdtOn = (value & 0x80) == 0;
         boolean lastACLK = sourceACLK;

@@ -9,6 +9,7 @@ public class ArrayFIFO {
     private final int memory[];
     private final int start;
     private final int size;
+    private final String name;
     
     private int readPos = 0;
     private int writePos = 0;
@@ -16,8 +17,9 @@ public class ArrayFIFO {
 
     private int markWritePos;
     
-    public ArrayFIFO(int[] mem, int start, int size) {
+    public ArrayFIFO(String name, int[] mem, int start, int size) {
         memory = mem;
+        this.name = name;
         this.start = start;
         this.size = size;
         len = 0;
@@ -54,18 +56,19 @@ public class ArrayFIFO {
     }
     
     public int read() {
+        if (len <= 0) {
+            if (STRICT) {
+                throw new EmulationException("Reading from empty FIFO");
+            } else {
+                System.out.println("Reading from empty FIFO");
+                return 0;
+            }
+        }
         int v = memory[start + readPos++];
         if (readPos >= size) {
             readPos = 0;
         }
         len--;
-        if (len < 0) {
-            if (STRICT) {
-                throw new EmulationException("Reading from empty FIFO");
-            } else {
-                System.out.println("Reading from empty FIFO");
-            }
-        }
         return v & 0xff;
     }
     
@@ -115,7 +118,7 @@ public class ArrayFIFO {
 
 
     public String stateToString() {
-        return "FIFO: " + len + " rpos: " + readPos + " wpos: " + writePos;
+        return name + " len: " + len + " rpos: " + readPos + " wpos: " + writePos;
     }
 
 

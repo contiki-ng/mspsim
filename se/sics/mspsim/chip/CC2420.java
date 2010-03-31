@@ -395,7 +395,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   // TODO: super(cpu) and chip autoregister chips into the CPU.
   public CC2420(MSP430Core cpu) {
-      rxFIFO = new ArrayFIFO(memory, RAM_RXFIFO, 128);
+      rxFIFO = new ArrayFIFO("RXFIFO", memory, RAM_RXFIFO, 128);
       
     registers[REG_SNOP] = 0;
     registers[REG_TXCTRL] = 0xa0ff;
