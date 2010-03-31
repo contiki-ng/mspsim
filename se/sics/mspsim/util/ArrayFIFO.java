@@ -4,6 +4,8 @@ import se.sics.mspsim.core.EmulationException;
 
 public class ArrayFIFO {
 
+    public static final boolean STRICT = false;
+    
     private final int memory[];
     private final int start;
     private final int size;
@@ -58,7 +60,11 @@ public class ArrayFIFO {
         }
         len--;
         if (len < 0) {
-            throw new EmulationException("Reading from empty FIFO");
+            if (STRICT) {
+                throw new EmulationException("Reading from empty FIFO");
+            } else {
+                System.out.println("Reading from empty FIFO");
+            }
         }
         return v & 0xff;
     }
