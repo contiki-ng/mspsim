@@ -441,7 +441,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
     case RX_CALIBRATE:
       /* should be 12 according to specification */
-      setSymbolEvent(8);
+      setSymbolEvent(12);
       setMode(MODE_RX_ON);
       break;
 
