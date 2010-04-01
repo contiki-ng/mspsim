@@ -353,6 +353,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       case RX_CALIBRATE:
         setState(RadioState.RX_SFD_SEARCH);
         break;
+        /* this will be called 8 symbols after first SFD_SEARCH */
+      case RX_SFD_SEARCH:
+        status |= STATUS_RSSI_VALID;
+        updateCCA();
+        break;
 
       case TX_CALIBRATE:
         setState(RadioState.TX_PREAMBLE);
@@ -447,8 +452,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
     case RX_SFD_SEARCH:
       zeroSymbols = 0;
-      // RSSI valid here?
-      status |= STATUS_RSSI_VALID;
+      /* eight symbols after first SFD search RSSI will be valid */
+      if ((status & STATUS_RSSI_VALID) == 0) {
+          setSymbolEvent(8);
+      }
+//      status |= STATUS_RSSI_VALID;
       updateCCA();
       setMode(MODE_RX_ON);
       break;
@@ -488,9 +496,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       break;
       
     case TX_ACK_CALIBRATE:
-        /* TX active during ACK ? */
+        /* TX active during ACK + NOTE: we ignore the SFD when receiveing full packets so
+         * we need to add another extra 2 symbols here to get a correct timing */
         status |= STATUS_TX_ACTIVE;
-        setSymbolEvent(12 + 2);
+        setSymbolEvent(12 + 2 + 2);
         setMode(MODE_TXRX_ON);
       break;
     case TX_ACK_PREAMBLE:
