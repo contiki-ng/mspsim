@@ -297,6 +297,9 @@ public class MSP430 extends MSP430Core {
     setRunning(false);
   }
 
+  public int getDCOFrequency() {
+    return dcoFrq;
+  }
   public int getExecCount(int address) {
     if (execCounter != null) {
       return execCounter[address];
