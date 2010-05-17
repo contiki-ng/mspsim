@@ -60,7 +60,7 @@ public class ArrayFIFO {
             if (STRICT) {
                 throw new EmulationException("Reading from empty FIFO");
             } else {
-                System.out.println("Reading from empty FIFO");
+                /*System.out.println("Reading from empty FIFO");*/
                 return 0;
             }
         }
