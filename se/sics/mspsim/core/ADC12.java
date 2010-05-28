@@ -35,7 +35,7 @@
  *
  * Each time a sample is converted the ADC12 system will check for EOS flag
  * and if not set it just continues with the next conversion (x + 1). 
- * If EOS next conv is startMem.
+ * If EOS next conversion is startMem.
  * Interrupt is triggered when the IE flag are set! 
  *
  *
@@ -46,6 +46,8 @@
  */
 
 package se.sics.mspsim.core;
+
+import java.util.Arrays;
 
 public class ADC12 extends IOUnit {
 
@@ -96,6 +98,7 @@ public class ADC12 extends IOUnit {
 
   public static final int EOS_MASK = 0x80;
   
+  private final MSP430Core core;
   
   private int adc12ctl0 = 0;
   private int adc12ctl1 = 0;
@@ -113,7 +116,7 @@ public class ADC12 extends IOUnit {
   private int startMem = 0;
   private int adcDiv = 1;
 
-  private ADCInput adcInput[] = new ADCInput[8];
+  private ADCInput adcInput[] = new ADCInput[16];
   
   private int conSeq;
   private int adc12ie;
@@ -121,7 +124,6 @@ public class ADC12 extends IOUnit {
   private int adc12iv;
   
   private int adcSSel;
-  private MSP430Core core;
   private int adc12Vector = 7;
 
   private TimeEvent adcTrigger = new TimeEvent(0) {
@@ -136,38 +138,70 @@ public class ADC12 extends IOUnit {
     super(cpu.memory, 0);
     core = cpu;
   }
-  
+
+  public void reset(int type) {
+    enableConversion = false;
+    startConversion = false;
+    adc12ctl0 = 0;
+    adc12ctl1 = 0;
+    shTime0 = shTime1 = 4;
+    adc12On = false;
+    shSource = 0;
+    startMem = adc12Pos = 0;
+    adcDiv = 1;
+
+    conSeq = 0;
+    adc12ie = 0;
+    adc12ifg = 0;
+    adc12iv = 0;
+    adcSSel = 0;
+
+    Arrays.fill(adc12mctl, 0);
+  }
+
   public void setADCInput(int adindex, ADCInput input) {
     adcInput[adindex] = input;
   }
 
   // write a value to the IO unit
-  public void write(int address, int value, boolean word,
-			     long cycles) {
+  public void write(int address, int value, boolean word, long cycles) {
     switch (address) {
     case ADC12CTL0:
-      adc12ctl0 = value;
-      shTime0 = SHTBITS[(value >> 8) & 0x0f];
-      shTime1 = SHTBITS[(value >> 12) & 0x0f];
-      adc12On = (value & 0x10) > 0;
+      if (enableConversion) {
+        // Ongoing conversion: only some parts may be changed
+        adc12ctl0 = (adc12ctl0 & 0xfff0) + (value & 0xf);
+      } else {
+        adc12ctl0 = value;
+        shTime0 = SHTBITS[(value >> 8) & 0x0f];
+        shTime1 = SHTBITS[(value >> 12) & 0x0f];
+        adc12On = (value & 0x10) > 0;
+      }
       enableConversion = (value & 0x02) > 0;
       startConversion = (value & 0x01) > 0;
       
       if (DEBUG) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
       if (adc12On && enableConversion && startConversion) {
-        // Set the start time to be now!
-        adcTrigger.time = core.getTime();
-        convert();
+        if (!adcTrigger.isScheduled()) {
+          // Set the start time to be now!
+          adc12Pos = startMem;
+          int delay = adcDiv * ((adc12Pos < 8 ? shTime0 : shTime1) + 13);
+          core.scheduleTimeEvent(adcTrigger, core.getTime() + delay);
+        }
       }
       break;
     case ADC12CTL1:
-      adc12ctl1 = value;
-      startMem = (value >> 12) & 0xf;
-      shSource = (value >> 10) & 0x3;
-      adcDiv = ((value >> 5) & 0x7) + 1;
+      if (enableConversion) {
+        // Ongoing conversion: only some parts may be changed
+        adc12ctl1 = (adc12ctl1 & 0xfff8) + (value & 0x7);
+      } else {
+        adc12ctl1 = value;
+        startMem = (value >> 12) & 0xf;
+        shSource = (value >> 10) & 0x3;
+        adcDiv = ((value >> 5) & 0x7) + 1;
+        adcSSel = (value >> 3) & 0x03;
+      }
       conSeq = (value >> 1) & 0x03;
-      adcSSel = (value >> 3) & 0x03;
       if (DEBUG) System.out.println(getName() + ": Set startMem: " + startMem + " SHSource: " + shSource +
           " ConSeq-mode:" + conSeq + " Div: " + adcDiv + " ADCSSEL: " + adcSSel);
       break;
@@ -179,10 +213,13 @@ public class ADC12 extends IOUnit {
       break;
     default:
       if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
-        adc12mctl[address - ADC12MCTL0] = value & 0xff;
-        if (DEBUG) System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " source = " + (value & 0xf));
-        if ((value & 0x80) != 0) {
-          if (DEBUG) System.out.println("ADC12MCTL" + (address - ADC12MCTL0) + " EOS bit set");
+        if (enableConversion) {
+          /* Ongoing conversion: not possible to modify */
+        } else {
+          adc12mctl[address - ADC12MCTL0] = value & 0xff;
+          if (DEBUG) System.out.println("ADC12MCTL" + (address - ADC12MCTL0)
+              + " source = " + (value & 0xf)
+              + (((value & EOS_MASK) != 0) ? " EOS bit set" : ""));
         }
       }
     }
@@ -202,7 +239,7 @@ public class ADC12 extends IOUnit {
     default:
       if (address >= ADC12MCTL0 && address <= ADC12MCTL15)  {
         return adc12mctl[address - ADC12MCTL0];
-      } else if (address >= ADC12MEM0) {
+      } else if (address >= ADC12MEM0 && address <= ADC12MEM15) {
         int reg = (address - ADC12MEM0) / 2;
         // Clear ifg!
         adc12ifg &= ~(1 << reg);
@@ -226,12 +263,12 @@ public class ADC12 extends IOUnit {
   private void convert() {
     // If either off or not enable conversion then just return...
     if (!adc12On || !enableConversion) return;
-    // Some noice...
-    ADCInput input = adcInput[adc12mctl[adc12Pos] & 0x7];
+    // Some noise...
+    ADCInput input = adcInput[adc12mctl[adc12Pos] & 0xf];
     adc12mem[adc12Pos] = input != null ? input.nextData() : 2048 + 100 - smp & 255;
     smp += 7;
+    adc12ifg |= (1 << adc12Pos);
     if ((adc12ie & (1 << adc12Pos)) > 0) {
-      adc12ifg |= (1 << adc12Pos);
       // This should check if there already is an higher iv!
       adc12iv = adc12Pos * 2 + 6;
       //System.out.println("** Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
@@ -243,8 +280,7 @@ public class ADC12 extends IOUnit {
     } else {
       adc12Pos = (adc12Pos + 1) & 0x0f;
     }
-    int delay = adcDiv * (shTime0 + 13);
-    
+    int delay = adcDiv * ((adc12Pos < 8 ? shTime0 : shTime1) + 13);
     core.scheduleTimeEvent(adcTrigger, adcTrigger.time + delay);
   }
   
