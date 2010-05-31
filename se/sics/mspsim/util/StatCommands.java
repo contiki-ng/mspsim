@@ -75,7 +75,10 @@ public class StatCommands implements CommandBundle {
               context.out.println("  " + chipName + ": NOT FOUND");
             } else {
               context.out.println(chipName + ": " + chip);
-              context.out.println(chip.chipinfo());
+              String info = chip.chipinfo();
+              if (info != null) {
+                context.out.println(info);
+              }
             }
           }
         } else {
