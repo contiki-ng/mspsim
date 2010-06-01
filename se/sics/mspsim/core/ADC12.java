@@ -96,8 +96,15 @@ public class ADC12 extends IOUnit {
     256, 384, 512, 768, 1024, 1024, 1024, 1024
   };
 
+  public static final int BUSY_MASK = 0x01;
   public static final int EOS_MASK = 0x80;
-  
+
+  public static final int CONSEQ_SINGLE = 0x00;
+  public static final int CONSEQ_SEQUENCE = 0x01;
+  public static final int CONSEQ_REPEAT_SINGLE = 0x02;
+  public static final int CONSEQ_REPEAT_SEQUENCE = 0x03;
+  public static final int CONSEQ_SEQUENCE_MASK = 0x01;
+
   private final MSP430Core core;
   
   private int adc12ctl0 = 0;
@@ -111,6 +118,7 @@ public class ADC12 extends IOUnit {
   private boolean adc12On = false;
   private boolean enableConversion;
   private boolean startConversion;
+  private boolean isConverting;
   
   private int shSource = 0;
   private int startMem = 0;
@@ -142,6 +150,7 @@ public class ADC12 extends IOUnit {
   public void reset(int type) {
     enableConversion = false;
     startConversion = false;
+    isConverting = false;
     adc12ctl0 = 0;
     adc12ctl1 = 0;
     shTime0 = shTime1 = 4;
@@ -181,21 +190,20 @@ public class ADC12 extends IOUnit {
       
       if (DEBUG) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
-      if (adc12On && enableConversion && startConversion) {
-        if (!adcTrigger.isScheduled()) {
-          // Set the start time to be now!
-          adc12Pos = startMem;
-          int delay = adcDiv * ((adc12Pos < 8 ? shTime0 : shTime1) + 13);
-          core.scheduleTimeEvent(adcTrigger, core.getTime() + delay);
-        }
+      if (adc12On && enableConversion && startConversion && !isConverting) {
+        // Set the start time to be now!
+        isConverting = true;
+        adc12Pos = startMem;
+        int delay = adcDiv * ((adc12Pos < 8 ? shTime0 : shTime1) + 13);
+        core.scheduleTimeEvent(adcTrigger, core.getTime() + delay);
       }
       break;
     case ADC12CTL1:
       if (enableConversion) {
         // Ongoing conversion: only some parts may be changed
-        adc12ctl1 = (adc12ctl1 & 0xfff8) + (value & 0x7);
+        adc12ctl1 = (adc12ctl1 & 0xfff8) + (value & 0x6);
       } else {
-        adc12ctl1 = value;
+        adc12ctl1 = value & 0xfffe;
         startMem = (value >> 12) & 0xf;
         shSource = (value >> 10) & 0x3;
         adcDiv = ((value >> 5) & 0x7) + 1;
@@ -231,7 +239,7 @@ public class ADC12 extends IOUnit {
     case ADC12CTL0:
       return adc12ctl0;
     case ADC12CTL1:
-      return adc12ctl1;
+      return isConverting ? (adc12ctl1 | BUSY_MASK) : adc12ctl1;
     case ADC12IE:
       return adc12ie;
     case ADC12IFG:
@@ -261,8 +269,12 @@ public class ADC12 extends IOUnit {
 
   int smp = 0;
   private void convert() {
-    // If either off or not enable conversion then just return...
-    if (!adc12On || !enableConversion) return;
+    // If off then just return...
+    if (!adc12On) {
+      isConverting = false;
+      return;
+    }
+    boolean runAgain = enableConversion && conSeq != CONSEQ_SINGLE;
     // Some noise...
     ADCInput input = adcInput[adc12mctl[adc12Pos] & 0xf];
     adc12mem[adc12Pos] = input != null ? input.nextData() : 2048 + 100 - smp & 255;
@@ -274,14 +286,24 @@ public class ADC12 extends IOUnit {
       //System.out.println("** Trigger ADC12 IRQ for ADCMEM" + adc12Pos);
       core.flagInterrupt(adc12Vector, this, true);
     }
-    // Increase
-    if ((adc12mctl[adc12Pos] & EOS_MASK) == EOS_MASK) {
-      adc12Pos = startMem;
-    } else {
-      adc12Pos = (adc12Pos + 1) & 0x0f;
+    if ((conSeq & CONSEQ_SEQUENCE_MASK) != 0) {
+      // Increase
+      if ((adc12mctl[adc12Pos] & EOS_MASK) == EOS_MASK) {
+        adc12Pos = startMem;
+        if (conSeq == CONSEQ_SEQUENCE) {
+          // Single sequence only
+          runAgain = false;
+        }
+      } else {
+        adc12Pos = (adc12Pos + 1) & 0x0f;
+      }
     }
-    int delay = adcDiv * ((adc12Pos < 8 ? shTime0 : shTime1) + 13);
-    core.scheduleTimeEvent(adcTrigger, adcTrigger.time + delay);
+    if (!runAgain) {
+      isConverting = false;
+    } else {
+      int delay = adcDiv * ((adc12Pos < 8 ? shTime0 : shTime1) + 13);
+      core.scheduleTimeEvent(adcTrigger, adcTrigger.time + delay);
+    }
   }
   
   public void interruptServiced(int vector) {
