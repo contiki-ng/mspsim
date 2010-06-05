@@ -48,6 +48,7 @@ import se.sics.mspsim.cli.CommandBundle;
 import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.TimeEvent;
 
@@ -62,7 +63,7 @@ public class StatCommands implements CommandBundle {
   }
 
   public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
-    handler.registerCommand("chipinfo", new BasicCommand("show information about specified chip",
+    handler.registerCommand("chipinfo", new BasicCommand("show information about specified chip/loggable",
     "[chips...]") {
 
       @Override
@@ -70,21 +71,21 @@ public class StatCommands implements CommandBundle {
         if (context.getArgumentCount() > 0) {
           for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
             String chipName = context.getArgument(i);
-            Chip chip = statistics.getChip(chipName);
+            Loggable chip = cpu.getLoggable(chipName);
             if (chip == null) {
               context.out.println("  " + chipName + ": NOT FOUND");
             } else {
               context.out.println(chipName + ": " + chip);
-              String info = chip.chipinfo();
+              String info = chip.info();
               if (info != null) {
                 context.out.println(info);
               }
             }
           }
         } else {
-          Chip[] chips = statistics.getChips();
+          Loggable[] chips = cpu.getLoggables();
           if (chips == null) {
-            context.out.println("No chips found.");
+            context.out.println("No loggables found.");
           } else {
             for (int i = 0, n = chips.length; i < n; i++) {
               context.out.println("  " + chips[i].getName());

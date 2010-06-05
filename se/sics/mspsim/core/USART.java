@@ -43,8 +43,6 @@ package se.sics.mspsim.core;
 
 public class USART extends IOUnit implements SFRModule {
 
-  public static final boolean DEBUG = false; //true;
-
   // USART 0/1 register offset (0x70 / 0x78)
   public static final int UCTL = 0;
   public static final int UTCTL = 1;
@@ -166,7 +164,7 @@ public class USART extends IOUnit implements SFRModule {
   }
 
   public void enableChanged(int reg, int bit, boolean enabled) {
-    if (DEBUG) System.out.println("enableChanged: " + reg + " bit: " + bit +
+    if (DEBUG) log("enableChanged: " + reg + " bit: " + bit +
         " enabled = " + enabled + " txBit: " + txbit);
     if (bit == txbit) {
       txEnabled = enabled;
@@ -215,21 +213,21 @@ public class USART extends IOUnit implements SFRModule {
     case UCTL:
       uctl = data;
       spiMode = (data & 0x04) > 0;
-      if (DEBUG) System.out.println(getName() + " write to UCTL " + data);
+      if (DEBUG) log(" write to UCTL " + data);
       break;
     case UTCTL:
       utctl = data;
-      if (DEBUG) System.out.println(getName() + " write to UTCTL " + data);
+      if (DEBUG) log(" write to UTCTL " + data);
 
       if (((data >> 4) & 3) == 1) {
         clockSource = MSP430Constants.CLK_ACLK;
         if (DEBUG) {
-          System.out.println(getName() + " Selected ACLK as source");
+          log(" Selected ACLK as source");
         }
       } else {
         clockSource = MSP430Constants.CLK_SMCLK;
         if (DEBUG) {
-          System.out.println(getName() + " Selected SMCLK as source");
+          log(" Selected SMCLK as source");
         }
       }
       if ((data & UTCTL_URXSE) == UTCTL_URXSE) {
@@ -244,7 +242,7 @@ public class USART extends IOUnit implements SFRModule {
       break;
     case UMCTL:
       umctl = data;
-      if (DEBUG) System.out.println(getName() + " write to UMCTL " + data);
+      if (DEBUG) log(" write to UMCTL " + data);
       break;
     case UBR0:
       ubr0 = data;
@@ -255,14 +253,14 @@ public class USART extends IOUnit implements SFRModule {
       updateBaudRate();
       break;
     case UTXBUF:
-      if (DEBUG) System.out.print(getName() + ": USART_UTXBUF:" + (char) data + " = " + data + "\n");
+      if (DEBUG) log(": USART_UTXBUF:" + (char) data + " = " + data + "\n");
       if (txEnabled || (spiMode && rxEnabled)) {
         // Interruptflag not set!
         clrBitIFG(utxifg);
         /* the TX is no longer empty ! */
         utctl &= ~UTCTL_TXEMPTY;
         /* should the interrupt be flagged off here ? - or only the flags */
-        if (DEBUG) System.out.println(getName() + " flagging off transmit interrupt");
+        if (DEBUG) log(" flagging off transmit interrupt");
         //      cpu.flagInterrupt(transmitInterrupt, this, false);
 
         // Schedule on cycles here
@@ -273,11 +271,11 @@ public class USART extends IOUnit implements SFRModule {
         if (!transmitting) {
             /* how long time will the copy from the TX_BUF to the shift reg take? */
             /* assume 3 cycles? */
-            nextTXReady = cycles + 3; //tickPerByte + 3;
+            nextTXReady = cycles + 1; //tickPerByte + 3;
             cpu.scheduleCycleEvent(txTrigger, nextTXReady);
         }
       } else {
-        System.out.println("Ignoring UTXBUF data since TX not active...");
+        log("Ignoring UTXBUF data since TX not active...");
       }
       utxbuf = data;
       break;
@@ -291,10 +289,10 @@ public class USART extends IOUnit implements SFRModule {
     
     switch (address) {
     case UCTL:
-      if (DEBUG) System.out.println(getName() + " read from UCTL");
+      if (DEBUG) log(" read from UCTL");
       return uctl;
     case UTCTL:
-      if (DEBUG) System.out.println(getName() + " read from UTCTL: " + utctl);
+      if (DEBUG) log(" read from UTCTL: " + utctl);
       return utctl;
     case URCTL:
       return urctl;
@@ -311,7 +309,7 @@ public class USART extends IOUnit implements SFRModule {
       // When byte is read - the interruptflag is cleared!
       // and error status should also be cleared later...
       if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-          System.out.println(getName() + " clearing rx interrupt flag " + cpu.getPC() + " byte: " + tmp);
+          log(" clearing rx interrupt flag " + cpu.getPC() + " byte: " + tmp);
       }
       clrBitIFG(urxifg);
       if (listener != null) {
@@ -329,14 +327,12 @@ public class USART extends IOUnit implements SFRModule {
     }
     if (clockSource == MSP430Constants.CLK_ACLK) {
       if (DEBUG) {
-        System.out.println(getName() + " Baud rate is (bps): " + cpu.aclkFrq / div +
-            " div = " + div);
+        log(" Baud rate is (bps): " + cpu.aclkFrq / div + " div = " + div);
       }
       baudRate = cpu.aclkFrq / div;
     } else {
       if (DEBUG) {     
-        System.out.println(getName() + " Baud rate is (bps): " + cpu.smclkFrq / div +
-            " div = " + div);
+        log(" Baud rate is (bps): " + cpu.smclkFrq / div + " div = " + div);
       }
       baudRate = cpu.smclkFrq / div;
     }
@@ -344,7 +340,7 @@ public class USART extends IOUnit implements SFRModule {
     // Is this correct??? Is it the DCO or smclkFRQ we should have here???
     tickPerByte = (8 * cpu.smclkFrq) / baudRate;
     if (DEBUG) {
-      System.out.println(getName() +  " Ticks per byte: " + tickPerByte);
+      log(" Ticks per byte: " + tickPerByte);
     }
   }
 
@@ -387,14 +383,14 @@ public class USART extends IOUnit implements SFRModule {
         setBitIFG(utxifg);
         transmitting = true;
         nextTXReady = cycles + tickPerByte + 1;
-        cpu.scheduleCycleEvent(txTrigger, nextTXReady);        
+        cpu.scheduleCycleEvent(txTrigger, nextTXReady);
     }
 
     if (DEBUG) {
       if (isIEBitsSet(utxifg)) {
-        System.out.println(getName() + " flagging on transmit interrupt");
+        log(" flagging on transmit interrupt");
       }
-      System.out.println(getName() + " Ready to transmit next at: " + cycles);
+      log(" Ready to transmit next at: " + cycles);
     }
   }
 
@@ -409,8 +405,8 @@ public class USART extends IOUnit implements SFRModule {
   public void byteReceived(int b) {
     if (!rxEnabled) return;
     
-    if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-      System.out.println(getName() + " byteReceived: " + b + " " + (char) b);
+    if (DEBUG) {
+      log(" byteReceived: " + b + " " + (char) b);
     }
     urxbuf = b & 0xff;
     // Indicate interrupt also!
@@ -418,9 +414,15 @@ public class USART extends IOUnit implements SFRModule {
 
     // Check if the IE flag is enabled! - same as the IFlag to indicate!
     if (isIEBitsSet(urxifg)) {
-      if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-        System.out.println(getName() + " flagging receive interrupt ");
+      if (DEBUG) {
+        log(" flagging receive interrupt ");
       }
     }
   }
+  
+  public String info() {
+      return "UTXIE: " + isIEBitsSet(utxifg) + "  URXIE:" + isIEBitsSet(urxifg) + "\n" +
+      "UTXIFG: " + ((getIFG() & utxifg) > 0) + "  URXIFG:" + ((getIFG() & urxifg) > 0);
+  }
+  
 }

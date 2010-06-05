@@ -108,6 +108,8 @@ public class Watchdog extends IOUnit implements SFRModule {
           SFR sfr = cpu.getSFR();
           sfr.setBitIFG(0, WATCHDOG_INTERRUPT_VALUE);
           scheduleTimer();
+          System.out.println("WDT trigger - will set interrupt flag (no reset)");
+          cpu.generateTrace(System.out);
       } else {
           System.out.println("WDT trigger - will reset node!");
           cpu.generateTrace(System.out);

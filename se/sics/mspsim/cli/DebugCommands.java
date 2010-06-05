@@ -44,6 +44,7 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.DbgInstruction;
 import se.sics.mspsim.core.DisAsm;
 import se.sics.mspsim.core.EmulationException;
+import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.Memory;
@@ -523,7 +524,7 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("loggable", new BasicCommand("list loggable objects", "") {
           @Override
           public int executeCommand(CommandContext context) {
-            Chip[] chips = cpu.getChips();
+            Loggable[] chips = cpu.getLoggables();
             for (int i = 0; i < chips.length; i++) {
               context.out.println(chips[i].getName());
             }
@@ -532,10 +533,10 @@ public class DebugCommands implements CommandBundle {
         });
         
         ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "<loggable>" ) {
-          Chip chip = null;
+          Loggable chip = null;
           @Override
           public int executeCommand(CommandContext context) {
-            chip = cpu.getChip(context.getArgument(0));
+            chip = cpu.getLoggable(context.getArgument(0));
             if (chip == null) {
               context.err.println("Can not find loggable: " + context.getArgument(0));
             }

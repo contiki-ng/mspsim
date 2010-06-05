@@ -46,6 +46,7 @@ import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.Profiler;
+import se.sics.mspsim.ui.CPUHeatMap;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.SimpleProfiler;
 
@@ -225,6 +226,14 @@ public class ProfilerCommands implements CommandBundle {
               return 0;
             }
       });
+      
+      ch.registerCommand("readmap", new BasicCommand("read map", "") {
+          public int executeCommand(CommandContext context) {
+              CPUHeatMap hm = new CPUHeatMap();
+              cpu.setGlobalMonitor(hm);
+              return 0;
+          } 
+      });      
     }
   }
 

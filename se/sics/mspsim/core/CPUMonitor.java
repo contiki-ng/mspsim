@@ -47,7 +47,7 @@ public interface CPUMonitor {
   public static final int MEMORY_WRITE = 2;
   public static final int REGISTER_READ = 3;
   public static final int REGISTER_WRITE = 4;
-  public static final int BREAK = 5;
+  public static final int EXECUTE = 5;
 
   public void cpuAction(int type, int adr, int data);
 

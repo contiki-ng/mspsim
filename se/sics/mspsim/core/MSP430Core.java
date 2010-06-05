@@ -67,6 +67,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // 16 registers of which some are "special" - PC, SP, etc.
   public int[] reg = new int[16];
 
+  public CPUMonitor globalMonitor;
+  
   public CPUMonitor[] regWriteMonitors = new CPUMonitor[16];
   public CPUMonitor[] regReadMonitors = new CPUMonitor[16];
   
@@ -264,6 +266,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     profiler = prof;
     profiler.setCPU(this);
   }
+
+  public void setGlobalMonitor(CPUMonitor mon) {
+      globalMonitor = mon;
+  }
   
   /* returns port 1 ... 6 */
   public IOPort getIOPort(int portID) {
@@ -300,6 +306,25 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return null;
   }
 
+  public Loggable[] getLoggables() {
+      Loggable[] ls = new Loggable[ioUnits.length + chips.size()];
+      for (int i = 0; i < ioUnits.length; i++) {
+          ls[i] = ioUnits[i];
+      }
+      for (int i = 0; i < chips.size(); i++) {
+          ls[i + ioUnits.length] = chips.get(i);
+      }
+      return ls;
+  }
+
+  public Loggable getLoggable(String name) {
+      Loggable l = getChip(name);
+      if (l == null) {
+          l = getIOUnit(name);
+      }
+      return l;
+  }
+  
   public Chip[] getChips() {
     return chips.toArray(new Chip[chips.size()]);
   }
@@ -678,6 +703,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     if (breakPoints[address] != null) {
       breakPoints[address].cpuAction(CPUMonitor.MEMORY_READ, address, val);
     }
+    /* is a null check as fast as a boolean check ?*/
+    if (globalMonitor != null) {
+        globalMonitor.cpuAction(CPUMonitor.MEMORY_READ, address, val);
+    }
     return val;
   }
   
@@ -714,6 +743,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
         }
       }
     }
+    /* is a null check as fast as a boolean check */
+    if (globalMonitor != null) {
+        globalMonitor.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
+    }
+
   }
 
   void printWarning(int type, int address) throws EmulationException {
@@ -760,22 +794,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // Push PC and SR to stack
       // store on stack - always move 2 steps (W) even if B.
       writeRegister(SP, sp = spBefore - 2);
-      // Put lo & hi on stack!
-      memory[sp] = pc & 0xff;
-      memory[sp + 1] = (pc >> 8) & 0xff;
+      write(sp, pc, true);
 
       writeRegister(SP, sp = sp - 2);
-      // Put lo & hi on stack!
-      memory[sp] = sr & 0xff;
-      memory[sp + 1] = (sr >> 8) & 0xff;
+      write(sp, sr, true);
     }
     // Clear SR
     writeRegister(SR, 0); // sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
 
     // Jump to the address specified in the interrupt vector
-    writeRegister(PC, pc =
-		memory[0xffe0 + interruptMax * 2] +
-		(memory[0xffe0 + interruptMax * 2 + 1] << 8));
+    writeRegister(PC, pc = read(0xffe0 + interruptMax * 2, true));
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
@@ -858,7 +886,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // efficiently
     if (breakPoints[pc] != null) {
       if (breakpointActive) {
-	breakPoints[pc].cpuAction(CPUMonitor.BREAK, pc, 0);
+	breakPoints[pc].cpuAction(CPUMonitor.EXECUTE, pc, 0);
 	breakpointActive = false;
 	return false;
       } else {
@@ -866,9 +894,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	breakpointActive = true;
       }
     }
+    if (globalMonitor != null) {
+        globalMonitor.cpuAction(CPUMonitor.EXECUTE, pc, 0);
+    }
 
-
-    instruction = memory[pc] + (memory[pc + 1] << 8);
+    instruction = read(pc, true);
     op = instruction >> 12;
     int sp = 0;
     int sr = 0;
@@ -919,8 +949,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  break;
 	case AM_INDEX:
 	  // TODO: needs to handle if SR is used!
-	  dstAddress = readRegisterCG(dstRegister, ad) +
-	    memory[pc] + (memory[pc + 1] << 8);
+	  dstAddress = readRegisterCG(dstRegister, ad) + read(pc, true);
+//	  memory[pc] + (memory[pc + 1] << 8);
 
 	  // When is PC incremented - assuming immediately after "read"?
 	  pc += 2;
@@ -1002,12 +1032,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
       case PUSH:
 	if (word) {
 	  // Put lo & hi on stack!
-	  memory[sp] = dst & 0xff;
-	  memory[sp + 1] = dst >> 8;
+//	  memory[sp] = dst & 0xff;
+//	  memory[sp + 1] = dst >> 8;
+	  write(sp, dst, true);
 	} else {
 	  // Byte => only lo byte
-	  memory[sp] = dst & 0xff;
-	  memory[sp + 1] = 0;
+//	  memory[sp] = dst & 0xff;
+//	  memory[sp + 1] = 0;
+          write(sp, dst & 0xff, true);
 	}
 	/* if REG or INDIRECT AUTOINC then add 2 cycles, otherwise 1 */
 	cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
@@ -1017,8 +1049,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
       case CALL:        
         // store current PC on stack. (current PC points to next instr.)
 	pc = readRegister(PC);
-	memory[sp] = pc & 0xff;
-	memory[sp + 1] = pc >> 8;
+//	memory[sp] = pc & 0xff;
+//	memory[sp + 1] = pc >> 8;
+	write(sp, pc, true);
 	writeRegister(PC, dst);
 
 	/* Additional cycles: REG => 3, AM_IND_AUTO => 2, other => 1 */
@@ -1040,9 +1073,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	// Put Top of stack to Status DstRegister (TOS -> SR)
         servicedInterrupt = -1; /* needed before write to SR!!! */
 	sp = readRegister(SP);
-	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
+        writeRegister(SR, read(sp, true));
+        sp = sp + 2;
+        //	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
 	// TOS -> PC
-	writeRegister(PC, memory[sp++] + (memory[sp++] << 8));
+//	writeRegister(PC, memory[sp++] + (memory[sp++] << 8));
+        writeRegister(PC, read(sp, true));
+        sp = sp + 2;
 	writeRegister(SP, sp);
 	write = false;
 	updateStatus = false;
@@ -1150,8 +1187,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  break;
 	case AM_INDEX:
 	  // Indexed if reg != PC & CG1/CG2 - will PC be incremented?
-	  srcAddress = readRegisterCG(srcRegister, as) +
-	    memory[pc] + (memory[pc + 1] << 8);
+	  srcAddress = readRegisterCG(srcRegister, as) + read(pc, true);
+//	    memory[pc] + (memory[pc + 1] << 8);
 	  // When is PC incremented - assuming immediately after "read"?
 	  incRegister(PC, 2);
 	  cycles += dstRegMode ? 3 : 6;
@@ -1194,11 +1231,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
         pc = readRegister(PC);
         if (dstRegister == 2) {
           /* absolute mode */
-          dstAddress = memory[pc] + (memory[pc + 1] << 8);
+          dstAddress = read(pc, true); //memory[pc] + (memory[pc + 1] << 8);
         } else {
           // CG here - probably not!???
-          dstAddress = readRegister(dstRegister)
-          + memory[pc] + (memory[pc + 1] << 8);
+          dstAddress = readRegister(dstRegister) + read(pc, true);
+//          + memory[pc] + (memory[pc + 1] << 8);
         }
 
         if (op != MOV)

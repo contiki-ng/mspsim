@@ -133,7 +133,7 @@ public abstract class Chip implements Loggable, EventSource {
     return true;
   }
   
-  public String chipinfo() {
+  public String info() {
     return "* no info";
   }
 

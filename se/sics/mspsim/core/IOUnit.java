@@ -41,10 +41,17 @@
 
 package se.sics.mspsim.core;
 
-public abstract class IOUnit implements InterruptHandler {
+import java.io.PrintStream;
+
+public abstract class IOUnit implements InterruptHandler, Loggable {
 
   int[] memory;
   int offset;
+  
+  protected EmulationLogger logger;
+  private PrintStream log;
+  protected boolean DEBUG = false;
+
 
   public IOUnit(int[] memory, int offset) {
     this.memory = memory;
@@ -73,5 +80,34 @@ public abstract class IOUnit implements InterruptHandler {
     return (data >> 8) & 0xff;
   }
   
-  public abstract String getName(); 
+  public abstract String getName();
+  
+  /* Loggable */
+  public void clearLogStream() {
+    log = null;
+    DEBUG = false;
+  }
+
+  public PrintStream getLogStream() {
+    return log;
+  }
+  
+  public void setLogStream(PrintStream out) {
+    log = out;
+    DEBUG = true;
+  }
+
+  public void log(String msg) {
+    if (log != null) {
+      log.println(getName() + ": " + msg);
+    }
+  }
+
+  public void setEmulationLogger(EmulationLogger logger) {
+    this.logger = logger;
+  }
+
+  public String info() {
+      return "* no info";
+  }
 }
