@@ -1063,7 +1063,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
           if (function == null) {
             function = getFunction(map, dst);
           }
-          profiler.profileCall(function, cpuCycles);
+          profiler.profileCall(function, cpuCycles, pc);
         }
 	
 	write = false;

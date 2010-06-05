@@ -54,7 +54,7 @@ public interface Profiler {
   
   public void setCPU(MSP430Core cpu);
 
-  public void profileCall(MapEntry entry, long cycles);
+  public void profileCall(MapEntry entry, long cycles, int from);
   public void profileReturn(long cycles);
   public void profileInterrupt(int vector, long cycles);
   public void profileRETI(long cycles);

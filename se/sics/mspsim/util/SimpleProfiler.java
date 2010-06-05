@@ -104,7 +104,7 @@ public class SimpleProfiler implements Profiler, EventListener {
    ignoreFunctions.put(function, function);
   }
   
-  public void profileCall(MapEntry entry, long cycles) {
+  public void profileCall(MapEntry entry, long cycles, int from) {
     if (cSP == callStack.length) {
       CallEntry[] tmp = new CallEntry[cSP + 64];
       System.arraycopy(callStack, 0, tmp, 0, cSP);
@@ -136,7 +136,9 @@ public class SimpleProfiler implements Profiler, EventListener {
     ce.cycles = cycles;
     ce.exclusiveCycles = cycles;
     ce.hide = hide;
+    ce.fromPC = from;
     newIRQ = false;
+    
 
     CallListener[] listeners = callListeners;
     if (listeners != null) {
@@ -331,7 +333,8 @@ public class SimpleProfiler implements Profiler, EventListener {
     int stackCount = cSP;
     out.println("Stack Trace: number of calls: " + stackCount);
     for (int i = 0; i < stackCount; i++) {
-      out.println("  " + callStack[stackCount - i - 1].function.getInfo());
+      out.println("  " + callStack[stackCount - i - 1].function.getInfo() + " called from PC: " +
+                  callStack[stackCount - i - 1].fromPC);
     }
   }
   
@@ -377,6 +380,7 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
   
   private static class CallEntry {
+    int fromPC;
     MapEntry function;
     long cycles;
     long exclusiveCycles;
