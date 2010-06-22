@@ -2,7 +2,7 @@ package se.sics.mspsim.util;
 
 public class ArrayUtils {
 
-  public static Object[] add(Class componentType, Object[] array, Object value) {
+  public static Object[] add(Class<?> componentType, Object[] array, Object value) {
     Object[] tmp;
     if (array == null) {
       tmp = (Object[]) java.lang.reflect.Array.newInstance(componentType, 1);
