@@ -16,6 +16,8 @@ import se.sics.mspsim.core.MSP430Core;
 
 public class CPUHeatMap extends JComponent implements CPUMonitor {
 
+    private static final long serialVersionUID = -7964848220064713887L;
+
     private Timer ticker;
     
     private JFrame window;
@@ -92,7 +94,6 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
         g.drawImage(heatmap, 0, 0, getWidth(), getHeight(), this);
     }
 
-    @Override
     public void cpuAction(int type, int adr, int data) {
         int val = 0;
         int f = 1;
