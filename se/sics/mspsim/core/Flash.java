@@ -38,7 +38,6 @@ package se.sics.mspsim.core;
 import se.sics.mspsim.util.Utils;
 
 public class Flash extends IOUnit {
-  private static final boolean DEBUG = true;
   
   private static final int FCTL1 = 0x0128;
   private static final int FCTL2 = 0x012a;
@@ -151,7 +150,7 @@ public class Flash extends IOUnit {
 	if (blockwrite_count == 64) {
 	  // FIXME: What happens if we try to write more than 64 bytes
 	  // on real hardware???
-	  System.out.printf("Last access in block mode. Forced exit?");
+	  logw("Last access in block mode. Forced exit?");
 	  current_write_mode = WriteMode.WRITE_BLOCK_FINISH;
 	}
 /*	if (DEBUG) {
@@ -162,8 +161,7 @@ public class Flash extends IOUnit {
 	
       case WRITE_BLOCK_FINISH:
 	if (DEBUG) {
-	  System.out.println("Programming voltage dropped, " +
-	  		"write mode disabled.");
+	  log("Programming voltage dropped, write mode disabled.");
 	}
 	current_write_mode = WriteMode.WRITE_NONE;
 	busy = false;
@@ -230,8 +228,7 @@ public class Flash extends IOUnit {
       myfreq = cpu.aclkFrq / freqdiv;
       finish_msec = ((double)time * freqdiv * 1000) / cpu.aclkFrq;
       if (DEBUG)
-	System.out.println("Flash: Using ACLK source with f=" + myfreq 
-	    + " Hz\nFlasg: Time required=" + finish_msec + " ms");
+        log("Using ACLK source with f=" + myfreq + "Hz. Time required=" + finish_msec + " ms");
       cpu.scheduleTimeEventMillis(end_process, finish_msec);
       break;
       
@@ -247,7 +244,7 @@ public class Flash extends IOUnit {
       
     case MCLK:
       if (DEBUG)
-	System.out.println("Flash: Using MCLK source with div=" + freqdiv);
+	log("Using MCLK source with div=" + freqdiv);
       cpu.scheduleCycleEvent(end_process, (long)time * freqdiv);
       break;
     }
@@ -262,7 +259,7 @@ public class Flash extends IOUnit {
     
     if (locked) {
       if (DEBUG) {
-	System.out.println("Write to flash blocked because of LOCK flag.");
+        log("Write to flash blocked because of LOCK flag.");
       }
       return;
     }
@@ -283,7 +280,7 @@ public class Flash extends IOUnit {
       int area_end = a_area_end[0];
       
       if (DEBUG) {
-	System.out.println("Segment erase @" + Utils.hex16(address) + 
+	log("Segment erase @" + Utils.hex16(address) + 
 	    ": erasing area " + Utils.hex16(area_start) + "-" +
 	    Utils.hex16(area_end));
       }
@@ -322,12 +319,10 @@ public class Flash extends IOUnit {
       if (blockwrite_count == 0) {
 	wait_time = BLOCKWRITE_FIRST_TIME;
 	if (DEBUG) {
-	  System.out.println("Flash write in block mode started @"
-	      + Utils.hex16(address));
+	  log("Flash write in block mode started @" + Utils.hex16(address));
 	}
 	if (addressInFlash(cpu.readRegister(MSP430.PC))) {
-	  System.out.println("Oops. Block write access only allowed when" +
-	  		" executing from RAM.");
+	  logw("Oops. Block write access only allowed when executing from RAM.");
 	}
       } else {
 	wait_time = BLOCKWRITE_TIME;
@@ -358,8 +353,8 @@ public class Flash extends IOUnit {
     }
     if (DEBUG) {
       if (wait == false && current_write_mode == WriteMode.WRITE_BLOCK) {
-	System.out.println("Reading flash prohibited. Would read 0x3fff!!!\n" 
-	    + "CPU PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)) 
+	log("Reading flash prohibited. Would read 0x3fff!!!"); 
+	log("CPU PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)) 
 	    + " read address=" + Utils.hex16(address));
       }
     }
@@ -435,7 +430,7 @@ public class Flash extends IOUnit {
     if ((value & KEYMASK) == FWKEY)
       return true;
 
-    System.out.println("Bad key accessing flash controller --> reset");
+    logw("Bad key accessing flash controller --> reset");
     statusreg |= KEYV;
     cpu.flagInterrupt(RESET_VECTOR, this, true);
     return false;
@@ -454,11 +449,11 @@ public class Flash extends IOUnit {
   private EraseMode getEraseMode(int regdata) {
     int idx = (regdata & ERASE_MASK) >> ERASE_SHIFT;
     
-    for(EraseMode em : EraseMode.values()) {
+    for (EraseMode em : EraseMode.values()) {
       if (em.ordinal() == idx)
 	return em;
     }
-    throw new RuntimeException("Invalid erase mode");
+    throw new IllegalArgumentException("Invalid erase mode: " + regdata);
   }
   
   private void triggerErase(int newmode) {
@@ -475,8 +470,8 @@ public class Flash extends IOUnit {
   
   private void triggerAccessViolation(String reason) {
     if (DEBUG)
-      System.out.println("Flash access violation: " + reason +
-	  "\nPC=" + Utils.hex16(cpu.readRegister(MSP430.PC)));
+      log("Flash access violation: " + reason +
+	  ". PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)));
     
     statusreg |= ACCVIFG;
     if (sfr.isIEBitsSet(SFR.IE1, ACCVIE)) {
@@ -493,7 +488,7 @@ public class Flash extends IOUnit {
   
   private void triggerBlockWrite() {
     if (DEBUG) {
-      System.out.println("Block write triggered");
+      log("Block write triggered");
     }
     current_write_mode = WriteMode.WRITE_BLOCK;
     blockwrite_count = 0;
@@ -501,7 +496,7 @@ public class Flash extends IOUnit {
   
   private void triggerEndBlockWrite() {
     if (DEBUG) {
-      System.out.println("Got end of flash block write");
+      log("Got end of flash block write");
     }
     current_write_mode = WriteMode.WRITE_BLOCK_FINISH;
     waitFlashProcess(BLOCKWRITE_END_TIME);
@@ -509,7 +504,7 @@ public class Flash extends IOUnit {
   
   public void write(int address, int value, boolean word, long cycles) {
     if (!word) {
-      System.out.println("Invalid access type to flash controller");
+      logw("Invalid access type to flash controller");
       return;
     }
 
@@ -529,7 +524,7 @@ public class Flash extends IOUnit {
       if ((mode & ERASE_MASK) != 0 || (mode & WRT) != 0) {
 	if (!((mode & BLKWRT) != 0 && wait)) {
 	  triggerAccessViolation(
-	      "FCTL1 write not allowed while erase/write active.");
+	      "FCTL1 write not allowed while erase/write active");
 	  return;
 	}
       }
@@ -597,7 +592,7 @@ public class Flash extends IOUnit {
 
   public void reset(int type) {
     if (DEBUG) {
-      System.out.println("Flash got reset!");
+      log("Got reset!");
     }
 
     if (type == MSP430.RESET_POR)
