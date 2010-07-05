@@ -540,7 +540,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public void receivedByte(byte data) {
       // Received a byte from the "air"
 
-      log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
+      if (DEBUG)
+        log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
               ((stateMachine == RadioState.RX_SFD_SEARCH || stateMachine == RadioState.RX_FRAME) ? "" : " *** Ignored"));
 
       if(stateMachine == RadioState.RX_SFD_SEARCH) {
@@ -667,10 +668,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       switch(address) {
       case REG_IOCFG0:
           setFIFOP(false);
-          log("IOCFG0: " + registers[address]);
+          if (DEBUG) log("IOCFG0: " + registers[address]);
           break;
       case REG_IOCFG1:
-          log("IOCFG1: SFDMUX "
+          if (DEBUG)
+            log("IOCFG1: SFDMUX "
                           + ((registers[address] & SFDMUX) >> SFDMUX)
                           + " CCAMUX: " + (registers[address] & CCAMUX));
 //        if( (registers[address] & CCAMUX) == CCA_CCA)
@@ -877,7 +879,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         if (DEBUG) {
             log("Strobe RX-ON!!!");
         }
-      }else{
+      } else {
         if (DEBUG) log("WARNING: SRXON when not IDLE");
       }
 
@@ -885,11 +887,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     case REG_SRFOFF:
       if (DEBUG) {
         log("Strobe RXTX-OFF!!! at " + cpu.cycles);
-      }
-      if (stateMachine == RadioState.TX_ACK ||
+        if (stateMachine == RadioState.TX_ACK ||
               stateMachine == RadioState.TX_FRAME ||
               stateMachine == RadioState.RX_FRAME) {
-          System.out.println("CC2420: Warning: turning off RXTX during " + stateMachine);
+          log("WARNING: turning off RXTX during " + stateMachine);
+        }
       }
       setState(RadioState.IDLE);
       break;
@@ -1134,7 +1136,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private void setFIFOP(boolean fifop) {
     fifoP = fifop;
-    if (DEBUG) log(getName() + " setting FIFOP to " + fifop);
+    if (DEBUG) log("Setting FIFOP to " + fifop);
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
     } else {
@@ -1143,7 +1145,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   private void setFIFO(boolean fifo) {
-    if (DEBUG) log(getName() + " setting FIFO to " + fifo);
+    if (DEBUG) log("Setting FIFO to " + fifo);
     currentFIFO = fifo;
     fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
   }
@@ -1231,7 +1233,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     if(newOn) {
       // 0.6ms maximum vreg startup from datasheet pg 13
       cpu.scheduleTimeEventMillis(vregEvent, 0.1);
-      if (DEBUG) log(getName() + ": Scheduling vregEvent at: cyc = " + cpu.cycles +
+      if (DEBUG) log("Scheduling vregEvent at: cyc = " + cpu.cycles +
          " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     } else {
       on = false;
