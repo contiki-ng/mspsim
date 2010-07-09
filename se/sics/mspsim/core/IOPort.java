@@ -89,6 +89,22 @@ public class IOPort extends IOUnit {
     this.cpu = cpu;
   }
 
+  public int getIn() {
+      return memory[offset + IN];
+  }
+
+  public int getOut() {
+      return out;
+  }
+
+  public int getDirection() {
+      return dirReg;
+  }
+
+  public int getSelect() {
+      return memory[offset + (interrupt > 0 ? ISEL : SEL)];
+  }
+
   public void setPortListener(PortListener listener) {
     this.listener = listener;
   }
