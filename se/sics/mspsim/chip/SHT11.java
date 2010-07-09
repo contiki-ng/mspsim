@@ -58,8 +58,6 @@ public class SHT11 extends Chip {
 
   private final int CMD_MEASURE_TEMP = 0x03;
   private final int CMD_MEASURE_HUM = 0x05;
-  
-  private final boolean DEBUG = false;
 
   private final static char[] INIT_COMMAND = "CdcCDc".toCharArray();
   private int initPos = 0;
@@ -128,8 +126,8 @@ public class SHT11 extends Chip {
       crc = crc8Add(crc, readData);
       crc = crc8Add(crc, output[0]);
       crc = crc8Add(crc, output[1]);
-      if (DEBUG) System.out.println("CRC: " +
-              Utils.hex8(crc) + " rcrc: " + Utils.hex8(rev8bits(crc)));
+      if (DEBUG) log("CRC: " + Utils.hex8(crc) +
+          " rcrc: " + Utils.hex8(rev8bits(crc)));
       output[2] = rev8bits(crc);
       
       /* finished measuring - signal with LOW! */
@@ -175,7 +173,7 @@ public class SHT11 extends Chip {
     if (clockHi == high) return;
 
     char c = high ? 'C' : 'c';
-    if (DEBUG) System.out.println(getName() + ": clock pin " + c);
+    if (DEBUG) log("clock pin " + c);
     switch (state) {
     case IDLE:
       if (checkInit(c)) {
@@ -187,7 +185,7 @@ public class SHT11 extends Chip {
         readData = (readData << 1) | (dataHi ? 1 : 0);
         bitCnt++;
         if (bitCnt == 8) {
-          if (DEBUG) System.out.println("SHT11: read: " + Utils.hex8(readData));
+          if (DEBUG) log("read: " + Utils.hex8(readData));
           bitCnt = 0;
           state = ACK_CMD;
           sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
@@ -215,14 +213,14 @@ public class SHT11 extends Chip {
         if (bitCnt == 8) {
           // All bits are written!
           state = ACK_WRITE;
-          if (DEBUG) System.out.println("Wrote byte: " + output[writePos]);
+          if (DEBUG) log("Wrote byte: " + output[writePos]);
           writePos++;
         }
       }
       break;
     case ACK_WRITE:
       if (c == 'C' && dataHi) {
-        if (DEBUG) System.out.println("*** NO ACK???");
+        if (DEBUG) log("*** NO ACK???");
         reset(0);
       }
       break;
@@ -233,7 +231,7 @@ public class SHT11 extends Chip {
   public void dataPin(boolean high) {
     if (dataHi == high) return;
     char c = high ? 'D' : 'd';
-    if (DEBUG) System.out.println(getName() + ": data pin  " + c);
+    if (DEBUG) log("data pin  " + c);
     switch (state) {
     case IDLE:
       if (checkInit(c)) {
@@ -242,7 +240,7 @@ public class SHT11 extends Chip {
       break;
     case ACK_WRITE:
       if (c == 'D') { // if D goes back high - then we are done here!!!
-        if (DEBUG) System.out.println("ACK for byte complete...");
+        if (DEBUG) log("ACK for byte complete...");
         if (writePos < writeLen) {
           state = WRITE_BYTE;
           writeData = output[writePos];
@@ -262,7 +260,7 @@ public class SHT11 extends Chip {
       if (initPos == INIT_COMMAND.length) {
         initPos = 0;
         if (DEBUG) {
-          System.out.println("SHT11: COMMAND signature detected!!!");
+          log("COMMAND signature detected!!!");
         }
         return true;
       }

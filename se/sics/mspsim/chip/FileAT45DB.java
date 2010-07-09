@@ -50,8 +50,6 @@ import se.sics.mspsim.core.MSP430Core;
 
 public class FileAT45DB extends AT45DB {
 
-  private static final boolean DEBUG = true;
-
   // PAGE_SIZE and NUM_PAGES defined in AT45DB
   private static final int FLASH_SIZE = PAGE_SIZE * NUM_PAGES;
   
@@ -100,7 +98,7 @@ public class FileAT45DB extends AT45DB {
       fileLock = fileChannel.tryLock();
       if (fileLock != null) {
         // The file is now locked for use
-        if (DEBUG) System.out.println("FileAT45DB: using flash file '" + filename + '\'');
+        if (DEBUG) log("using flash file '" + filename + '\'');
         return true;
       } else {
         fileChannel.close();

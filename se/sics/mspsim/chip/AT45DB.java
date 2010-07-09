@@ -45,8 +45,6 @@ import se.sics.mspsim.core.*;
 
 public abstract class AT45DB extends Chip implements USARTListener {
 
-  public static final boolean DEBUG = false;
-
   public static final int PAGE_SIZE = 264;
   public static final int NUM_PAGES = 2048;
   public static final int SIZE_BYTES = PAGE_SIZE * NUM_PAGES;
@@ -148,7 +146,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
       if (chipSelect) {
         //if (DEBUG) {
-        //  System.out.println("AT45DB: byte received: " + data);
+        //  log("byte received: " + data);
         //}
 
         switch(state) {
@@ -164,15 +162,15 @@ public abstract class AT45DB extends Chip implements USARTListener {
             bufferAddress |= data;
 
             if(DEBUG)
-              System.out.println("AT45DB: Address - PA[10-0]: " + pageAddress + " BA[8-0]: " + bufferAddress);
+              log("Address - PA[10-0]: " + pageAddress + " BA[8-0]: " + bufferAddress);
 
             if(dummy == 0) {
-              if(DEBUG) System.out.println("AT45DB: State " + state + " -> " + next_state);
+              if(DEBUG) log("State " + state + " -> " + next_state);
               state = next_state;
             }
           }else{
             if(--dummy == 0) {
-              if(DEBUG) System.out.println("AT45DB: State " + state + " -> " + next_state);
+              if(DEBUG) log("State " + state + " -> " + next_state);
               state = next_state;
             }
           }
@@ -185,7 +183,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
           buf_num = (state == BUFFER1_READ ? 1 : 2);
           source.byteReceived(readBuffer(buf_num, bufferAddress++));
           if(bufferAddress >= PAGE_SIZE)
-            System.out.println("AT45DB: ERROR: Buffer Read past buffer size: " + bufferAddress);
+            logw("ERROR: Buffer Read past buffer size: " + bufferAddress);
           break;
 
         case BUFFER1_WRITE:
@@ -193,7 +191,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
           buf_num = (state == BUFFER1_WRITE ? 1 : 2);
           writeBuffer(buf_num, bufferAddress++, data);
           if(bufferAddress >= PAGE_SIZE)
-            System.out.println("AT45DB: ERROR: Buffer Write past buffer size: " + bufferAddress);
+            logw("ERROR: Buffer Write past buffer size: " + bufferAddress);
           source.byteReceived(0);
           break;
 
@@ -211,7 +209,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
           case BUFFER1_TO_PAGE_ERASE:
           case BUFFER2_TO_PAGE_ERASE:
             if(DEBUG)
-              System.out.println("AT45DB: Buffer" + (data == BUFFER1_TO_PAGE_ERASE ? "1" : "2") + " to Page with Erase Command");
+              log("Buffer" + (data == BUFFER1_TO_PAGE_ERASE ? "1" : "2") + " to Page with Erase Command");
             pos = 0;
             state = READ_ADDRESS;
             next_state = data;
@@ -223,7 +221,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
           case BUFFER1_READ:
           case BUFFER2_READ:
             if(DEBUG)
-              System.out.println("AT45DB: Read Buffer Command " + (data == BUFFER1_READ ? "Buffer1" : "Buffer2"));
+              log("Read Buffer Command " + (data == BUFFER1_READ ? "Buffer1" : "Buffer2"));
             pos = 0;
             state = READ_ADDRESS;
             next_state = data;
@@ -235,7 +233,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
           case BUFFER1_WRITE:
           case BUFFER2_WRITE:
             if(DEBUG)
-              System.out.println("AT45DB: Write Buffer Command " + (data == BUFFER1_WRITE ? "Buffer1" : "Buffer2"));
+              log("Write Buffer Command " + (data == BUFFER1_WRITE ? "Buffer1" : "Buffer2"));
             pos = 0;
             state = READ_ADDRESS;
             next_state = data;
@@ -247,7 +245,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
           case PAGE_TO_BUFFER1:
           case PAGE_TO_BUFFER2:
             if(DEBUG)
-              System.out.println("AT45DB: Page To Buffer " + (data == PAGE_TO_BUFFER1 ? "1" : "2") + " Command");
+              log("Page To Buffer " + (data == PAGE_TO_BUFFER1 ? "1" : "2") + " Command");
             pos = 0;
             state = READ_ADDRESS;
             next_state = data;
@@ -257,12 +255,12 @@ public abstract class AT45DB extends Chip implements USARTListener {
             break;
 
           case STATUS_REGISTER_READ:
-            if(DEBUG) System.out.println("AT45DB: Read status register command.  status: " + status);
+            if(DEBUG) log("Read status register command.  status: " + status);
             state = STATUS_REGISTER_READ;
             source.byteReceived(0);
             break;
           default:
-            System.out.println("AT45DB: WARNING: Command not implemented: " + data);
+            logw("WARNING: Command not implemented: " + data);
           source.byteReceived(0);
           break;
           }
@@ -276,7 +274,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
     private int readBuffer(int num, int address) {
       //if(DEBUG) {
-      //  System.out.println("AT45DB: Reading RAM Buffer" + num + " Address: " + Integer.toHexString(address));
+      //  log("Reading RAM Buffer" + num + " Address: " + Integer.toHexString(address));
       //}
       if(num == 1)
         return buffer1[address & 0x1ff];
@@ -286,7 +284,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
     private void writeBuffer(int num, int address, int data) {
       //if(DEBUG) {
-      //	  System.out.println("AT45DB: Writing RAM Buffer" + num + " Address: " + Integer.toHexString(address) + " Data: " + data);
+      //	  log("Writing RAM Buffer" + num + " Address: " + Integer.toHexString(address) + " Data: " + data);
       //}
       if(num == 1)
         buffer1[address & 0x1ff] = (byte)data;
@@ -299,7 +297,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
       if(Reset == true)
         state = STATE_RESET;
       if(DEBUG) {
-        System.out.println("AT45DB: Reset: " + Reset);
+        log("Reset: " + Reset);
       }
     }
     public void setChipSelect(boolean select) {
@@ -328,7 +326,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
       }
 
       if(DEBUG) {
-        System.out.println("AT45DB: Chip Select: " + chipSelect);
+        log("Chip Select: " + chipSelect);
       }
     }
 

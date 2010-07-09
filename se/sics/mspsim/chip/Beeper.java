@@ -71,13 +71,13 @@ public class Beeper extends IOUnit {
   	try {
   		dataLine = (SourceDataLine) AudioSystem.getLine(dli);
   		if (dataLine == null)	{
-  			System.out.println("DataLine: not existing...");
+  			logw("DataLine: not existing...");
   		}	else {
   			dataLine.open(dataLine.getFormat(), 16384);
   			volume = (FloatControl)	dataLine.getControl(FloatControl.Type.MASTER_GAIN);
   		}
   	} catch (Exception e) {
-  		System.out.println("Problem while  getting data line " + e);
+  		logw("Problem while getting data line " + e);
   	}
     double f1 = 0;
     for (int i = 0, n = WAVE_LEN; i < n; i++) {

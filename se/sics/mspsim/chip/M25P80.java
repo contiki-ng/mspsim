@@ -45,8 +45,6 @@ import se.sics.mspsim.core.*;
 
 public abstract class M25P80 extends Chip implements USARTListener, PortListener, Memory {
 
-  public static final boolean DEBUG = false;
-
   public static final int WRITE_STATUS = 0x01;
   public static final int PAGE_PROGRAM = 0x02;
   public static final int READ_DATA = 0x03;
@@ -102,7 +100,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public void dataReceived(USART source, int data) {
     if (chipSelect) {
       if (DEBUG) {
-        System.out.println("M25P80: byte received: " + data);
+        log("byte received: " + data);
       }
       switch(state) {
       case READ_STATUS:
@@ -125,7 +123,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
           source.byteReceived(0);
           pos++;
           if (DEBUG && pos == 3) {
-            System.out.println("M25P80: reading from " + Integer.toHexString(readAddress));
+            log("reading from " + Integer.toHexString(readAddress));
           }
         } else {
           source.byteReceived(readMemory(readAddress++));
@@ -157,7 +155,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
             }
             blockWriteAddress = readAddress & 0xfff00;
             if (DEBUG) {
-              System.out.println("M25P80: programming at " + Integer.toHexString(readAddress));
+              log("programming at " + Integer.toHexString(readAddress));
             }
           }
         } else {
@@ -168,24 +166,24 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         return;
       }
       if (DEBUG) {
-        System.out.println("M25P80: new command: " + data);
+        log("new command: " + data);
       }
       switch (data) {
       case WRITE_ENABLE:
         if (DEBUG) {
-          System.out.println("M25P80: Write Enable");
+          log("Write Enable");
         }
         writeEnable = true;
         break;
       case WRITE_DISABLE:
         if (DEBUG) {
-          System.out.println("M25P80: Write Disable");
+          log("Write Disable");
         }
         writeEnable = false;
         break;
       case READ_IDENT:
         if (DEBUG) {
-          System.out.println("M25P80: Read ident.");
+          log("Read ident.");
         }
         state = READ_IDENT;
         pos = 0;
@@ -197,38 +195,38 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         state = READ_STATUS;
         source.byteReceived(0);
         if (DEBUG) {
-          System.out.println("M25P80: Read status => " + status + " " + cpu.getPC());
+          log("Read status => " + status + " " + cpu.getPC());
         }
         return;
       case WRITE_STATUS:
         if (DEBUG) {
-          System.out.println("M25P80: Write status");
+          log("Write status");
         }
         state = WRITE_STATUS;
         break;
       case READ_DATA:
         if (DEBUG) {
-          System.out.println("M25P80: Read Data");
+          log("Read Data");
         }
         state = READ_DATA;
         pos = readAddress = 0;
         break;
       case PAGE_PROGRAM:
         if (DEBUG) {
-          System.out.println("M25P80: Page Program");
+          log("Page Program");
         }
         state = PAGE_PROGRAM;
         pos = readAddress = 0;
         break;
       case SECTOR_ERASE:
         if (DEBUG) {
-          System.out.println("M25P80: Sector Erase");
+          log("Sector Erase");
         }
         state = SECTOR_ERASE;
         pos = 0;
         break;
       case BULK_ERASE:
-        System.out.println("M25P80: Bulk Erase");
+        log("Bulk Erase");
         break;
       }
       source.byteReceived(0);
@@ -270,7 +268,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   // Should return correct data!
   private int readMemory(int address) {
     if (DEBUG) {
-      System.out.println("M25P80: Reading memory address: " + Integer.toHexString(address));
+      log("Reading memory address: " + Integer.toHexString(address));
     }
     ensureLoaded(address);
     return readMemory[address & 0xff];
@@ -285,7 +283,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
 	|| ((loadedAddress & 0xfff00) != (address & 0xfff00))) {
       try {
         if (DEBUG) {
-          System.out.println("M25P80: Loading memory: " + (address & 0xfff00));
+          log("Loading memory: " + (address & 0xfff00));
         }
         loadMemory(address, readMemory);
       } catch (IOException e) {
@@ -318,7 +316,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
       }
     }
     chipSelect = (data & CHIP_SELECT) == 0;
-//    System.out.println("M25P80: write to Port4: " +
+//    if (DEBUG) log("write to Port4: " +
 //		       Integer.toString(data, 16)
 //		       + " CS:" + chipSelect);
     state = 0;
@@ -330,7 +328,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   }
 
   private void programPage() {
-      if (writing) System.out.println("Can not set program page while already writing... " + cpu.getPC());
+      if (writing) logw("Can not set program page while already writing... " + cpu.getPC());
     writeStatus(PROGRAM_PAGE_MILLIS);
     ensureLoaded(blockWriteAddress);
     for (int i = 0; i < readMemory.length; i++) {
@@ -350,7 +348,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     blockWriteAddress = sectorAddress;
     for (int i = 0; i < 0x100; i++) {
       if (DEBUG) {
-        System.out.println("M25P80: erasing at " + Integer.toHexString(blockWriteAddress));
+        log("erasing at " + Integer.toHexString(blockWriteAddress));
       }
       writeBack(blockWriteAddress, buffer);
       blockWriteAddress += 0x100;
@@ -362,7 +360,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     try {
       byte[] tmp = new byte[data.length];
       if (DEBUG) {
-        System.out.println("M25P80: Writing data to disk at " + Integer.toHexString(address));
+        log("Writing data to disk at " + Integer.toHexString(address));
       }
       seek(address & 0xfff00);
       for (int i = 0; i < data.length; i++) {

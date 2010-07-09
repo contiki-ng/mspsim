@@ -49,7 +49,7 @@ import se.sics.mspsim.util.Utils;
 
 public class DS2411 extends Chip {
 
-  private static final boolean DEBUG = false;
+  private static final boolean DEBUG_DS2411 = false;
   
   private enum STATE {
     IDLE, WAIT_FOR_RESET, RESETTING, SIGNAL_READY, READY, WAIT_SENDING, SENDING
@@ -78,23 +78,23 @@ public class DS2411 extends Chip {
       case WAIT_FOR_RESET:
         if (!lastPin) {
           state = STATE.RESETTING;
-          log("Reseting...");
+          if (DEBUG) log("Reseting...");
         }
         break;
       case SIGNAL_READY:
         /* ready! release bus */
         sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
         state = STATE.READY;
-        log("Ready!");
+        if (DEBUG) log("Ready!");
         readByte = 0;
         pos = 0;
         break;
       case READY:
-        log("Reading: " + (lastPin ? 1 : 0));
+        if (DEBUG) log("Reading: " + (lastPin ? 1 : 0));
         readByte = readByte + (lastPin ? (1 << pos) : 0);
         pos++;
         if (pos == 8) {
-          log("Command: " + Utils.hex8(readByte));
+          if (DEBUG) log("Command: " + Utils.hex8(readByte));
           handleCommand(readByte);
           state = STATE.WAIT_SENDING;
           pos = 0;
@@ -108,7 +108,7 @@ public class DS2411 extends Chip {
   
   public DS2411(MSP430Core cpu) {
     super("DS2411", "Silicon Serial Number", cpu);
-    if (DEBUG) {
+    if (DEBUG_DS2411) {
       setLogStream(System.out);
     }
   }
@@ -162,7 +162,7 @@ public class DS2411 extends Chip {
    * cause a reset in any state...
    */
   public void dataPin(boolean high) {
-    log(" Data pin high: " + high + " " + cpu.cycles);
+    if (DEBUG) log("Data pin high: " + high + " " + cpu.cycles);
     if (lastPin == high) return;
     lastPin = high;
     switch(state) {
@@ -172,14 +172,14 @@ public class DS2411 extends Chip {
         state = STATE.WAIT_FOR_RESET;
         /* reset if low for at least 480uS - we check after 400uS and resets
          * then */
-        log("Wait for reset...");
+        if (DEBUG) log("Wait for reset...");
         cpu.scheduleTimeEventMillis(stateEvent, 0.400);
       }
       break;
     case RESETTING:
       if (high) {
         state = STATE.SIGNAL_READY;
-        log("Signal ready");
+        if (DEBUG) log("Signal ready");
         /* reset done - signal with LOW for a while! */
         sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
         cpu.scheduleTimeEventMillis(stateEvent, 0.480);
@@ -200,17 +200,17 @@ public class DS2411 extends Chip {
       break;
     case SENDING:
       if (high) {
-        if (pos == 0) log("should write next byte: " + writeByte);
+        if (pos == 0 && DEBUG) log("should write next byte: " + writeByte);
 
         /* went high => we should send another bit */
         sdataPort.setPinState(sdataPin,
             ((writeByte & (1 << pos)) > 0) ? IOPort.PIN_HI : IOPort.PIN_LOW);
-        log(" wrote bit: " + (((writeByte & (1 << pos)) > 0) ? 1 : 0));
+        if (DEBUG) log("wrote bit: " + (((writeByte & (1 << pos)) > 0) ? 1 : 0));
         pos++;
         if (pos == 8) {
           writePos++;
           if (writePos == writeLen) {
-            log("write is over => IDLE!!!!");
+            if (DEBUG) log("write is over => IDLE!!!!");
             state = STATE.IDLE;
           } else {
             pos = 0;

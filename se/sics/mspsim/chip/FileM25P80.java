@@ -52,8 +52,6 @@ import se.sics.mspsim.core.MSP430Core;
 
 public class FileM25P80 extends M25P80 {
 
-  private static final boolean DEBUG = true;
-
   private String filename;
   private RandomAccessFile file;
   private FileChannel fileChannel;
@@ -98,7 +96,7 @@ public class FileM25P80 extends M25P80 {
     if (fileLock == null) {
       // Failed to open flash file
       if (write) {
-        System.err.println(getName() + ": failed to open flash file '" + filename + '\'');
+        logw("failed to open flash file '" + filename + '\'');
       }
       return false;
     }
@@ -123,12 +121,11 @@ public class FileM25P80 extends M25P80 {
       fileLock = fileChannel.tryLock();
       if (fileLock != null) {
         // The file is now locked for use
-        if (DEBUG) System.out.println("FileM25P80: using flash file '" + filename + '\'');
+        if (DEBUG) log("using flash file '" + filename + '\'');
         return true;
-      } else {
-        fileChannel.close();
-        return false;
       }
+      fileChannel.close();
+      return false;
     } catch (IOException e) {
       e.printStackTrace();
       closeFile();
