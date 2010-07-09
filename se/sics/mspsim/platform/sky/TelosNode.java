@@ -103,9 +103,4 @@ public class TelosNode extends MoteIVNode {
     node.setupArgs(config);
   }
 
-  public void stateChanged(int state) {
-    // TODO Auto-generated method stub
-    
-  }
-
 }
