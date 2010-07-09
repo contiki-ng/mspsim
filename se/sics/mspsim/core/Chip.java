@@ -176,10 +176,19 @@ public abstract class Chip implements Loggable, EventSource {
     DEBUG = true;
   }
 
-  public void log(String msg) {
+  protected void log(String msg) {
     if (log != null) {
       log.println(getID() + ": " + msg);
     }
+  }
+
+  protected void logw(String msg) {
+      String logMessage = getID() + ": " + msg;
+      PrintStream log = this.log;
+      if (log != null) {
+        log.println(logMessage);
+      }
+      System.err.println(logMessage);
   }
 
   public void setEmulationLogger(EmulationLogger logger) {
