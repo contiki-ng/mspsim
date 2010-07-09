@@ -50,6 +50,7 @@ import se.sics.mspsim.core.USART;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.OperatingModeStatistics;
 
@@ -155,22 +156,39 @@ public class ESBNode extends GenericNode implements PortListener {
   public void setupNode() {
     setupNodePorts();
 
-    stats.addMonitor(this);
-    stats.addMonitor(radio);
-    stats.addMonitor(cpu);
+    if (stats != null) {
+      stats.addMonitor(this);
+      stats.addMonitor(radio);
+      stats.addMonitor(cpu);
+    }
     
     if (!config.getPropertyAsBoolean("nogui", true)) {
+      setupGUI();
+
+      // Add some windows for listening to serial output
+      IOUnit usart = cpu.getIOUnit("USART 1");
+      if (usart instanceof USART) {
+        SerialMon serial = new SerialMon((USART)usart, "RS232 Port Output");
+        ((USART) usart).setUSARTListener(serial);
+      }
+
+      if (stats != null) {
+        // A HACK for some "graphs"!!!
+        DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
+        registry.registerComponent("dutychart", dataChart);
+        DataSourceSampler dss = dataChart.setupChipFrame(cpu);
+        dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getID(), 0, OperatingModeStatistics.OP_INVERT));
+        dataChart.addDataSource(dss, "Listen", stats.getDataSource(radio.getID(), TR1001.MODE_RX_ON));
+        dataChart.addDataSource(dss, "Transmit", stats.getDataSource(radio.getID(), TR1001.MODE_TXRX_ON));
+        dataChart.addDataSource(dss, "CPU", stats.getDataSource(cpu.getID(), MSP430.MODE_ACTIVE));
+      }
+    }
+  }
+
+  public void setupGUI() {
+    if (gui == null) {
       gui = new ESBGui(this);
       registry.registerComponent("nodegui", gui);
-
-      // A HACK for some "graphs"!!!
-      DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
-      registry.registerComponent("dutychart", dataChart);
-      DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getID(), 0, OperatingModeStatistics.OP_INVERT));
-      dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
-      dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
-      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430", MSP430.MODE_ACTIVE));
     }
   }
 
