@@ -43,6 +43,7 @@
 package se.sics.mspsim.platform;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
 import java.io.File;
 import java.net.URL;
 
@@ -149,4 +150,20 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
 
     protected abstract void stopGUI();
 
+    protected void paintComponent(Graphics g) {
+        Color old = g.getColor();
+        ImageIcon nodeImage = getNodeImage();
+        int w = getWidth(), h = getHeight();
+        int iw = nodeImage.getIconWidth(), ih = nodeImage.getIconHeight();
+        nodeImage.paintIcon(this, g, 0, 0);
+        // Clear all areas not covered by the image
+        g.setColor(getBackground());
+        if (w > iw) {
+            g.fillRect(iw, 0, w, h);
+        }
+        if (h > ih) {
+            g.fillRect(0, ih, w, h);
+        }
+        g.setColor(old);
+    }
 }

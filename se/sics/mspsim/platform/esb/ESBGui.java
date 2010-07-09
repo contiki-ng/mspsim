@@ -51,16 +51,12 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
-import javax.swing.ImageIcon;
 
 import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADCInput;
 import se.sics.mspsim.core.IOUnit;
-import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.platform.AbstractNodeGUI;
-import se.sics.mspsim.ui.SerialMon;
 
 public class ESBGui extends AbstractNodeGUI implements ADCInput {
 
@@ -86,7 +82,6 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
   private MouseMotionAdapter mouseMotionListener;
   private MouseAdapter mouseListener;
 
-  private SerialMon serial;
   Beeper beeper;
 
   private ESBNode node;
@@ -159,17 +154,7 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
     };
     addMouseListener(mouseListener);
 
-    // Add some windows for listening to serial output
-    MSP430 cpu = node.getCPU();
-    IOUnit usart = cpu.getIOUnit("USART 1");
-    if (usart instanceof USART) {
-      if (serial == null) {
-        serial = new SerialMon((USART)usart, "RS232 Port Output");
-      }
-      ((USART) usart).setUSARTListener(serial);
-    }
-
-    IOUnit adc = cpu.getIOUnit("ADC12");
+    IOUnit adc = node.getCPU().getIOUnit("ADC12");
     if (adc instanceof ADC12) {
       ((ADC12) adc).setADCInput(0, this);
     }
@@ -217,21 +202,10 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
   }
   
   protected void paintComponent(Graphics g) {
-    Color old = g.getColor();
-    int w = getWidth(), h = getHeight();
-    ImageIcon esbImage = getNodeImage();
-    int iw = esbImage.getIconWidth(), ih = esbImage.getIconHeight();
-    esbImage.paintIcon(this, g, 0, 0);
-    // Clear all areas not covered by the image
-    g.setColor(getBackground());
-    if (w > iw) {
-      g.fillRect(iw, 0, w, h);
-    }
-    if (h > ih) {
-      g.fillRect(0, ih, w, h);
-    }
+    super.paintComponent(g);
 
     // Display all active leds
+    Color old = g.getColor();
     if (node.greenLed) {
       g.setColor(GREEN_TRANS);
       g.fillOval(GREEN_X - 1, LED_Y - 3, 5, 9);

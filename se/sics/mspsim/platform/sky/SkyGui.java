@@ -45,13 +45,7 @@ import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
-import javax.swing.ImageIcon;
-
-import se.sics.mspsim.core.IOUnit;
-import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.platform.AbstractNodeGUI;
-import se.sics.mspsim.ui.SerialMon;
 
 public class SkyGui extends AbstractNodeGUI {
 
@@ -69,8 +63,6 @@ public class SkyGui extends AbstractNodeGUI {
   public static final Color BLUE_C = new Color(0xffa0a0ff);
   public static final Color GREEN_C = new Color(0xff60ff60);
   public static final Color RED_C = new Color(0xffff8000);
-
-  private SerialMon serial;
 
   private MoteIVNode node;
 
@@ -116,30 +108,12 @@ public class SkyGui extends AbstractNodeGUI {
       };
 
     this.addMouseListener(mouseHandler);
-
-    // Add some windows for listening to serial output
-    MSP430 cpu = node.getCPU();
-    IOUnit usart = cpu.getIOUnit("USART 1");
-    if (usart instanceof USART) {
-      serial = new SerialMon((USART)usart, "USART1 Port Output");
-      ((USART) usart).setUSARTListener(serial);
-    }
   }
 
   protected void paintComponent(Graphics g) {
     Color old = g.getColor();
-    ImageIcon skyImage = getNodeImage();
-    int w = getWidth(), h = getHeight();
-    int iw = skyImage.getIconWidth(), ih = skyImage.getIconHeight();
-    skyImage.paintIcon(this, g, 0, 0);
-    // Clear all areas not covered by the image
-    g.setColor(getBackground());
-    if (w > iw) {
-      g.fillRect(iw, 0, w, h);
-    }
-    if (h > ih) {
-      g.fillRect(0, ih, w, h);
-    }
+
+    super.paintComponent(g);
 
     // Display all active leds
     if (node.redLed) {
