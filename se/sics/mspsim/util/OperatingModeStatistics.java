@@ -41,7 +41,8 @@
 package se.sics.mspsim.util;
 
 import java.io.PrintStream;
-import java.util.HashMap;
+import java.util.ArrayList;
+
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.OperatingModeListener;
@@ -56,20 +57,20 @@ public class OperatingModeStatistics {
   public static final int OP_INVERT = 1;
 
   private final MSP430Core cpu;
-  private HashMap<String, StatEntry> statistics = new HashMap<String, StatEntry>();
-  private HashMap<String, StatEntry> aliases = new HashMap<String, StatEntry>();
+  private ArrayList<StatEntry> statistics = new ArrayList<StatEntry>();
 
   public OperatingModeStatistics(MSP430Core cpu) {
     this.cpu = cpu;
   }
 
-  private StatEntry getStatEntry(String name) {
-      StatEntry entry = statistics.get(name);
-      if (entry == null) {
-          // If not found by id, try finding the entry by name
-          entry = aliases.get(name);
+  private synchronized StatEntry getStatEntry(String name) {
+      for (StatEntry entry : statistics) {
+          if (name.equalsIgnoreCase(entry.chip.getID()) ||
+                  name.equalsIgnoreCase(entry.chip.getName())) {
+              return entry;
+          }
       }
-      return entry;
+      return null;
   }
 
   public Chip getChip(String chipName) {
@@ -77,10 +78,10 @@ public class OperatingModeStatistics {
     return entry == null ? null : entry.chip;
   }
 
-  public Chip[] getChips() {
+  public synchronized Chip[] getChips() {
     Chip[] chips = new Chip[statistics.size()];
     int index = 0;
-    for (StatEntry entry : statistics.values()) {
+    for (StatEntry entry : statistics) {
       chips[index++] = entry.chip;
     }
     return chips;
@@ -88,12 +89,13 @@ public class OperatingModeStatistics {
 
   public void addMonitor(Chip chip) {
     StatEntry entry = new StatEntry(chip);
-    statistics.put(chip.getID(), entry);
-    aliases.put(chip.getName(), entry);
+    synchronized (this) {
+        statistics.add(entry);
+    }
   }
 
-  public void printStat() {
-    for (StatEntry entry : statistics.values()) {
+  public synchronized void printStat() {
+    for (StatEntry entry : statistics) {
       entry.printStat(System.out);
     }
   }
@@ -233,7 +235,7 @@ public class OperatingModeStatistics {
     }
 
     void printStat(PrintStream out) {
-      out.println("Stat for: " + chip.getName());
+      out.println("Stat for: " + chip.getID());
       for (int i = 0; i < elapsed.length; i++) {
         out.println("" + (i + 1) + " = " + elapsed[i]);
       }

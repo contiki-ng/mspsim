@@ -117,7 +117,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   double currentDCOFactor = 1.0;
   
   // Clk A can be "captured" by timers - needs to be handled close to CPU...?
-  private int clkACaptureMode = CLKCAPTURE_NONE;
+//  private int clkACaptureMode = CLKCAPTURE_NONE;
   // Other clocks too...
   long nextEventCycles;
   private EventQueue vTimeEventQueue = new EventQueue();
@@ -297,7 +297,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public Chip getChip(String name) {
     for(Chip chip : chips) {
-      if (name.equals(chip.getID()) || name.equals(chip.getName())) {
+      if (name.equalsIgnoreCase(chip.getID()) || name.equalsIgnoreCase(chip.getName())) {
         return chip;
       }
     }
@@ -584,7 +584,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
     for (int i = 0, n = ioUnits.length; i < n; i++) {
-      if (name.equals(ioUnits[i].getID()) || name.equals(ioUnits[i].getName())) {
+      if (name.equalsIgnoreCase(ioUnits[i].getID()) || name.equalsIgnoreCase(ioUnits[i].getName())) {
 	return ioUnits[i];
       }
     }
@@ -896,10 +896,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	breakPoints[pc].cpuAction(CPUMonitor.EXECUTE, pc, 0);
 	breakpointActive = false;
 	return false;
-      } else {
-	// Execute this instruction - this is second call...
-	breakpointActive = true;
       }
+      // Execute this instruction - this is second call...
+      breakpointActive = true;
     }
     if (globalMonitor != null) {
         globalMonitor.cpuAction(CPUMonitor.EXECUTE, pc, 0);
