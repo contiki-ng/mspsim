@@ -66,6 +66,22 @@ public class Main {
     return null;
   }
 
+  private static String getNodeTypeByPlatform(String platform) {
+      if ("jcreate".equals(platform)) {
+          return "se.sics.mspsim.platform.jcreate.JCreateNode";
+      }
+      if ("sentilla-usb".equals(platform)) {
+          return "se.sics.mspsim.platform.sentillausb.SentillaUSBNode";
+      }
+      if ("esb".equals(platform)) {
+          return "se.sics.mspsim.platform.esb.ESBNode";
+      }
+      // Try to guess the node type.
+      return "se.sics.mspsim.platform." + platform + '.'
+          + Character.toUpperCase(platform.charAt(0))
+          + platform.substring(1).toLowerCase() + "Node";
+  }
+
   public static void main(String[] args) throws IOException {
     ArgumentManager config = new ArgumentManager();
     config.handleArguments(args);
@@ -77,13 +93,8 @@ public class Main {
       node = createNode(nodeType);
     } else {
       platform = config.getProperty("platform", "sky");
-      nodeType = "se.sics.mspsim.platform." + platform + '.' +
-      Character.toUpperCase(platform.charAt(0)) + platform.substring(1).toLowerCase() + "Node";
+      nodeType = getNodeTypeByPlatform(platform);
       node = createNode(nodeType);
-      if (node == null) {
-        nodeType = "se.sics.mspsim.platform." + platform + '.' + platform.toUpperCase() + "Node";
-        node = createNode(nodeType);
-      }
     }
     if (node == null) {
       System.err.println("MSPSim does not currently support the platform '" + platform + "'.");
