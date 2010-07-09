@@ -91,6 +91,10 @@ public class TR1001 extends Chip implements RFListener, RFSource {
     return MODE_MAX;
   }
 
+  public String info() {
+      return "Radio State: " + getModeName(getMode());
+  }
+
   public void setRFListener(RFListener rfListener) {
     this.rfListener = rfListener;
   }
