@@ -8,7 +8,7 @@ public class ComponentRegistry {
   private boolean running = false;
   
   public void registerComponent(String name, Object component) {
-    synchronized (components) {
+    synchronized (this) {
       components.add(new ComponentEntry(name, component)); 
     }
     if (component instanceof ActiveComponent) {
