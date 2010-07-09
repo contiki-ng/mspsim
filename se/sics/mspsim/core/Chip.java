@@ -178,7 +178,7 @@ public abstract class Chip implements Loggable, EventSource {
 
   public void log(String msg) {
     if (log != null) {
-      log.println(getName() + ": " + msg);
+      log.println(getID() + ": " + msg);
     }
   }
 

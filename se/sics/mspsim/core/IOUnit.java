@@ -114,12 +114,12 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   protected void log(String msg) {
     PrintStream log = this.log;
     if (log != null) {
-      log.println(getName() + ": " + msg);
+      log.println(getID() + ": " + msg);
     }
   }
 
   protected void logw(String msg) {
-    String logMessage = getName() + ": " + msg;
+    String logMessage = getID() + ": " + msg;
     PrintStream log = this.log;
     if (log != null) {
       log.println(logMessage);
