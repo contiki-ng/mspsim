@@ -134,16 +134,21 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private Flash flash;
   
   public MSP430Core(int type, ComponentRegistry registry) {
+    super("MSP430", "MSP430 Core", null);
+    this.registry = registry;
+
+    // The CPU need to register itself as chip
+    addChip(this);
+
     // Ignore type for now...
     setModeNames(MODE_NAMES);
-    this.registry = registry;
     int passIO = 0;
     // IOUnits should likely be placed in a hashtable?
     // Maybe for debugging purposes...
     ioUnits = new IOUnit[PORTS + 7];
 
-    Timer ta = new Timer(this, Timer.TIMER_Ax149, memory, 0x160);
-    Timer tb = new Timer(this, Timer.TIMER_Bx149, memory, 0x180);
+    Timer ta = new Timer(this, "A", Timer.TIMER_Ax149, memory, 0x160);
+    Timer tb = new Timer(this, "B", Timer.TIMER_Bx149, memory, 0x180);
     for (int i = 0, n = 0x20; i < n; i++) {
       memOut[0x160 + i] = ta;
       memOut[0x180 + i] = tb;
@@ -186,8 +191,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[i] = mp;
     }
 
-    USART usart0 = new USART(this, memory, 0x70);
-    USART usart1 = new USART(this, memory, 0x78);
+    USART usart0 = new USART(this, 0, memory, 0x70);
+    USART usart1 = new USART(this, 1, memory, 0x78);
     
     for (int i = 0, n = 8; i < n; i++) {
       memOut[0x70 + i] = usart0;
@@ -199,8 +204,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     
     // Add port 1,2 with interrupt capability!
-    ioUnits[0] = new IOPort(this, "1", 4, memory, 0x20);
-    ioUnits[1] = new IOPort(this, "2", 1, memory, 0x28);
+    ioUnits[0] = new IOPort(this, 1, 4, memory, 0x20);
+    ioUnits[1] = new IOPort(this, 2, 1, memory, 0x28);
     for (int i = 0, n = 8; i < n; i++) {
       memOut[0x20 + i] = ioUnits[0];
       memOut[0x28 + i] = ioUnits[1];
@@ -208,15 +213,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // Add port 3,4 & 5,6
     for (int i = 0, n = 2; i < n; i++) {
-      ioUnits[i + 2] = new IOPort(this, "" + (3 + i), 0,
-					 memory, 0x18 + i * 4);
+      ioUnits[i + 2] = new IOPort(this, (3 + i), 0, memory, 0x18 + i * 4);
       memOut[0x18 + i * 4] = ioUnits[i + 2];
       memOut[0x19 + i * 4] = ioUnits[i + 2];
       memOut[0x1a + i * 4] = ioUnits[i + 2];
       memOut[0x1b + i * 4] = ioUnits[i + 2];
 
-      ioUnits[i + 4] = new IOPort(this, "" + (5 + i), 0,
-					 memory, 0x30 + i * 4);
+      ioUnits[i + 4] = new IOPort(this, (5 + i), 0, memory, 0x30 + i * 4);
 
       memOut[0x30 + i * 4] = ioUnits[i + 4];
       memOut[0x31 + i * 4] = ioUnits[i + 4];
@@ -270,7 +273,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public void setGlobalMonitor(CPUMonitor mon) {
       globalMonitor = mon;
   }
-  
+
+  public ComponentRegistry getRegistry() {
+    return registry;
+  }
+
   /* returns port 1 ... 6 */
   public IOPort getIOPort(int portID) {
     if (portID > 0 && portID < 7) {
@@ -290,7 +297,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public Chip getChip(String name) {
     for(Chip chip : chips) {
-      if (name.equals(chip.getName())) {
+      if (name.equals(chip.getID()) || name.equals(chip.getName())) {
         return chip;
       }
     }
@@ -577,7 +584,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
     for (int i = 0, n = ioUnits.length; i < n; i++) {
-      if (name.equals(ioUnits[i].getName())) {
+      if (name.equals(ioUnits[i].getID()) || name.equals(ioUnits[i].getName())) {
 	return ioUnits[i];
       }
     }
@@ -1425,10 +1432,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     cpuCycles += cycles - startCycles;
     
     return true;
-  }
-  
-  public String getName() {
-    return "MSP430 Core";
   }
   
   public int getModeMax() {

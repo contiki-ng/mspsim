@@ -80,7 +80,6 @@ public class MSP430 extends MSP430Core {
   public MSP430(int type, ComponentRegistry registry) {
     super(type, registry);
     disAsm = new DisAsm();
-    addChip(this);
   }
 
   public double getCPUPercent() {

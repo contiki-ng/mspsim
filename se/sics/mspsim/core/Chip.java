@@ -52,6 +52,10 @@ import se.sics.mspsim.util.ArrayUtils;
  */
 public abstract class Chip implements Loggable, EventSource {
 
+  protected final String id;
+  protected final String name;
+  protected final MSP430Core cpu;
+
   private OperatingModeListener[] omListeners;
   private EventListener eventListener;
   protected boolean sendEvents = false;
@@ -60,7 +64,20 @@ public abstract class Chip implements Loggable, EventSource {
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
-  
+
+  public Chip(String id, MSP430Core cpu) {
+    this(id, id, cpu);
+  }
+
+  public Chip(String id, String name, MSP430Core cpu) {
+    this.id = id;
+    this.name = name;
+    this.cpu = cpu;
+    if (cpu != null) {
+      cpu.addChip(this);
+    }
+  }
+
   public void addOperatingModeListener(OperatingModeListener listener) {
     omListeners = (OperatingModeListener[]) ArrayUtils.add(OperatingModeListener.class, omListeners, listener);
   }
@@ -125,7 +142,14 @@ public abstract class Chip implements Loggable, EventSource {
     return -1;
   }
 
-  public abstract String getName();
+  public String getID() {
+    return id;
+  }
+
+  public String getName() {
+    return name;
+  }
+
   public abstract int getModeMax();
 
   /* By default the cs is set high */

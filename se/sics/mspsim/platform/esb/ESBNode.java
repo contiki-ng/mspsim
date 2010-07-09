@@ -83,6 +83,7 @@ public class ESBNode extends GenericNode implements PortListener {
    *
    */
   public ESBNode() {
+      super("ESB");
   }
 
   public void setPIR(boolean hi) {
@@ -166,19 +167,15 @@ public class ESBNode extends GenericNode implements PortListener {
       DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
       registry.registerComponent("dutychart", dataChart);
       DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getName(), 0, OperatingModeStatistics.OP_INVERT));
+      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getID(), 0, OperatingModeStatistics.OP_INVERT));
       dataChart.addDataSource(dss, "Listen", stats.getDataSource("TR1001", TR1001.MODE_RX_ON));
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("TR1001", TR1001.MODE_TXRX_ON));
-      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
+      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430", MSP430.MODE_ACTIVE));
     }
   }
 
   public int getModeMax() {
     return 0;
-  }
-
-  public String getName() {
-    return "ESB";
   }
 
   public static void main(String[] args) throws IOException {

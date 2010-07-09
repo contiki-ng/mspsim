@@ -86,7 +86,7 @@ public class BasicClockModule extends IOUnit {
    *
    */
   public BasicClockModule(MSP430Core core, int[] memory, int offset, Timer[] timers) {
-    super(memory, offset);
+    super("BasicClockModule", memory, offset);
     this.core = core;
     this.timers = timers;
     reset();
@@ -167,10 +167,6 @@ public class BasicClockModule extends IOUnit {
     }
   }
   
-  public String getName() {
-    return "BasicClockModule";
-  }
-
   public void interruptServiced(int vector) {
   }
 }

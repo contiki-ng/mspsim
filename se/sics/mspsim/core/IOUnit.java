@@ -47,13 +47,21 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
 
   int[] memory;
   int offset;
-  
+
+  protected final String id;
+  protected final String name;
+
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
 
+  public IOUnit(String id, int[] memory, int offset) {
+    this(id, id, memory, offset);
+  }
 
-  public IOUnit(int[] memory, int offset) {
+  public IOUnit(String id, String name, int[] memory, int offset) {
+    this.id = id;
+    this.name = name;
     this.memory = memory;
     this.offset = offset;
   }
@@ -79,8 +87,14 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
     // Second byte => hi byte
     return (data >> 8) & 0xff;
   }
-  
-  public abstract String getName();
+
+  public String getID() {
+      return id;
+  }
+
+  public String getName() {
+      return name;
+  }
   
   /* Loggable */
   public void clearLogStream() {

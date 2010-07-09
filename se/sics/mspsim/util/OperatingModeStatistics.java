@@ -55,15 +55,25 @@ public class OperatingModeStatistics {
   public static final int OP_NORMAL = 0;
   public static final int OP_INVERT = 1;
 
-  private MSP430Core cpu;
+  private final MSP430Core cpu;
   private HashMap<String, StatEntry> statistics = new HashMap<String, StatEntry>();
+  private HashMap<String, StatEntry> aliases = new HashMap<String, StatEntry>();
 
   public OperatingModeStatistics(MSP430Core cpu) {
     this.cpu = cpu;
   }
 
+  private StatEntry getStatEntry(String name) {
+      StatEntry entry = statistics.get(name);
+      if (entry == null) {
+          // If not found by id, try finding the entry by name
+          entry = aliases.get(name);
+      }
+      return entry;
+  }
+
   public Chip getChip(String chipName) {
-    StatEntry entry = statistics.get(chipName);
+    StatEntry entry = getStatEntry(chipName);
     return entry == null ? null : entry.chip;
   }
 
@@ -78,7 +88,8 @@ public class OperatingModeStatistics {
 
   public void addMonitor(Chip chip) {
     StatEntry entry = new StatEntry(chip);
-    statistics.put(chip.getName(), entry);    
+    statistics.put(chip.getID(), entry);
+    aliases.put(chip.getName(), entry);
   }
 
   public void printStat() {
@@ -92,7 +103,7 @@ public class OperatingModeStatistics {
   }
 
   public DataSource getDataSource(String chip, String modeStr) {
-    StatEntry se = statistics.get(chip);
+    StatEntry se = getStatEntry(chip);
     if (se != null) {
       int mode = se.chip.getModeByName(modeStr);
       if (mode != -1) { 
@@ -104,7 +115,7 @@ public class OperatingModeStatistics {
 
   
   public DataSource getDataSource(String chip, int mode, int operation) {
-    StatEntry se = statistics.get(chip);
+    StatEntry se = getStatEntry(chip);
     if (se != null) {
       return new StatDataSource(se, mode, operation);
     }
@@ -112,7 +123,7 @@ public class OperatingModeStatistics {
   }
 
   public MultiDataSource getMultiDataSource(String chip) {
-    StatEntry se = statistics.get(chip);
+    StatEntry se = getStatEntry(chip);
     if (se != null) {
       return new StatMultiDataSource(se);
     }

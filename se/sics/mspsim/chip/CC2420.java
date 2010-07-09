@@ -304,8 +304,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private RFListener listener;
   private boolean on;
 
-  private MSP430Core cpu;
-
   private TimeEvent oscillatorEvent = new TimeEvent(0, "CC2420 OSC") {
     public void execute(long t) {
       status |= STATUS_XOSC16M_STABLE;
@@ -398,20 +396,18 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       return stateMachine;
   }
 
-  // TODO: super(cpu) and chip autoregister chips into the CPU.
   public CC2420(MSP430Core cpu) {
+      super("CC2420", "Radio", cpu);
       rxFIFO = new ArrayFIFO("RXFIFO", memory, RAM_RXFIFO, 128);
       
     registers[REG_SNOP] = 0;
     registers[REG_TXCTRL] = 0xa0ff;
-    this.cpu = cpu;
     setModeNames(MODE_NAMES);
     setMode(MODE_POWER_OFF);
     fifoP = false;
     rxFIFO.reset();
     overflow = false;
     reset();
-    cpu.addChip(this);
   }
   
   private void reset() {
@@ -1293,9 +1289,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   /*****************************************************************************
    * Chip APIs
    *****************************************************************************/
-  public String getName() {
-    return "CC2420";
-  }
 
   public int getModeMax() {
     return MODE_MAX;

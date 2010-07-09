@@ -92,10 +92,8 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
       writing = false;
     }};
 
-  private MSP430Core cpu;
-
   public M25P80(MSP430Core cpu) {
-    this.cpu = cpu;
+      super("M25P80", "External Flash", cpu);
   }
 
   public void stateChanged(int state) {
@@ -380,10 +378,6 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     return 0;
   }
 
-  public String getName() {
-    return "M25P80: external flash";
-  }
-  
   public abstract void seek(long pos) throws IOException;
   public abstract int readFully(byte[] b) throws IOException;
   public abstract void write(byte[] b) throws IOException;

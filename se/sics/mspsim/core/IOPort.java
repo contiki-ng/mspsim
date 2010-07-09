@@ -52,7 +52,6 @@ public class IOPort extends IOUnit {
   private static final String[] names = {
     "IN", "OUT", "DIR", "SEL" };
 
-  private final String name;
   private final int interrupt;
   private final MSP430Core cpu;
   private int interruptFlag;
@@ -82,10 +81,9 @@ public class IOPort extends IOUnit {
    * Creates a new <code>IOPort</code> instance.
    *
    */
-  public IOPort(MSP430Core cpu, String portName,
+  public IOPort(MSP430Core cpu, int port,
 		int interrupt, int[] memory, int offset) {
-    super(memory, offset);
-    name = "Port " + portName;
+    super("P" + port, "Port " + port, memory, offset);
     this.interrupt = interrupt;
     this.interruptEnable = 0;
     this.cpu = cpu;
@@ -119,7 +117,7 @@ public class IOPort extends IOUnit {
     int iAddress = address - offset;
 
     if (iAddress == IN) {
-      logw("WARNING: writing to read-only PxIN");
+      logw("WARNING: writing to read-only " + getID() + "IN");
     } else {
       memory[address] = data & 0xff;
       if (word) {
@@ -127,7 +125,7 @@ public class IOPort extends IOUnit {
       }
       if (DEBUG) {
         try {
-          log("Writing to Px" +
+          log("Writing to " + getID() +
               (interrupt > 0? iNames[iAddress] : names[iAddress]) +
               "  $" + Utils.hex8(address) +
               " => $" + Utils.hex8(data) + "=#" +
@@ -181,10 +179,6 @@ public class IOPort extends IOUnit {
       break;
     case ISEL:
     }
-  }
-
-  public String getName() {
-    return name;
   }
 
   public void interruptServiced(int vector) {

@@ -60,10 +60,10 @@ public class TR1001 extends Chip implements RFListener, RFSource {
   private RFListener rfListener;
 
   public TR1001(MSP430Core cpu, USART usart) {
+    super("TR1001", "Radio", cpu);
     this.usart = usart;
     setModeNames(MODE_NAMES);
     setMode(MODE_TXRX_OFF);
-    cpu.addChip(this);
     usart.setUSARTListener(new USARTListener() {
 
       public void dataReceived(USART source, int data) {
@@ -80,11 +80,6 @@ public class TR1001 extends Chip implements RFListener, RFSource {
 
       public void stateChanged(int state) {
       }});
-  }
-
-  @Override
-  public String getName() {
-    return "TR1001";
   }
 
   public void setMode(int mode) {

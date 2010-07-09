@@ -132,10 +132,8 @@ public abstract class AT45DB extends Chip implements USARTListener {
       setReady(true);
     }};
 
-    private MSP430Core cpu;
-
     public AT45DB(MSP430Core cpu) {
-      this.cpu = cpu;
+      super("AT45DB", "External Flash", cpu);
     }
 
     private void setReady(boolean ready) {
@@ -360,10 +358,6 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
     public int getModeMax() {
       return 0;
-    }
-
-    public String getName() {
-      return "AT45DB: external flash";
     }
 
     public abstract void seek(long pos) throws IOException;

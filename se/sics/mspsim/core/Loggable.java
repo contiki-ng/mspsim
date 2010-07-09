@@ -40,6 +40,7 @@ public interface Loggable {
   public void setEmulationLogger(EmulationLogger log);
   public void setLogStream(PrintStream out);
   public void clearLogStream();
+  public String getID();
   public String getName();
   public String info();
 

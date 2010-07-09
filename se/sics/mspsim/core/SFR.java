@@ -72,7 +72,7 @@ public class SFR extends IOUnit {
   private int[] irqTriggeredPos = new int[16];
   
   public SFR(MSP430Core cpu, int[] memory) {
-    super(memory, 0);
+    super("SFR", "Special Function Register", memory, 0);
     this.cpu = cpu;
     this.memory = memory;
     reset(0);
@@ -269,10 +269,6 @@ public class SFR extends IOUnit {
     if (sfrModule[pos] != null) {
       sfrModule[pos].interruptServiced(vector);
     }
-  }
-
-  public String getName() {
-    return "SpecialFunctionRegister, SFR";
   }
 
 } // SFR

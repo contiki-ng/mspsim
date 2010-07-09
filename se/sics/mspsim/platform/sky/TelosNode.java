@@ -66,7 +66,7 @@ public class TelosNode extends MoteIVNode {
    *
    */
   public TelosNode() {
-    setMode(MODE_LEDS_OFF);
+    super("Telos");
   }
 
   public AT45DB getFlash() {
@@ -87,10 +87,6 @@ public class TelosNode extends MoteIVNode {
   public void dataReceived(USART source, int data) {
     radio.dataReceived(source, data);
     flash.dataReceived(source, data);
-  }
-
-  public String getName() {
-    return "Telos";
   }
 
   public void setupNodePorts() {

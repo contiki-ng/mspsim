@@ -174,7 +174,7 @@ public class Flash extends IOUnit {
   
   public Flash(MSP430Core cpu, int[] memory, FlashRange main_range,
       FlashRange info_range) {
-    super(memory, FCTL1);
+    super("Flash", "Internal Flash", memory, FCTL1);
     this.cpu = cpu;
     this.memory = memory;
     this.main_range = main_range;
@@ -187,10 +187,6 @@ public class Flash extends IOUnit {
 
   public boolean blocksCPU() {
     return blocked_cpu;
-  }
-  
-  public String getName() {
-    return "Flash";
   }
   
   public void interruptServiced(int vector) {

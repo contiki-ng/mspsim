@@ -89,15 +89,11 @@ public class Watchdog extends IOUnit implements SFRModule {
   };
 
   public Watchdog(MSP430Core cpu) {
-    super(cpu.memory, 0x120);
+    super("Watchdog", cpu.memory, 0x120);
     this.cpu = cpu;
     cpu.getSFR().registerSFDModule(0, WATCHDOG_INTERRUPT_BIT, this, WATCHDOG_VECTOR);
   }
    
-  public String getName() {
-    return "Watchdog";
-  }
-
   public void interruptServiced(int vector) {
     cpu.flagInterrupt(vector, this, false);
   }

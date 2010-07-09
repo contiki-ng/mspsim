@@ -84,8 +84,6 @@ public class SHT11 extends Chip {
   private int writeLen = 0;
   private int writeData = 0;
   
-  private MSP430Core cpu;
-  
   private static int rev8bits(int v) {
     int r = 0;
     int s = 8;
@@ -151,10 +149,8 @@ public class SHT11 extends Chip {
       this.humid = humidity;
   }
     
-    // TODO: super(cpu) and chip autoregister chips into the CPU.
-  public SHT11(MSP430Core core) {
-    cpu = core;
-    cpu.addChip(this);
+  public SHT11(MSP430Core cpu) {
+      super("SHT11", "Digital Humidity Sensor", cpu);
   }
     
   public void setDataPort(IOPort port, int bit) {
@@ -285,7 +281,4 @@ public class SHT11 extends Chip {
     return 0;
   }
 
-  public String getName() {
-    return "SHT11";
-  } 
 }

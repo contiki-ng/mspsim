@@ -143,7 +143,7 @@ public class ADC12 extends IOUnit {
 
   
   public ADC12(MSP430Core cpu) {
-    super(cpu.memory, 0);
+    super("ADC12", cpu.memory, 0);
     core = cpu;
   }
 
@@ -261,10 +261,6 @@ public class ADC12 extends IOUnit {
       }
     }
     return 0;
-  }
-
-  public String getName() {
-    return "ADC12";
   }
 
   int smp = 0;

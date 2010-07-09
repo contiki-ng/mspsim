@@ -64,7 +64,7 @@ public class Beeper extends IOUnit {
   int beepCtr = 0;
 
   public Beeper() {
-  	super(null, 0);
+  	super("Beeper", null, 0);
   	AudioFormat af = new AudioFormat(SAMPLE_RATE, 8, 1, true, false);
   	DataLine.Info dli =
   		new DataLine.Info(SourceDataLine.class, af, 16384);
@@ -122,10 +122,6 @@ public class Beeper extends IOUnit {
   }
 
   public void write(int address, int data, boolean word, long cycler) {
-  }
-
-  public String getName() {
-    return "Beeper";
   }
 
   // Nothing for interrupts...

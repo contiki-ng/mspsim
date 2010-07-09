@@ -76,7 +76,7 @@ public class Multiplier extends IOUnit {
    *
    */
   public Multiplier(MSP430Core core, int memory[], int offset) {
-    super(memory, offset);
+    super("Multiplier", "Hardware Multiplier", memory, offset);
     this.core = core;
   }
 
@@ -182,10 +182,6 @@ public class Multiplier extends IOUnit {
       if (DEBUG) System.out.println(" ===> result = " + res);
       break;
     }
-  }
-
-  public String getName() {
-    return "Hardware Multiplier";
   }
 
   public void interruptServiced(int vector) {

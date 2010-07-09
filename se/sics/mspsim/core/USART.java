@@ -64,7 +64,7 @@ public class USART extends IOUnit implements SFRModule {
   public static final int IE1 = 0;
   public static final int IFG1 = 2;
 
-  private int uartID = 0;
+  private final int uartID;
 
   public static final int USART0_RX_VEC = 9;
   public static final int USART0_TX_VEC = 8;
@@ -124,13 +124,11 @@ public class USART extends IOUnit implements SFRModule {
    * Creates a new <code>USART</code> instance.
    *
    */
-  public USART(MSP430Core cpu, int[] memory, int offset) {
-    super(memory, offset);
+  public USART(MSP430Core cpu, int uartID, int[] memory, int offset) {
+    super("USART" + uartID, "USART " + uartID, memory, offset);
     this.cpu = cpu;
+    this.uartID = uartID;
     sfr = cpu.getSFR();
-    if (offset == 0x78) {
-      uartID = 1;
-    }
 
     // Initialize - transmit = ok...
     // and set which interrupts are used
@@ -342,11 +340,6 @@ public class USART extends IOUnit implements SFRModule {
     if (DEBUG) {
       log(" Ticks per byte: " + tickPerByte);
     }
-  }
-
-
-  public String getName() {
-    return "USART " + uartID;
   }
 
   // We should add "Interrupt serviced..." to indicate that its latest

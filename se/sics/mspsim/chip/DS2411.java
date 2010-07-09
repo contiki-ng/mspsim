@@ -56,9 +56,8 @@ public class DS2411 extends Chip {
   }
   
   private static final int CMD_READ_ROM = 0x33;
-  private static final int CMD_SEACH_ROM = 0xf0;  
+  //private static final int CMD_SEARCH_ROM = 0xf0;  
   
-  MSP430Core cpu;
   private IOPort sdataPort;
   private int sdataPin;
   private STATE state = STATE.IDLE;
@@ -108,7 +107,7 @@ public class DS2411 extends Chip {
   };
   
   public DS2411(MSP430Core cpu) {
-    this.cpu = cpu;
+    super("DS2411", "Silicon Serial Number", cpu);
     if (DEBUG) {
       setLogStream(System.out);
     }
@@ -151,10 +150,6 @@ public class DS2411 extends Chip {
 
   public int getModeMax() {
     return 0;
-  }
-
-  public String getName() {
-    return "DS2411";
   }
 
   public void setDataPort(IOPort port, int bit) {

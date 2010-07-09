@@ -47,7 +47,6 @@ import se.sics.mspsim.cli.BasicLineCommand;
 import se.sics.mspsim.cli.CommandBundle;
 import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.cli.CommandHandler;
-import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.TimeEvent;
@@ -63,32 +62,38 @@ public class StatCommands implements CommandBundle {
   }
 
   public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
-    handler.registerCommand("chipinfo", new BasicCommand("show information about specified chip/loggable",
-    "[chips...]") {
+    handler.registerCommand("info", new BasicCommand("show information about specified chip/loggable",
+    "[unit...]") {
 
       @Override
       public int executeCommand(CommandContext context) {
         if (context.getArgumentCount() > 0) {
           for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
-            String chipName = context.getArgument(i);
-            Loggable chip = cpu.getLoggable(chipName);
-            if (chip == null) {
-              context.out.println("  " + chipName + ": NOT FOUND");
+            String unitName = context.getArgument(i);
+            Loggable unit = cpu.getLoggable(unitName);
+            if (unit == null) {
+              context.out.println("  " + unitName + ": NOT FOUND");
             } else {
-              context.out.println(chipName + ": " + chip);
-              String info = chip.info();
+              context.out.println(unitName + ": " + unit);
+              String info = unit.info();
               if (info != null) {
                 context.out.println(info);
               }
             }
           }
         } else {
-          Loggable[] chips = cpu.getLoggables();
-          if (chips == null) {
+          Loggable[] units = cpu.getLoggables();
+          if (units == null) {
             context.out.println("No loggables found.");
           } else {
-            for (int i = 0, n = chips.length; i < n; i++) {
-              context.out.println("  " + chips[i].getName());
+            for (int i = 0, n = units.length; i < n; i++) {
+              String id = units[i].getID();
+              String name = units[i].getName();
+              if (id == name) {
+                  context.out.println("  " + id);
+              } else {
+                  context.out.println("  " + id + " (" + name + ')');
+              }
             }
           }
         }

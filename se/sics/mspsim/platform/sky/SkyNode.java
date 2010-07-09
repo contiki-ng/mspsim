@@ -61,7 +61,7 @@ public class SkyNode extends MoteIVNode {
    *
    */
   public SkyNode() {
-    setMode(MODE_LEDS_OFF);
+    super("Tmote Sky");
   }
 
   public M25P80 getFlash() {
@@ -88,10 +88,6 @@ public class SkyNode extends MoteIVNode {
     flash.portWrite(source, data);
   }
   
-  public String getName() {
-    return "Tmote Sky";
-  }
-
   public void setupNodePorts() {
     super.setupNodePorts();
     if (flashFile != null) {

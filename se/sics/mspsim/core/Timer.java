@@ -174,7 +174,6 @@ public class Timer extends IOUnit {
     "NONE", "RISING", "FALLING", "BOTH"
   };
 
-  private final String name;
   private final int tiv;
   private int inputDivider = 1;
 
@@ -406,34 +405,29 @@ public class Timer extends IOUnit {
    *
    */
 
-  public Timer(MSP430Core core, int[] srcMap, int[] memory, int offset) {
-    super(memory, offset);
+  public Timer(MSP430Core core, String type, int[] srcMap, int[] memory, int offset) {
+    super("Timer" + type, "Timer " + type, memory, offset);
     this.srcMap = srcMap;
     this.core = core;
     noCompare = (srcMap.length / 4) - 1;
     if (DEBUG) {
       System.out.println("Timer: noComp:" + noCompare);
     }
-    String type = "";
     if (srcMap == TIMER_Ax149) {
-      name = "Timer A";
-      type = " A";
       tiv = TAIV;
       timerOverflow = 0x0a;
       ccr0Vector = TACCR0_VECTOR;
       ccr1Vector = TACCR1_VECTOR;
     } else {
-      type = " B";
-      name = "Timer B";
       tiv = TBIV;
       timerOverflow = 0x0e;
       ccr0Vector = TBCCR0_VECTOR;
       ccr1Vector = TBCCR1_VECTOR;
     }
-    counterTrigger.name += type;
+    counterTrigger.name += ' ' + type;
 
     for (int i = 0; i < noCompare; i++) {
-        ccr[i] = new CCR(0, "CCR" + i + type, i == 0 ? ccr0Vector : ccr1Vector, i);
+        ccr[i] = new CCR(0, "CCR" + i + " " + type, i == 0 ? ccr0Vector : ccr1Vector, i);
     }
     
     reset(0);
@@ -898,10 +892,6 @@ public class Timer extends IOUnit {
       }
     }
     return "";
-  }
-
-  public String getName() {
-    return name;
   }
 
   /**

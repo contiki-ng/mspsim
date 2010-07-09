@@ -72,6 +72,11 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
 
   protected String flashFile;
 
+  public MoteIVNode(String id) {
+    super(id);
+    setMode(MODE_LEDS_OFF);
+  }
+
   public void setDebug(boolean debug) {
     cpu.setDebug(debug);
   }
@@ -197,10 +202,10 @@ public abstract class MoteIVNode extends GenericNode implements PortListener, US
       DataChart dataChart =  new DataChart(registry, "Duty Cycle", "Duty Cycle");
       registry.registerComponent("dutychart", dataChart);
       DataSourceSampler dss = dataChart.setupChipFrame(cpu);
-      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getName(), 0, OperatingModeStatistics.OP_INVERT));
+      dataChart.addDataSource(dss, "LEDS", stats.getDataSource(getID(), 0, OperatingModeStatistics.OP_INVERT));
       dataChart.addDataSource(dss, "Listen", stats.getDataSource("CC2420", CC2420.MODE_RX_ON));
       dataChart.addDataSource(dss, "Transmit", stats.getDataSource("CC2420", CC2420.MODE_TXRX_ON));
-      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430 Core", MSP430.MODE_ACTIVE));
+      dataChart.addDataSource(dss, "CPU", stats.getDataSource("MSP430", MSP430.MODE_ACTIVE));
     }
   }
 
