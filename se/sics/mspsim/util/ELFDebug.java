@@ -93,7 +93,7 @@ public class ELFDebug {
   }
 
   public StabFile[] getStabFiles() {
-      ArrayList files = new ArrayList();
+      ArrayList<StabFile> files = new ArrayList<StabFile>();
       StabFile currentFile = null;
       for (int i = 0, n = stabs.length; i < n; i++) {
           Stab stab = stabs[i];
@@ -111,7 +111,7 @@ public class ELFDebug {
               break;
           }
       }
-      return (StabFile[]) files.toArray(new StabFile[0]);
+      return files.toArray(new StabFile[files.size()]);
   }
   
   
@@ -190,7 +190,7 @@ public class ELFDebug {
     String currentFile = null;
     String currentFunction = null;
     int lastAddress = 0;
-    int currentLine = 0;
+//    int currentLine = 0;
     int currentLineAdr = 0;
     for (Stab stab : stabs) {
       switch(stab.type) {
@@ -220,7 +220,7 @@ public class ELFDebug {
       case N_SLINE:
         if (currentPath != null) { /* only files with path... */
           if (currentLineAdr < address) {
-            currentLine = stab.desc;
+//            currentLine = stab.desc;
             currentLineAdr = lastAddress + stab.value;
             allAddresses.add(new Integer(currentLineAdr));
             /*if (currentLineAdr >= address) {
