@@ -1293,18 +1293,31 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public int getModeMax() {
     return MODE_MAX;
   }
-  
+
+  private String getLongAddress() {
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < 8; i++) {
+        if ((i % 2 == 0) && i > 0) {
+            sb.append(':');
+        }
+        sb.append(Utils.hex8(memory[RAM_IEEEADDR + 7 - i]));
+      }
+      return sb.toString();
+  }
+
   public String info() {
     updateActiveFrequency();
-    return " VREG_ON: " + on + " ChipSel: " + chipSelect +
-    "\n OSC_Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
-    "\n RSSI_Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
+    return " VREG_ON: " + on + "  Chip Select: " + chipSelect +
+    "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
+    "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
-    " FIFOP: " + fifoP + " FIFO: " + currentFIFO + " SFD: " + currentSFD + 
-    "\n Radio State: " + stateMachine +
-    "\n RXFIFO: " + rxFIFO.stateToString() +
-    "\n AutoACK: " + autoAck + " AddrDecode: " + addressDecode + " AutoCRC: " + autoCRC +
-    "\n SPI State: " + state +
+    "  FIFOP: " + fifoP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD + 
+    "\n " + rxFIFO.stateToString() +
+    "\n Radio State: " + stateMachine + "  SPI State: " + state + 
+    "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
+    "\n PanID: 0x" + Utils.hex8(memory[RAM_PANID + 1]) + Utils.hex8(memory[RAM_PANID]) +
+    "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
+    "  LongAddr: 0x" + getLongAddress() +
     "\n Channel: " + activeChannel +
     "\n";
   }
