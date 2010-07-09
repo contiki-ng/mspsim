@@ -47,18 +47,16 @@ public class IOPort extends IOUnit {
   public static final int PIN_LOW = 0;
   public static final int PIN_HI = 1;
 
-  public static final boolean DEBUG = false;
+  private static final String[] iNames = {
+    "IN", "OUT", "DIR", "IFG", "IES", "IE", "SEL" };
+  private static final String[] names = {
+    "IN", "OUT", "DIR", "SEL" };
 
-  public static final String[] iNames = {
-    "P_IN","P_OUT", "P_DIR", "P_IFG", "P_IES", "P_IE", "P_SEL" };
-  public static final String[] names = {
-    "P_IN", "P_OUT", "P_DIR", "P_SEL" };
-
-  private String name;
-  private int interrupt;
+  private final String name;
+  private final int interrupt;
+  private final MSP430Core cpu;
   private int interruptFlag;
   private int interruptEnable;
-  private MSP430Core cpu;
 
   // External pin state!
   private int pinState[] = new int[8];
@@ -87,7 +85,7 @@ public class IOPort extends IOUnit {
   public IOPort(MSP430Core cpu, String portName,
 		int interrupt, int[] memory, int offset) {
     super(memory, offset);
-    name = portName;
+    name = "Port " + portName;
     this.interrupt = interrupt;
     this.interruptEnable = 0;
     this.cpu = cpu;
@@ -98,13 +96,15 @@ public class IOPort extends IOUnit {
   }
 
   public void setTimerCapture(Timer timer, int pin) {
-    System.out.println("Setting timer capture for pin: " + pin);
+    if (DEBUG) {
+      log("Setting timer capture for pin: " + pin);
+    }
     timerCapture[pin] = timer;
   }
   
   public int read(int address, boolean word, long cycles) {
     if (DEBUG) {
-      System.out.println("Notify read: " + address);
+      log("Notify read: " + address);
     }
 
     int val = memory[address];
@@ -115,23 +115,26 @@ public class IOPort extends IOUnit {
   }
 
   public void write(int address, int data, boolean word, long cycles) {
-    memory[address] = data & 0xff;
-    if (word) {
-      memory[address + 1] = (data >> 8) & 0xff;
-    }
-
     // This does not handle word writes yet...
     int iAddress = address - offset;
 
-    if (DEBUG) {
-      try {
-	System.out.println("Writing to " + getName() + ":" +
-			   (interrupt > 0? iNames[iAddress] : names[iAddress]) +
-			   "  " + Utils.hex8(address) +
-			   " => " + Utils.hex8(data) + "=#" +
-			   Utils.binary8(data) + " word: " + word);
-      } catch (Exception e) {
-	e.printStackTrace();
+    if (iAddress == IN) {
+      logw("WARNING: writing to read-only PxIN");
+    } else {
+      memory[address] = data & 0xff;
+      if (word) {
+        memory[address + 1] = (data >> 8) & 0xff;
+      }
+      if (DEBUG) {
+        try {
+          log("Writing to Px" +
+              (interrupt > 0? iNames[iAddress] : names[iAddress]) +
+              "  $" + Utils.hex8(address) +
+              " => $" + Utils.hex8(data) + "=#" +
+              Utils.binary8(data) + " word: " + word);
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
       }
     }
 
@@ -162,13 +165,13 @@ public class IOPort extends IOUnit {
       if (interrupt > 0) {
 	// IFG - writing a zero => clear the flag!
 	if (DEBUG) {
-	  System.out.println(getName() + " Clearing IFlag: " + data);
+	  log("Clearing IFlag: " + data);
 	}
 	interruptFlag &= data;
 	memory[offset + IFG] = interruptFlag;
 	cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
       } else {
-	// Samel as ISEL!!!
+	// Same as ISEL!!!
       }
       break;
     case IES:
@@ -181,7 +184,7 @@ public class IOPort extends IOUnit {
   }
 
   public String getName() {
-    return "Port " + name;
+    return name;
   }
 
   public void interruptServiced(int vector) {
@@ -203,8 +206,7 @@ public class IOPort extends IOUnit {
           if (state == PIN_HI) {
             interruptFlag |= bit;
             if (DEBUG) {
-              System.out.println(getName() +
-                  " Flagging interrupt (HI): " + bit);
+              log("Flagging interrupt (HI): " + bit);
             }
           }
         } else {
@@ -212,8 +214,7 @@ public class IOPort extends IOUnit {
           if (state == PIN_LOW) {
             interruptFlag |= bit;
             if (DEBUG) {
-              System.out.println(getName() +
-                  " Flagging interrupt (LOW): " + bit);
+              log("Flagging interrupt (LOW): " + bit);
             }
           }
         }
@@ -224,15 +225,14 @@ public class IOPort extends IOUnit {
       
       if (timerCapture[pin] != null) {
         /* should not be pin and 0 here
-         * pin might need configration and 0 can maybe also be 1? 
+         * pin might need configuration and 0 can maybe also be 1? 
          */
-//        System.out.println(getName() + " Notifying timer of changed pin value");
+//        if (DEBUG) log("Notifying timer of changed pin value");
         timerCapture[pin].capture(pin, 0, state);
       }
       
     }
   }
-
 
   public void reset(int type) {
     for (int i = 0, n = 8; i < n; i++) {
@@ -242,4 +242,16 @@ public class IOPort extends IOUnit {
     interruptEnable = 0;
     cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
   }
+
+  public String info() {
+      StringBuilder sb = new StringBuilder();
+      String[] regs = (interrupt > 0) ? iNames : names;
+      sb.append('$').append(Utils.hex16(offset)).append(':');
+      for (int i = 0, n = regs.length; i < n; i++) {
+        sb.append(' ').append(regs[i]).append(":$")
+        .append(Utils.hex8(memory[offset + i]));
+      }
+      return sb.toString();
+  }
+
 }
