@@ -1,4 +1,5 @@
 package se.sics.mspsim.platform.sky;
+import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
 
@@ -18,6 +19,7 @@ public abstract class MoteIVNode extends CC2420Node {
   public static final int SHT11_CLK = 1 << SHT11_CLK_PIN;
   public static final int SHT11_DATA = 1 << SHT11_DATA_PIN;
 
+  private static final int[] LEDS = { 0xff8000, 0x60ff60, 0xa0a0ff };
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
   public static final int RED_LED = 0x10;
@@ -25,7 +27,8 @@ public abstract class MoteIVNode extends CC2420Node {
   public boolean redLed;
   public boolean blueLed;
   public boolean greenLed;
-  
+
+  private Leds leds;
   public SHT11 sht11;
 
   public SkyGui gui;
@@ -35,6 +38,10 @@ public abstract class MoteIVNode extends CC2420Node {
     setMode(MODE_LEDS_OFF);
   }
 
+  public Leds getLeds() {
+      return leds;
+  }
+
   public void setButton(boolean hi) {
     port2.setPinState(BUTTON_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
   }
@@ -42,6 +49,7 @@ public abstract class MoteIVNode extends CC2420Node {
   public void setupNodePorts() {
     super.setupNodePorts();
 
+    leds = new Leds(cpu, LEDS);
     sht11 = new SHT11(cpu);
     if (port1 != null) {
       sht11.setDataPort(port1, SHT11_DATA_PIN);
@@ -62,12 +70,9 @@ public abstract class MoteIVNode extends CC2420Node {
       redLed = (data & RED_LED) == 0;
       blueLed = (data & BLUE_LED) == 0;
       greenLed = (data & GREEN_LED) == 0;
+      leds.setLeds((redLed ? 1 : 0) + (greenLed ? 2 : 0) + (blueLed ? 4 : 0));
       int newMode = (redLed ? 1 : 0) + (greenLed ? 1 : 0) + (blueLed ? 1 : 0);
       setMode(newMode);
-
-      if (gui != null) {
-        gui.repaint();
-      }
     } else if (source == port1) {
       sht11.clockPin((data & SHT11_CLK) != 0);
       sht11.dataPin((data & SHT11_DATA) != 0);

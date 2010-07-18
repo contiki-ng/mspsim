@@ -46,6 +46,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 
+import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.platform.AbstractNodeGUI;
 
 public class SentillaUSBGui extends AbstractNodeGUI {
@@ -73,6 +74,11 @@ public class SentillaUSBGui extends AbstractNodeGUI {
         new Rectangle(LEDS_GREEN_X, LEDS_Y, LEDS_RED_X + 10 - LEDS_GREEN_X, 13);
 
     private final SentillaUSBNode node;
+    private final StateChangeListener ledsListener = new StateChangeListener() {
+        public void stateChanged(Object source, int oldState, int newState) {
+            repaint(LEDS_CLIP);
+        }
+    };
 
     public SentillaUSBGui(SentillaUSBNode node) {
         super("SentillaUSBGui", "images/sentilla-usb.jpg");
@@ -81,10 +87,12 @@ public class SentillaUSBGui extends AbstractNodeGUI {
 
     @Override
     protected void startGUI() {
+        node.getLeds().addStateChangeListener(ledsListener);
     }
 
     @Override
     protected void stopGUI() {
+        node.getLeds().removeStateChangeListener(ledsListener);
     }
 
     @Override
@@ -112,10 +120,6 @@ public class SentillaUSBGui extends AbstractNodeGUI {
         g.fillOval(x + 3, LEDS_Y + 3, 4, 5);
         g.setColor(colors[3]);
         g.fillRect(x + 3, LEDS_Y + 3, 2, 2);
-    }
-
-    void updateLeds() {
-        repaint(LEDS_CLIP);
     }
 
 }

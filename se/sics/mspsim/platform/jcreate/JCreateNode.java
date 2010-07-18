@@ -43,6 +43,7 @@ package se.sics.mspsim.platform.jcreate;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.FileM25P80;
+import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.chip.MMA7260QT;
 import se.sics.mspsim.core.ADC12;
@@ -61,18 +62,23 @@ public class JCreateNode extends CC2420Node {
     public static final int MODE_LEDS_OFF = 0;
     public static final int MODE_MAX = 9;
 
+    private static final int[] LEDS = {
+        0xff6060, 0xff6060, 0xff6060, 0xff6060,
+        0xff6060, 0xff6060, 0xff6060, 0xff6060
+    };
+
+    private Leds leds;
     private MMA7260QT accelerometer;
     private M25P80 flash;
 
     private JCreateGui gui;
-    private int leds;
 
     public JCreateNode() {
         super("Sentilla JCreate");
         setMode(MODE_LEDS_OFF);
     }
 
-    public int getLeds() {
+    public Leds getLeds() {
         return leds;
     }
 
@@ -108,6 +114,7 @@ public class JCreateNode extends CC2420Node {
     @Override
     public void setupNodePorts() {
         super.setupNodePorts();
+        leds = new Leds(cpu, LEDS);
         accelerometer = new MMA7260QT(cpu);
         IOUnit io = cpu.getIOUnit("ADC12");
         if (io instanceof ADC12) {
@@ -146,8 +153,8 @@ public class JCreateNode extends CC2420Node {
         super.portWrite(source, data);
 
         if (source == port5) {
-            if (leds != ~(data & 0xff)) {
-                leds = ~(data & 0xff);
+            if (leds.getLeds() != (~data & 0xff)) {
+                leds.setLeds(~data & 0xff);
 
                 int newMode = 0;
                 for (int i = 0; i < 8; i++) {
@@ -156,10 +163,6 @@ public class JCreateNode extends CC2420Node {
                     }
                 }
                 setMode(newMode);
-
-                if (gui != null) {
-                    gui.updateLeds();
-                }
             }
         } else if (source == port2) {
             int out = source.getOut() & source.getDirection();

@@ -43,6 +43,7 @@ package se.sics.mspsim.platform.sentillausb;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.FileM25P80;
+import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.USART;
@@ -59,18 +60,24 @@ public class SentillaUSBNode extends CC2420Node {
     public static final int MODE_LEDS_2 = 2;
     public static final int MODE_MAX = MODE_LEDS_2;
 
+    private static final int[] LEDS = { 0xff6060, 0x40ff40 };
     public static final int GREEN_LED = 0x20;
     public static final int RED_LED = 0x10;
 
     private M25P80 flash;
     private SentillaUSBGui gui;
 
+    private Leds leds;
     boolean redLed;
     boolean greenLed;
 
     public SentillaUSBNode() {
         super("Sentilla USB");
         setMode(MODE_LEDS_OFF);
+    }
+
+    public Leds getLeds() {
+        return leds;
     }
 
     public M25P80 getFlash() {
@@ -101,6 +108,7 @@ public class SentillaUSBNode extends CC2420Node {
     @Override
     public void setupNodePorts() {
         super.setupNodePorts();
+        leds = new Leds(cpu, LEDS);
         if (flashFile != null) {
             setFlash(new FileM25P80(cpu, flashFile));
         }
@@ -120,12 +128,9 @@ public class SentillaUSBNode extends CC2420Node {
         if (source == port5) {
             redLed = (data & RED_LED) == 0;
             greenLed = (data & GREEN_LED) == 0;
+            leds.setLeds((redLed ? 1 : 0) + (greenLed ? 2 : 0));
             int newMode = (redLed ? 1 : 0) + (greenLed ? 1 : 0);
             setMode(newMode);
-
-            if (gui != null) {
-              gui.updateLeds();
-            }
         }
     }
 

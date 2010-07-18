@@ -56,6 +56,7 @@ import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADCInput;
 import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.platform.AbstractNodeGUI;
 
 public class ESBGui extends AbstractNodeGUI implements ADCInput {
@@ -66,7 +67,7 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
   public static final int YELLOW_X = 9;
   public static final int RED_X = 16;
   public static final int LED_Y = 4;
-  private static final Rectangle LED_BOUNDS = new Rectangle(GREEN_X - 2, LED_Y - 4, RED_X + 6, LED_Y + 10);
+  private static final Rectangle LED_BOUNDS = new Rectangle(GREEN_X - 1, LED_Y - 3, RED_X - GREEN_X + 6, 9);
 
   public static final Color RED_TRANS = new Color(0xff,0x40,0x40,0xa0);
   public static final Color YELLOW_TRANS = new Color(0xff, 0xff, 0x00, 0xa0);
@@ -84,7 +85,12 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
 
   Beeper beeper;
 
-  private ESBNode node;
+  private final ESBNode node;
+  private final StateChangeListener ledsListener = new StateChangeListener() {
+      public void stateChanged(Object source, int oldState, int newState) {
+          repaint(LED_BOUNDS);
+      }
+  };
   private boolean buttonDown = false;
   private boolean resetDown = false;
 
@@ -154,6 +160,8 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
     };
     addMouseListener(mouseListener);
 
+    node.getLeds().addStateChangeListener(ledsListener);
+
     IOUnit adc = node.getCPU().getIOUnit("ADC12");
     if (adc instanceof ADC12) {
       ((ADC12) adc).setADCInput(0, this);
@@ -184,12 +192,9 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
   protected void stopGUI() {
       removeMouseMotionListener(mouseMotionListener);
       removeMouseListener(mouseListener);
+      node.getLeds().removeStateChangeListener(ledsListener);
 
       // TODO cleanup
-  }
-
-  public void ledsChanged() {
-      repaint(LED_BOUNDS);
   }
 
   private byte[] data = new byte[4];

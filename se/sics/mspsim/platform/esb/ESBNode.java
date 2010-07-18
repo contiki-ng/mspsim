@@ -41,6 +41,8 @@
 
 package se.sics.mspsim.platform.esb;
 import java.io.IOException;
+
+import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.TR1001;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
@@ -67,11 +69,13 @@ public class ESBNode extends GenericNode implements PortListener {
   private IOPort port2;
   private IOPort port5;
 
+  private static final int[] LEDS = { 0xff6060, 0xffff00, 0x40ff40 };
   public static final int RED_LED = 0x01;
   public static final int GREEN_LED = 0x02;
   public static final int YELLOW_LED = 0x04;
   public static final int BEEPER = 0x08;
 
+  private Leds leds;
   public boolean redLed;
   public boolean greenLed;
   public boolean yellowLed;
@@ -85,6 +89,10 @@ public class ESBNode extends GenericNode implements PortListener {
    */
   public ESBNode() {
       super("ESB");
+  }
+
+  public Leds getLeds() {
+      return leds;
   }
 
   public void setPIR(boolean hi) {
@@ -113,8 +121,8 @@ public class ESBNode extends GenericNode implements PortListener {
       redLed = (data & RED_LED) == 0;
       greenLed = (data & GREEN_LED) == 0;
       yellowLed = (data & YELLOW_LED) == 0;
+      leds.setLeds((greenLed ? 4 : 0) + (yellowLed ? 2 : 0) + (redLed ? 1 : 0));
       if (gui != null) {
-	gui.ledsChanged();
 	gui.beeper.beepOn((data & BEEPER) != 0);
       }
 
@@ -151,6 +159,7 @@ public class ESBNode extends GenericNode implements PortListener {
     if (usart0 instanceof USART) {
       radio = new TR1001(cpu, (USART) usart0);
     }
+    leds = new Leds(cpu, LEDS);
   }
 
   public void setupNode() {

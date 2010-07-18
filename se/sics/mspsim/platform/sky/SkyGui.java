@@ -42,9 +42,11 @@
 package se.sics.mspsim.platform.sky;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.platform.AbstractNodeGUI;
 
 public class SkyGui extends AbstractNodeGUI {
@@ -64,7 +66,14 @@ public class SkyGui extends AbstractNodeGUI {
   public static final Color GREEN_C = new Color(0xff60ff60);
   public static final Color RED_C = new Color(0xffff8000);
 
-  private MoteIVNode node;
+  private static final Rectangle LEDS_BOUNDS = new Rectangle(LED_X, RED_Y, 9, BLUE_Y - RED_Y + 5);
+
+  private final MoteIVNode node;
+  private final StateChangeListener ledsListener = new StateChangeListener() {
+      public void stateChanged(Object source, int oldState, int newState) {
+          repaint(LEDS_BOUNDS);
+      }
+  };
 
   public SkyGui(MoteIVNode node) {
     super("SkyGui", "images/sky.jpg");
@@ -108,6 +117,7 @@ public class SkyGui extends AbstractNodeGUI {
       };
 
     this.addMouseListener(mouseHandler);
+    node.getLeds().addStateChangeListener(ledsListener);
   }
 
   protected void paintComponent(Graphics g) {
@@ -138,6 +148,7 @@ public class SkyGui extends AbstractNodeGUI {
   }
 
   protected void stopGUI() {    
+      node.getLeds().removeStateChangeListener(ledsListener);
   }
 
 }

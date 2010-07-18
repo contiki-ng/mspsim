@@ -46,6 +46,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 
+import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.platform.AbstractNodeGUI;
 
 public class JCreateGui extends AbstractNodeGUI {
@@ -63,6 +64,11 @@ public class JCreateGui extends AbstractNodeGUI {
         LEDS_X[LEDS_X.length - 1] + 10 - LEDS_X[0], 10);
 
     private final JCreateNode node;
+    private final StateChangeListener ledsListener = new StateChangeListener() {
+        public void stateChanged(Object source, int oldState, int newState) {
+            repaint(LEDS_CLIP);
+        }
+    };
 
     public JCreateGui(JCreateNode node) {
         super("JCreateGui", "images/jcreate.jpg");
@@ -71,10 +77,12 @@ public class JCreateGui extends AbstractNodeGUI {
 
     @Override
     protected void startGUI() {
+        node.getLeds().addStateChangeListener(ledsListener);
     }
 
     @Override
     protected void stopGUI() {
+        node.getLeds().removeStateChangeListener(ledsListener);
     }
 
     @Override
@@ -85,7 +93,7 @@ public class JCreateGui extends AbstractNodeGUI {
         // Display all active leds
         ((Graphics2D)g).setRenderingHint(RenderingHints.KEY_ANTIALIASING,
             RenderingHints.VALUE_ANTIALIAS_ON);
-        int leds = node.getLeds();
+        int leds = node.getLeds().getLeds();
         for (int i = 0; i < 8; i++) {
             if ((leds & (0x80 >> i)) != 0) {
                 paintLed(g, i);
@@ -104,10 +112,6 @@ public class JCreateGui extends AbstractNodeGUI {
         g.fillOval(x + 3, LEDS_Y + 3, 4, 4);
         g.setColor(RED_CORE);
         g.fillRect(x + 3, LEDS_Y + 3, 2, 2);
-    }
-
-    void updateLeds() {
-        repaint(LEDS_CLIP);
     }
 
 }
