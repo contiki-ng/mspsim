@@ -46,7 +46,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import se.sics.mspsim.chip.RFListener;
@@ -55,7 +54,6 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.TimeEvent;
-import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
@@ -288,10 +286,10 @@ public class MiscCommands implements CommandBundle {
           name = context.getArgument(1);
         }
         if (registry.getComponent(name) != null) {
-          context.err.println("Another component with name " + name + " is already installed");
+          context.err.println("Another component with name '" + name + "' is already installed");
           return 1;
         }
-        Class pluginClass = null;
+        Class<?> pluginClass = null;
         PluginRepository plugins = (PluginRepository) registry.getComponent("pluginRepository");
         try {
           try {
@@ -319,38 +317,41 @@ public class MiscCommands implements CommandBundle {
         if (context.getArgumentCount() == 0) {
           ServiceComponent[] sc = (ServiceComponent[]) registry.getAllComponents(ServiceComponent.class);
           for (int i = 0; i < sc.length; i++) {
-            context.out.printf(" %-20s %s\n",sc[i].getName(),sc[i].getStatus());
+            context.out.printf(" %-20s %s\n", sc[i].getName(), sc[i].getStatus());
           }
-        } else if (context.getArgumentCount() == 1){
-          String name = context.getArgument(0);
-          ServiceComponent sc = getServiceForName(registry, name);
-          if (sc != null) {
-            context.out.printf(" %-20s %s\n",sc.getName(),sc.getStatus());
-          } else {
-            context.out.println("can not find service" + name);
-          }
-        } else {
-          String name = context.getArgument(0);
-          String operation = context.getArgument(1);
-          if ("start".equals(operation)) {
-            ServiceComponent sc = getServiceForName(registry, name);
-            if (sc != null) {
-              sc.start();
-              context.out.println("service " + sc.getName() + " started");
-            } else {
-              context.out.println("can not find service" + name);
-            }
-          } else if ("stop".equals(operation)) {
-            ServiceComponent sc = getServiceForName(registry, name);
-            if (sc != null) {
-              sc.stop();
-              context.out.println("service " + sc.getName() + " stopped");
-            } else {
-              context.out.println("can not find service" + name);
-            }
-          }
+          return 0;
         }
-        return 0;
+        String name = context.getArgument(0);
+        ServiceComponent sc = getServiceForName(registry, name);
+        if (sc == null) {
+          context.err.println("could not find service '" + name + "'");
+          return 1;
+        }
+        if (context.getArgumentCount() == 1) {
+          context.out.printf(" %-20s %s\n", sc.getName(), sc.getStatus());
+          return 0;
+        }
+        String operation = context.getArgument(1);
+        if ("start".equals(operation)) {
+          if (sc.getStatus() == ServiceComponent.Status.STARTED) {
+            context.out.println("service " + sc.getName() + " already started");
+          } else {
+            sc.start();
+            context.out.println("service " + sc.getName() + " started");
+          }
+          return 0;
+        }
+        if ("stop".equals(operation)) {
+          if (sc.getStatus() == ServiceComponent.Status.STOPPED) {
+            context.out.println("service " + sc.getName() + " already stopped");
+          } else {
+            sc.stop();
+            context.out.println("service " + sc.getName() + " stopped");
+          }
+          return 0;
+        }
+        context.err.println("unknown operation '" + operation + "'");
+        return 1;
       }
     });
 
