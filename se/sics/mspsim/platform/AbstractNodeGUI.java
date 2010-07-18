@@ -144,6 +144,10 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
     public final void stop() {
         status = Status.STOPPED;
         stopGUI();
+        if (window != null) {
+            window.setVisible(false);
+            window = null;
+        }
     }
 
     protected abstract void startGUI();
