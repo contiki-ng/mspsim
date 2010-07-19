@@ -53,7 +53,6 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.TimeEvent;
-import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
 import se.sics.mspsim.util.PluginRepository;
@@ -400,7 +399,7 @@ public class MiscCommands implements CommandBundle {
     
     handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "[-registry] [-config]") {
         public int executeCommand(CommandContext context) {
-            ArgumentManager config = (ArgumentManager) registry.getComponent("config");
+            ConfigManager config = (ConfigManager) registry.getComponent("config");
             context.out.println("--------- System info ----------\n");
             context.out.println("MSPSim version: " + MSP430Constants.VERSION);
             context.out.println("Java version  : " + System.getProperty("java.version") + " " +
