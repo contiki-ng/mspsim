@@ -97,6 +97,7 @@ public class WindowUtils {
 	window.pack();
       }
     } else {
+      window.setLocationByPlatform(true);
       window.pack();
     }
   }
