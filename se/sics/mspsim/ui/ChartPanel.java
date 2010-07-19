@@ -45,13 +45,14 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
-import java.util.ArrayList;
 import java.util.Hashtable;
 
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.border.Border;
+
+import se.sics.mspsim.util.ArrayUtils;
 
 /**
  *
@@ -71,9 +72,8 @@ public class ChartPanel extends JComponent {
 
   private static final Color LIGHT_GRAY = new Color(0xff909090);
 
-  private ArrayList<Chart> charts = new ArrayList<Chart>();
   private Hashtable<String,Object> config = new Hashtable<String,Object>();
-  private Chart[] chartCache = null;
+  private Chart[] charts = null;
 
   private Chart axisChart;
 
@@ -96,29 +96,27 @@ public class ChartPanel extends JComponent {
   }
 
   public synchronized void addChart(Chart chart) {
-    charts.add(chart);
-    chartCache = null;
+    charts = (Chart[]) ArrayUtils.add(Chart.class, charts, chart);
   }
 
   public synchronized void removeChart(Chart chart) {
-    charts.remove(chart);
-    chartCache = null;
+    charts = (Chart[]) ArrayUtils.remove(charts, chart);
   }
 
-  public synchronized Chart getChart(String name) {
-    for (int i = 0, n = charts.size(); i < n; i++) {
-      if (name.equals(charts.get(i).getName())) {
-        return charts.get(i);
+  public Chart getChart(String name) {
+    Chart[] charts = this.charts;
+    if (charts != null) {
+      for (int i = 0, n = charts.length; i < n; i++) {
+        if (name.equals(charts[i].getName())) {
+          return charts[i];
+        }
       }
     }
     return null;
   }
 
-  public synchronized Chart[] getCharts() {
-    if (chartCache == null) {
-      chartCache = charts.toArray(new Chart[charts.size()]);
-    }
-    return chartCache;
+  public Chart[] getCharts() {
+    return charts;
   }
 
   public Object getConfig(String param) {
@@ -178,7 +176,7 @@ public class ChartPanel extends JComponent {
     g.drawRect(-1, -1, width + 2, height + 2);
 
     Chart[] chs = getCharts();
-    if (chs.length > 0) {
+    if (chs != null && chs.length > 0) {
       double totMaxY = Double.MIN_VALUE, totMinY = Double.MAX_VALUE; 
       double totMaxX = Double.MIN_VALUE, totMinX = Double.MAX_VALUE; 
 
