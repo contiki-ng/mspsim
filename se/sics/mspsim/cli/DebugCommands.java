@@ -205,19 +205,11 @@ public class DebugCommands implements CommandBundle {
         }
       });
 
-      ch.registerCommand("clear", new Command() {
+      ch.registerCommand("clear", new BasicCommand("clear a breakpoint or watch from a given address or symbol", "<address or symbol>") {
         public int executeCommand(final CommandContext context) {
           int baddr = context.getArgumentAsAddress(0);
           cpu.setBreakPoint(baddr, null);
           return 0;
-        }
-
-        public String getArgumentHelp(String commandName) {
-          return "<address or symbol>";
-        }
-
-        public String getCommandHelp(String commandName) {
-          return "clear a breakpoint or watch from a given address or symbol";
         }
       });
 
@@ -225,6 +217,7 @@ public class DebugCommands implements CommandBundle {
         public int executeCommand(final CommandContext context) {
           String regExp = context.getArgument(0);
           MapEntry[] entries = context.getMapTable().getEntries(regExp);
+          boolean found = false;
           for (int i = 0; i < entries.length; i++) {
             MapEntry mapEntry = entries[i];
             int address = mapEntry.getAddress();
@@ -232,6 +225,10 @@ public class DebugCommands implements CommandBundle {
                 Utils.hex16(address) + " (" + Utils.hex8(cpu.memory[address]) +
                   " " + Utils.hex8(cpu.memory[address + 1]) + ") " + mapEntry.getType() +
                   " in file " + mapEntry.getFile());
+            found = true;
+          }
+          if (!found) {
+            context.err.println("Could not find any symbols matching '" + regExp + '\'');
           }
           return 0;
         }
@@ -290,7 +287,6 @@ public class DebugCommands implements CommandBundle {
 
         ch.registerCommand("stepmicro", new BasicCommand("single the CPU specified no micros", "<micro skip> <micro step>") {
           public int executeCommand(CommandContext context) {
-            int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;
             long cyc = cpu.cycles;
             if (cpu.isRunning()) {
                 context.err.println("Can not single step when emulation is running.");
@@ -308,7 +304,6 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        
         ch.registerCommand("stack", new BasicCommand("show stack info", "") {
           public int executeCommand(CommandContext context) {
             int stackEnd = context.getMapTable().heapStartAddress;
@@ -323,15 +318,14 @@ public class DebugCommands implements CommandBundle {
             int adr = context.getArgumentAsAddress(0);
             if (adr != -1) {
               try {
-                context.out.println("" + context.getArgument(0) + " = " + Utils.hex16(cpu.read(adr, adr >= 0x100)));
+                context.out.println(context.getArgument(0) + " = $" + Utils.hex16(cpu.read(adr, adr >= 0x100)));
               } catch (Exception e) {
-                e.printStackTrace(context.out);
+                e.printStackTrace(context.err);
               }
               return 0;
-            } else {
-              context.err.println("unknown symbol: " + context.getArgument(0));
-              return 1;
             }
+            context.err.println("unknown symbol: " + context.getArgument(0));
+            return 1;
           }
         });
         ch.registerCommand("printreg", new BasicCommand("print value of an register", "<register>") {
