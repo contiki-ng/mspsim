@@ -47,6 +47,7 @@ import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.Profiler;
 import se.sics.mspsim.ui.CPUHeatMap;
+import se.sics.mspsim.ui.WindowManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.SimpleProfiler;
 
@@ -55,7 +56,7 @@ import se.sics.mspsim.util.SimpleProfiler;
  */
 public class ProfilerCommands implements CommandBundle {
 
-  public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
+  public void setupCommands(final ComponentRegistry registry, CommandHandler ch) {
     final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
     if (cpu != null) {
       ch.registerCommand("profile", new BasicCommand("show profile information",
@@ -227,13 +228,23 @@ public class ProfilerCommands implements CommandBundle {
             }
       });
       
-      ch.registerCommand("readmap", new BasicCommand("read map", "") {
+      ch.registerCommand("readmap", new BasicAsyncCommand("read map", "") {
+          private CPUHeatMap hm;
+
           public int executeCommand(CommandContext context) {
-              CPUHeatMap hm = new CPUHeatMap();
+              hm = new CPUHeatMap((WindowManager) registry.getComponent(WindowManager.class));
               cpu.setGlobalMonitor(hm);
               return 0;
-          } 
-      });      
+          }
+
+          public void stopCommand(CommandContext context) {
+              if (hm != null) {
+                  cpu.setGlobalMonitor(null);
+                  hm.close();
+                  hm = null;
+              }
+          }
+      });
     }
   }
 

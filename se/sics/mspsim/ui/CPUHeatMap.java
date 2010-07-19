@@ -1,5 +1,6 @@
 package se.sics.mspsim.ui;
 
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,7 +9,6 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 
 import javax.swing.JComponent;
-import javax.swing.JFrame;
 import javax.swing.Timer;
 
 import se.sics.mspsim.core.CPUMonitor;
@@ -20,7 +20,7 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
 
     private Timer ticker;
     
-    private JFrame window;
+    private ManagedWindow window;
     private BufferedImage heatmap;
     private int[] heatR = new int[MSP430Core.MAX_MEM];
     private int[] heatW = new int[MSP430Core.MAX_MEM];
@@ -28,11 +28,11 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
     private int heatMax = 0;
     private int mode = 1;
     
-    public CPUHeatMap() {
-        window = new JFrame("CPU Heat Map");
+    public CPUHeatMap(WindowManager windowManager) {
+        window = windowManager.createWindow("CPU Heat Map");
         heatmap = new BufferedImage(128, 512, BufferedImage.TYPE_INT_RGB);
-        window.setBounds(100, 100, 140, 530);
-        window.setVisible(true);
+        setPreferredSize(new Dimension(140, 530));
+        setOpaque(true);
         window.add(this);
         
         ticker = new Timer(50, new ActionListener() {
@@ -41,14 +41,27 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
             }
         });
         ticker.start();
-        window.addKeyListener(new KeyAdapter() {
+
+        setFocusable(true);
+        addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent ke) {
-                System.out.println("Key pressed: " + ke.getKeyChar());
                 if (ke.getKeyChar() == 'm') {
                     mode = mode ^ 1;
                 }
             }
         });
+
+        window.setVisible(true);
+    }
+
+    public void close() {
+        if (ticker != null) {
+            ticker.stop();
+        }
+        if (window != null) {
+            window.setVisible(false);
+            window = null;
+        }
     }
 
     public void updateImage() {
@@ -113,5 +126,5 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
             heatMax = val;
         }
     }
-    
+
 }
