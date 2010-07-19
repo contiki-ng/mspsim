@@ -33,7 +33,7 @@
  *
  * WindowCommands - 
  * 
- * Author  : Joakim Eriksson
+ * Author  : Joakim Eriksson, Niclas Finne
  * Created : 9 april 2008
  * Updated : $Date: 2008-03-17 20:34:12 +0100 (Mon, 17 Mar 2008) $
  *           $Revision: 187 $
@@ -42,82 +42,82 @@ package se.sics.mspsim.cli;
 
 import java.util.Hashtable;
 
+import se.sics.mspsim.ui.WindowManager;
 import se.sics.mspsim.ui.WindowUtils;
 import se.sics.mspsim.util.ComponentRegistry;
 
 public class WindowCommands implements CommandBundle {
 
-    private Hashtable <String, WindowTarget> windowTargets = new Hashtable<String, WindowTarget>();
+    private ComponentRegistry registry;
+    private final Hashtable<String,Target> windowTargets = new Hashtable<String,Target>();
 
     public void setupCommands(ComponentRegistry registry, CommandHandler handler) {
-        handler.registerCommand("window", new BasicLineCommand("redirect input to a window", "[-close|-clear|-list] <windowname>") {
-            WindowTarget wt;
+        this.registry = registry;
+        handler.registerCommand("window", new BasicLineCommand("redirect input to a window", "[-close|-clear|-list] [windowname]") {
+            Target wt;
             CommandContext context;
             public int executeCommand(CommandContext context) {
                 boolean close = false;
                 boolean clear = false;
-                boolean exit = false;
+                boolean list = false;
+                String windowName = null;
                 this.context = context;
                 for (int i = 0; i < context.getArgumentCount(); i++) {
                     String name = context.getArgument(i);
                     if ("-close".equals(name)) {
-                        exit = close = true;
+                        close = true;
                     } else if ("-clear".equals(name)) {
                         clear = true;
                     } else if ("-list".equals(name)) {
-                        WindowTarget tgts[] = windowTargets.values().toArray(new WindowTarget[windowTargets.size()]);
-                        if (tgts != null && tgts.length > 0)  {
-                            context.out.println("Window Name   PIDs");
-                        }
-                        for (int j = 0; j < tgts.length; j++) {
-                            tgts[j].print(context.out);
-                        }
-                        exit = true;
-                    } else if (i == context.getArgumentCount() - 1) {
-                        if (clear || close) {
-                            wt = windowTargets.get(name);
-                            if (wt != null) {
-                                if (close) {
-                                    context.out.println("Closing window " + name);
-                                    removeTarget(wt);
-                                    wt.close();
-                                } else if (clear) {
-                                    wt.clear();
-                                }
-                                /* command is no longer running */
-                                if (exit) context.exit(0);
-                                return 0;
-                            } else {
-                                context.err.println("Could not find the window " + name);
-                                /* command is no longer running */
-                                context.exit(1);
-                                return 1;
-                            }
-                        } else {
-                            wt = addTarget(context, name);
-                        }
+                        list = true;
+                    } else if (windowName != null) {
+                        context.err.println("illegal arguments");
+                        context.exit(1);
+                        return 1;
+                    } else {
+                        windowName = name;
                     }
                 }
-                if (exit) {
+                if (list || windowName == null) {
+                    Target tgts[];
+                    synchronized (windowTargets) {
+                        tgts = windowTargets.values().toArray(new Target[windowTargets.size()]);
+                    }
+                    if (tgts.length == 0) {
+                        context.out.println("There are no open windows.");
+                    } else {
+                        context.out.println("Window Name   PIDs");
+                        for (Target target : tgts) {
+                            context.out.println(target.getStatus());
+                        }
+                    }
                     context.exit(0);
+                    return 0;
                 }
+                if (close) {
+                    Target target = windowTargets.get(windowName);
+                    if (target != null) {
+                        context.out.println("Closing window " + windowName);
+                        target.close();
+                        context.exit(0);
+                        return 0;
+                    }
+                    context.err.println("Could not find the window " + windowName);
+                    context.exit(1);
+                    return 1;
+                }
+                wt = addTarget(context, windowName, clear);
                 return 0;
             }
 
             public void lineRead(String line) {
-                if (line != null) {
-                    wt.lineRead(line);
-                } else {
-                    wt.removeContext(context);
-                    context.exit(0);
-                }
+                wt.lineRead(context, line);
             }
 
             public void stopCommand(CommandContext context) {
-                // Should this do anything?
-                // Probably depending on the wt's config
-                System.out.println("Stopping window target: " + wt.getName());
-                wt.removeContext(context);
+                if (wt != null) {
+                    wt.removeContext(context);
+                }
             }
         });
 
@@ -129,18 +129,25 @@ public class WindowCommands implements CommandBundle {
         });
     }
 
-    protected WindowTarget addTarget(CommandContext context, String name) {
-        WindowTarget wt = windowTargets.get(name);
-        if (wt == null) {
-            wt = new WindowTarget(name);
-            windowTargets.put(name, wt);
+    protected Target addTarget(CommandContext context, String name, boolean clear) {
+        Target target;
+        WindowTarget wt = null;
+        synchronized (windowTargets) {
+            target = windowTargets.get(name);
+            if (target == null) {
+                target = wt = new WindowTarget(windowTargets, name);
+            }
         }
-        wt.addContext(context);
-        return wt;
+        if (wt != null) {
+            wt.init((WindowManager) registry.getComponent("windowManager"));
+        }
+        if (context.getPID() >= 0) {
+            target.addContext(context);
+        }
+        if (clear) {
+            target.lineRead(context, "#!clear");
+        }
+        return target;
     }
 
-    protected void removeTarget(WindowTarget target) {
-        /* needs to close down PIDs that are currently writing to the target too !!!??? */
-        windowTargets.remove(target.getName());
-    }
 }
