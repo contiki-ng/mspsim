@@ -101,7 +101,10 @@ public class CommandHandler implements ActiveComponent, LineListener {
             commands[index].stopCommand();
         }
         return 1;
-      } else if (pid >= 0) {
+      } else if (pid < 0) {
+          // The first command is not asynchronous. Make sure all commands have stopped.
+          exitCommands(commands);
+      } else {
         boolean exited = false;
         for (int i = 0; i < commands.length && !exited; i++) {
             if (commands[i].hasExited()) {

@@ -116,10 +116,12 @@ public abstract class Target {
     public void removeContext(CommandContext context) {
         boolean close = false;
         synchronized (targets) {
-            if (contexts != null && contexts.remove(context)) {
-                if (DEBUG) {
-                    System.out.println("Target: removed writer from "
+            if (contexts != null) {
+                if (contexts.remove(context)) {
+                    if (DEBUG) {
+                        System.out.println("Target: removed writer from "
                             + name + " (" + contexts.size() + ')');
+                    }
                 }
                 if (contexts.size() == 0) {
                     close = true;
