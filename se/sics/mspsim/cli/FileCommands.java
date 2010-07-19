@@ -6,7 +6,7 @@ import se.sics.mspsim.util.ComponentRegistry;
 
 public class FileCommands implements CommandBundle {
 
-    private final Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
+    private final Hashtable <String,Target> fileTargets = new Hashtable<String,Target>();
 
     public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
         // TODO: this should also be "registered" as a "sink".
@@ -23,7 +23,7 @@ public class FileCommands implements CommandBundle {
         handler.registerCommand("fclose", new BasicCommand("close the specified file", "<filename>") {
           public int executeCommand(CommandContext context) {
             String name = context.getArgument(0);
-            FileTarget ft = fileTargets.get(name);
+            Target ft = fileTargets.get(name);
             if (ft != null) {
               context.out.println("Closing file " + name);
               ft.close();

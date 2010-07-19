@@ -42,136 +42,31 @@ package se.sics.mspsim.cli;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Hashtable;
 
 /**
  * @author joakim
  */
-public class FileTarget {
+public class FileTarget extends Target {
 
-    private static final boolean DEBUG = false;
-
-    private final Hashtable<String,FileTarget> fileTargets;
-    private final String name;
     private final FileWriter out;
-    private ArrayList<CommandContext> contexts = new ArrayList<CommandContext>();
 
-    public FileTarget(Hashtable<String,FileTarget> fileTargets, String name,
-            boolean append) throws IOException {
-        this.fileTargets = fileTargets;
-        this.out = new FileWriter(name, append);
-        this.name = name;
-        fileTargets.put(name, this);
+    public FileTarget(Hashtable<String,Target> targets, String name, FileWriter out) {
+        super(targets, name, true);
+        this.out = out;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getStatus() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(name);
-        synchronized (fileTargets) {
-            if (contexts != null) {
-                sb.append(" \tPIDs: [");
-                for (int i = 0, n = contexts.size(); i < n; i++) {
-                    int pid = contexts.get(i).getPID();
-                    if (i > 0) {
-                        sb.append(',');
-                    }
-                    if (pid < 0) {
-                        sb.append('?');
-                    } else {
-                        sb.append(pid);
-                    }
-                }
-                sb.append(']');
-            }
-        }
-        return sb.toString();
-    }
-
-    public void lineRead(CommandContext context, String line) {
-        if (line == null) {
-            removeContext(context);
-        } else {
-            try {
-                out.write(line);
-                out.write('\n');
-                out.flush();
-            } catch (IOException e) {
-                e.printStackTrace(context.err);
-            }
+    protected void handleLine(CommandContext context, String line) {
+        try {
+            out.write(line);
+            out.write('\n');
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace(context.err);
         }
     }
 
-    public void addContext(CommandContext context) {
-        boolean added = false;
-        synchronized (fileTargets) {
-            if (contexts != null) {
-                contexts.add(context);
-                added = true;
-                if (DEBUG) {
-                    System.out.println("FileTarget: new writer to " + name
-                            + " (" + contexts.size() + ')');
-                }
-            }
-        }
-        if (!added) {
-            context.kill();
-        }
-    }
-
-    public void removeContext(CommandContext context) {
-        boolean close = false;
-        synchronized (fileTargets) {
-            if (contexts != null && contexts.remove(context)) {
-                if (DEBUG) {
-                    System.out.println("FileTarget: removed writer from "
-                            + name + " (" + contexts.size() + ')');
-                }
-                if (contexts.size() == 0) {
-                    close = true;
-                }
-            }
-        }
-        if (close) {
-            close(false);
-        }
-    }
-
-    public void close() {
-        close(true);
-    }
-
-    private void close(boolean forceClose) {
-        ArrayList<CommandContext> list;
-        synchronized (fileTargets) {
-            if (contexts == null) {
-                // Already closed
-                return;
-            }
-            if (contexts.size() > 0 && !forceClose) {
-                // File still has connected writers.
-                return;
-            }
-            list = contexts;
-            contexts = null;
-            if (fileTargets.get(name) == this) {
-                fileTargets.remove(name);
-                if (DEBUG) {
-                    System.out.println("FileTarget: closed file " + name);
-                }
-            }
-        }
-
-        if (list != null) {
-            // Close any connected writers
-            for (CommandContext context : list) {
-                context.kill();
-            }
-        }
+    protected void closeTarget() {
         try {
             out.close();
         } catch (IOException e) {
