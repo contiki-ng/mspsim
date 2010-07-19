@@ -52,7 +52,6 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.TargetDataLine;
 
-import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADCInput;
 import se.sics.mspsim.core.IOUnit;
@@ -82,8 +81,6 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
 
   private MouseMotionAdapter mouseMotionListener;
   private MouseAdapter mouseListener;
-
-  Beeper beeper;
 
   private final ESBNode node;
   private final StateChangeListener ledsListener = new StateChangeListener() {
@@ -166,8 +163,6 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
     if (adc instanceof ADC12) {
       ((ADC12) adc).setADCInput(0, this);
     }
-
-    beeper = new Beeper();
 
     // Just a test... TODO: remove!!!
     try {

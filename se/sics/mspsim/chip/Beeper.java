@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2010, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,105 +40,162 @@
  */
 
 package se.sics.mspsim.chip;
-import javax.sound.sampled.*;
-import se.sics.mspsim.core.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.FloatControl;
+import javax.sound.sampled.SourceDataLine;
+
+import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.TimeEvent;
 
 /**
- * Beeper for the esb...
+ * Beeper for the ESB...
  */
-public class Beeper extends IOUnit {
+public class Beeper extends Chip {
 
-  private SourceDataLine dataLine;
-  private FloatControl volume;
+    public static final int MODE_OFF = 0;
+    public static final int MODE_ON = 1;
+    public static final int MODE_MAX = MODE_ON;
 
-  public static final int SAMPLE_RATE = 44000;
+    public static final int SAMPLE_RATE = 44000;
+    public static final int FRQ_1 = 2200;
+    public static final int WAVE_LEN = (SAMPLE_RATE / FRQ_1);
 
-  public static final int FRQ_1 = 2200;
+    // One second of the sound in buffer
+    private static byte[] buffer;
+    private static byte[] quiet;
 
-  public static final int WAVE_LEN = (SAMPLE_RATE / FRQ_1);
+    private boolean beepOn = false;
+    private int beepCtrl;
+    private boolean isSoundEnabled = false;
 
-  // One second of the sound in buffer
-  byte[] buffer = new byte[WAVE_LEN];
-  byte[] quiet = new byte[WAVE_LEN];
+    private SourceDataLine dataLine;
+    private FloatControl volume;
 
-  int beepCtr = 0;
+    private TimeEvent soundEvent;
 
-  public Beeper() {
-  	super("Beeper", null, 0);
-  	AudioFormat af = new AudioFormat(SAMPLE_RATE, 8, 1, true, false);
-  	DataLine.Info dli =
-  		new DataLine.Info(SourceDataLine.class, af, 16384);
-  	try {
-  		dataLine = (SourceDataLine) AudioSystem.getLine(dli);
-  		if (dataLine == null)	{
-  			logw("DataLine: not existing...");
-  		}	else {
-  			dataLine.open(dataLine.getFormat(), 16384);
-  			volume = (FloatControl)	dataLine.getControl(FloatControl.Type.MASTER_GAIN);
-  		}
-  	} catch (Exception e) {
-  		logw("Problem while getting data line " + e);
-  	}
-    double f1 = 0;
-    for (int i = 0, n = WAVE_LEN; i < n; i++) {
-      f1 = Math.sin(i * 3.141592 * 2 / WAVE_LEN) * 40;
-      f1 += Math.sin(i * 3.141592 * 4 / WAVE_LEN) * 30;
-      buffer[i] = (byte) (f1);
+    public Beeper(MSP430Core cpu) {
+        super("Beeper", cpu);
+        setMode(MODE_OFF);
     }
 
-    if (dataLine != null) {
-      dataLine.start();
+    private void initSound() {
+        if (quiet == null) {
+            quiet = new byte[WAVE_LEN];
+        }
+        if (buffer == null) {
+            byte[] buf = new byte[WAVE_LEN];
+            double f1 = 0;
+            for (int i = 0, n = WAVE_LEN; i < n; i++) {
+                f1 = Math.sin(i * 3.141592 * 2 / WAVE_LEN) * 40;
+                f1 += Math.sin(i * 3.141592 * 4 / WAVE_LEN) * 30;
+                buf[i] = (byte) (f1);
+            }
+            buffer = buf;
+        }
+        if (soundEvent == null) {
+            soundEvent = new TimeEvent(0, "Beeper") {
+                public void execute(long t) {
+                    if (isSoundEnabled) {
+                        ioTick(t);
+                        cpu.scheduleCycleEvent(this, cpu.cycles + 1000);
+                    }
+                }
+            };
+        }
+        AudioFormat af = new AudioFormat(SAMPLE_RATE, 8, 1, true, false);
+        DataLine.Info dli = new DataLine.Info(SourceDataLine.class, af, 16384);
+        try {
+            dataLine = (SourceDataLine) AudioSystem.getLine(dli);
+            if (dataLine == null) {
+                logw("No audio data line available");
+            } else {
+                dataLine.open(dataLine.getFormat(), 16384);
+                volume = (FloatControl) dataLine.getControl(FloatControl.Type.MASTER_GAIN);
+            }
+        } catch (Exception e) {
+            logw("Could not get audio data line: " + e);
+        }
+        if (dataLine != null) {
+            isSoundEnabled = true;
+            dataLine.start();
+        }
     }
-  }
 
-  public void setVolue(int vol) {
-  	volume.setValue(vol);
-  }
-
-  public void beepOn(boolean beep) {
-    if (beep) {
-      beepCtr = 7;
+    private void shutdownSound() {
+        isSoundEnabled = false;
+        if (dataLine != null) {
+            dataLine.close();
+            dataLine = null;
+            volume = null;
+        }
     }
-  }
 
-  public long ioTick(long cycles) {
-    // Avoid blocking using timer...
-  	if (dataLine != null) {
-  		if (dataLine.available() > WAVE_LEN * 2) {
-  			if (beepCtr > 0) {
-  				dataLine.write(buffer, 0, WAVE_LEN);
-  				beepCtr--;
-  			} else {
-  				dataLine.write(quiet, 0, WAVE_LEN);
-  			}
-  		}
-  	}
-  	return cycles + 1000;
-  }
+    public boolean isSoundEnabled() {
+        return isSoundEnabled;
+    }
 
+    public void setSoundEnabled(boolean sound) {
+        if (this.isSoundEnabled != sound) {
+            if (sound) {
+                initSound();
+            } else {
+                shutdownSound();
+            }
+        }
+    }
 
-  public int read(int address, boolean word, long cycler) {
-  	return 0;
-  }
+    public int getVolume() {
+        return volume == null ? 0 : (int) volume.getValue();
+    }
 
-  public void write(int address, int data, boolean word, long cycler) {
-  }
+    public void setVolume(int vol) {
+        if (volume != null) {
+            volume.setValue(vol);
+        }
+    }
 
-  // Nothing for interrupts...
-  public void interruptServiced(int vector) {
-  }
+    public void beepOn(boolean beep) {
+        if (beepOn != beep) {
+            beepOn = beep;
+            setMode(beepOn ? MODE_ON : MODE_OFF);
+            if (DEBUG) log(beepOn ? "BEEPING" : "SILENT");
+            if (beepOn && isSoundEnabled) {
+                beepCtrl = 7;
+                if (!soundEvent.isScheduled()) {
+                    cpu.scheduleTimeEvent(soundEvent, cpu.getTime() + 2);
+                }
+            }
+        }
+    }
 
-  public static void main(String[] args) {
-  	Beeper beep = new Beeper();
-  	while (true) {
-  		beep.beepOn(true);
-  		for (int i = 0, n = 1000; i < n; i++) {
-  			beep.ioTick(0);
-  		}
-  		beep.beepOn(false);
-  		for (int i = 0, n = 10000; i < n; i++) {
-  			beep.ioTick(0);
-  		}
-  	}
-  }
+    private void ioTick(long time) {
+        // Avoid blocking using timer...
+        if (isSoundEnabled && dataLine != null) {
+            if (dataLine.available() > WAVE_LEN * 2) {
+                if (beepCtrl > 0) {
+                    dataLine.write(buffer, 0, WAVE_LEN);
+                    if (!beepOn) {
+                        beepCtrl--;
+                    }
+                } else {
+                    dataLine.write(quiet, 0, WAVE_LEN);
+                }
+            }
+        }
+    }
+
+    @Override
+    public int getModeMax() {
+        return MODE_MAX;
+    }
+
+    @Override
+    public String info() {
+        return "Volume: " + getVolume() + " Beep: " + (beepOn ? "on" : "off")
+        + " Sound Enabled: " + isSoundEnabled;
+    }
+
 }

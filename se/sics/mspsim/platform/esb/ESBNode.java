@@ -42,6 +42,7 @@
 package se.sics.mspsim.platform.esb;
 import java.io.IOException;
 
+import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.TR1001;
 import se.sics.mspsim.core.IOPort;
@@ -81,6 +82,7 @@ public class ESBNode extends GenericNode implements PortListener {
   public boolean yellowLed;
 
   private TR1001 radio;
+  private Beeper beeper;
   private ESBGui gui;
 
   /**
@@ -93,6 +95,10 @@ public class ESBNode extends GenericNode implements PortListener {
 
   public Leds getLeds() {
       return leds;
+  }
+
+  public Beeper getBeeper() {
+      return beeper;
   }
 
   public void setPIR(boolean hi) {
@@ -122,9 +128,7 @@ public class ESBNode extends GenericNode implements PortListener {
       greenLed = (data & GREEN_LED) == 0;
       yellowLed = (data & YELLOW_LED) == 0;
       leds.setLeds((greenLed ? 4 : 0) + (yellowLed ? 2 : 0) + (redLed ? 1 : 0));
-      if (gui != null) {
-	gui.beeper.beepOn((data & BEEPER) != 0);
-      }
+      beeper.beepOn((data & BEEPER) != 0);
 
     } else if (source == port5) {
       if ((data & 0xc0) == 0xc0) {
@@ -160,6 +164,7 @@ public class ESBNode extends GenericNode implements PortListener {
       radio = new TR1001(cpu, (USART) usart0);
     }
     leds = new Leds(cpu, LEDS);
+    beeper = new Beeper(cpu);
   }
 
   public void setupNode() {
@@ -173,6 +178,8 @@ public class ESBNode extends GenericNode implements PortListener {
     
     if (!config.getPropertyAsBoolean("nogui", true)) {
       setupGUI();
+
+      beeper.setSoundEnabled(true);
 
       // Add some windows for listening to serial output
       IOUnit usart = cpu.getIOUnit("USART 1");
