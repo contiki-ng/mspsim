@@ -45,7 +45,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.util.Hashtable;
 import java.util.regex.Pattern;
 
 import se.sics.mspsim.chip.RFListener;
@@ -66,8 +65,6 @@ import se.sics.mspsim.util.Utils;
  *
  */
 public class MiscCommands implements CommandBundle {
-
-  private Hashtable <String, FileTarget> fileTargets = new Hashtable<String, FileTarget>();
 
   public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
     handler.registerCommand("grep", new BasicLineCommand("print lines matching the specified pattern", "[-i] [-v] <regexp>") {
@@ -121,7 +118,6 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-
     handler.registerCommand("speed", new BasicCommand("set the speed factor for the CPU", "[factor]") {
       public int executeCommand(CommandContext context) {
         MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
@@ -129,9 +125,7 @@ public class MiscCommands implements CommandBundle {
           context.err.println("could not access the CPU.");
           return 1;
         } else if (context.getArgumentCount() == 0) {
-          long rate = cpu.getSleepRate();
-          double d = rate / 25000.0;
-          context.out.println("Speed factor is set to " + (((int)(d * 100 + 0.5)) / 100.0));
+          /* No speed specified. Simply show current speed. */
         } else {
           double d = context.getArgumentAsDouble(0);
           if (d > 0.0) {
@@ -142,6 +136,9 @@ public class MiscCommands implements CommandBundle {
             return 1;
           }
         }
+        long rate = cpu.getSleepRate();
+        double d = rate / 25000.0;
+        context.out.println("Speed factor is set to " + (((int)(d * 100 + 0.5)) / 100.0));
         return 0;
       }
     });
@@ -306,7 +303,6 @@ public class MiscCommands implements CommandBundle {
         } catch (Exception e1) {
           e1.printStackTrace(context.err);
         }
-        // TODO Auto-generated method stub
         return 1;
       }
     });
@@ -355,7 +351,7 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    handler.registerCommand("rflistener", new BasicLineCommand("an rflisteer", "[input|output] <rf-chip>") {
+    handler.registerCommand("rflistener", new BasicLineCommand("an rflistener", "<input|output> <rf-chip>") {
       CommandContext context;
       RFListener listener;
       final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
@@ -363,28 +359,40 @@ public class MiscCommands implements CommandBundle {
         this.context = ctx;
         String inout = context.getArgument(0);
         Chip chip = cpu.getChip(context.getArgument(1));
+        if (chip == null) {
+          context.err.println("Error: could not find chip '" + context.getArgument(1) + '\'');
+          return 1;
+        }
         if ("output".equals(inout)) {
           if (chip instanceof RFSource) {
-             ((RFSource)chip).setRFListener(new RFListener(){
+            ((RFSource)chip).setRFListener(new RFListener() {
               public void receivedByte(byte data) {
-                context.out.println("" + Utils.hex8(data));
+                context.out.println(Utils.hex8(data));
               }
-             });
+            });
+          } else {
+            context.err.println("Error: chip is not an RF source");
+            return 1;
           }
         } else if ("input".equals(inout)){
           listener = (RFListener) chip;
         } else {
           context.err.println("Error: illegal type: " + inout);
+          return 1;
         }
         return 0;
       }
+
       public void lineRead(String line) {
         if (listener != null) {
           byte[] data = Utils.hexconv(line);
-          context.out.println("Should send bytes to radio: " + line);
-          for (int i = 0; i < data.length; i++) {
-            //context.out.println("Byte " + i + " = " + ((int) data[i] & 0xff));
-            listener.receivedByte(data[i]);
+          if (data != null) {
+            context.out.println("RFListener: to radio: " + line);
+            for (int i = 0; i < data.length; i++) {
+              listener.receivedByte(data[i]);
+            }
+          } else {
+            context.out.println("RFListener: " + line);
           }
         }
       }
@@ -397,8 +405,8 @@ public class MiscCommands implements CommandBundle {
             context.out.println("MSPSim version: " + MSP430Constants.VERSION);
             context.out.println("Java version  : " + System.getProperty("java.version") + " " +
                     System.getProperty("java.vendor"));
-            context.out.println("Firmware      : " + config.getProperty("firmwareFile"));
-            context.out.println("AutoloadScript: " + config.getProperty("autoloadScript"));
+            context.out.println("Firmware      : " + config.getProperty("firmwareFile", "-"));
+            context.out.println("AutoloadScript: " + config.getProperty("autoloadScript", "-"));
             context.out.println();
             if (context.getOption("registry")) {
                 context.out.println("--------- Registry info --------\n");
