@@ -96,6 +96,10 @@ public class ELFSection {
     }
   }
 
+  public int getSize() {
+      return size;
+  }
+  
   public String getName(int i) {
     int pos = offset + i;
     StringBuffer sb = new StringBuffer();
@@ -106,6 +110,19 @@ public class ELFSection {
     return sb.toString();
   }
 
+  public int readElf8(int pos) {
+      return elf.readElf8(pos + offset);
+  }
+
+  public int readElf16(int pos) {
+      return elf.readElf16(pos + offset);
+  }
+
+  public int readElf32(int pos) {
+      return elf.readElf32(pos + offset);
+  }
+  
+  
   public String toString() {
     String nameStr = getSectionName();
     return "name: " + nameStr +

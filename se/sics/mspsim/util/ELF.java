@@ -48,13 +48,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 
+import se.sics.mspsim.debug.DwarfReader;
+
 public class ELF {
 
   private static final int EI_NIDENT = 16;
   private static final int EI_ENCODING = 5;
   private static final int[] MAGIC = new int[] {0x7f, 'E', 'L', 'F'};
   
-  public static final boolean DEBUG = false;
+  public static final boolean DEBUG = true;//false;
   
   
   boolean encMSB = true;
@@ -196,12 +198,33 @@ public class ELF {
     return pHeader;
   }
 
-//   public ELFSection getSection(int pos) {
-//     sec.name = getElf32(pos);
-//     pos += 4;
-//   }
+  public int getSectionCount() {
+      return shnum;
+  }
+
+  public ELFSection getSection(int index) {
+      return sections[index];
+  }
 
   int readElf32() {
+      int val = readElf32(pos);
+      pos += 4;
+      return val;
+  }
+
+  int readElf16() {
+      int val = readElf16(pos);
+      pos += 2;
+      return val;
+  }
+  
+  int readElf8() {
+      int val = readElf16(pos);
+      pos += 1;
+      return val;
+  }
+  
+  int readElf32(int pos) {
     int b = 0;
     if (encMSB) {
       b = (elfData[pos++] & 0xff) << 24 |
@@ -217,7 +240,7 @@ public class ELF {
     return b;
   }
 
-  int readElf16() {
+  int readElf16(int pos) {
     int b = 0;
     if (encMSB) {
       b = ((elfData[pos++] & 0xff) << 8) |
@@ -229,7 +252,7 @@ public class ELF {
     return b;
   }
 
-  int readElf8() {
+  int readElf8(int pos) {
     return elfData[pos++] & 0xff;
   }
 
@@ -255,14 +278,24 @@ public class ELF {
       }
     }
 
+    boolean readDwarf = false;
     /* Find sections */
     for (int i = 0, n = shnum; i < n; i++) {
-      if (".stabstr".equals(sections[i].getSectionName())) {
+        String name = sections[i].getSectionName();
+      System.out.println("ELF-Section: " + name);
+      if (".stabstr".equals(name)) {
 	dbgStabStr = sections[i];
       }
-      if (".stab".equals(sections[i].getSectionName())) {
+      if (".stab".equals(name)) {
 	dbgStab = sections[i];
       }
+      if (".debug_aranges".equals(name)) {
+          readDwarf = true;
+      }
+    }
+    if (readDwarf) {
+        DwarfReader dwarf = new DwarfReader(this);
+        dwarf.read();
     }
 
   }
