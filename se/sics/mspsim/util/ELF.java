@@ -289,7 +289,8 @@ public class ELF {
       if (".stab".equals(name)) {
 	dbgStab = sections[i];
       }
-      if (".debug_aranges".equals(name)) {
+      if (".debug_aranges".equals(name) || 
+          ".debug_line".equals(name)) {
           readDwarf = true;
       }
     }

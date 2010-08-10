@@ -122,6 +122,24 @@ public class ELFSection {
       return elf.readElf32(pos + offset);
   }
   
+  public int LEB128Size(long val) {
+      /* at least one byte, but possibly more */
+      return (int) (1 + (val / 128));
+  }
+
+  public long readLEB128(int pos) {
+      long val = 0;
+      /* LSB first always? */
+      int b;
+      int bitPos = 0;
+      do {
+          b = readElf8(pos++);
+          val = val + ((b & 127) << bitPos);
+          bitPos += 7;
+      } while ((b & 128) != 0);
+      return val;
+  }
+  
   
   public String toString() {
     String nameStr = getSectionName();
