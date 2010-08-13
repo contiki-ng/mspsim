@@ -680,6 +680,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           autoCRC = (data & ADR_AUTOCRC) != 0;
           autoAck = (data & AUTOACK) != 0;
           break;
+      case REG_FSCTRL:
+      	if (cl != null) {
+      		updateActiveFrequency();
+      		cl.changedChannel(activeChannel);
+      	}
+        break;
       }
   }
     
@@ -1221,6 +1227,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   public void setRFListener(RFListener rf) {
     listener = rf;
+  }
+
+  public interface ChannelListener {
+    public void changedChannel(int channel);
+  }
+  private ChannelListener cl = null;
+  public void setChannelListener(ChannelListener cl) {
+    this.cl = cl;
   }
 
   public void setVRegOn(boolean newOn) {
