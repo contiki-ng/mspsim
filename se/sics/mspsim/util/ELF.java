@@ -56,7 +56,7 @@ public class ELF {
   private static final int EI_ENCODING = 5;
   private static final int[] MAGIC = new int[] {0x7f, 'E', 'L', 'F'};
   
-  public static final boolean DEBUG = true;//false;
+  public static final boolean DEBUG = false;
   
   
   boolean encMSB = true;
@@ -282,7 +282,9 @@ public class ELF {
     /* Find sections */
     for (int i = 0, n = shnum; i < n; i++) {
         String name = sections[i].getSectionName();
-      System.out.println("ELF-Section: " + name);
+        if (DEBUG) {
+          System.out.println("ELF-Section: " + name);
+        }
       if (".stabstr".equals(name)) {
 	dbgStabStr = sections[i];
       }
