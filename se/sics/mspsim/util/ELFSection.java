@@ -88,6 +88,8 @@ public class ELFSection {
 
   ELF elf;
 
+  int pos = 0;
+  
   public String getSectionName() {
     if (elf.strTable != null) {
       return elf.strTable.getName(name);
@@ -96,6 +98,14 @@ public class ELFSection {
     }
   }
 
+  public void reset() {
+      pos = 0;
+  }
+
+  public int getPosition() {
+      return pos;
+  }
+  
   public int getSize() {
       return size;
   }
@@ -110,6 +120,35 @@ public class ELFSection {
     return sb.toString();
   }
 
+  public int readElf8() {
+      return readElf8(pos++);
+  }
+  
+  public int readElf16() {
+      int val = readElf16(pos);
+      pos += 2;
+      return val;
+  }
+  
+  public int readElf32() {
+      int val = readElf32(pos);
+      pos += 4;
+      return val;
+  }
+
+  public long readLEB128() {
+      long val = 0;
+      /* LSB first always? */
+      int b;
+      int bitPos = 0;
+      do {
+          b = readElf8(pos++);
+          val = val + ((b & 127) << bitPos);
+          bitPos += 7;
+      } while ((b & 128) != 0);
+      return val;
+  }
+  
   public int readElf8(int pos) {
       return elf.readElf8(pos + offset);
   }
