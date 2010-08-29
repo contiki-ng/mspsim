@@ -1,12 +1,47 @@
+/**
+ * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the Institute nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * This file is part of MSPSim.
+ *
+ * -----------------------------------------------------------------
+ *
+ * StabDebug
+ *
+ * Author  : Joakim Eriksson
+ * Created : Sun Oct 21 22:00:00 2009
+ * Updated : $Date: 2010-07-09 23:22:13 +0200 (Fri, 09 Jul 2010) $
+ *           $Revision: 717 $
+ */
+
 package se.sics.mspsim.debug;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-
-import se.sics.mspsim.util.ELFDebug;
-import se.sics.mspsim.util.Utils;
-import se.sics.mspsim.util.ELFDebug.Stab;
+import se.sics.mspsim.debug.StabDebug.Stab;
 
 public class StabFile {
 
@@ -24,10 +59,10 @@ public class StabFile {
     public void handleStabs(Stab[] stabs) {
         int i = stabIndex;
         while(i < stabs.length) {
-            ELFDebug.Stab stab = stabs[i];
+            StabDebug.Stab stab = stabs[i];
             System.out.println("Handling stab: " + stab);
             switch(stab.type) {
-            case ELFDebug.N_SO:
+            case StabDebug.N_SO:
                 if (stab.value != startAddress) {
                     return;
                 }
@@ -40,10 +75,10 @@ public class StabFile {
                 }
                 i++;
                 break;
-            case ELFDebug.N_FUN:
+            case StabDebug.N_FUN:
                 i += addFunction(i, stabs);
                 break;
-            case ELFDebug.N_LSYM:
+            case StabDebug.N_LSYM:
                 i += addType(i, stabs);
                 break;
             default:
@@ -90,8 +125,8 @@ public class StabFile {
     }
 
     private boolean isParam(Stab stab) {
-        return (stab.type == ELFDebug.N_REG_PARAM ||
-            stab.type == ELFDebug.N_VAR_PARAM);
+        return (stab.type == StabDebug.N_REG_PARAM ||
+            stab.type == StabDebug.N_VAR_PARAM);
     }
 
     public String toString() {

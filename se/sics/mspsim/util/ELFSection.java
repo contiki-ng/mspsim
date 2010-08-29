@@ -79,12 +79,12 @@ public class ELFSection {
   int type;
   int flags;
   int addr;
-  int offset;
+  private int offset;
   int size;
   int link;
   int info;
   int addralign;
-  int entSize;
+  private int entrySize;
 
   ELF elf;
 
@@ -111,7 +111,7 @@ public class ELFSection {
   }
   
   public String getName(int i) {
-    int pos = offset + i;
+    int pos = getOffset() + i;
     StringBuffer sb = new StringBuffer();
     char c;
     while ((c = (char) elf.elfData[pos++]) != 0) {
@@ -169,15 +169,15 @@ public class ELFSection {
   }
 
   public int readElf8(int pos) {
-      return elf.readElf8(pos + offset);
+      return elf.readElf8(pos + getOffset());
   }
 
   public int readElf16(int pos) {
-      return elf.readElf16(pos + offset);
+      return elf.readElf16(pos + getOffset());
   }
 
   public int readElf32(int pos) {
-      return elf.readElf32(pos + offset);
+      return elf.readElf32(pos + getOffset());
   }
   
   public int LEB128Size(long val) {
@@ -206,10 +206,26 @@ public class ELFSection {
       ((type <= TYPE_DYNSYM) ? " " + typeNames[type] : "") +
       "\nflags: " + Integer.toString(flags, 16) +
       "\naddr: " + Integer.toString(addr, 16) +
-      "\noffset: " + Integer.toString(offset, 16) +
+      "\noffset: " + Integer.toString(getOffset(), 16) +
       "\nsize: " + Integer.toString(size, 16) +
       "\nlink: " + Integer.toString(link, 16) +
       "\ninfo: " + Integer.toString(info, 16);
   }
+
+public void setEntrySize(int entrySize) {
+    this.entrySize = entrySize;
+}
+
+public int getEntrySize() {
+    return entrySize;
+}
+
+public void setOffset(int offset) {
+    this.offset = offset;
+}
+
+public int getOffset() {
+    return offset;
+}
 
 } // ELFSection

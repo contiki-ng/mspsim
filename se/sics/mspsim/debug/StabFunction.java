@@ -1,9 +1,8 @@
 package se.sics.mspsim.debug;
 
 import java.util.ArrayList;
-
-import se.sics.jipv6.util.Utils;
-import se.sics.mspsim.util.ELFDebug.Stab;
+import se.sics.mspsim.util.Utils;
+import se.sics.mspsim.debug.StabDebug.Stab;
 
 public class StabFunction {
 

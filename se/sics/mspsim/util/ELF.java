@@ -49,6 +49,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 
 import se.sics.mspsim.debug.DwarfReader;
+import se.sics.mspsim.debug.StabDebug;
 
 public class ELF {
 
@@ -75,7 +76,7 @@ public class ELF {
   int shstrndx;
 
   byte[] elfData;
-  int pos = 0;
+  private int pos = 0;
 
   private ELFSection sections[];
   private ELFProgram programs[];
@@ -84,13 +85,13 @@ public class ELF {
   ELFSection strTable;
   ELFSection symTable;
   ELFSection dbgStab;
-  ELFSection dbgStabStr;
+  public ELFSection dbgStabStr;
 
   ELFDebug debug;
 
   public ELF(byte[] data) {
     elfData = data;
-    pos = 0;
+    setPos(0);
   }
 
   /* check if the file exists and is an ELF file */
@@ -132,7 +133,7 @@ public class ELF {
       throw new ELFException("Illegal encoding: " + elfData[EI_ENCODING]);
     }
     
-    pos += 16;
+    setPos(getPos() + 16);
     type = readElf16();
     machine = readElf16();
     version = readElf32();
@@ -171,12 +172,12 @@ public class ELF {
     sec.type = readElf32();
     sec.flags = readElf32();
     sec.addr = readElf32();
-    sec.offset = readElf32();
+    sec.setOffset(readElf32());
     sec.size = readElf32();
     sec.link = readElf32();
     sec.info = readElf32();
     sec.addralign = readElf32();
-    sec.entSize = readElf32();
+    sec.setEntrySize(readElf32());
     sec.elf = this;
     return sec;
   }
@@ -206,21 +207,21 @@ public class ELF {
       return sections[index];
   }
 
-  int readElf32() {
-      int val = readElf32(pos);
-      pos += 4;
+  public int readElf32() {
+      int val = readElf32(getPos());
+      setPos(getPos() + 4);
       return val;
   }
 
-  int readElf16() {
-      int val = readElf16(pos);
-      pos += 2;
+  public int readElf16() {
+      int val = readElf16(getPos());
+      setPos(getPos() + 2);
       return val;
   }
   
-  int readElf8() {
-      int val = readElf16(pos);
-      pos += 1;
+  public int readElf8() {
+      int val = readElf16(getPos());
+      setPos(getPos() + 1);
       return val;
   }
   
@@ -265,7 +266,7 @@ public class ELF {
   }
 
   private void readSections() {
-    pos = shoff;
+    setPos(shoff);
 
     sections = new ELFSection[shnum];
     for (int i = 0, n = shnum; i < n; i++) {
@@ -304,7 +305,7 @@ public class ELF {
   }
 
   private void readPrograms() {
-    pos = phoff;
+    setPos(phoff);
     programs = new ELFProgram[phnum];
     for (int i = 0, n = phnum; i < n; i++) {
       programs[i] = readProgramHeader();
@@ -319,7 +320,7 @@ public class ELF {
     readPrograms();
     readSections();
     if (dbgStab != null) {
-      debug = new ELFDebug(this, dbgStab, dbgStabStr);
+      debug = new StabDebug(this, dbgStab, dbgStabStr);
     }
   }
 
@@ -370,15 +371,15 @@ public class ELF {
 
     ELFSection name = sections[symTable.link];
     int len = symTable.size;
-    int count = len / symTable.entSize;
-    int addr = symTable.offset;
+    int count = len / symTable.getEntrySize();
+    int addr = symTable.getOffset();
     String currentFile = "";
     if (DEBUG) {
       System.out.println("Number of symbols:" + count);
     }
     int currentAddress = 0;
     for (int i = 0, n = count; i < n; i++) {
-      pos = addr;
+      setPos(addr);
       int nI = readElf32();
       String sn = name.getName(nI);
       int sAddr = readElf32();
@@ -444,7 +445,7 @@ public class ELF {
 	}
 
       }
-      addr += symTable.entSize;
+      addr += symTable.getEntrySize();
     }
 
     return map;
@@ -480,7 +481,7 @@ public class ELF {
         }
         if (".stab".equals(elf.sections[i].getSectionName()) ||
             ".stabstr".equals(elf.sections[i].getSectionName())) {
-          int adr = elf.sections[i].offset;
+          int adr = elf.sections[i].getOffset();
           if (DEBUG) {
             System.out.println(" == Section data ==");
           }
@@ -508,7 +509,16 @@ public class ELF {
   }
 
 
-  class FileInfo {
+  public void setPos(int pos) {
+    this.pos = pos;
+}
+
+public int getPos() {
+    return pos;
+}
+
+
+class FileInfo {
     String name;
     int start;
     int end;

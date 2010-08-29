@@ -1,8 +1,7 @@
 package se.sics.mspsim.debug;
 
 import java.util.HashMap;
-
-import se.sics.mspsim.util.ELFDebug.Stab;
+import se.sics.mspsim.debug.StabDebug.Stab;
 
 public class StabType {
 
