@@ -148,7 +148,26 @@ public class ELFSection {
       } while ((b & 128) != 0);
       return val;
   }
-  
+
+  public long readLEB128S() {
+      long val = 0;
+      /* LSB first always? */
+      int b;
+      int bitPos = 0;
+      do {
+          b = readElf8(pos++);
+          val = val + ((b & 127) << bitPos);
+          bitPos += 7;
+      } while ((b & 128) != 0);
+      long negval = 0x1 << bitPos;
+      if (b < 0x40)
+          return val;
+      else {
+          System.out.println("Line: read negative : " + val + " negval: " + negval);
+          return -(negval - val);
+      }
+  }
+
   public int readElf8(int pos) {
       return elf.readElf8(pos + offset);
   }

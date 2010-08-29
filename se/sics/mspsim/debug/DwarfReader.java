@@ -1,6 +1,9 @@
 package se.sics.mspsim.debug;
 
 import java.util.ArrayList;
+
+import javax.sound.sampled.LineEvent;
+
 import se.sics.mspsim.util.Utils;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.ELFSection;
@@ -40,6 +43,9 @@ public class DwarfReader {
     private int lineFile;
     private int lineLine;
     private int lineColumn;
+    private boolean isBasicBlock = false;
+    private boolean isStatement = false;
+    private boolean endSequence = false;
     
     private ArrayList<Arange> aranges = new ArrayList<Arange>();
    
@@ -70,7 +76,7 @@ public class DwarfReader {
         int proLen = sec.readElf32();
         int minOpLen = sec.readElf8();
         
-        int isStmt = sec.readElf8();
+        int defaultIsStmt = sec.readElf8();
         int lineBase = sec.readElf8();
         int lineRange = sec.readElf8();
         int opcodeBase = sec.readElf8();
@@ -79,6 +85,13 @@ public class DwarfReader {
         System.out.println("Line total length: " + totLen);
         System.out.println("Line pro length: " + proLen);
         System.out.println("Line version: " + version);
+
+        if (lineBase > 127) {
+            lineBase = lineBase - 256;
+        }
+        System.out.println("Line base  : " + lineBase);
+        System.out.println("Line range : " + lineRange);
+        System.out.println("Line - Opcode base: " + opcodeBase);
         
         /* first char of includes (skip opcode lens)... */
         for (int i = 0; i < opcodeBase - 1; i++) {
@@ -124,17 +137,81 @@ public class DwarfReader {
         System.out.println("Line: position: " + sec.getPosition());
         System.out.println("Line: first bytes of the machine: ");
         System.out.print("Line: ");
-        for (int i = 0; i < 20; i++) {
+        isStatement = defaultIsStmt != 0;
+        for (int i = 0; i < 100; i++) {
            int ins =  sec.readElf8();
            System.out.print(Utils.hex8(ins) + " ");
            switch(ins) {
            case DW_LNS_EXT:
                /* extended instruction */
+               int len = sec.readElf8();
+               int extIns = sec.readElf8();
+               switch(extIns) {
+               case DW_LNE_end_sequence:
+                   endSequence = true;
+                   System.out.println("Line: End sequence executed!!!");
+                   break;
+               case DW_LNE_define_file:
+                   System.out.println("Line: Should define a file!!!!");
+                   break;
+               case DW_LNE_set_address:
+                   if (len == 2)
+                       lineAddress = sec.readElf8();
+                   if (len == 3)
+                       lineAddress = sec.readElf16();
+                   if (len == 5)
+                       lineAddress = sec.readElf32();
+                   System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
+                           " (len: " + len + ")");
+                   break;
+               }
                break;
-           case DW_LNS_advance_line:
+           case DW_LNS_copy:
+               /* copy data to matrix... */
+               isBasicBlock = false;
                break;
            case DW_LNS_advance_pc:
+               long add = sec.readLEB128();
+               lineAddress += add * minOpLen;
+               System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
                break;
+           case DW_LNS_advance_line:
+               long addLine = sec.readLEB128S();
+               lineLine += addLine;
+               System.out.println("Line: Increased line to: " + lineLine +
+                       " (incr: " + addLine + ")");
+               break;
+           case DW_LNS_set_file:
+               lineFile = (int) sec.readLEB128();
+               System.out.println("Line: Set file to: " + lineFile);
+               break;
+           case DW_LNS_set_column:
+               lineColumn = (int) sec.readLEB128();
+               break;
+           case DW_LNS_negate_stmt:
+               isStatement = !isStatement;
+               System.out.println("Line: Negated is statement");
+               break;
+           case DW_LNS_set_basic_block:
+               isBasicBlock = true;
+               System.out.println("Line: Set basic block to true");
+               break;
+           case DW_LNS_const_add_pc:
+               System.out.println("Line: Should add const to PC - but how much?");
+               break;
+           case DW_LNS_fixed_advance_pc:
+               int incr = sec.readElf16();
+               lineAddress += incr;
+               System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
+               break;
+           default:
+               
+               int lineInc = lineBase + ((ins - opcodeBase) % lineRange);
+               int addrInc = (ins - opcodeBase) / lineRange;
+               lineAddress += addrInc * minOpLen;
+               lineLine += lineInc;
+               System.out.println("Line: *** Special operation => addr: " +
+                       Utils.hex16(lineAddress) + " Line: " + lineLine + " lineInc: " + lineInc);
            }
         }
         System.out.println();        
