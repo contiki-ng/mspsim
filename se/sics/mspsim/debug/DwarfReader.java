@@ -41,8 +41,6 @@ package se.sics.mspsim.debug;
 
 import java.util.ArrayList;
 
-import javax.sound.sampled.LineEvent;
-
 import se.sics.mspsim.util.Utils;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.ELFSection;
@@ -69,12 +67,19 @@ public class DwarfReader {
     
     ELF elfFile;
 
+    /* Address ranges */
     class Arange {
         int length;
         int version;
         int offset;
         int addressSize;
         int segmentSize;
+    }
+    
+    /* Line number lookup data */
+    class LineData {
+        String[] includeDirs;
+        String[] sourceFiles;
     }
 
     /* some state for the line number handling */
@@ -87,7 +92,6 @@ public class DwarfReader {
     private boolean endSequence = false;
     
     private ArrayList<Arange> aranges = new ArrayList<Arange>();
-   
     
     public DwarfReader(ELF elfFile) {
         this.elfFile = elfFile;
@@ -108,152 +112,169 @@ public class DwarfReader {
 
     private void readLines(ELFSection sec) {
         System.out.println("DWARF Line - ELF Section length: " + sec.getSize());
-        int pos = 0;
         sec.reset();
-        int totLen = sec.readElf32();
-        int version = sec.readElf16();
-        int proLen = sec.readElf32();
-        int minOpLen = sec.readElf8();
-        
-        int defaultIsStmt = sec.readElf8();
-        int lineBase = sec.readElf8();
-        int lineRange = sec.readElf8();
-        int opcodeBase = sec.readElf8();
+        int endPos = 0;
+        while (sec.getPosition() < sec.getSize()) {
+            /* here starts the reading of one file's (?) debug info */
+            int totLen = sec.readElf32();
+            int version = sec.readElf16();
+            int proLen = sec.readElf32();
+            int minOpLen = sec.readElf8();
 
-        
-        System.out.println("Line total length: " + totLen);
-        System.out.println("Line pro length: " + proLen);
-        System.out.println("Line version: " + version);
+            int defaultIsStmt = sec.readElf8();
+            int lineBase = sec.readElf8();
+            int lineRange = sec.readElf8();
+            int opcodeBase = sec.readElf8();
 
-        if (lineBase > 127) {
-            lineBase = lineBase - 256;
-        }
-        System.out.println("Line base  : " + lineBase);
-        System.out.println("Line range : " + lineRange);
-        System.out.println("Line - Opcode base: " + opcodeBase);
-        
-        /* first char of includes (skip opcode lens)... */
-        for (int i = 0; i < opcodeBase - 1; i++) {
-            sec.readElf8();
-        }
-        
-//        pos = pos + 15 + opcodeBase - 1;
-//        System.out.println("Line pos = " + pos + " sec-pos = " + sec.getPosition());
-        System.out.println("Line --- include files ---");
-        ArrayList<String> directories = new ArrayList<String>();
-        directories.add("./");
-        ArrayList<String> files = new ArrayList<String>();
-        StringBuilder sb = new StringBuilder();
-        /* if first char is zero => no more include directories... */
-        int c;
-        while ((c = sec.readElf8()) != 0) {
-            sb.append((char)c);
-            while((c = sec.readElf8()) != 0) sb.append((char) c);
-            System.out.println("Line: include file: " + sb.toString());
-            directories.add(sb.toString());
-            sb.setLength(0);
-        }
+            endPos += 4 + totLen;
+            System.out.println("Line total length: " + totLen + " endPos: " + endPos);
+            System.out.println("Line pro length: " + proLen);
+            System.out.println("Line version: " + version);
 
-        System.out.println("Line --- source files ---");
-        long dirIndex = 0;
-        long time = 0;
-        long size = 0;
-        while ((c = sec.readElf8()) != 0) {
-            sb.append((char)c);
-            while((c = sec.readElf8()) != 0) sb.append((char) c);
-            dirIndex = sec.readLEB128();
-            time = sec.readLEB128();
-            size = sec.readLEB128();
-            
-            System.out.println("Line: source file: " + sb.toString() + "  dir: " + dirIndex + " size: " + size);
-            files.add(directories.get((int) dirIndex) + sb.toString());
-            sb.setLength(0);
+            if (lineBase > 127) {
+                lineBase = lineBase - 256;
+            }
+            System.out.println("Line base  : " + lineBase);
+            System.out.println("Line range : " + lineRange);
+            System.out.println("Line - Opcode base: " + opcodeBase);
+
+            /* first char of includes (skip opcode lens)... */
+            for (int i = 0; i < opcodeBase - 1; i++) {
+                sec.readElf8();
+            }
+
+            //        pos = pos + 15 + opcodeBase - 1;
+            //        System.out.println("Line pos = " + pos + " sec-pos = " + sec.getPosition());
+            System.out.println("Line --- include files ---");
+            ArrayList<String> directories = new ArrayList<String>();
+            directories.add("./");
+            ArrayList<String> files = new ArrayList<String>();
+            StringBuilder sb = new StringBuilder();
+
+            /* if first char is zero => no more include directories... */
+            int c;
+            while ((c = sec.readElf8()) != 0) {
+                sb.append((char)c);
+                while((c = sec.readElf8()) != 0) sb.append((char) c);
+                System.out.println("Line: include file: " + sb.toString());
+                directories.add(sb.toString());
+                sb.setLength(0);
+            }
+
+            System.out.println("Line --- source files ---");
+            long dirIndex = 0;
+            long time = 0;
+            long size = 0;
+            while ((c = sec.readElf8()) != 0) {
+                sb.append((char)c);
+                while((c = sec.readElf8()) != 0) sb.append((char) c);
+                dirIndex = sec.readLEB128();
+                time = sec.readLEB128();
+                size = sec.readLEB128();
+
+                System.out.println("Line: source file: " + sb.toString() + "  dir: " + dirIndex + " size: " + size);
+                files.add(directories.get((int) dirIndex) + sb.toString());
+                sb.setLength(0);
+            }
+
+            /* Now we should have entered the position of the "code" for generating the
+             * line <=> address table
+             */
+            System.out.println("Line: position: " + sec.getPosition());
+            System.out.println("Line: first bytes of the machine: ");
+            System.out.print("Line: ");
+
+            /* reset the "state" of the state machine (6.2.2 spec) */
+            lineAddress = 0;
+            lineFile = 1;
+            lineLine = 1;
+            lineColumn = 0;
+            endSequence = false;
+            isStatement = defaultIsStmt != 0;
+            isBasicBlock = false;
+
+            if (sec.getPosition() >= endPos) {
+                endSequence = true;
+            }
+            while(!endSequence) {
+                int ins =  sec.readElf8();
+                System.out.print(Utils.hex8(ins) + " ");
+                switch(ins) {
+                case DW_LNS_EXT:
+                    /* extended instruction */
+                    int len = sec.readElf8();
+                    int extIns = sec.readElf8();
+                    switch(extIns) {
+                    case DW_LNE_end_sequence:
+                        endSequence = true;
+                        System.out.println("Line: End sequence executed!!!");
+                        break;
+                    case DW_LNE_define_file:
+                        System.out.println("Line: Should define a file!!!!");
+                        break;
+                    case DW_LNE_set_address:
+                        if (len == 2)
+                            lineAddress = sec.readElf8();
+                        if (len == 3)
+                            lineAddress = sec.readElf16();
+                        if (len == 5)
+                            lineAddress = sec.readElf32();
+                        System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
+                                " (len: " + len + ")");
+                        break;
+                    }
+                    break;
+                case DW_LNS_copy:
+                    /* copy data to matrix... */
+                    isBasicBlock = false;
+                    break;
+                case DW_LNS_advance_pc:
+                    long add = sec.readLEB128();
+                    lineAddress += add * minOpLen;
+                    System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
+                    break;
+                case DW_LNS_advance_line:
+                    long addLine = sec.readLEB128S();
+                    lineLine += addLine;
+                    System.out.println("Line: Increased line to: " + lineLine +
+                            " (incr: " + addLine + ")");
+                    break;
+                case DW_LNS_set_file:
+                    lineFile = (int) sec.readLEB128();
+                    System.out.println("Line: Set file to: " + lineFile);
+                    break;
+                case DW_LNS_set_column:
+                    lineColumn = (int) sec.readLEB128();
+                    System.out.println("Line: set column to: " + lineColumn);
+                    break;
+                case DW_LNS_negate_stmt:
+                    isStatement = !isStatement;
+                    System.out.println("Line: Negated is statement");
+                    break;
+                case DW_LNS_set_basic_block:
+                    isBasicBlock = true;
+                    System.out.println("Line: Set basic block to true");
+                    break;
+                case DW_LNS_const_add_pc:
+                    System.out.println("Line: Should add const to PC - but how much?");
+                    break;
+                case DW_LNS_fixed_advance_pc:
+                    int incr = sec.readElf16();
+                    lineAddress += incr;
+                    System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
+                    break;
+                default:
+                    int lineInc = lineBase + ((ins - opcodeBase) % lineRange);
+                    int addrInc = (ins - opcodeBase) / lineRange;
+                    lineAddress += addrInc * minOpLen;
+                    lineLine += lineInc;
+                    System.out.println("Line: *** Special operation => addr: " +
+                            Utils.hex16(lineAddress) + " Line: " + lineLine + " lineInc: " + lineInc);
+                }
+            }
+            System.out.println();
+            System.out.println("Line - Position " + sec.getPosition() + " totLen: " + totLen);
         }
-        
-        /* Now we should have entered the position of the "code" for generating the
-         * line <=> address table
-         */
-        System.out.println("Line: position: " + sec.getPosition());
-        System.out.println("Line: first bytes of the machine: ");
-        System.out.print("Line: ");
-        isStatement = defaultIsStmt != 0;
-        for (int i = 0; i < 100; i++) {
-           int ins =  sec.readElf8();
-           System.out.print(Utils.hex8(ins) + " ");
-           switch(ins) {
-           case DW_LNS_EXT:
-               /* extended instruction */
-               int len = sec.readElf8();
-               int extIns = sec.readElf8();
-               switch(extIns) {
-               case DW_LNE_end_sequence:
-                   endSequence = true;
-                   System.out.println("Line: End sequence executed!!!");
-                   break;
-               case DW_LNE_define_file:
-                   System.out.println("Line: Should define a file!!!!");
-                   break;
-               case DW_LNE_set_address:
-                   if (len == 2)
-                       lineAddress = sec.readElf8();
-                   if (len == 3)
-                       lineAddress = sec.readElf16();
-                   if (len == 5)
-                       lineAddress = sec.readElf32();
-                   System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
-                           " (len: " + len + ")");
-                   break;
-               }
-               break;
-           case DW_LNS_copy:
-               /* copy data to matrix... */
-               isBasicBlock = false;
-               break;
-           case DW_LNS_advance_pc:
-               long add = sec.readLEB128();
-               lineAddress += add * minOpLen;
-               System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
-               break;
-           case DW_LNS_advance_line:
-               long addLine = sec.readLEB128S();
-               lineLine += addLine;
-               System.out.println("Line: Increased line to: " + lineLine +
-                       " (incr: " + addLine + ")");
-               break;
-           case DW_LNS_set_file:
-               lineFile = (int) sec.readLEB128();
-               System.out.println("Line: Set file to: " + lineFile);
-               break;
-           case DW_LNS_set_column:
-               lineColumn = (int) sec.readLEB128();
-               break;
-           case DW_LNS_negate_stmt:
-               isStatement = !isStatement;
-               System.out.println("Line: Negated is statement");
-               break;
-           case DW_LNS_set_basic_block:
-               isBasicBlock = true;
-               System.out.println("Line: Set basic block to true");
-               break;
-           case DW_LNS_const_add_pc:
-               System.out.println("Line: Should add const to PC - but how much?");
-               break;
-           case DW_LNS_fixed_advance_pc:
-               int incr = sec.readElf16();
-               lineAddress += incr;
-               System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
-               break;
-           default:
-               
-               int lineInc = lineBase + ((ins - opcodeBase) % lineRange);
-               int addrInc = (ins - opcodeBase) / lineRange;
-               lineAddress += addrInc * minOpLen;
-               lineLine += lineInc;
-               System.out.println("Line: *** Special operation => addr: " +
-                       Utils.hex16(lineAddress) + " Line: " + lineLine + " lineInc: " + lineInc);
-           }
-        }
-        System.out.println();        
     }
         
     /* DWARF - address ranges information */
