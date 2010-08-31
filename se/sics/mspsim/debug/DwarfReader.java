@@ -41,12 +41,16 @@ package se.sics.mspsim.debug;
 
 import java.util.ArrayList;
 
+import se.sics.mspsim.util.DebugInfo;
+import se.sics.mspsim.util.ELFDebug;
 import se.sics.mspsim.util.Utils;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.ELFSection;
 
-public class DwarfReader {
+public class DwarfReader implements ELFDebug {
 
+    public boolean DEBUG = false;
+    
     /* Operands for lines */
     public static final int    DW_LNS_EXT = 0;
     
@@ -75,13 +79,24 @@ public class DwarfReader {
         int addressSize;
         int segmentSize;
     }
-    
+
+    class LineEntry {
+        int address;
+        int line;
+        LineEntry(int line, int adr) {
+            this.line = line;
+            address = adr;
+        }
+    }
     /* Line number lookup data */
     class LineData {
         String[] includeDirs;
         String[] sourceFiles;
+        LineEntry[] lineEntries;
     }
 
+    ArrayList<LineData> lineInfo = new ArrayList<LineData>();
+    
     /* some state for the line number handling */
     private int lineAddress;
     private int lineFile;
@@ -114,6 +129,7 @@ public class DwarfReader {
         System.out.println("DWARF Line - ELF Section length: " + sec.getSize());
         sec.reset();
         int endPos = 0;
+        ArrayList<LineEntry> lineData = new ArrayList();
         while (sec.getPosition() < sec.getSize()) {
             /* here starts the reading of one file's (?) debug info */
             int totLen = sec.readElf32();
@@ -145,7 +161,7 @@ public class DwarfReader {
 
             //        pos = pos + 15 + opcodeBase - 1;
             //        System.out.println("Line pos = " + pos + " sec-pos = " + sec.getPosition());
-            System.out.println("Line --- include files ---");
+            if (DEBUG) System.out.println("Line --- include files ---");
             ArrayList<String> directories = new ArrayList<String>();
             directories.add("./");
             ArrayList<String> files = new ArrayList<String>();
@@ -156,12 +172,12 @@ public class DwarfReader {
             while ((c = sec.readElf8()) != 0) {
                 sb.append((char)c);
                 while((c = sec.readElf8()) != 0) sb.append((char) c);
-                System.out.println("Line: include file: " + sb.toString());
+                if (DEBUG) System.out.println("Line: include file: " + sb.toString());
                 directories.add(sb.toString());
                 sb.setLength(0);
             }
 
-            System.out.println("Line --- source files ---");
+            if (DEBUG) System.out.println("Line --- source files ---");
             long dirIndex = 0;
             long time = 0;
             long size = 0;
@@ -172,8 +188,8 @@ public class DwarfReader {
                 time = sec.readLEB128();
                 size = sec.readLEB128();
 
-                System.out.println("Line: source file: " + sb.toString() + "  dir: " + dirIndex + " size: " + size);
-                files.add(directories.get((int) dirIndex) + sb.toString());
+                if (DEBUG) System.out.println("Line: source file: " + sb.toString() + "  dir: " + dirIndex + " size: " + size);
+                files.add(directories.get((int) dirIndex) + "/" + sb.toString());
                 sb.setLength(0);
             }
 
@@ -196,6 +212,8 @@ public class DwarfReader {
             if (sec.getPosition() >= endPos) {
                 endSequence = true;
             }
+            lineData.clear();
+            
             while(!endSequence) {
                 int ins =  sec.readElf8();
                 System.out.print(Utils.hex8(ins) + " ");
@@ -219,13 +237,14 @@ public class DwarfReader {
                             lineAddress = sec.readElf16();
                         if (len == 5)
                             lineAddress = sec.readElf32();
-                        System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
+                        if (DEBUG) System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
                                 " (len: " + len + ")");
                         break;
                     }
                     break;
                 case DW_LNS_copy:
                     /* copy data to matrix... */
+                    lineData.add(new LineEntry(lineLine, lineAddress));
                     isBasicBlock = false;
                     break;
                 case DW_LNS_advance_pc:
@@ -236,44 +255,72 @@ public class DwarfReader {
                 case DW_LNS_advance_line:
                     long addLine = sec.readLEB128S();
                     lineLine += addLine;
-                    System.out.println("Line: Increased line to: " + lineLine +
+                    if (DEBUG) System.out.println("Line: Increased line to: " + lineLine +
                             " (incr: " + addLine + ")");
                     break;
                 case DW_LNS_set_file:
                     lineFile = (int) sec.readLEB128();
-                    System.out.println("Line: Set file to: " + lineFile);
+                    if (DEBUG) System.out.println("Line: Set file to: " + lineFile);
                     break;
                 case DW_LNS_set_column:
                     lineColumn = (int) sec.readLEB128();
-                    System.out.println("Line: set column to: " + lineColumn);
+                    if (DEBUG) System.out.println("Line: set column to: " + lineColumn);
                     break;
                 case DW_LNS_negate_stmt:
                     isStatement = !isStatement;
-                    System.out.println("Line: Negated is statement");
+                    if (DEBUG) System.out.println("Line: Negated is statement");
                     break;
                 case DW_LNS_set_basic_block:
                     isBasicBlock = true;
-                    System.out.println("Line: Set basic block to true");
+                    if (DEBUG) System.out.println("Line: Set basic block to true");
                     break;
                 case DW_LNS_const_add_pc:
-                    System.out.println("Line: Should add const to PC - but how much?");
+                    System.out.println("Line: *** Should add const to PC - but how much - same as FF??");
                     break;
                 case DW_LNS_fixed_advance_pc:
                     int incr = sec.readElf16();
                     lineAddress += incr;
-                    System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
+                    System.out.println("Line: *** Increased address to: " + Utils.hex16(lineAddress));
                     break;
                 default:
                     int lineInc = lineBase + ((ins - opcodeBase) % lineRange);
                     int addrInc = (ins - opcodeBase) / lineRange;
                     lineAddress += addrInc * minOpLen;
                     lineLine += lineInc;
-                    System.out.println("Line: *** Special operation => addr: " +
+                    lineData.add(new LineEntry(lineLine, lineAddress));
+                    isBasicBlock = false;
+                    
+                    if (DEBUG) System.out.println("Line: *** Special operation => addr: " +
                             Utils.hex16(lineAddress) + " Line: " + lineLine + " lineInc: " + lineInc);
                 }
             }
-            System.out.println();
-            System.out.println("Line - Position " + sec.getPosition() + " totLen: " + totLen);
+            if (DEBUG) System.out.println("Line - Position " + sec.getPosition() + " totLen: " + totLen);
+
+            if (lineData.size() > 0) {
+                /* create a block of line-address data that can be used for lookup later.*/
+                LineData lineTable = new LineData();
+                lineTable.lineEntries = lineData.toArray(new LineEntry[0]);
+                lineTable.includeDirs = directories.toArray(new String[0]);
+                lineTable.sourceFiles = files.toArray(new String[0]);
+                lineInfo.add(lineTable);
+            }
+        }
+        
+        /* Now we have some tables of data where it should be possible to sort out which
+         * addresses correspond to which lines!?
+         */
+        
+        
+        for (int i = 0; i < lineInfo.size(); i++) {
+            LineData data = lineInfo.get(i);
+            System.out.println("Compiled file: " + data.sourceFiles[0]);
+            System.out.println("Start address: " +
+                    Utils.hex16(data.lineEntries[0].address));
+            System.out.println("End  address: " +
+                    Utils.hex16(data.lineEntries[data.lineEntries.length - 1].address));
+            System.out.println("Size: " +
+                    Utils.hex16(data.lineEntries[data.lineEntries.length - 1].address - data.lineEntries[0].address));
+            
         }
     }
         
@@ -309,5 +356,30 @@ public class DwarfReader {
                 } while (addr != 0 || len != 0);
             }
         } while (pos < sec.getSize());
-    }    
+    }
+
+    /* Access methods for data... */
+    public DebugInfo getDebugInfo(int address) {
+        for (int i = 0; i < lineInfo.size(); i++) {
+            LineData data = lineInfo.get(i);
+            int start = data.lineEntries[0].address;
+            int end = data.lineEntries[data.lineEntries.length - 1].address;
+            if (address <= end && address >= start) {
+                for (int j = 0; j < data.lineEntries.length; j++) {
+                    if (data.lineEntries[j].address >= address) {
+                        return new DebugInfo(data.lineEntries[j].line, ".", data.sourceFiles[0], "* not available");
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public ArrayList<Integer> getExecutableAddresses() {
+        return null;
+    }
+
+    public String[] getSourceFiles() {
+        return null;
+    }
 }

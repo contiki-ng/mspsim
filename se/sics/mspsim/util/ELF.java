@@ -300,6 +300,7 @@ public class ELF {
     if (readDwarf) {
         DwarfReader dwarf = new DwarfReader(this);
         dwarf.read();
+        debug = dwarf;
     }
 
   }
