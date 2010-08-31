@@ -60,7 +60,7 @@ public class SentillaUSBNode extends CC2420Node {
     public static final int MODE_LEDS_2 = 2;
     public static final int MODE_MAX = MODE_LEDS_2;
 
-    private static final int[] LEDS = { 0xff6060, 0x40ff40 };
+    private static final int[] LEDS = { 0xff2020, 0x40ff40 };
     public static final int GREEN_LED = 0x20;
     public static final int RED_LED = 0x10;
 

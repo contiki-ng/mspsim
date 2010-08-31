@@ -70,7 +70,7 @@ public class ESBNode extends GenericNode implements PortListener {
   private IOPort port2;
   private IOPort port5;
 
-  private static final int[] LEDS = { 0xff6060, 0xffff00, 0x40ff40 };
+  private static final int[] LEDS = { 0xff2020, 0xffff00, 0x40ff40 };
   public static final int RED_LED = 0x01;
   public static final int GREEN_LED = 0x02;
   public static final int YELLOW_LED = 0x04;

@@ -63,8 +63,8 @@ public class JCreateNode extends CC2420Node {
     public static final int MODE_MAX = 9;
 
     private static final int[] LEDS = {
-        0xff6060, 0xff6060, 0xff6060, 0xff6060,
-        0xff6060, 0xff6060, 0xff6060, 0xff6060
+        0xff2020, 0xff2020, 0xff2020, 0xff2020,
+        0xff2020, 0xff2020, 0xff2020, 0xff2020
     };
 
     private Leds leds;

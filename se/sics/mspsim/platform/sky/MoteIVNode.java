@@ -19,7 +19,7 @@ public abstract class MoteIVNode extends CC2420Node {
   public static final int SHT11_CLK = 1 << SHT11_CLK_PIN;
   public static final int SHT11_DATA = 1 << SHT11_DATA_PIN;
 
-  private static final int[] LEDS = { 0xff8000, 0x60ff60, 0xa0a0ff };
+  private static final int[] LEDS = { 0xff2020, 0x40ff40, 0x4040ff };
   public static final int BLUE_LED = 0x40;
   public static final int GREEN_LED = 0x20;
   public static final int RED_LED = 0x10;
