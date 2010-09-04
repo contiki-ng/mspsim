@@ -358,6 +358,12 @@ public class ELF {
   }
 
   public String lookupFile(int address) {
+    if (debug != null) {
+        DebugInfo di = debug.getDebugInfo(address);
+        if (di != null) {
+            return di.getFile();
+        }
+    }
     for (int i = 0; i < files.size(); i++) {
       FileInfo fi = files.get(i);
       if (address >= fi.start && address <= fi.end) {
@@ -392,15 +398,12 @@ public class ELF {
       if (type == ELFSection.SYMTYPE_NONE && sn != null){
         if ("Letext".equals(sn)) {
           if (currentFile != null) {
-//            System.out.println("Found file addr for " + currentFile + " : 0x" +
-//                Utils.hex16(currentAddress) + " - 0x" + Utils.hex16(sAddr));
             files.add(new FileInfo(currentFile, currentAddress, sAddr));
             currentAddress = sAddr;
           }
         } else if (!sn.startsWith("_")) {
-//          System.out.println("Adding entry: " + sn + " at " + sAddr);
-          map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, 0, sn, currentFile,
-              false));
+            map.setEntry(new MapEntry(MapEntry.TYPE.variable, sAddr, 0, sn, currentFile,
+                    false));
         }
       }
       if (type == ELFSection.SYMTYPE_FILE) {
