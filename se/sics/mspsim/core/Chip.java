@@ -57,10 +57,14 @@ public abstract class Chip implements Loggable, EventSource {
   protected final MSP430Core cpu;
 
   private OperatingModeListener[] omListeners;
+  private StateChangeListener[] scListeners;
+  private ConfigurationChangeListener[] ccListeners;
+
   private EventListener eventListener;
   protected boolean sendEvents = false;
   private String[] modeNames = null;
   private int mode;
+  private int chipState;
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
@@ -86,6 +90,23 @@ public abstract class Chip implements Loggable, EventSource {
     omListeners = (OperatingModeListener[]) ArrayUtils.remove(omListeners, listener);
   }
 
+  public void addStateChangeListener(StateChangeListener listener) {
+      scListeners = (StateChangeListener[]) ArrayUtils.add(StateChangeListener.class, scListeners, listener);
+    }
+    
+  public void removeStateChangeListener(StateChangeListener listener) {
+      scListeners = (StateChangeListener[]) ArrayUtils.remove(scListeners, listener);
+  }
+
+  public void addConfigurationChangeListener(ConfigurationChangeListener listener) {
+      ccListeners = (ConfigurationChangeListener[]) ArrayUtils.add(ConfigurationChangeListener.class, ccListeners, listener);
+    }
+    
+  public void removeConfigurationChangeListener(ConfigurationChangeListener listener) {
+      ccListeners = (ConfigurationChangeListener[]) ArrayUtils.remove(ccListeners, listener);
+  }
+
+  
   public int getMode() {
     return mode;
   }
@@ -142,6 +163,35 @@ public abstract class Chip implements Loggable, EventSource {
     return -1;
   }
 
+  /* Called by subclasses to inform about changes of state */
+  protected void stateChanged(int newState) {
+      if (chipState != newState) {
+          int oldState = chipState;
+          chipState = newState;
+          /* inform listeners */
+          StateChangeListener[] listeners = scListeners;
+          if (listeners != null) {
+              for (int i = 0, n = listeners.length; i < n; i++) {
+                  listeners[i].stateChanged(this, oldState, chipState);
+              }
+          }
+      }
+  }
+  
+  /* Called by subclasses to inform about changes of configuration */
+  protected void configurationChanged(int parameter, int oldValue, int newValue) {
+      ConfigurationChangeListener[] listeners = ccListeners;
+      if (listeners != null) {
+          for (int i = 0, n = listeners.length; i < n; i++) {
+              listeners[i].configurationChanged(this, parameter, oldValue, newValue);
+          }
+      }
+  }
+
+  /* interface for getting hold of configuration values - typically mapped to some kind of address */
+  public abstract int getConfiguration(int parameter);
+  
+  
   public String getID() {
     return id;
   }

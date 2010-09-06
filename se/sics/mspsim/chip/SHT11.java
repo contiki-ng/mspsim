@@ -279,4 +279,9 @@ public class SHT11 extends Chip {
     return 0;
   }
 
+  /* no configuration for the SHT11 ? */
+  public int getConfiguration(int parameter) {
+      return 0;
+  }
+
 }

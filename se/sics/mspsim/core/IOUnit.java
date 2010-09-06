@@ -43,6 +43,8 @@ package se.sics.mspsim.core;
 
 import java.io.PrintStream;
 
+import se.sics.mspsim.util.ArrayUtils;
+
 public abstract class IOUnit implements InterruptHandler, Loggable {
 
   int[] memory;
@@ -51,6 +53,9 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   protected final String id;
   protected final String name;
 
+  private StateChangeListener[] scListeners;
+  private int ioState;
+  
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
@@ -66,6 +71,29 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
     this.offset = offset;
   }
 
+  public void addStateChangeListener(StateChangeListener listener) {
+      scListeners = (StateChangeListener[]) ArrayUtils.add(StateChangeListener.class, scListeners, listener);
+    }
+    
+  public void removeStateChangeListener(StateChangeListener listener) {
+      scListeners = (StateChangeListener[]) ArrayUtils.remove(scListeners, listener);
+  }
+
+  /* Called by subclasses to inform about changes of state */
+  protected void stateChanged(int newState) {
+      if (ioState != newState) {
+          int oldState = ioState;
+          ioState = newState;
+          /* inform listeners */
+          StateChangeListener[] listeners = scListeners;
+          if (listeners != null) {
+              for (int i = 0, n = listeners.length; i < n; i++) {
+                  listeners[i].stateChanged(this, oldState, ioState);
+              }
+          }
+      }
+  }
+  
   public void reset(int type) {
   }
 

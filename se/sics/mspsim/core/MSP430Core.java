@@ -1447,4 +1447,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public int getPC() {
     return reg[PC];
   }
+  
+  public int getConfiguration(int parameter) {
+      return 0;
+  }
 }

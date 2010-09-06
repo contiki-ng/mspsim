@@ -187,15 +187,18 @@ public class Beeper extends Chip {
         }
     }
 
-    @Override
     public int getModeMax() {
         return MODE_MAX;
     }
 
-    @Override
     public String info() {
         return "Volume: " + getVolume() + " Beep: " + (beepOn ? "on" : "off")
         + " Sound Enabled: " + isSoundEnabled;
+    }
+
+    /* just return some value */
+    public int getConfiguration(int parameter) {
+        return beepOn ? 1 : 0;
     }
 
 }

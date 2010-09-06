@@ -310,9 +310,8 @@ public class USART extends IOUnit implements SFRModule {
           log(" clearing rx interrupt flag " + cpu.getPC() + " byte: " + tmp);
       }
       clrBitIFG(urxifg);
-      if (listener != null) {
-          listener.stateChanged(USARTListener.RXFLAG_CLEARED);
-      }
+      /* This should be changed to a state rather than an "event" */
+      stateChanged(USARTListener.RXFLAG_CLEARED);
       return tmp;
     }
     return 0;

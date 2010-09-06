@@ -78,6 +78,7 @@ public class DS2411 extends Chip {
       case WAIT_FOR_RESET:
         if (!lastPin) {
           state = STATE.RESETTING;
+          stateChanged(state.ordinal());
           if (DEBUG) log("Reseting...");
         }
         break;
@@ -85,6 +86,7 @@ public class DS2411 extends Chip {
         /* ready! release bus */
         sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
         state = STATE.READY;
+        stateChanged(state.ordinal());
         if (DEBUG) log("Ready!");
         readByte = 0;
         pos = 0;
@@ -96,7 +98,8 @@ public class DS2411 extends Chip {
         if (pos == 8) {
           if (DEBUG) log("Command: " + Utils.hex8(readByte));
           handleCommand(readByte);
-          state = STATE.WAIT_SENDING;
+          state = STATE.WAIT_SENDING;        
+          stateChanged(state.ordinal());
           pos = 0;
           writePos = 0;
           writeByte = writeBuf[writePos];              
@@ -170,6 +173,7 @@ public class DS2411 extends Chip {
       sdataPort.setPinState(sdataPin, IOPort.PIN_HI);      
       if (!high) {
         state = STATE.WAIT_FOR_RESET;
+        stateChanged(state.ordinal());
         /* reset if low for at least 480uS - we check after 400uS and resets
          * then */
         if (DEBUG) log("Wait for reset...");
@@ -179,6 +183,7 @@ public class DS2411 extends Chip {
     case RESETTING:
       if (high) {
         state = STATE.SIGNAL_READY;
+        stateChanged(state.ordinal());
         if (DEBUG) log("Signal ready");
         /* reset done - signal with LOW for a while! */
         sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
@@ -196,6 +201,7 @@ public class DS2411 extends Chip {
     case WAIT_SENDING:
       if (!high) {
         state = STATE.SENDING;
+        stateChanged(state.ordinal());
       }
       break;
     case SENDING:
@@ -212,6 +218,7 @@ public class DS2411 extends Chip {
           if (writePos == writeLen) {
             if (DEBUG) log("write is over => IDLE!!!!");
             state = STATE.IDLE;
+            stateChanged(state.ordinal());
           } else {
             pos = 0;
             writeByte = writeBuf[writePos];
@@ -228,5 +235,9 @@ public class DS2411 extends Chip {
     macID[3] = l;
     macID[4] = m;
     macID[5] = n;    
+  }
+
+  public int getConfiguration(int parameter) {
+      return 0;
   }
 }

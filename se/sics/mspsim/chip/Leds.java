@@ -104,14 +104,16 @@ public class Leds extends Chip {
         this.stateListeners = (StateChangeListener[]) ArrayUtils.remove(this.stateListeners, l);
     }
 
-    @Override
     public int getModeMax() {
         return 0;
     }
 
-    @Override
     public String info() {
         return "Leds: " + (ledColors.length <= 8 ? Utils.binary8(leds) : Utils.binary16(leds));
+    }
+
+    public int getConfiguration(int parameter) {
+        return 0;
     }
 
 }

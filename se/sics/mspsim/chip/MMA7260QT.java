@@ -120,7 +120,6 @@ public class MMA7260QT extends Chip {
         super.setMode(mode);
     }
 
-    @Override
     public int getModeMax() {
         return MODE_NAMES.length;
     }
@@ -129,6 +128,11 @@ public class MMA7260QT extends Chip {
         return "Mode: " + getModeName(getMode())
         + " Sensitivity: " + getSensitivityAsString()
         + " [x=" + getADCX() + ",y=" + getADCY() + ",z=" + getADCZ() + ']';
+    }
+
+    /* currently just return the gSelect as configuration */
+    public int getConfiguration(int parameter) {
+        return gSelect;
     }
 
 }

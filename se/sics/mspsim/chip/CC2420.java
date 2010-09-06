@@ -523,6 +523,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     if (stateListener != null) {
         stateListener.newState(stateMachine);
     }
+    stateChanged(stateMachine.state);
 
     return true;
   }
@@ -1337,6 +1338,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   public void stateChanged(int state) {
+  }
+
+  /* return data in register at the correct position */
+  public int getConfiguration(int parameter) {
+      return registers[parameter];
   }
   
 } // CC2420

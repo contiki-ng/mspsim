@@ -301,4 +301,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
   }
 
+  public int getConfiguration(int param) {
+      return 0;
+  }
 }

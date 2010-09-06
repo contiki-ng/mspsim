@@ -166,12 +166,12 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
             if(dummy == 0) {
               if(DEBUG) log("State " + state + " -> " + next_state);
-              state = next_state;
+              setState(next_state);
             }
           }else{
             if(--dummy == 0) {
               if(DEBUG) log("State " + state + " -> " + next_state);
-              state = next_state;
+              setState(next_state);
             }
           }
           source.byteReceived(0);
@@ -211,7 +211,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
             if(DEBUG)
               log("Buffer" + (data == BUFFER1_TO_PAGE_ERASE ? "1" : "2") + " to Page with Erase Command");
             pos = 0;
-            state = READ_ADDRESS;
+            setState(READ_ADDRESS);
             next_state = data;
             dummy = 0;
             setReady(false);
@@ -223,7 +223,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
             if(DEBUG)
               log("Read Buffer Command " + (data == BUFFER1_READ ? "Buffer1" : "Buffer2"));
             pos = 0;
-            state = READ_ADDRESS;
+            setState(READ_ADDRESS);
             next_state = data;
             dummy = 1;
             setReady(false);
@@ -235,7 +235,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
             if(DEBUG)
               log("Write Buffer Command " + (data == BUFFER1_WRITE ? "Buffer1" : "Buffer2"));
             pos = 0;
-            state = READ_ADDRESS;
+            setState(READ_ADDRESS);
             next_state = data;
             dummy = 0;
             setReady(false);
@@ -247,7 +247,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
             if(DEBUG)
               log("Page To Buffer " + (data == PAGE_TO_BUFFER1 ? "1" : "2") + " Command");
             pos = 0;
-            state = READ_ADDRESS;
+            setState(READ_ADDRESS);
             next_state = data;
             dummy = 0;
             setReady(false);
@@ -256,12 +256,12 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
           case STATUS_REGISTER_READ:
             if(DEBUG) log("Read status register command.  status: " + status);
-            state = STATUS_REGISTER_READ;
+            setState(STATUS_REGISTER_READ);
             source.byteReceived(0);
             break;
           default:
-            logw("WARNING: Command not implemented: " + data);
-          source.byteReceived(0);
+              logw("WARNING: Command not implemented: " + data);
+              source.byteReceived(0);
           break;
           }
           break;
@@ -270,6 +270,11 @@ public abstract class AT45DB extends Chip implements USARTListener {
         break;
         }
       }
+    }
+
+    private void setState(int nextState) {
+        state = nextState;
+        stateChanged(nextState);
     }
 
     private int readBuffer(int num, int address) {
@@ -295,7 +300,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
     public void setReset(boolean reset) {
       Reset = reset;
       if(Reset == true)
-        state = STATE_RESET;
+        setState(STATE_RESET);
       if(DEBUG) {
         log("Reset: " + Reset);
       }
@@ -322,7 +327,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
         break;
         }
 
-        state = STATE_IDLE;
+        setState(STATE_IDLE);
       }
 
       if(DEBUG) {
@@ -362,4 +367,9 @@ public abstract class AT45DB extends Chip implements USARTListener {
     public abstract int read(byte[] b) throws IOException;
     public abstract void write(byte[] b) throws IOException;
 
+    /* not yet any meaningful support for getting configuration */
+    public int getConfiguration(int param) {
+        return 0;
+    }
+    
 } // AT45DB

@@ -380,4 +380,9 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public abstract int readFully(byte[] b) throws IOException;
   public abstract void write(byte[] b) throws IOException;
 
+  /* by default - there is not configuratin to return for m25p80 */
+  public int getConfiguration(int param) {
+      return 0;
+  }
+  
 } // ExtFlash
