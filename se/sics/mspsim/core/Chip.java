@@ -181,7 +181,7 @@ public abstract class Chip implements Loggable, EventSource {
   /* Called by subclasses to inform about changes of configuration */
   protected void configurationChanged(int parameter, int oldValue, int newValue) {
       ConfigurationChangeListener[] listeners = ccListeners;
-      if (listeners != null) {
+      if (oldValue != newValue && listeners != null) {
           for (int i = 0, n = listeners.length; i < n; i++) {
               listeners[i].configurationChanged(this, parameter, oldValue, newValue);
           }

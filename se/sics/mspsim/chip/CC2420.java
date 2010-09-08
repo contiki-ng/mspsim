@@ -661,6 +661,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   private void setReg(int address, int data) {
+      int oldValue = registers[address];
       registers[address] = data;
       switch(address) {
       case REG_IOCFG0:
@@ -682,12 +683,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           autoAck = (data & AUTOACK) != 0;
           break;
       case REG_FSCTRL:
-      	if (cl != null) {
-      		updateActiveFrequency();
-      		cl.changedChannel(activeChannel);
-      	}
+          if (cl != null) {
+              updateActiveFrequency();
+              cl.changedChannel(activeChannel);
+          }
         break;
       }
+      configurationChanged(address, oldValue, data);
   }
     
   public void dataReceived(USART source, int data) {
