@@ -385,11 +385,15 @@ public class Timer extends IOUnit {
           /* and can be something else if mode is another... */
           // This should be updated whenever clockspeed changes...
           nextTimerTrigger = (long) (nextTimerTrigger + 0x10000 * cyclesMultiplicator);
+//          System.out.println("*** scheduling counter trigger..." + nextTimerTrigger + " now = " + t);
           core.scheduleCycleEvent(this, nextTimerTrigger);
+          
           
           if (lastTIV == 0 && interruptEnable) {
               lastTIV = memory[tiv] = timerOverflow;
               core.flagInterrupt(ccr1Vector, Timer.this, true);
+          } else {
+//              System.out.println("*** Did not trigger interrupt: " + interruptEnable);
           }
       }
   };
@@ -813,7 +817,10 @@ public class Timer extends IOUnit {
     updateCyclesMultiplicator();
     if (DEBUG) 
       System.out.println(getName() + " Counter reset at " + cycles +  " cycMul: " + cyclesMultiplicator);
-    core.scheduleCycleEvent(counterTrigger, (long) ((0x100000 - counter) * cyclesMultiplicator));
+
+    core.scheduleCycleEvent(counterTrigger, cycles + (long)((0x10000 - counter) * cyclesMultiplicator));
+//    System.out.println("(re)Scheduling counter trigger..." + counterTrigger.time + " now = " + cycles + " ctr: " + counter);
+
   }
   
   private void setCounter(int newCtr, long cycles) {
