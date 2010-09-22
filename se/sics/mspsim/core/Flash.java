@@ -100,7 +100,6 @@ public class Flash extends IOUnit {
   private static final int FN_MASK = 0x3f;
 
   private MSP430Core cpu;
-  private SFR sfr;
   private FlashRange main_range;
   private FlashRange info_range;
   private int[] memory;
@@ -179,7 +178,6 @@ public class Flash extends IOUnit {
     this.memory = memory;
     this.main_range = main_range;
     this.info_range = info_range;
-    this.sfr = cpu.getSFR();
     locked = true;
     
     reset(MSP430.RESET_POR);
@@ -470,7 +468,7 @@ public class Flash extends IOUnit {
 	  ". PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)));
     
     statusreg |= ACCVIFG;
-    if (sfr.isIEBitsSet(SFR.IE1, ACCVIE)) {
+    if (cpu.getSFR().isIEBitsSet(SFR.IE1, ACCVIE)) {
       cpu.flagInterrupt(NMI_VECTOR, this, true);
     }
   }
