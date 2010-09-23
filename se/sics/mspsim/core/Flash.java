@@ -35,6 +35,8 @@
  */
 package se.sics.mspsim.core;
 
+import java.util.Arrays;
+
 import se.sics.mspsim.util.Utils;
 
 public class Flash extends IOUnit {
@@ -54,15 +56,12 @@ public class Flash extends IOUnit {
   private static final int ERASE_SHIFT = 1;
   private static final int ERASE_MASK = 0x06;
   
-  private enum EraseMode {
-    ERASE_NONE,
+  /* Erase modes needs to be first due to usage of ordinality */
+  private enum WriteMode {
+    NONE,
     ERASE_SEGMENT,
     ERASE_MAIN,
-    ERASE_ALL
-  };
-  
-  private enum WriteMode {
-    WRITE_NONE,
+    ERASE_ALL,
     WRITE_SINGLE,
     WRITE_BLOCK,
     WRITE_BLOCK_FINISH
@@ -112,45 +111,41 @@ public class Flash extends IOUnit {
   private boolean busy;
   private boolean wait;
   private boolean blocked_cpu;
-  private EraseMode current_erase;
-  
-  private WriteMode current_write_mode;
-  private int blockwrite_count;
+
+  private WriteMode currentWriteMode;
+  private int blockwriteCount;
   
   private TimeEvent end_process = new TimeEvent(0) {
     public void execute(long t) {
       blocked_cpu = false;
       
-      switch(current_erase) {
-      case ERASE_NONE:
+      switch(currentWriteMode) {
+      case NONE:
         break;
         
       case ERASE_SEGMENT:
       case ERASE_MAIN:
       case ERASE_ALL:
+        // Erase flags are automatically cleared after each erase
 	mode = 0;
-	current_erase = EraseMode.ERASE_NONE;
+	currentWriteMode = WriteMode.NONE;
 	busy = false;
-	break;
-      }
-      
-      switch(current_write_mode) {
-      case WRITE_NONE:
 	break;
 	
       case WRITE_SINGLE:
-	mode = 0;
 	busy = false;
-	current_write_mode = WriteMode.WRITE_NONE;
+	// WRT flags are NOT automatically cleared
+//	mode = 0;
+//	current_write_mode = WriteMode.WRITE_NONE;
 	break;
 	
       case WRITE_BLOCK:
-	blockwrite_count++;
-	if (blockwrite_count == 64) {
+	blockwriteCount++;
+	if (blockwriteCount == 64) {
 	  // FIXME: What happens if we try to write more than 64 bytes
 	  // on real hardware???
 	  logw("Last access in block mode. Forced exit?");
-	  current_write_mode = WriteMode.WRITE_BLOCK_FINISH;
+	  currentWriteMode = WriteMode.WRITE_BLOCK_FINISH;
 	}
 /*	if (DEBUG) {
 	  System.out.println("Write cycle complete, flagged WAIT.");
@@ -162,10 +157,10 @@ public class Flash extends IOUnit {
 	if (DEBUG) {
 	  log("Programming voltage dropped, write mode disabled.");
 	}
-	current_write_mode = WriteMode.WRITE_NONE;
+	currentWriteMode = WriteMode.NONE;
 	busy = false;
 	wait = true;
-	mode = 0;
+//	mode = 0;
 	break;
       }
     }
@@ -179,7 +174,10 @@ public class Flash extends IOUnit {
     this.main_range = main_range;
     this.info_range = info_range;
     locked = true;
-    
+
+    Arrays.fill(memory, main_range.start, main_range.end, 0xff);
+    Arrays.fill(memory, info_range.start, info_range.end, 0xff);
+
     reset(MSP430.RESET_POR);
   }
 
@@ -265,7 +263,7 @@ public class Flash extends IOUnit {
       }
     }
     
-    switch(current_erase) {
+    switch(currentWriteMode) {
     case ERASE_SEGMENT:
       int a_area_start[] = new int[1];
       int a_area_end[] = new int[1];
@@ -282,7 +280,7 @@ public class Flash extends IOUnit {
 	memory[i] = 0xff;
       }
       waitFlashProcess(SEGMENT_ERASE_TIME);
-      return;
+      break;
       
     case ERASE_MAIN:
       if (! main_range.isInRange(address)) {
@@ -292,7 +290,7 @@ public class Flash extends IOUnit {
 	memory[i] = 0xff;
       }
       waitFlashProcess(MASS_ERASE_TIME);
-      return;
+      break;
       
     case ERASE_ALL:
       for (int i = main_range.start; i < main_range.end; i++) {
@@ -302,42 +300,38 @@ public class Flash extends IOUnit {
 	memory[i] = 0xff;
       }
       waitFlashProcess(MASS_ERASE_TIME);
-      return;
-    }
-    
-    switch(current_write_mode) {
-    case WRITE_BLOCK:
-      wait = false;
-      // TODO: Register target block and verify all writes stay in the same
-      // block. What does the real hardware on random writes?!?
-      if (blockwrite_count == 0) {
-	wait_time = BLOCKWRITE_FIRST_TIME;
-	if (DEBUG) {
-	  log("Flash write in block mode started @" + Utils.hex16(address));
-	}
-	if (addressInFlash(cpu.readRegister(MSP430.PC))) {
-	  logw("Oops. Block write access only allowed when executing from RAM.");
-	}
-      } else {
-	wait_time = BLOCKWRITE_TIME;
-      }
       break;
-      
     case WRITE_SINGLE:
-      wait_time = WRITE_TIME;
+    case WRITE_BLOCK:
+      if (currentWriteMode == WriteMode.WRITE_BLOCK) {
+        wait = false;
+        // TODO: Register target block and verify all writes stay in the same
+        // block. What does the real hardware on random writes?!?
+        if (blockwriteCount == 0) {
+          wait_time = BLOCKWRITE_FIRST_TIME;
+          if (DEBUG) {
+            log("Flash write in block mode started @" + Utils.hex16(address));
+          }
+          if (addressInFlash(cpu.readRegister(MSP430.PC))) {
+            logw("Oops. Block write access only allowed when executing from RAM.");
+          }
+        } else {
+          wait_time = BLOCKWRITE_TIME;
+        }
+      } else {
+        wait_time = WRITE_TIME;
+      }
+      /* Flash memory allows clearing bits only */
+      memory[address] &= data & 0xff;
+      if (word) {
+          memory[address + 1] &= (data >> 8) & 0xff;
+      }
+      if (DEBUG) {
+        log("Writing " + data + " to $" + Utils.hex16(address));
+      }
+      waitFlashProcess(wait_time);
       break;
     }
-    
-    /* Flash memory allows clearing bits only */
-    memory[address] &= data & 0xff;
-    if (word) {
-	memory[address + 1] &= (data >> 8) & 0xff;
-    }
-    
-    if (wait_time < 0) {
-      throw new RuntimeException("Wait time not properly initialized");
-    }
-    waitFlashProcess(wait_time);
   }
   
   public void notifyRead(int address) {
@@ -346,7 +340,7 @@ public class Flash extends IOUnit {
       return;
     }
     if (DEBUG) {
-      if (wait == false && current_write_mode == WriteMode.WRITE_BLOCK) {
+      if (wait == false && currentWriteMode == WriteMode.WRITE_BLOCK) {
 	log("Reading flash prohibited. Would read 0x3fff!!!"); 
 	log("CPU PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)) 
 	    + " read address=" + Utils.hex16(address));
@@ -435,15 +429,13 @@ public class Flash extends IOUnit {
     busy = false;
     wait = true;
     locked = true;
-    current_erase = EraseMode.ERASE_NONE;
-    current_write_mode = WriteMode.WRITE_NONE;
-    
+    currentWriteMode = WriteMode.NONE;   
   }
   
-  private EraseMode getEraseMode(int regdata) {
+  private WriteMode getEraseMode(int regdata) {
     int idx = (regdata & ERASE_MASK) >> ERASE_SHIFT;
     
-    for (EraseMode em : EraseMode.values()) {
+    for (WriteMode em : WriteMode.values()) {
       if (em.ordinal() == idx)
 	return em;
     }
@@ -451,7 +443,7 @@ public class Flash extends IOUnit {
   }
   
   private void triggerErase(int newmode) {
-    current_erase = getEraseMode(newmode);
+    currentWriteMode = getEraseMode(newmode);
   }
   
   private void triggerLockFlash() {
@@ -463,10 +455,9 @@ public class Flash extends IOUnit {
   }
   
   private void triggerAccessViolation(String reason) {
-    if (DEBUG)
-      log("Flash access violation: " + reason +
-	  ". PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)));
-    
+    logw("Access violation: " + reason + ". PC=$"
+        + Utils.hex16(cpu.readRegister(MSP430.PC)));
+
     statusreg |= ACCVIFG;
     if (cpu.getSFR().isIEBitsSet(SFR.IE1, ACCVIE)) {
       cpu.flagInterrupt(NMI_VECTOR, this, true);
@@ -477,22 +468,22 @@ public class Flash extends IOUnit {
     /*if (DEBUG) {
       System.out.println("Single write triggered");
     }*/
-    current_write_mode = WriteMode.WRITE_SINGLE;
+    currentWriteMode = WriteMode.WRITE_SINGLE;
   }
   
   private void triggerBlockWrite() {
     if (DEBUG) {
       log("Block write triggered");
     }
-    current_write_mode = WriteMode.WRITE_BLOCK;
-    blockwrite_count = 0;
+    currentWriteMode = WriteMode.WRITE_BLOCK;
+    blockwriteCount = 0;
   }
   
   private void triggerEndBlockWrite() {
     if (DEBUG) {
       log("Got end of flash block write");
     }
-    current_write_mode = WriteMode.WRITE_BLOCK_FINISH;
+    currentWriteMode = WriteMode.WRITE_BLOCK_FINISH;
     waitFlashProcess(BLOCKWRITE_END_TIME);
   }
   
@@ -515,12 +506,11 @@ public class Flash extends IOUnit {
     case FCTL1:
       // access violation while erase/write in progress
       // exception: block write mode and WAIT==1
-      if ((mode & ERASE_MASK) != 0 || (mode & WRT) != 0) {
-	if (!((mode & BLKWRT) != 0 && wait)) {
-	  triggerAccessViolation(
-	      "FCTL1 write not allowed while erase/write active");
-	  return;
-	}
+//      if ((mode & ERASE_MASK) != 0 || (mode & WRT) != 0) {
+      if (busy && ((mode & BLKWRT) == 0 || wait == false)) {
+          //	if (!((mode & BLKWRT) != 0 && wait)) {
+        triggerAccessViolation("FCTL1 write not allowed while erase/write active");
+        return;
       }
 
       if ((mode & ERASE_MASK) != (regdata & ERASE_MASK)) {
@@ -539,9 +529,9 @@ public class Flash extends IOUnit {
 	  } else {
 	    triggerSingleWrite();
 	  }
-	  mode &= ~WRT;
-	  mode |= regdata & WRT;
 	}
+	mode &= ~WRT;
+	mode |= regdata & WRT;
       }
       
       if ((mode & BLKWRT) != 0 && (regdata & BLKWRT) == 0) {
@@ -597,7 +587,6 @@ public class Flash extends IOUnit {
     busy = false;
     wait = true;
     locked = true;
-    current_erase = EraseMode.ERASE_NONE;
-    current_write_mode = WriteMode.WRITE_NONE;
+    currentWriteMode = WriteMode.NONE;
   }
 }
