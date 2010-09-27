@@ -134,6 +134,7 @@ public class IOPort extends IOUnit {
 
     if (iAddress == IN) {
       logw("WARNING: writing to read-only " + getID() + "IN");
+      throw new EmulationException("Writing to read-only " + getID() + "IN");
     } else {
       memory[address] = data & 0xff;
       if (word) {
