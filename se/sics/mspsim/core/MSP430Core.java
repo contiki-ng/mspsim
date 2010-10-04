@@ -132,6 +132,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
   ComponentRegistry registry;
   Profiler profiler;
   private Flash flash;
+
+  boolean isFlashBusy;
   
   public MSP430Core(int type, ComponentRegistry registry) {
     super("MSP430", "MSP430 Core", null);
@@ -695,7 +697,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     } else {
       address &= 0xffff;
 
-      if (flash.addressInFlash(address)) {
+      if (isFlashBusy && flash.addressInFlash(address)) {
         flash.notifyRead(address);
       }
 

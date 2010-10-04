@@ -108,7 +108,6 @@ public class Flash extends IOUnit {
   private int statusreg; /* FCTL3 */
 
   private boolean locked;
-  private boolean busy;
   private boolean wait;
   private boolean blocked_cpu;
 
@@ -129,14 +128,12 @@ public class Flash extends IOUnit {
         // Erase flags are automatically cleared after each erase
 	mode = 0;
 	currentWriteMode = WriteMode.NONE;
-	busy = false;
+	cpu.isFlashBusy = false;
 	break;
 	
       case WRITE_SINGLE:
-	busy = false;
+	cpu.isFlashBusy = false;
 	// WRT flags are NOT automatically cleared
-//	mode = 0;
-//	current_write_mode = WriteMode.WRITE_NONE;
 	break;
 	
       case WRITE_BLOCK:
@@ -158,9 +155,9 @@ public class Flash extends IOUnit {
 	  log("Programming voltage dropped, write mode disabled.");
 	}
 	currentWriteMode = WriteMode.NONE;
-	busy = false;
+	cpu.isFlashBusy = false;
 	wait = true;
-//	mode = 0;
+	mode = 0;
 	break;
       }
     }
@@ -210,7 +207,7 @@ public class Flash extends IOUnit {
     int myfreq;
     double finish_msec;
     
-    busy = true;
+    cpu.isFlashBusy = true;
     if (addressInFlash(instr_addr)) {
       blocked_cpu = true;
     }
@@ -256,7 +253,7 @@ public class Flash extends IOUnit {
       return;
     }
     
-    if (busy || wait == false) {
+    if (cpu.isFlashBusy || wait == false) {
       if (!((mode & BLKWRT) != 0 && wait)) {
 	triggerAccessViolation("Flash write prohbited while BUSY=1 or WAIT=0");
 	return;
@@ -335,7 +332,7 @@ public class Flash extends IOUnit {
   }
   
   public void notifyRead(int address) {
-    if (busy) {
+    if (cpu.isFlashBusy) {
       triggerAccessViolation("Flash read not allowed while BUSY flag set");
       return;
     }
@@ -386,7 +383,7 @@ public class Flash extends IOUnit {
     if (address == FCTL3) {
       int retval = statusreg | FRKEY;
       
-      if (busy)
+      if (cpu.isFlashBusy)
 	retval |= BUSY;
       
       if (locked)
@@ -426,7 +423,7 @@ public class Flash extends IOUnit {
 
   private void triggerEmergencyExit() {
     mode = 0;
-    busy = false;
+    cpu.isFlashBusy = false;
     wait = true;
     locked = true;
     currentWriteMode = WriteMode.NONE;   
@@ -507,7 +504,7 @@ public class Flash extends IOUnit {
       // access violation while erase/write in progress
       // exception: block write mode and WAIT==1
 //      if ((mode & ERASE_MASK) != 0 || (mode & WRT) != 0) {
-      if (busy && ((mode & BLKWRT) == 0 || wait == false)) {
+      if (cpu.isFlashBusy && ((mode & BLKWRT) == 0 || wait == false)) {
           //	if (!((mode & BLKWRT) != 0 && wait)) {
         triggerAccessViolation("FCTL1 write not allowed while erase/write active");
         return;
@@ -542,7 +539,7 @@ public class Flash extends IOUnit {
 
     case FCTL2:
       // access violation if BUSY==1
-      if (busy) {
+      if (cpu.isFlashBusy) {
 	triggerAccessViolation(
 	    "Register write to FCTL2 not allowed when busy");
 	return;
@@ -584,7 +581,7 @@ public class Flash extends IOUnit {
     
     mode = 0;
     clockcfg = 0x42;
-    busy = false;
+    cpu.isFlashBusy = false;
     wait = true;
     locked = true;
     currentWriteMode = WriteMode.NONE;

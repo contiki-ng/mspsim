@@ -261,9 +261,8 @@ public class MSP430 extends MSP430Core {
     }
 
 
-    boolean emuOP = false;
     while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
-        if (emuOP = emulateOP(maxCycles)) {
+        if (emulateOP(maxCycles)) {
             if (execCounter != null) {
                 execCounter[reg[PC]]++;
             }
