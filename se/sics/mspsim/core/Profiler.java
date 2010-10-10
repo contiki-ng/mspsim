@@ -74,4 +74,6 @@ public interface Profiler {
   /* function call logging */
   public void setLogger(PrintStream out);
 
+  public String getCall(int i);
+
 }

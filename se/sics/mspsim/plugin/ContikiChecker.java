@@ -43,6 +43,7 @@ import java.util.Hashtable;
 import se.sics.mspsim.cli.BasicAsyncCommand;
 import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.cli.CommandHandler;
+import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.Profiler;
 import se.sics.mspsim.profiler.CallListener;
@@ -73,12 +74,12 @@ public class ContikiChecker implements CallListener, ActiveComponent {
             commandHandler.registerCommand("contikichecker", new BasicAsyncCommand("enable the Contiki checker", "") {
 
                 @Override
-                public int executeCommand(CommandContext context) {
+                public int executeCommand(final CommandContext context) {
                     if (profiler != null) {
                         context.err.println("already running");
                         return 1;
                     }
-                    MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+                    final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
                     profiler = cpu.getProfiler();
                     if (profiler == null) {
                         context.err.println("no profiler available");
@@ -86,6 +87,22 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                     }
                     ContikiChecker.this.context = context;
                     profiler.addCallListener(ContikiChecker.this);
+
+                    context.out.println("Installing watchpoints...");
+                    CPUMonitor mon = new CPUMonitor() {
+                        public void cpuAction(int type, int adr, int data) {
+                            if (type == CPUMonitor.MEMORY_WRITE) {
+                                context.out.println("Warning: write to " + adr +
+                                        " from " + profiler.getCall(0));
+                                //profiler.printStackTrace(context.out);
+                            }
+                        }
+                    };
+                    for (int i = 0; i < 0x100; i++) {
+                        cpu.setBreakPoint(i, mon);        
+                    }
+                    
+                    
                     return 0;
                 }
 
@@ -112,12 +129,12 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                 if (callTable.get(init1) == null && (init2 == null || callTable.get(init2) == null)) {
                     // Warning, lookup in case an init function exists
                     if (context.getMapTable().getFunctionAddress(init1) > 0) {
-                        context.err.println("ContikiChecker: warning, " + name + " is called before " + init1);
-                        profiler.printStackTrace(context.err);
+                        //context.err.println("ContikiChecker: warning, " + name + " is called before " + init1);
+                        //profiler.printStackTrace(context.err);
                         addEntry = false;
                     } else if (init2 != null && context.getMapTable().getFunctionAddress(init2) > 0) {
-                        context.err.println("ContikiChecker: warning, " + name + " is called before " + init2);
-                        profiler.printStackTrace(context.err);
+                        //context.err.println("ContikiChecker: warning, " + name + " is called before " + init2);
+                        //profiler.printStackTrace(context.err);
                         addEntry = false;
                     }
                 }

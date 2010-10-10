@@ -487,4 +487,8 @@ public class SimpleProfiler implements Profiler, EventListener {
     callListeners = (CallListener[])
       ArrayUtils.remove(callListeners, listener);
   }
+
+  public String getCall(int i) {
+      return callStack[cSP - i].function.getInfo();
+  }
 }

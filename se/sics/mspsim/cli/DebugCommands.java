@@ -266,6 +266,12 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
+        ch.registerCommand("throw", new BasicCommand("throw an Emulation Exception", "") {
+            public int executeCommand(CommandContext context) {
+                throw new EmulationException(context.getArgument(0));
+            }
+          });
+
         ch.registerCommand("step", new BasicCommand("single step the CPU", "[number of instructions]") {
           public int executeCommand(CommandContext context) {
             int nr = context.getArgumentCount() > 0 ? context.getArgumentAsInt(0) : 1;

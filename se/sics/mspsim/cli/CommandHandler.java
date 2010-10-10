@@ -4,6 +4,8 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+
+import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
@@ -94,6 +96,9 @@ public class CommandHandler implements ActiveComponent, LineListener {
         err.println("Error: Command failed: " + e.getMessage());
         e.printStackTrace(err);
         error = true;
+        if (e instanceof EmulationException) {
+            throw (EmulationException) e;
+        }
       }
       if (error) {
         // Stop any commands that have been started
