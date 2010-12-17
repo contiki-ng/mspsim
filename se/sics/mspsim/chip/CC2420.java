@@ -990,9 +990,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private void txNext() {
     if(txfifoPos <= memory[RAM_TXFIFO]) {
-      if (txfifoPos == 0) {
+      int len = memory[RAM_TXFIFO] & 0xff;
+      if (txfifoPos == len - 1) {
           txCrc.setCRC(0);
-          int len = memory[RAM_TXFIFO] & 0xff;
           for (int i = 1; i < len - 1; i++) {
             txCrc.addBitrev(memory[RAM_TXFIFO + i] & 0xff);
           }
