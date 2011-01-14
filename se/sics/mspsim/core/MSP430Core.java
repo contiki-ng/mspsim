@@ -612,6 +612,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     vTimeEventQueue.removeAll();
 
     bcs.reset();
+    for (Chip chip : chips) {
+      chip.notifyReset();
+    }
     // Needs to be last since these can add events...
     resetIOUnits();
   

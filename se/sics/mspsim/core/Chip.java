@@ -82,6 +82,9 @@ public abstract class Chip implements Loggable, EventSource {
     }
   }
 
+  public void notifyReset() {
+  }
+
   public void addOperatingModeListener(OperatingModeListener listener) {
     omListeners = (OperatingModeListener[]) ArrayUtils.add(OperatingModeListener.class, omListeners, listener);
   }
