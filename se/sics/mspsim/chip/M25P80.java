@@ -42,6 +42,7 @@
 package se.sics.mspsim.chip;
 import java.io.IOException;
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.util.Utils;
 
 public abstract class M25P80 extends Chip implements USARTListener, PortListener, Memory {
 
@@ -57,15 +58,17 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public static final int BULK_ERASE = 0xc7;
   public static final int DEEP_POWER_DOWN = 0xb9;
   public static final int WAKE_UP = 0xab;
-  
+
+  public static final int STATUS_MASK = 0x9C;
+
   public static final int MEMORY_SIZE = 1024 * 1024;
   
-  private int state = 0;
   public static final int CHIP_SELECT = 0x10;
 
   private static final double PROGRAM_PAGE_MILLIS = 1.0; // 0.8 - 5 ms
   private static final double SECTOR_ERASE_MILLIS = 1400; // 800 - 3 000 ms 
 
+  private int state = 0;
   private boolean chipSelect;
 
   private int pos;
@@ -85,13 +88,22 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   private byte[] readMemory = new byte[256];
   private byte[] buffer = new byte[256];
 
-  private TimeEvent writeEvent = new TimeEvent(0) {
+  private TimeEvent writeEvent = new TimeEvent(0, "M25P80 Writing") {
     public void execute(long t) {
       writing = false;
     }};
 
   public M25P80(MSP430Core cpu) {
       super("M25P80", "External Flash", cpu);
+  }
+
+  @Override
+  public void notifyReset() {
+    writing = false;
+  }
+
+  public int getStatus() {
+    return status | (writeEnable ? 0x02 : 0x00) | (writing ? 0x01 : 0x00);
   }
 
   public void stateChanged(int state) {
@@ -104,7 +116,10 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
       }
       switch(state) {
       case READ_STATUS:
-          source.byteReceived(status);
+          if (DEBUG) {
+            log("Read status => " + getStatus() + " from $" + Utils.hex16(cpu.getPC()));
+          }
+          source.byteReceived(getStatus());
           return;
       case READ_IDENT:
         source.byteReceived(identity[pos]);
@@ -114,7 +129,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         }
         return;
       case WRITE_STATUS:
-        status = data;
+        status = data & STATUS_MASK;
         source.byteReceived(0);
         return;
       case READ_DATA:
@@ -123,7 +138,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
           source.byteReceived(0);
           pos++;
           if (DEBUG && pos == 3) {
-            log("reading from " + Integer.toHexString(readAddress));
+            log("reading from $" + Integer.toHexString(readAddress));
           }
         } else {
           source.byteReceived(readMemory(readAddress++));
@@ -155,7 +170,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
             }
             blockWriteAddress = readAddress & 0xfff00;
             if (DEBUG) {
-              log("programming at " + Integer.toHexString(readAddress));
+              log("programming at $" + Integer.toHexString(readAddress));
             }
           }
         } else {
@@ -190,13 +205,8 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
         source.byteReceived(0);
         return;
       case READ_STATUS:
-        status = (status & (0xff - 1 - 2)) | (writeEnable ? 0x02 : 0x00) |
-          (writing ? 0x01 : 0x00);
         state = READ_STATUS;
         source.byteReceived(0);
-        if (DEBUG) {
-          log("Read status => " + status + " " + cpu.getPC());
-        }
         return;
       case WRITE_STATUS:
         if (DEBUG) {
@@ -328,7 +338,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   }
 
   private void programPage() {
-      if (writing) logw("Can not set program page while already writing... " + cpu.getPC());
+      if (writing) logw("Can not set program page while already writing... from $" + Utils.hex16(cpu.getPC()));
     writeStatus(PROGRAM_PAGE_MILLIS);
     ensureLoaded(blockWriteAddress);
     for (int i = 0; i < readMemory.length; i++) {
@@ -348,7 +358,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     blockWriteAddress = sectorAddress;
     for (int i = 0; i < 0x100; i++) {
       if (DEBUG) {
-        log("erasing at " + Integer.toHexString(blockWriteAddress));
+        log("erasing at $" + Integer.toHexString(blockWriteAddress));
       }
       writeBack(blockWriteAddress, buffer);
       blockWriteAddress += 0x100;
@@ -360,7 +370,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
     try {
       byte[] tmp = new byte[data.length];
       if (DEBUG) {
-        log("Writing data to disk at " + Integer.toHexString(address));
+        log("Writing data to disk at $" + Integer.toHexString(address));
       }
       seek(address & 0xfff00);
       for (int i = 0; i < data.length; i++) {
@@ -380,9 +390,14 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public abstract int readFully(byte[] b) throws IOException;
   public abstract void write(byte[] b) throws IOException;
 
-  /* by default - there is not configuratin to return for m25p80 */
+  /* by default - there is not configuration to return for m25p80 */
   public int getConfiguration(int param) {
       return 0;
   }
-  
-} // ExtFlash
+
+  public String info() {
+      return "  Status: " + getStatus() + "  Write Enabled: " + writeEnable
+      + "  Write in Progress: " + writing + '\n' + "  Chip Select: " + chipSelect;
+  }
+
+} // M25P80
