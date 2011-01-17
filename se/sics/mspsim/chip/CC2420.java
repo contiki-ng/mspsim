@@ -269,7 +269,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int dsn = 0;
   private int fcf0 = 0;
   private int fcf1 = 0;
-
+  private int frameType = 0;
   
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -528,6 +528,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     return true;
   }
 
+  private void rejectFrame() {
+      // Immediately jump to SFD Search again... something more???
+      /* reset state */
+      rxFIFO.restore();
+      setSFD(false);
+      setFIFO(rxFIFO.length() > 0);
+      setState(RadioState.RX_SFD_SEARCH);
+  }
+  
   /* variables for the address recognigion */
   int destinationAddressMode = 0;
   boolean decodeAddress = false;
@@ -579,15 +588,25 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   rxCrc.addBitrev(data & 0xff);
                   if (rxread == 1) {
                       fcf0 = data & 0xff;
+                      frameType = fcf0 & FRAME_TYPE;
                   } else if (rxread == 2) {
                       fcf1 = data & 0xff;
-                      if (TYPE_DATA_FRAME == (fcf0 & FRAME_TYPE)) {
-                          decodeAddress = addressDecode;
+                      decodeAddress = addressDecode;
+                      if (frameType == TYPE_DATA_FRAME) {
                           ackRequest = (fcf0 & ACK_REQUEST) > 0;
                           destinationAddressMode = (fcf1 >> 2) & 3;
-                      } else {
+                          /* check this !!! */
+                          if (destinationAddressMode != LONG_ADDRESS &&
+                              destinationAddressMode != SHORT_ADDRESS) {
+                              rejectFrame();
+                          }
+                      } else if (frameType == TYPE_BEACON_FRAME ||
+                    		  frameType == TYPE_ACK_FRAME){
                           decodeAddress = false;
                           ackRequest = false;
+                      } else if (addressDecode) {
+                    	  /* illegal frame when decoding address... */
+                    	  rejectFrame();
                       }
                   } else if (rxread == 3) {
                       // save data sequence number
@@ -598,22 +617,17 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                       if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
                           /* here we need to check that this address is correct compared to the stored address */
                           flushPacket = !rxFIFO.tailEquals(memory, RAM_IEEEADDR, 8);
+                          flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 8);
                           decodeAddress = false;
                       } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
                           /* should check short address */
                           flushPacket = !rxFIFO.tailEquals(BC_ADDRESS, 0, 2) && 
                                   !rxFIFO.tailEquals(memory, RAM_SHORTADDR, 2);
+                          flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 2);
                           decodeAddress = false;
                       }
                       if (flushPacket) {
-                          // Immediately jump to SFD Search again... something more???
-                          /* reset state */
-                          rxFIFO.restore();
-                          //                  System.out.("Packet rejected by autoaddress Reverting to: " + rxfifoWritePos +
-                          //                          " len:" + rxfifoLen);
-                          setSFD(false);
-                          setFIFO(rxFIFO.length() > 0);
-                          setState(RadioState.RX_SFD_SEARCH);
+                    	  rejectFrame();
                       }
                   }
               }
@@ -649,8 +663,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   if (DEBUG) log("RX: Complete: packetStart: " + rxFIFO.stateToString());
 
                   /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
+                  /* Autoack-mode + good CRC => autoack */
                   //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
-                  if ((autoAck && ackRequest) || shouldAck) {
+                  if ((autoAck && ackRequest && (crc == rxCrc.getCRCBitrev())) || shouldAck) {
                       setState(RadioState.TX_ACK_CALIBRATE);
                   } else {
                       setState(RadioState.RX_WAIT);

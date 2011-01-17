@@ -123,8 +123,13 @@ public class ArrayFIFO {
 
 
     public boolean tailEquals(int[] data, int offset, int len) {
+        return tailEquals(data, offset, len, 0);
+    }
+
+
+    public boolean tailEquals(int[] data, int offset, int len, int ignore) {
         for (int i = 0; i < len; i++) {
-            if ((data[offset + i] & 0xff) != get(i - len)) {
+            if ((data[offset + i] & 0xff) != get(i - len - ignore)) {
                 return false;
             }
         }

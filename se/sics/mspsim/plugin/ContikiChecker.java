@@ -99,10 +99,8 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                         }
                     };
                     for (int i = 0; i < 0x100; i++) {
-                        cpu.setBreakPoint(i, mon);        
+                        cpu.setBreakPoint(i, mon);
                     }
-                    
-                    
                     return 0;
                 }
 
