@@ -40,24 +40,23 @@
  */
 
 package se.sics.mspsim.util;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.regex.Pattern;
+
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
 import se.sics.mspsim.profiler.CallListener;
-
-import java.io.PrintStream;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
-import java.util.Map.Entry;
-import java.util.regex.Pattern;
-
 
 public class SimpleProfiler implements Profiler, EventListener {
  
@@ -80,6 +79,7 @@ public class SimpleProfiler implements Profiler, EventListener {
   private long[] interruptCount = new long[16];
   private int servicedInterrupt;
   private int interruptLevel;
+  private int interruptFrom;
   private boolean newIRQ;
   
   public SimpleProfiler() {
@@ -101,7 +101,7 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
   
   public void addIgnoreFunction(String function) {
-   ignoreFunctions.put(function, function);
+    ignoreFunctions.put(function, function);
   }
   
   public void profileCall(MapEntry entry, long cycles, int from) {
@@ -113,7 +113,9 @@ public class SimpleProfiler implements Profiler, EventListener {
     if (callStack[cSP] == null) {
       callStack[cSP] = new CallEntry();
     }
+
     int hide = 0;
+    PrintStream logger = this.logger;
     if (logger != null) {
       /* hide this if last call was to be hidden */
       hide = (cSP == 0 || newIRQ) ? 0 : callStack[cSP - 1].hide;
@@ -121,7 +123,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       if (hide > 0) hide++;
       if ((!hideIRQ || servicedInterrupt == -1) && hide == 0) {
         if (servicedInterrupt >= 0) logger.printf("[%2d] ", servicedInterrupt);
-        printSpace(logger, cSP * 2 - interruptLevel);
+        printSpace(logger, (cSP - interruptLevel) * 2);
         logger.println("Call to $" + Utils.hex16(entry.getAddress()) +
                        ": " + entry.getInfo());
         if (ignoreFunctions.get(entry.getName()) != null) {
@@ -151,7 +153,12 @@ public class SimpleProfiler implements Profiler, EventListener {
   public void profileReturn(long cycles) {
     if (cSP <= 0) {
       /* the stack pointer might have been messed with? */
-      logger.println("SimpleProfiler: Too many returns?");
+      PrintStream logger = this.logger;
+      if (logger != null) {
+        logger.println("SimpleProfiler: Too many returns?");
+      } else {
+        System.err.println("SimpleProfiler: Too many returns?");
+      }
       return;
     }
     CallEntry cspEntry = callStack[--cSP];
@@ -174,19 +181,20 @@ public class SimpleProfiler implements Profiler, EventListener {
       ce.calls++;
       if (cSP != 0) {
         MapEntry caller = callStack[cSP-1].function;
-        HashMap<MapEntry,Integer> callers = ce.callers;
-        Integer numCalls = callers.get(caller);
+        HashMap<MapEntry,CallCounter> callers = ce.callers;
+        CallCounter numCalls = callers.get(caller);
         if (numCalls == null) {
-          callers.put(caller, 1);
-        } else {
-          callers.put(caller, numCalls + 1);
+          numCalls = new CallCounter();
+          callers.put(caller, numCalls);
         }
+        numCalls.count++;
       }
 
+      PrintStream logger = this.logger;
       if (logger != null) {
         if ((cspEntry.hide <= 1) && (!hideIRQ || servicedInterrupt == -1)) {
           if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
-          printSpace(logger, cSP * 2 - interruptLevel);
+          printSpace(logger, (cSP - interruptLevel) * 2);
           logger.println("return from " + ce.function.getInfo() + " elapsed: " + elapsed);
         }
       }
@@ -203,9 +211,12 @@ public class SimpleProfiler implements Profiler, EventListener {
 
   public void profileInterrupt(int vector, long cycles) {
     servicedInterrupt = vector;
+    interruptFrom = cpu.getPC(); 
     lastInterruptTime[servicedInterrupt] = cycles;
-    interruptLevel = cSP * 2;
+    interruptLevel = cSP;
     newIRQ = true;
+
+    PrintStream logger = this.logger;
     if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + vector + " start execution -----");
     }
@@ -217,6 +228,8 @@ public class SimpleProfiler implements Profiler, EventListener {
       interruptCount[servicedInterrupt]++;
     }
     newIRQ = false;
+
+    PrintStream logger = this.logger;
     if (logger != null && !hideIRQ) {
       logger.println("----- Interrupt vector " + servicedInterrupt + " returned - elapsed: " +
           (cycles - lastInterruptTime[servicedInterrupt]));
@@ -230,6 +243,7 @@ public class SimpleProfiler implements Profiler, EventListener {
   public void resetProfile() {
     clearProfile();
     cSP = 0;
+    servicedInterrupt = -1;
   }
 
   public void clearProfile() {
@@ -305,16 +319,16 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
 
   private void printCallers(CallEntry callEntry, PrintStream out) {
-    HashMap<MapEntry,Integer> callers = callEntry.callers;
-    List<Entry<MapEntry, Integer>> list = new LinkedList<Entry<MapEntry, Integer>>(callers.entrySet());
-    Collections.sort(list, new Comparator<Entry<MapEntry, Integer>>() {
-        public int compare(Entry<MapEntry, Integer> o1, Entry<MapEntry, Integer> o2) {
+    HashMap<MapEntry,CallCounter> callers = callEntry.callers;
+    List<Entry<MapEntry,CallCounter>> list = new ArrayList<Entry<MapEntry,CallCounter>>(callers.entrySet());
+    Collections.sort(list, new Comparator<Entry<MapEntry,CallCounter>>() {
+        public int compare(Entry<MapEntry,CallCounter> o1, Entry<MapEntry,CallCounter> o2) {
           return o2.getValue().compareTo(o1.getValue());
         }
     });
-    for (Entry<MapEntry, Integer> entry : list) {
+    for (Entry<MapEntry,CallCounter> entry : list) {
       String functionName = entry.getKey().getName();
-      String callS = "" + entry.getValue();
+      String callS = "" + entry.getValue().count;
       printSpace(out, 12 - callS.length());
       out.print(callS);
       printSpace(out, 2);
@@ -331,13 +345,19 @@ public class SimpleProfiler implements Profiler, EventListener {
 
   public void printStackTrace(PrintStream out) {
     int stackCount = cSP;
-    out.println("Stack Trace: number of calls: " + stackCount);
+    out.println("Stack Trace: number of calls: " + stackCount
+        + " PC: $" + Utils.hex16(cpu.getPC()));
     for (int i = 0; i < stackCount; i++) {
-      out.println("  " + callStack[stackCount - i - 1].function.getInfo() + " called from PC: " +
-                  callStack[stackCount - i - 1].fromPC);
+      CallEntry call = callStack[stackCount - i - 1];
+      out.println("  " + call.function.getInfo()
+          + " called from PC: $" + Utils.hex16(call.fromPC)
+          + " (elapsed: " + (cpu.cpuCycles - call.cycles) + ')');
+      if (stackCount - i - 1 == interruptLevel && servicedInterrupt != -1) {
+        out.println(" *** Interrupt " + servicedInterrupt + " from PC: $" + Utils.hex16(interruptFrom));
+      }
     }
   }
-  
+
   private static class CallEntryComparator implements Comparator<CallEntry> {
     private int mode;
     
@@ -386,10 +406,18 @@ public class SimpleProfiler implements Profiler, EventListener {
     long exclusiveCycles;
     int calls;
     int hide;
-    HashMap<MapEntry, Integer> callers;
+    HashMap<MapEntry,CallCounter> callers;
     
     public CallEntry() {
-      callers = new HashMap<MapEntry, Integer>();
+      callers = new HashMap<MapEntry,CallCounter>();
+    }
+  }
+
+  private static class CallCounter implements Comparable<CallCounter> {
+    public int count = 0;
+
+    public int compareTo(CallCounter o) {
+      return (count < o.count ? -1 : (count == o.count ? 0 : 1));
     }
   }
 
@@ -483,7 +511,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       ArrayUtils.add(CallListener.class, callListeners, listener);
   }
 
-  public void removeCallListener(CallListener listener) {
+  public synchronized void removeCallListener(CallListener listener) {
     callListeners = (CallListener[])
       ArrayUtils.remove(callListeners, listener);
   }
