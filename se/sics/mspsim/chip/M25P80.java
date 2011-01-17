@@ -66,7 +66,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   public static final int CHIP_SELECT = 0x10;
 
   private static final double PROGRAM_PAGE_MILLIS = 1.0; // 0.8 - 5 ms
-  private static final double SECTOR_ERASE_MILLIS = 1400; // 800 - 3 000 ms 
+  private static final double SECTOR_ERASE_MILLIS = 800; // 800 - 3 000 ms 
 
   private int state = 0;
   private boolean chipSelect;
