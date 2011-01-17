@@ -596,7 +596,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                           ackRequest = (fcf0 & ACK_REQUEST) > 0;
                           destinationAddressMode = (fcf1 >> 2) & 3;
                           /* check this !!! */
-                          if (destinationAddressMode != LONG_ADDRESS &&
+                          if (addressDecode && destinationAddressMode != LONG_ADDRESS &&
                               destinationAddressMode != SHORT_ADDRESS) {
                               rejectFrame();
                           }
