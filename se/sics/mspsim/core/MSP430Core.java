@@ -91,6 +91,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private IOUnit[] ioUnits;
   private SFR sfr;
+  private Watchdog watchdog;
 
     // From the possible interrupt sources - to be able to indicate is serviced.
   private InterruptHandler interruptSource[] = new IOUnit[16];
@@ -147,7 +148,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int passIO = 0;
     // IOUnits should likely be placed in a hashtable?
     // Maybe for debugging purposes...
-    ioUnits = new IOUnit[PORTS + 7];
+    ioUnits = new IOUnit[PORTS + 7 + 1];
 
     Timer ta = new Timer(this, "A", Timer.TIMER_Ax149, memory, 0x160);
     Timer tb = new Timer(this, "B", Timer.TIMER_Bx149, memory, 0x180);
@@ -172,9 +173,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[i] = sfr;
       memIn[i] = sfr;
     }
-    Watchdog wdt = new Watchdog(this);
-    memOut[0x120] = wdt;
-    memIn[0x120] = wdt;
+    watchdog = new Watchdog(this);
+    memOut[0x120] = watchdog;
+    memIn[0x120] = watchdog;
 
     memIn[Timer.TAIV] = ta;
     memOut[Timer.TAIV] = ta;
@@ -246,6 +247,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     ADC12 adc12 = new ADC12(this);
     ioUnits[passIO++] = adc12;
 
+    ioUnits[passIO++] = watchdog;
     
     for (int i = 0, n = 16; i < n; i++) {
       memOut[0x80 + i] = adc12;

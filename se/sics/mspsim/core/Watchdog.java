@@ -47,7 +47,6 @@ import se.sics.mspsim.util.Utils;
  *
  */
 public class Watchdog extends IOUnit implements SFRModule {
-  private static final boolean DEBUG = false;
   
   private static final int WDTCTL = 0x120;
 
@@ -122,11 +121,11 @@ public class Watchdog extends IOUnit implements SFRModule {
     if (address == WDTCTL) {
       if ((value >> 8) == 0x5a) {
         wdtctl = value & 0xff;
-        if (DEBUG) System.out.println(getName() + " Wrote to WDTCTL: " + Utils.hex8(wdtctl) + " from " + cpu.getPC());
+        if (DEBUG) log("Wrote to WDTCTL: " + Utils.hex8(wdtctl) + " from " + cpu.getPC());
         
         // Is it on?
         wdtOn = (value & 0x80) == 0;
-        boolean lastACLK = sourceACLK;
+//        boolean lastACLK = sourceACLK;
         sourceACLK = (value & WDTSSEL) != 0;
         if ((value & WDTCNTCL) != 0) {
           // Clear timer => reset the delay
@@ -135,7 +134,7 @@ public class Watchdog extends IOUnit implements SFRModule {
         timerMode = (value & WDTMSEL) != 0;
         // Start it if it should be started!
         if (wdtOn) {
-          if (DEBUG) System.out.println("Setting WDTCNT to count: " + delay);
+          if (DEBUG) log("Setting WDTCNT to count: " + delay);
           scheduleTimer();
         } else {
           // Stop it and remember current "delay" left!
@@ -143,23 +142,24 @@ public class Watchdog extends IOUnit implements SFRModule {
         }
       } else {
         // Trigger reset!!
-//       System.out.println("WDTCTL: illegal write - should reset!!!! " + value);
+        logw("illegal write to WDTCTL (" + value + ") from $" + Utils.hex16(cpu.getPC())
+            + " - reset!!!!");
         cpu.flagInterrupt(RESET_VECTOR, this, true);
       }
     }
   }
-  
+
   private void scheduleTimer() {
       if (sourceACLK) {
-          if (DEBUG) System.out.println("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
+          if (DEBUG) log("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
           targetTime = cpu.scheduleTimeEventMillis(wdtTrigger, 1000.0 * delay / cpu.aclkFrq);
       } else {
-          if (DEBUG) System.out.println("setting delay in cycles");
+          if (DEBUG) log("setting delay in cycles");
           cpu.scheduleCycleEvent(wdtTrigger, targetTime = cpu.cycles + delay);
       }
   }
 
   public void enableChanged(int reg, int bit, boolean enabled) {
-          System.out.println("*** Watchdog module enabled: " + enabled);
+      if (DEBUG) log("*** Watchdog module enabled: " + enabled);
   }
 }
