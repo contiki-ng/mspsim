@@ -40,7 +40,6 @@
  */
 package se.sics.mspsim.cli;
 import se.sics.mspsim.core.CPUMonitor;
-import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.DbgInstruction;
 import se.sics.mspsim.core.DisAsm;
 import se.sics.mspsim.core.EmulationException;
@@ -86,7 +85,7 @@ public class DebugCommands implements CommandBundle {
 		  cpu.stop();
                 }
           });
-          context.out.println("Breakpoint set at $" + Utils.hex16(baddr));
+          context.err.println("Breakpoint set at $" + Utils.hex16(baddr));
           return 0;
         }
         public void stopCommand(CommandContext context) {
@@ -196,7 +195,7 @@ public class DebugCommands implements CommandBundle {
               }
             }
           });
-          context.out.println("Watch set for register " + getRegisterName(register));
+          context.err.println("Watch set for register " + getRegisterName(register));
           return 0;
         }
 
@@ -521,32 +520,48 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("loggable", new BasicCommand("list loggable objects", "") {
-          @Override
-          public int executeCommand(CommandContext context) {
-            Loggable[] chips = cpu.getLoggables();
-            for (int i = 0; i < chips.length; i++) {
-              context.out.println(chips[i].getName());
-            }
-            return 0;
-          }
-        });
-        
-        ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "<loggable>" ) {
-          Loggable chip = null;
-          @Override
-          public int executeCommand(CommandContext context) {
-            chip = cpu.getLoggable(context.getArgument(0));
-            if (chip == null) {
-              context.err.println("Can not find loggable: " + context.getArgument(0));
-            }
-            chip.setLogStream(context.out);
-            return 0;
-          }
+        ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "[loggable...]" ) {
+            private Loggable[] loggables = null;
 
-          public void stopCommand(CommandContext context) {
-            chip.clearLogStream();
-          }
+            @Override
+            public int executeCommand(CommandContext context) {
+                if (context.getArgumentCount() == 0) {
+                    Loggable[] loggable = cpu.getLoggables();
+                    for (Loggable unit : loggable) {
+                        String id = unit.getID();
+                        String name = unit.getName();
+                        if (id == name) {
+                            context.out.println("  " + id);
+                        } else {
+                            context.out.println("  " + id + " (" + name + ')');
+                        }
+                    }
+                    context.exit(0);
+                    return 0;
+                }
+
+                Loggable[] logs = new Loggable[context.getArgumentCount()];
+                for(int i = 0, n = context.getArgumentCount(); i < n; i++) {
+                    logs[i] = cpu.getLoggable(context.getArgument(i));
+                    if (logs[i] == null) {
+                        context.err.println("Can not find loggable '" + context.getArgument(i) + '\'');
+                        return 1;
+                    }
+                }
+                for(Loggable l : logs) {
+                    l.setLogStream(context.out);
+                }
+                this.loggables = logs;
+                return 0;
+            }
+
+            public void stopCommand(CommandContext context) {
+                if (loggables != null) {
+                    for(Loggable l : loggables) {
+                        l.clearLogStream();
+                    }
+                }
+            }
         });
 
         ch.registerCommand("trace", new BasicCommand("store a trace of execution positions.", "<trace size | show>") {
@@ -583,25 +598,22 @@ public class DebugCommands implements CommandBundle {
     MapEntry me = context.getMapTable().getEntry(adr);
     if (me != null) {
       return me.getName();
-    } else {
-      return Utils.hex16(adr);
     }
+    return '$' + Utils.hex16(adr);
   }
 
   private static String getSymOrAddrELF(ELF elf, int adr) {
     DebugInfo me = elf.getDebugInfo(adr);
     if (me != null) {
       return me.toString();
-    } else {
-      return Utils.hex16(adr);
     }
+    return '$' + Utils.hex16(adr);
   }
 
   private static String getRegisterName(int register) {
     if (register >= 0 && register < MSP430Constants.REGISTER_NAMES.length) {
       return MSP430Constants.REGISTER_NAMES[register];
-    } else {
-      return "R" + register;
     }
+    return "R" + register;
   }
 }
