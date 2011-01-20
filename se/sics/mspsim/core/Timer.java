@@ -748,8 +748,8 @@ public class Timer extends IOUnit {
         // Check if up or updwn and reset if counter too high...
         if (counter > data && (mode == UPDWN || mode == UP)) {
           counter = 0;
+          resetCounter(cycles);
         }
-        resetCounter(cycles);
       }
       ccr[index].tccr = data;
 
