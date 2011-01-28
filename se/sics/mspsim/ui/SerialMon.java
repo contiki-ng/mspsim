@@ -53,7 +53,8 @@ import javax.swing.SwingUtilities;
 
 import se.sics.mspsim.core.*;
 
-public class SerialMon implements KeyListener, USARTListener {
+public class SerialMon implements KeyListener, USARTListener,
+				  StateChangeListener {
 
   private static final String PREFIX = " > ";
   private static final int MAX_LINES = 200;
@@ -95,6 +96,7 @@ public class SerialMon implements KeyListener, USARTListener {
     WindowUtils.addSaveOnShutdown(key, window);
     window.setVisible(true);
 
+    usart.addStateChangeListener(this);
     textArea.addKeyListener(this);
   }
 
@@ -168,7 +170,7 @@ public class SerialMon implements KeyListener, USARTListener {
     }
   }
 
-  public void stateChanged(int state) {
+  public void stateChanged(Object source, int old, int state) {
     if (state == USARTListener.RXFLAG_CLEARED && bsize > 0)  {
       if (usart.isReceiveFlagCleared()) {
         usart.byteReceived(buffer[rPos]);

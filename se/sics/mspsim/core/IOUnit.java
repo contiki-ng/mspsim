@@ -79,9 +79,13 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
       scListeners = (StateChangeListener[]) ArrayUtils.remove(scListeners, listener);
   }
 
-  /* Called by subclasses to inform about changes of state */
+
   protected void stateChanged(int newState) {
-      if (ioState != newState) {
+      stateChanged(newState, false);
+  }
+  /* Called by subclasses to inform about changes of state */
+    protected void stateChanged(int newState, boolean forceCallback) {
+      if (forceCallback || ioState != newState) {
           int oldState = ioState;
           ioState = newState;
           /* inform listeners */

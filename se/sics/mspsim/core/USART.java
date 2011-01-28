@@ -311,7 +311,8 @@ public class USART extends IOUnit implements SFRModule {
       }
       clrBitIFG(urxifg);
       /* This should be changed to a state rather than an "event" */
-      stateChanged(USARTListener.RXFLAG_CLEARED);
+      /* Force callback since this is not used as a state */
+      stateChanged(USARTListener.RXFLAG_CLEARED, true);
       return tmp;
     }
     return 0;
