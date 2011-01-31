@@ -374,6 +374,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean currentSFD;
   private boolean currentFIFO;
   private boolean overflow = false;
+  private boolean frameRejected = false;
 
   public interface StateListener {
     public void newState(RadioState state);
@@ -445,7 +446,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       setSymbolEvent(12);
       setMode(MODE_RX_ON);
       break;
-
     case RX_SFD_SEARCH:
       zeroSymbols = 0;
       /* eight symbols after first SFD search RSSI will be valid */
@@ -516,6 +516,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         /* mark position of frame start - for rejecting when address is wrong */
         rxFIFO.mark();
         rxread = 0;
+        frameRejected = false;
         break;
     }
 
@@ -534,7 +535,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       rxFIFO.restore();
       setSFD(false);
       setFIFO(rxFIFO.length() > 0);
-      setState(RadioState.RX_SFD_SEARCH);
+      frameRejected = true;
   }
   
   /* variables for the address recognigion */
@@ -573,66 +574,73 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           } else if(rxFIFO.isFull()) {
               setRxOverflow();
           } else {
-              rxFIFO.write(data);
-
-              if (rxread == 0) {
-                  rxCrc.setCRC(0);
-                  rxlen = data & 0xff;
-                  //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
-                  decodeAddress = false;
-                  if (DEBUG) log("RX: Start frame length " + rxlen);
-                  // FIFO pin goes high after length byte is written to RXFIFO
-                  setFIFO(true);
-              } else if (rxread < rxlen - 1) {
-                  /* As long as we are not in the length or FCF (CRC) we count CRC */
-                  rxCrc.addBitrev(data & 0xff);
-                  if (rxread == 1) {
-                      fcf0 = data & 0xff;
-                      frameType = fcf0 & FRAME_TYPE;
-                  } else if (rxread == 2) {
-                      fcf1 = data & 0xff;
-                      decodeAddress = addressDecode;
-                      if (frameType == TYPE_DATA_FRAME) {
-                          ackRequest = (fcf0 & ACK_REQUEST) > 0;
-                          destinationAddressMode = (fcf1 >> 2) & 3;
-                          /* check this !!! */
-                          if (addressDecode && destinationAddressMode != LONG_ADDRESS &&
-                              destinationAddressMode != SHORT_ADDRESS) {
+              if (!frameRejected) {
+                  rxFIFO.write(data);
+                  if (rxread == 0) {
+                      rxCrc.setCRC(0);
+                      rxlen = data & 0xff;
+                      //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
+                      decodeAddress = false;
+                      if (DEBUG) log("RX: Start frame length " + rxlen);
+                      // FIFO pin goes high after length byte is written to RXFIFO
+                      setFIFO(true);
+                  } else if (rxread < rxlen - 1) {
+                      /* As long as we are not in the length or FCF (CRC) we count CRC */
+                      rxCrc.addBitrev(data & 0xff);
+                      if (rxread == 1) {
+                          fcf0 = data & 0xff;
+                          frameType = fcf0 & FRAME_TYPE;
+                      } else if (rxread == 2) {
+                          fcf1 = data & 0xff;
+                          decodeAddress = addressDecode;
+                          if (frameType == TYPE_DATA_FRAME) {
+                              ackRequest = (fcf0 & ACK_REQUEST) > 0;
+                              destinationAddressMode = (fcf1 >> 2) & 3;
+                              /* check this !!! */
+                              if (addressDecode && destinationAddressMode != LONG_ADDRESS &&
+                                      destinationAddressMode != SHORT_ADDRESS) {
+                                  rejectFrame();
+                              }
+                          } else if (frameType == TYPE_BEACON_FRAME ||
+                                  frameType == TYPE_ACK_FRAME){
+                              decodeAddress = false;
+                              ackRequest = false;
+                          } else if (addressDecode) {
+                              /* illegal frame when decoding address... */
                               rejectFrame();
                           }
-                      } else if (frameType == TYPE_BEACON_FRAME ||
-                    		  frameType == TYPE_ACK_FRAME){
-                          decodeAddress = false;
-                          ackRequest = false;
-                      } else if (addressDecode) {
-                    	  /* illegal frame when decoding address... */
-                    	  rejectFrame();
-                      }
-                  } else if (rxread == 3) {
-                      // save data sequence number
-                      dsn = data & 0xff;
-                  } else if (decodeAddress) {
-                      boolean flushPacket = false;
-                      /* here we decode the address !!! */
-                      if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
-                          /* here we need to check that this address is correct compared to the stored address */
-                          flushPacket = !rxFIFO.tailEquals(memory, RAM_IEEEADDR, 8);
-                          flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 8);
-                          decodeAddress = false;
-                      } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
-                          /* should check short address */
-                          flushPacket = !rxFIFO.tailEquals(BC_ADDRESS, 0, 2) && 
-                                  !rxFIFO.tailEquals(memory, RAM_SHORTADDR, 2);
-                          flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 2);
-                          decodeAddress = false;
-                      }
-                      if (flushPacket) {
-                    	  rejectFrame();
+                      } else if (rxread == 3) {
+                          // save data sequence number
+                          dsn = data & 0xff;
+                      } else if (decodeAddress) {
+                          boolean flushPacket = false;
+                          /* here we decode the address !!! */
+                          if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
+                              /* here we need to check that this address is correct compared to the stored address */
+                              flushPacket = !rxFIFO.tailEquals(memory, RAM_IEEEADDR, 8);
+                              flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 8);
+                              decodeAddress = false;
+                          } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
+                              /* should check short address */
+                              flushPacket = !rxFIFO.tailEquals(BC_ADDRESS, 0, 2) && 
+                              !rxFIFO.tailEquals(memory, RAM_SHORTADDR, 2);
+                              flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 2);
+                              decodeAddress = false;
+                          }
+                          if (flushPacket) {
+                              rejectFrame();
+                          }
                       }
                   }
               }
-
+              
               if(rxread++ == rxlen) {
+                  if (frameRejected) {
+                      log("Frame rejected - setting SFD to false and RXWAIT\n");
+                      setSFD(false);
+                      setState(RadioState.RX_WAIT);
+                      return;
+                  }
                   // In RX mode, FIFOP goes high, if threshold is higher than frame length....
 
                   // Here we check the CRC of the packet!
@@ -1344,7 +1352,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
     "  FIFOP: " + fifoP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD + 
-    "\n " + rxFIFO.stateToString() +
+    "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
     "\n Radio State: " + stateMachine + "  SPI State: " + state + 
     "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
     "\n PanID: 0x" + Utils.hex8(memory[RAM_PANID + 1]) + Utils.hex8(memory[RAM_PANID]) +
