@@ -106,7 +106,7 @@ public class DMA extends IOUnit {
                         currentSourceAddress + " => " + data + " " + (char) data +
                         " size:" + size + " index:" + index);
                 trigger.clearDMATrigger(index);
-                DMA.this.cpu.write(destinationAddress, data, false);
+                DMA.this.cpu.write(currentDestinationAddress, data, false);
                 
                 currentSourceAddress += srcIncr;
                 currentDestinationAddress += dstIncr;
