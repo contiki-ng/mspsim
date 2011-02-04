@@ -29,9 +29,13 @@ public class DMA extends IOUnit {
     public static final int UTXIFG1 = 10; /* UART 1 */
     public static final int MULTIPLIER = 11;
 
+    public static final int IFG_MASK = 0x08;
+    
     private static final int[] INCR = {0,0,-1,1};
     
-    class Channel {
+    private InterruptMultiplexer interruptMultiplexer;
+    
+    class Channel implements InterruptHandler {
         int channelNo;
         /* public registers */
         
@@ -52,8 +56,12 @@ public class DMA extends IOUnit {
 
         DMATrigger trigger;
         int triggerIndex;
-
+        int transferMode = 0;
+        
         boolean enable = false;
+        boolean dmaLevel = false; /* edge or level sensitive trigger */
+        boolean dmaIE = false;
+        boolean dmaIFG = false;
         
         public Channel(int i) {
             channelNo = i;
@@ -69,15 +77,22 @@ public class DMA extends IOUnit {
             switch(address) {
             case 0:
                 ctl = data;
+                transferMode = (data >> 12) & 7;
                 dstIncr = INCR[(data >> 10) & 3];
                 srcIncr = INCR[(data >> 8) & 3];
                 dstByteMode = (data & 0x80) > 0; /* bit 7 */
                 srcByteMode = (data & 0x40) > 0; /* bit 6 */
+                dmaLevel = (data & 0x20) > 0; /* bit 5 */
                 boolean enabling = !enable && (data & 0x10) > 0;  
                 enable = (data & 0x10) > 0; /* bit 4 */
+                dmaIFG = (data & IFG_MASK) > 0; /* bit 3 */
+                dmaIE = (data & 0x04) > 0; /* bit 2 */
                 System.out.println("DMA Ch." + channelNo + ": config srcIncr: " + srcIncr + " dstIncr:" + dstIncr
-                        + " en: " + enable + " srcB:" + srcByteMode + " dstB:" + dstByteMode);
+                        + " en: " + enable + " srcB:" + srcByteMode + " dstB:" + dstByteMode + " level: " + dmaLevel +
+                        " transferMode: " + transferMode + " ie:" + dmaIE);
+                /* this might be wrong ? */
                 if (enabling) trigger(trigger, triggerIndex);
+                interruptMultiplexer.updateInterrupt(dmaIFG & dmaIE, channelNo);
                 break;
             case 2:
                 sourceAddress = data;
@@ -97,13 +112,15 @@ public class DMA extends IOUnit {
         public int read(int address) {
             switch(address) {
             case 0:
-                    return ctl;
+                /* set the IFG */
+                ctl = (ctl & ~IFG_MASK) | (dmaIFG ? IFG_MASK : 0);
+                return ctl;
             case 2:
-                    return sourceAddress;
+                return sourceAddress;
             case 4:
-                    return destinationAddress;
+                return destinationAddress;
             case 6:
-                    return size;
+                return size;
             }
             System.out.println("Illegal read of DMA Channel register");
             return 0;
@@ -127,9 +144,21 @@ public class DMA extends IOUnit {
                     currentSourceAddress = sourceAddress;
                     currentDestinationAddress = destinationAddress;
                     size = storedSize;
-                    /* flag interrupt!!!! */
+                    if ((transferMode & 0x04) == 0) {
+                        enable = false;
+                    }
+                    /* flag interrupt and update interrupt vector */
+                    dmaIFG = true;
+                    interruptMultiplexer.updateInterrupt(dmaIFG & dmaIE, channelNo);
                 }
             }
+        }
+
+        public void interruptServiced(int vector) {
+        }
+
+        public String getName() {
+            return "DMA Channel " + channelNo;
         }
     }
 
@@ -151,6 +180,10 @@ public class DMA extends IOUnit {
         this.cpu = msp430Core;
     }
 
+    public void setInterruptMultiplexer(InterruptMultiplexer interruptMultiplexer) {
+        this.interruptMultiplexer = interruptMultiplexer;
+    }
+    
     public void setDMATrigger(int totindex, DMATrigger trigger, int tIndex) {
         dmaTrigger[totindex] = trigger;
         dmaTriggerIndex[totindex] = tIndex;

@@ -94,7 +94,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private Watchdog watchdog;
 
     // From the possible interrupt sources - to be able to indicate is serviced.
-  private InterruptHandler interruptSource[] = new IOUnit[16];
+  private InterruptHandler interruptSource[] = new InterruptHandler[16];
 
   protected int interruptMax = -1;
   // Op/instruction represents the last executed OP / instruction
@@ -277,6 +277,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     dma.setDMATrigger(DMA.UTXIFG0, usart0, 1);
     dma.setDMATrigger(DMA.URXIFG1, usart1, 0);
     dma.setDMATrigger(DMA.UTXIFG1, usart1, 1);
+
+    dma.setInterruptMultiplexer(new InterruptMultiplexer(this, 0));
     
     ioUnits[passIO++] = dma;
     
