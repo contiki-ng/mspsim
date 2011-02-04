@@ -98,6 +98,7 @@ public class SerialMon implements KeyListener, USARTListener,
 
     usart.addStateChangeListener(this);
     textArea.addKeyListener(this);
+    usart.addStateChangeListener(this);
   }
 
   public void saveWindowBounds() {

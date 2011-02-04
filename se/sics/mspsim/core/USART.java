@@ -41,7 +41,7 @@
 
 package se.sics.mspsim.core;
 
-public class USART extends IOUnit implements SFRModule {
+public class USART extends IOUnit implements SFRModule, DMATrigger {
 
   // USART 0/1 register offset (0x70 / 0x78)
   public static final int UCTL = 0;
@@ -113,6 +113,10 @@ public class USART extends IOUnit implements SFRModule {
   private boolean rxEnabled = false;
   private boolean spiMode = false;
   
+  /* DMA controller that needs to be called at certain times */
+  private DMA dma;
+  private int dmaIndex;
+  
   private TimeEvent txTrigger = new TimeEvent(0) {
     public void execute(long t) {
         // Ready to transmit new byte!
@@ -150,6 +154,12 @@ public class USART extends IOUnit implements SFRModule {
     reset(0);
   }
 
+  public void setDMA(DMA dma, int index) {
+      this.dma = dma;
+      dmaIndex = index;
+  }
+
+  
   public void reset(int type) {
     nextTXReady = cpu.cycles + 100;
     txShiftReg = nextTXByte = -1;
@@ -175,7 +185,13 @@ public class USART extends IOUnit implements SFRModule {
 //    if ((bits & utxifg) > 0) {
 //        System.out.println(getName() + " Set utxifg");
 //    }
-    sfr.setBitIFG(uartID, bits);
+    if (dma != null) {
+        sfr.setBitIFG(uartID, bits);
+        /* set bit first, then trigger DMA transfer - this should
+         * be made via a 1 cycle or so delayed action */
+        if ((bits & urxifg) > 0) dma.trigger(this, dmaIndex, 0);
+        if ((bits & utxifg) > 0) dma.trigger(this, dmaIndex, 1);
+    }
   }
 
   private void clrBitIFG(int bits) {
@@ -417,5 +433,17 @@ public class USART extends IOUnit implements SFRModule {
       return "UTXIE: " + isIEBitsSet(utxifg) + "  URXIE:" + isIEBitsSet(urxifg) + "\n" +
       "UTXIFG: " + ((getIFG() & utxifg) > 0) + "  URXIFG:" + ((getIFG() & urxifg) > 0);
   }
-  
+
+  public void clearDMATrigger(int index) {
+      System.out.println("UART clearing DMA " + index);
+      if (index == 0) {
+          /* clear RX - might be different in different modes... */
+          System.out.println("UART clearing read bit!");
+          clrBitIFG(urxifg);
+          stateChanged(USARTListener.RXFLAG_CLEARED, true);
+      } else {
+          /* clear TX - might be different in different modes... */
+          clrBitIFG(utxifg);
+      }
+  }
 }

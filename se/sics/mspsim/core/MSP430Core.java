@@ -148,7 +148,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int passIO = 0;
     // IOUnits should likely be placed in a hashtable?
     // Maybe for debugging purposes...
-    ioUnits = new IOUnit[PORTS + 7 + 1];
+    ioUnits = new IOUnit[PORTS + 9];
 
     Timer ta = new Timer(this, "A", Timer.TIMER_Ax149, memory, 0x160);
     Timer tb = new Timer(this, "B", Timer.TIMER_Bx149, memory, 0x180);
@@ -261,6 +261,23 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[0x1A0 + i] = adc12;
       memIn[0x1A0 + i] = adc12;
     }
+    
+    
+    DMA dma = new DMA("dma", memory, 0, this);
+    for (int i = 0, n = 24; i < n; i++) {    
+        memOut[0x1E0 + i] = dma;
+        memIn[0x1E0 + i] = dma;
+    }
+    /* DMA Ctl */
+    memOut[0x122] = dma;
+    memIn[0x124] = dma;
+    
+    /* configure the DMA */
+    usart0.setDMA(dma, DMA.URXIFG0);
+    usart1.setDMA(dma, DMA.URXIFG1);
+    
+    ioUnits[passIO++] = dma;
+    
     if (DEBUG) System.out.println("Number of passive: " + passIO);
   }
 
