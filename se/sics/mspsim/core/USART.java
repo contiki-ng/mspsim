@@ -154,9 +154,8 @@ public class USART extends IOUnit implements SFRModule, DMATrigger {
     reset(0);
   }
 
-  public void setDMA(DMA dma, int index) {
+  public void setDMA(DMA dma) {
       this.dma = dma;
-      dmaIndex = index;
   }
 
   
@@ -189,8 +188,8 @@ public class USART extends IOUnit implements SFRModule, DMATrigger {
         sfr.setBitIFG(uartID, bits);
         /* set bit first, then trigger DMA transfer - this should
          * be made via a 1 cycle or so delayed action */
-        if ((bits & urxifg) > 0) dma.trigger(this, dmaIndex, 0);
-        if ((bits & utxifg) > 0) dma.trigger(this, dmaIndex, 1);
+        if ((bits & urxifg) > 0) dma.trigger(this, 0);
+        if ((bits & utxifg) > 0) dma.trigger(this, 1);
     }
   }
 
@@ -434,6 +433,14 @@ public class USART extends IOUnit implements SFRModule, DMATrigger {
       "UTXIFG: " + ((getIFG() & utxifg) > 0) + "  URXIFG:" + ((getIFG() & urxifg) > 0);
   }
 
+  public boolean getDMATriggerState(int index) {
+      if (index == 0) {
+          return (getIFG() & urxifg) > 0;
+      } else {
+          return (getIFG() & utxifg) > 0;
+      }
+  }
+  
   public void clearDMATrigger(int index) {
       System.out.println("UART clearing DMA " + index);
       if (index == 0) {

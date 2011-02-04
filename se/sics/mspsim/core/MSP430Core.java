@@ -273,8 +273,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     memIn[0x124] = dma;
     
     /* configure the DMA */
-    usart0.setDMA(dma, DMA.URXIFG0);
-    usart1.setDMA(dma, DMA.URXIFG1);
+    dma.setDMATrigger(DMA.URXIFG0, usart0, 0);
+    dma.setDMATrigger(DMA.UTXIFG0, usart0, 1);
+    dma.setDMATrigger(DMA.URXIFG1, usart1, 0);
+    dma.setDMATrigger(DMA.UTXIFG1, usart1, 1);
     
     ioUnits[passIO++] = dma;
     

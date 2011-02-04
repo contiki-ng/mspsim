@@ -32,7 +32,9 @@ public class DMA extends IOUnit {
     private static final int[] INCR = {0,0,-1,1};
     
     class Channel {
+        int channelNo;
         /* public registers */
+        
         int ctl;
         int sourceAddress;
         int destinationAddress;
@@ -47,13 +49,20 @@ public class DMA extends IOUnit {
         int dstIncr = 0;
         boolean dstByteMode = false;
         boolean srcByteMode = false;
-        int trigger;
+
+        DMATrigger trigger;
+        int triggerIndex;
 
         boolean enable = false;
         
-        public void setTrigger(int t) {
+        public Channel(int i) {
+            channelNo = i;
+        }
+
+        public void setTrigger(DMATrigger t, int index) {
             System.out.println("Setting trigger to " + t);
             trigger = t;
+            triggerIndex = index;
         }
         
         public void write(int address, int data) {
@@ -64,8 +73,11 @@ public class DMA extends IOUnit {
                 srcIncr = INCR[(data >> 8) & 3];
                 dstByteMode = (data & 0x80) > 0; /* bit 7 */
                 srcByteMode = (data & 0x40) > 0; /* bit 6 */
+                boolean enabling = !enable && (data & 0x10) > 0;  
                 enable = (data & 0x10) > 0; /* bit 4 */
-                System.out.println("DMA: config srcIncr: " + srcIncr + " dstIncr:" + dstIncr);
+                System.out.println("DMA Ch." + channelNo + ": config srcIncr: " + srcIncr + " dstIncr:" + dstIncr
+                        + " en: " + enable + " srcB:" + srcByteMode + " dstB:" + dstByteMode);
+                if (enabling) trigger(trigger, triggerIndex);
                 break;
             case 2:
                 sourceAddress = data;
@@ -117,7 +129,6 @@ public class DMA extends IOUnit {
                     size = storedSize;
                     /* flag interrupt!!!! */
                 }
-                
             }
         }
     }
@@ -128,23 +139,33 @@ public class DMA extends IOUnit {
     
     MSP430Core cpu;
     
+    /* MAX 16 triggers ? */
+    private DMATrigger[] dmaTrigger = new DMATrigger[16];
+    private int[] dmaTriggerIndex = new int[16];
+    
     public DMA(String id, int[] memory, int offset, MSP430Core msp430Core) {
         super(id, memory, offset);
-        channels[0] = new Channel();
-        channels[1] = new Channel();
-        channels[2] = new Channel();
+        channels[0] = new Channel(0);
+        channels[1] = new Channel(1);
+        channels[2] = new Channel(2);
         this.cpu = msp430Core;
     }
 
-    public void trigger(DMATrigger trigger, int startIndex, int index) {
+    public void setDMATrigger(int totindex, DMATrigger trigger, int tIndex) {
+        dmaTrigger[totindex] = trigger;
+        dmaTriggerIndex[totindex] = tIndex;
+        trigger.setDMA(this);
+    }
+    
+    public void trigger(DMATrigger trigger, int index) {
         /* could make this a bit and have a bit-pattern if more dma channels but
          * with 3 channels it does not make sense. Optimize later - maybe with
          * flag in DMA triggers so that they now if a channel listens at all.
          */
-        int totIndex = startIndex + index;
         for (int i = 0; i < channels.length; i++) {
-            System.out.println("DMA Channel:" + channels[i].trigger + " index " + totIndex);
-            if (channels[i].trigger == totIndex) channels[i].trigger(trigger, index);
+//            System.out.println("DMA Channel:" + i + " " + channels[i].trigger + " = " + trigger);
+            if (channels[i].trigger == trigger &&
+                channels[i].triggerIndex == index) channels[i].trigger(trigger, index);
         }
     }
     
@@ -157,9 +178,9 @@ public class DMA extends IOUnit {
         case DMACTL0:
             /* DMA Control 0 */
             dmactl0 = value;
-            channels[0].setTrigger(value & 0xf);
-            channels[1].setTrigger((value >> 4) & 0xf);
-            channels[2].setTrigger((value >> 8) & 0xf);
+            channels[0].setTrigger(dmaTrigger[value & 0xf], dmaTriggerIndex[value & 0xf]);
+            channels[1].setTrigger(dmaTrigger[(value >> 4) & 0xf], dmaTriggerIndex[(value >> 4) & 0xf]);
+            channels[2].setTrigger(dmaTrigger[(value >> 8) & 0xf], dmaTriggerIndex[(value >> 8) & 0xf]);
             break;
         case DMACTL1:
             /* DMA Control 1 */
