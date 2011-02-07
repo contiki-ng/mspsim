@@ -5,6 +5,7 @@ import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
@@ -47,7 +48,8 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
     protected String flashFile;
 
     public CC2420Node(String id) {
-        super(id);
+        /* this should be a config for the MSP430x1611 */
+        super(id, new MSP430Config());
     }
 
     public void setDebug(boolean debug) {

@@ -74,9 +74,9 @@ public class SimpleProfiler implements Profiler, EventListener {
   private CallListener[] callListeners;
 
   /* statistics for interrupts */
-  private long[] lastInterruptTime = new long[16];
-  private long[] interruptTime = new long[16];
-  private long[] interruptCount = new long[16];
+  private long[] lastInterruptTime = new long[64];
+  private long[] interruptTime = new long[64];
+  private long[] interruptCount = new long[64];
   private int servicedInterrupt;
   private int interruptLevel;
   private int interruptFrom;
@@ -310,7 +310,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
     out.println("********** Profile IRQ **************************");
     out.println("Vector          Average    Calls  Tot.Cycles");
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < cpu.config.maxInterruptVector + 1; i++) {
         out.print((i < 10 ? "0" : "") + i + "               ");
         out.printf("%4d ",(interruptCount[i] > 0 ? (interruptTime[i] / interruptCount[i]):0));
         out.printf("%8d   %8d",interruptCount[i],interruptTime[i]);

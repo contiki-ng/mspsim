@@ -109,6 +109,25 @@ public interface MSP430Constants {
   public static final int XOR = 0xe;
   public static final int AND = 0xf;
 
+  
+  // MSP430X instructions
+  public static final int MOVA_IND0 = 0x0000;
+  public static final int MOVA_IND1 = 0x0010;
+  public static final int MOVA_ABS2REG = 0x0020;
+  public static final int MOVA_INDX2REG = 0x0030;
+  public static final int MOVA_REG2ABS = 0x0060;
+  public static final int MOVA_REG2INDX = 0x0070;
+  public static final int MOVA_IMM2REG = 0x0080;
+  public static final int CMPA_IMM = 0x0090;
+  public static final int ADDA_IMM = 0x00a0;
+  public static final int SUBA_IMM = 0x00b0;
+  public static final int MOVA_REG = 0x00c0;
+  public static final int CMPA_REG = 0x00d0;
+  public static final int ADDA_REG = 0x00e0;
+  public static final int SUBA_REG = 0x00f0;
+  
+  
+  
   public static final String[] TWO_OPS = {
     "-","-","-","-","MOV", "ADD", "ADDC", "SUBC", "SUB",
     "CMP", "DADD", "BIT", "BIC", "BIS", "XOR", "AND"

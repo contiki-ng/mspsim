@@ -60,9 +60,11 @@ JAVAARGS=-classpath "${CLASSPATH}"
 ifndef FIRMWAREFILE
 ESBFIRMWARE = firmware/esb/sensor-demo.firmware
 SKYFIRMWARE = firmware/sky/blink.firmware
+Z1FIRMWARE = firmware/z1/blink.firmware
 else
 ESBFIRMWARE = ${FIRMWAREFILE}
 SKYFIRMWARE = ${FIRMWAREFILE}
+Z1FIRMWARE = ${FIRMWAREFILE}
 endif
 
 CPUTEST := tests/cputest.firmware
@@ -71,7 +73,7 @@ TIMERTEST := tests/timertest.firmware
 SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg firmware/*/*.firmware ${SCRIPTS}
 
-PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli debug platform ${addprefix platform/,esb sky jcreate sentillausb} plugin profiler net ui util extutil/highlight extutil/jfreechart}
+PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli debug platform ${addprefix platform/,esb sky jcreate sentillausb, z1} plugin profiler net ui util extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -116,6 +118,8 @@ runskyprof:	compile
 
 runtelos:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.TelosNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+runz1:	compile
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.z1.Z1Node $(ARGS) $(Z1FIRMWARE) $(MAPFILE)
 
 
 test:	cputest

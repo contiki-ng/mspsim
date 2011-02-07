@@ -42,6 +42,7 @@
 package se.sics.mspsim.util;
 import java.io.*;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Config;
 
 public class IHexReader {
 
@@ -138,7 +139,7 @@ public class IHexReader {
 //     System.out.println("T ^ T =>  " + (true ^ true) +
 // 		       " T ^ F => " + (false ^ true));
 
-    MSP430 cpu = new MSP430(0, new ComponentRegistry());
+    MSP430 cpu = new MSP430(0, new ComponentRegistry(), new MSP430Config());
     int[] memory = cpu.getMemory();
     reader.readFile(memory, args[0]);
     cpu.reset();

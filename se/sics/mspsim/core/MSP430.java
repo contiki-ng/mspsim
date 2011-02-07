@@ -77,8 +77,8 @@ public class MSP430 extends MSP430Core {
    * Creates a new <code>MSP430</code> instance.
    *
    */
-  public MSP430(int type, ComponentRegistry registry) {
-    super(type, registry);
+  public MSP430(int type, ComponentRegistry registry, MSP430Config config) {
+    super(type, registry, config);
     disAsm = new DisAsm();
   }
 

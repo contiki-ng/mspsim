@@ -55,6 +55,7 @@ import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.EmulationLogger;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
 import se.sics.mspsim.ui.ControlUI;
@@ -84,8 +85,8 @@ public abstract class GenericNode extends Chip implements Runnable {
   protected OperatingModeStatistics stats;
 
 
-  public GenericNode(String id) {
-    super(id, new MSP430(0, new ComponentRegistry()));
+  public GenericNode(String id, MSP430Config config) {
+    super(id, new MSP430(0, new ComponentRegistry(), config));
     this.cpu = (MSP430)super.cpu;
     this.registry = cpu.getRegistry();
   }

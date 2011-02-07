@@ -48,6 +48,7 @@ import se.sics.mspsim.chip.TR1001;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
@@ -90,7 +91,8 @@ public class ESBNode extends GenericNode implements PortListener {
    *
    */
   public ESBNode() {
-      super("ESB");
+      /* this should be a config for the MSP430f149 */
+      super("ESB", new MSP430Config());
   }
 
   public Leds getLeds() {

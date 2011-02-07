@@ -55,7 +55,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public static final int RETURN = 0x4130;
 
   public static final boolean DEBUG = false;
-  public static final boolean debugInterrupts = false;
+  public static final boolean debugInterrupts = true;//false;
 
   public static final boolean EXCEPTION_ON_BAD_OPERATION = true;
 
@@ -82,6 +82,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public long cycles = 0;
   public long cpuCycles = 0;
   MapTable map;
+  public MSP430Config config;
 
   // Most HW needs only notify write and clocking, others need also read...
   // For notify write...
@@ -93,9 +94,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private SFR sfr;
   private Watchdog watchdog;
 
-    // From the possible interrupt sources - to be able to indicate is serviced.
-  private InterruptHandler interruptSource[] = new InterruptHandler[16];
-
+  // From the possible interrupt sources - to be able to indicate is serviced.
+  // NOTE: 64 since more modern MSP430's have more than 16 vectors (5xxx has 64).
+  private InterruptHandler interruptSource[] = new InterruptHandler[64];
+  private final int MAX_INTERRUPT;
+  
   protected int interruptMax = -1;
   // Op/instruction represents the last executed OP / instruction
   private int op;
@@ -136,10 +139,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   boolean isFlashBusy;
   
-  public MSP430Core(int type, ComponentRegistry registry) {
+  public MSP430Core(int type, ComponentRegistry registry, MSP430Config config) {
     super("MSP430", "MSP430 Core", null);
+    MAX_INTERRUPT = config.maxInterruptVector;
     this.registry = registry;
-
+    this.config = config;
     // The CPU need to register itself as chip
     addChip(this);
 
@@ -150,15 +154,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Maybe for debugging purposes...
     ioUnits = new IOUnit[PORTS + 9];
 
-    Timer ta = new Timer(this, "A", Timer.TIMER_Ax149, memory, 0x160);
-    Timer tb = new Timer(this, "B", Timer.TIMER_Bx149, memory, 0x180);
+    // first step towards making core configurable
+    Timer ta = new Timer(this, memory, config.timerConfig[0]);
+    Timer tb = new Timer(this, memory, config.timerConfig[1]);
     for (int i = 0, n = 0x20; i < n; i++) {
-      memOut[0x160 + i] = ta;
-      memOut[0x180 + i] = tb;
-      memIn[0x160 + i] = ta;
-      memIn[0x180 + i] = tb;
+      memOut[config.timerConfig[0].offset + i] = ta;
+      memIn[config.timerConfig[0].offset + i] = ta;
+      memOut[config.timerConfig[1].offset + i] = tb;
+      memIn[config.timerConfig[1].offset + i] = tb;
     }
-
+    
     /* TODO: this range is only valid for the F1611 series (Sky, etc) */
     flash = new Flash(this, memory,
         new FlashRange(0x4000, 0x10000, 512, 64),
@@ -238,7 +243,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Usarts
     ioUnits[passIO++] = usart0;
     ioUnits[passIO++] = usart1;
-
     
     // Add the timers
     ioUnits[passIO++] = ta;
@@ -653,7 +657,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   public void reset() {
-    flagInterrupt(15, null, true);
+    flagInterrupt(MAX_INTERRUPT, null, true);
   }
 
   // Indicate that we have an interrupt now!
@@ -665,16 +669,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       if (debugInterrupts) {
         if (source != null) {
-          System.out.println("### Interrupt flagged ON by " + source.getName() + " prio: " + interrupt);
+          System.out.println("### Interrupt " + interrupt  + " flagged ON by " + source.getName() + " prio: " + interrupt);
         } else {
-          System.out.println("### Interrupt flagged ON by <null>");
+          System.out.println("### Interrupt " + interrupt + " flagged ON by <null>");
         }
       }
 
       // MAX priority is executed first - update max if this is higher!
       if (interrupt > interruptMax) {
 	interruptMax = interrupt;
-	if (interruptMax == 15) {
+	if (interruptMax == MAX_INTERRUPT) {
 	  // This can not be masked at all!
 	  interruptsEnabled = true;
 	}
@@ -825,7 +829,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     // Only store stuff on irq except reset... - not sure if this is correct...
     // TODO: Check what to do if reset is called!
-    if (interruptMax < 15) {
+    if (interruptMax < MAX_INTERRUPT) {
       // Push PC and SR to stack
       // store on stack - always move 2 steps (W) even if B.
       writeRegister(SP, sp = spBefore - 2);
@@ -838,7 +842,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     writeRegister(SR, 0); // sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
 
     // Jump to the address specified in the interrupt vector
-    writeRegister(PC, pc = read(0xffe0 + interruptMax * 2, true));
+    writeRegister(PC, pc = read(0xfffe - (MAX_INTERRUPT - interruptMax) * 2, true));
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
@@ -847,9 +851,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // executed things might change!
     reevaluateInterrupts();
     
-    if (servicedInterrupt == 15) {
-//      System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
-      internalReset();
+    if (servicedInterrupt == MAX_INTERRUPT) {
+        if (debugInterrupts) System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
+        internalReset();
     }
     
     
@@ -860,7 +864,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
       System.out.println("### Executing interrupt: " +
 			 servicedInterrupt + " at "
 			 + pcBefore + " to " + pc +
-			 " SP before: " + spBefore);
+			 " SP before: " + spBefore +
+			 " Vector: " + Utils.hex16(0xfffe - (MAX_INTERRUPT - servicedInterrupt) * 2));
     }
     
     // And call the serviced routine (which can cause another interrupt)
@@ -952,6 +957,29 @@ public class MSP430Core extends Chip implements MSP430Constants {
     writeRegister(PC, pc);
 
     switch (op) {
+    case 0:
+        // MSP430X - additional instructions
+        op = instruction & 0xf0f0;
+        System.out.println("Executing MSP430X instruction op:" + Utils.hex16(op) +
+                " ins:" + Utils.hex16(instruction) + " PC = " + Utils.hex16(pc - 2));
+        int src = 0;
+        /* data is either bit 19-16 or src register */
+        int srcData = (instruction & 0x0f00) >> 8;
+        int dstData = (instruction & 0x000f);
+        switch(op) {
+        // 20 bit register write
+        case MOVA_IMM2REG:
+            src = read(pc, true);
+            writeRegister(PC, pc += 2);
+            dst = src + (srcData << 16);
+            System.out.println("*** Writing $" + Utils.hex16(dst) + " to reg: " + dstData);
+            writeRegister(dstData, dst);
+            break;
+        default:
+            System.out.println("MSP430X instructions not yet supported...");
+        }
+        
+        break;
     case 1:
       // -------------------------------------------------------------------
       //  Single operand instructions
@@ -1197,7 +1225,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       dstRegMode = ((instruction >> 7) & 1) == 0;
       dstAddress = -1;
       int srcAddress = -1;
-      int src = 0;
+      src = 0;
 
       // Some CGs should be handled as registry reads only...
       if ((srcRegister == CG1 && as > AM_INDEX) || srcRegister == CG2) {
@@ -1415,7 +1443,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         writeRegister(SR, sr);
         break;
       default:
-	System.out.println("DoubleOperand not implemented: " + op + " at " + pc);
+	System.out.println("DoubleOperand not implemented: op = " + op + " at " + pc);
 	if (EXCEPTION_ON_BAD_OPERATION) {
 	  EmulationException ex = new EmulationException("Bad operation: " + op + " at " + pc);
 	  ex.initCause(new Throwable("" + pc));
@@ -1478,5 +1506,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   public int getConfiguration(int parameter) {
       return 0;
+  }
+  
+  public String info() {
+      StringBuffer buf = new StringBuffer();
+      for (int i = 0; i < 16; i++) {
+          buf.append("Vector: at $"  + Utils.hex16(0xfffe - i * 2) + " -> $" +
+                  Utils.hex16(read(0xfffe - i * 2, true)) + "\n");
+      }
+      return buf.toString();
   }
 }

@@ -76,13 +76,13 @@ public class Timer extends IOUnit {
   public static final int TBIV = 0x011e;
   public static final int TAIV = 0x012e;
 
-  public static final int TACCR0_VECTOR = 6;
-  // Other is on 5
-  public static final int TACCR1_VECTOR = 5;
-
-  public static final int TBCCR0_VECTOR = 13;
-  // Other is on 12
-  public static final int TBCCR1_VECTOR = 12;
+//  public static final int TACCR0_VECTOR = 6;
+//  // Other is on 5
+//  public static final int TACCR1_VECTOR = 5;
+//
+//  public static final int TBCCR0_VECTOR = 13;
+//  // Other is on 12
+//  public static final int TBCCR1_VECTOR = 12;
 
   public static final int TCTL = 0;
   public static final int TCCTL0 = 2;
@@ -409,9 +409,9 @@ public class Timer extends IOUnit {
    *
    */
 
-  public Timer(MSP430Core core, String type, int[] srcMap, int[] memory, int offset) {
-    super("Timer" + type, "Timer " + type, memory, offset);
-    this.srcMap = srcMap;
+  public Timer(MSP430Core core, int[] memory, MSP430Config.TimerConfig config) {
+    super(config.name, config.name, memory, config.offset);
+    this.srcMap = config.srcMap;
     this.core = core;
     noCompare = (srcMap.length / 4) - 1;
     if (DEBUG) {
@@ -420,18 +420,17 @@ public class Timer extends IOUnit {
     if (srcMap == TIMER_Ax149) {
       tiv = TAIV;
       timerOverflow = 0x0a;
-      ccr0Vector = TACCR0_VECTOR;
-      ccr1Vector = TACCR1_VECTOR;
     } else {
       tiv = TBIV;
       timerOverflow = 0x0e;
-      ccr0Vector = TBCCR0_VECTOR;
-      ccr1Vector = TBCCR1_VECTOR;
     }
-    counterTrigger.name += ' ' + type;
+    ccr0Vector = config.ccr0Vector;
+    ccr1Vector = config.ccrXVector;
+
+    counterTrigger.name += ' ' + config.name;
 
     for (int i = 0; i < noCompare; i++) {
-        ccr[i] = new CCR(0, "CCR" + i + " " + type, i == 0 ? ccr0Vector : ccr1Vector, i);
+        ccr[i] = new CCR(0, "CCR" + i + " " + config.name, i == 0 ? ccr0Vector : ccr1Vector, i);
     }
     
     reset(0);
