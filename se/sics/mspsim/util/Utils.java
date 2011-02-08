@@ -51,6 +51,7 @@ public class Utils {
   public static final int ASCII = 1;
   public static final int HEX = 2;
   public static final int DEC = 3;
+  public static final int ASCII_UNMODIFIED = 4;
   
   public static int size(int type) {
       return 1 + (type / 2);
@@ -65,6 +66,8 @@ public class Utils {
           } else {
               return ".";
           }
+      case    ASCII_UNMODIFIED:
+          return "" + ((char) data);
       case    HEX: 
           return (size == 2 ? Utils.hex16(data):Utils.hex8(data));
       }

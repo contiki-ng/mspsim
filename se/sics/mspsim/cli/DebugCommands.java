@@ -110,17 +110,17 @@ public class DebugCommands implements CommandBundle {
                   if (Character.isDigit(modeStr.charAt(0))) {
                       length = Integer.parseInt(modeStr);
                   } else if ("char".equals(modeStr)) {
-                      mode = 1;
+                      mode = Utils.ASCII_UNMODIFIED; // 4
                   } else if ("break".equals(modeStr)) {
-                      mode = 2;
+                      mode = 10;
                   } else if ("hex".equals(modeStr)) {
-                      mode = 3;
+                      mode = Utils.HEX; // 2
                   }
               }
           }
           CPUMonitor monitor = new CPUMonitor() {
               public void cpuAction(int type, int adr, int data) {
-                  if (mode == 0 || mode == 2) {
+                  if (mode == 0 || mode == 10) {
                       int pc = cpu.readRegister(0);
                       String adrStr = getSymOrAddr(context, adr);
                       String pcStr = getSymOrAddrELF(getELF(), pc);
@@ -132,17 +132,17 @@ public class DebugCommands implements CommandBundle {
                       }
                       context.out.println("*** " + op + " from " + pcStr +
                               ": " + adrStr + " = " + data);
-                      if (mode == 2) {
+                      if (mode == 10) {
                           cpu.stop();
                       }
                   } else {
                       if (length > 1) {
                           for (int i = address; i < address + length; i++) {
-                              context.out.print(Utils.toString(cpu.memory[i], Utils.BYTE, mode == 1 ? Utils.ASCII : Utils.HEX));
+                              context.out.print(Utils.toString(cpu.memory[i], Utils.BYTE, mode));
                           }
                           context.out.println();
                       } else {
-                          context.out.print(Utils.toString(data, Utils.BYTE, mode == 1 ? Utils.ASCII : Utils.HEX));
+                          context.out.print(Utils.toString(data, Utils.BYTE, mode));
                       }
                   }
               }

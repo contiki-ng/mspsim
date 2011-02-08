@@ -55,7 +55,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public static final int RETURN = 0x4130;
 
   public static final boolean DEBUG = false;
-  public static final boolean debugInterrupts = true;//false;
+  public static final boolean debugInterrupts = false;
 
   public static final boolean EXCEPTION_ON_BAD_OPERATION = true;
 
