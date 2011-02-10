@@ -308,13 +308,15 @@ public class SimpleProfiler implements Profiler, EventListener {
         }
       }
     }
-    out.println("********** Profile IRQ **************************");
-    out.println("Vector          Average    Calls  Tot.Cycles");
-    for (int i = 0; i < cpu.config.maxInterruptVector + 1; i++) {
+    if (pattern == null) {
+      out.println("********** Profile IRQ **************************");
+      out.println("Vector          Average    Calls  Tot.Cycles");
+      for (int i = 0; i <= cpu.config.maxInterruptVector; i++) {
         out.print((i < 10 ? "0" : "") + i + "               ");
         out.printf("%4d ",(interruptCount[i] > 0 ? (interruptTime[i] / interruptCount[i]):0));
         out.printf("%8d   %8d",interruptCount[i],interruptTime[i]);
         out.println();
+      }
     }
   }
 
