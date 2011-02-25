@@ -186,8 +186,8 @@ public class ESBNode extends GenericNode implements PortListener {
       // Add some windows for listening to serial output
       IOUnit usart = cpu.getIOUnit("USART 1");
       if (usart instanceof USART) {
-        SerialMon serial = new SerialMon((USART)usart, "RS232 Port Output");
-        ((USART) usart).setUSARTListener(serial);
+        SerialMon serial = new SerialMon((USART)usart, "USART1 Port Output");
+        registry.registerComponent("serialgui", serial);
       }
 
       if (stats != null) {

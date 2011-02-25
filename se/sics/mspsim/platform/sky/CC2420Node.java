@@ -142,7 +142,7 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
             IOUnit usart = cpu.getIOUnit("USART1");
             if (usart instanceof USART) {
                 SerialMon serial = new SerialMon((USART)usart, "USART1 Port Output");
-                ((USART) usart).setUSARTListener(serial);
+                registry.registerComponent("serialgui", serial);
             }
             if (stats != null) {
                 // A HACK for some "graphs"!!!
