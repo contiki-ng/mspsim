@@ -26,9 +26,6 @@
  * SUCH DAMAGE.
  *
  * This file is part of MSPSim.
- *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * GenericNode
@@ -108,11 +105,14 @@ public abstract class GenericNode extends Chip implements Runnable {
   public void setupArgs(ArgumentManager config) throws IOException {
     String[] args = config.getArguments();
     if (args.length == 0) {
-      System.out.println("Usage: " + getClass().getName() + " <firmware>");
+      System.err.println("Usage: " + getClass().getName() + " <firmware>");
       System.exit(1);
     }
     firmwareFile = args[0];
-
+    if (!(new File(firmwareFile)).exists()) {
+      System.err.println("Could not find the firmware file '" + firmwareFile + "'.");
+      System.exit(1);
+    }
     if (config.getProperty("nogui") == null) {
       config.setProperty("nogui", "false");
     }
@@ -135,7 +135,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     }
 
     int[] memory = cpu.getMemory();
-    if (args[0].endsWith("ihex")) {
+    if (firmwareFile.endsWith("ihex")) {
       // IHEX Reading
       IHexReader reader = new IHexReader();
       reader.readFile(memory, firmwareFile);
@@ -194,7 +194,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     System.out.flush();
   }
 
-  public void setup(ConfigManager config) throws IOException {
+  public void setup(ConfigManager config) {
     this.config = config;
     EmulationLogger logger = (EmulationLogger) registry.getComponent("logger");
     if (logger == null) {
