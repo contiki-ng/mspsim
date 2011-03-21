@@ -116,7 +116,7 @@ public class DwarfReader implements ELFDebug {
         for (int i = 0; i < elfFile.getSectionCount(); i++) {
             ELFSection sec = elfFile.getSection(i);
             String name = sec.getSectionName();
-            System.out.println("DWARF Section: " + name);
+            if (DEBUG) System.out.println("DWARF Section: " + name);
             if (".debug_aranges".equals(name)) {
                 readAranges(sec);
             } else if (".debug_line".equals(name)) {
@@ -126,10 +126,12 @@ public class DwarfReader implements ELFDebug {
     }
 
     private void readLines(ELFSection sec) {
-        System.out.println("DWARF Line - ELF Section length: " + sec.getSize());
+        if (DEBUG) {
+            System.out.println("DWARF Line - ELF Section length: " + sec.getSize());
+        }
         sec.reset();
         int endPos = 0;
-        ArrayList<LineEntry> lineData = new ArrayList();
+        ArrayList<LineEntry> lineData = new ArrayList<LineEntry>();
         while (sec.getPosition() < sec.getSize()) {
             /* here starts the reading of one file's (?) debug info */
             int totLen = sec.readElf32();
@@ -143,16 +145,20 @@ public class DwarfReader implements ELFDebug {
             int opcodeBase = sec.readElf8();
 
             endPos += 4 + totLen;
-            System.out.println("Line total length: " + totLen + " endPos: " + endPos);
-            System.out.println("Line pro length: " + proLen);
-            System.out.println("Line version: " + version);
+            if (DEBUG) {
+                System.out.println("Line total length: " + totLen + " endPos: " + endPos);
+                System.out.println("Line pro length: " + proLen);
+                System.out.println("Line version: " + version);
+            }
 
             if (lineBase > 127) {
                 lineBase = lineBase - 256;
             }
-            System.out.println("Line base  : " + lineBase);
-            System.out.println("Line range : " + lineRange);
-            System.out.println("Line - Opcode base: " + opcodeBase);
+            if (DEBUG) {
+                System.out.println("Line base  : " + lineBase);
+                System.out.println("Line range : " + lineRange);
+                System.out.println("Line - Opcode base: " + opcodeBase);
+            }
 
             /* first char of includes (skip opcode lens)... */
             for (int i = 0; i < opcodeBase - 1; i++) {
@@ -196,10 +202,11 @@ public class DwarfReader implements ELFDebug {
             /* Now we should have entered the position of the "code" for generating the
              * line <=> address table
              */
-            System.out.println("Line: position: " + sec.getPosition());
-            System.out.println("Line: first bytes of the machine: ");
-            System.out.print("Line: ");
-
+            if (DEBUG) {
+                System.out.println("Line: position: " + sec.getPosition());
+                System.out.println("Line: first bytes of the machine: ");
+                System.out.print("Line: ");
+            }
             /* reset the "state" of the state machine (6.2.2 spec) */
             lineAddress = 0;
             lineFile = 1;
@@ -216,7 +223,7 @@ public class DwarfReader implements ELFDebug {
             
             while(!endSequence) {
                 int ins =  sec.readElf8();
-                System.out.print(Utils.hex8(ins) + " ");
+                if (DEBUG) System.out.print(Utils.hex8(ins) + " ");
                 switch(ins) {
                 case DW_LNS_EXT:
                     /* extended instruction */
@@ -225,10 +232,10 @@ public class DwarfReader implements ELFDebug {
                     switch(extIns) {
                     case DW_LNE_end_sequence:
                         endSequence = true;
-                        System.out.println("Line: End sequence executed!!!");
+                        if (DEBUG) System.out.println("Line: End sequence executed!!!");
                         break;
                     case DW_LNE_define_file:
-                        System.out.println("Line: Should define a file!!!!");
+                        if (DEBUG) System.out.println("Line: Should define a file!!!!");
                         break;
                     case DW_LNE_set_address:
                         if (len == 2)
@@ -250,7 +257,7 @@ public class DwarfReader implements ELFDebug {
                 case DW_LNS_advance_pc:
                     long add = sec.readLEB128();
                     lineAddress += add * minOpLen;
-                    System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
+                    if (DEBUG) System.out.println("Line: Increased address to: " + Utils.hex16(lineAddress));
                     break;
                 case DW_LNS_advance_line:
                     long addLine = sec.readLEB128S();
@@ -275,12 +282,12 @@ public class DwarfReader implements ELFDebug {
                     if (DEBUG) System.out.println("Line: Set basic block to true");
                     break;
                 case DW_LNS_const_add_pc:
-                    System.out.println("Line: *** Should add const to PC - but how much - same as FF??");
+                    if (DEBUG) System.out.println("Line: *** Should add const to PC - but how much - same as FF??");
                     break;
                 case DW_LNS_fixed_advance_pc:
                     int incr = sec.readElf16();
                     lineAddress += incr;
-                    System.out.println("Line: *** Increased address to: " + Utils.hex16(lineAddress));
+                    if (DEBUG) System.out.println("Line: *** Increased address to: " + Utils.hex16(lineAddress));
                     break;
                 default:
                     int lineInc = lineBase + ((ins - opcodeBase) % lineRange);
@@ -311,22 +318,22 @@ public class DwarfReader implements ELFDebug {
          */
         
         
-        for (int i = 0; i < lineInfo.size(); i++) {
-            LineData data = lineInfo.get(i);
-            System.out.println("Compiled file: " + data.sourceFiles[0]);
-            System.out.println("Start address: " +
-                    Utils.hex16(data.lineEntries[0].address));
-            System.out.println("End  address: " +
-                    Utils.hex16(data.lineEntries[data.lineEntries.length - 1].address));
-            System.out.println("Size: " +
-                    Utils.hex16(data.lineEntries[data.lineEntries.length - 1].address - data.lineEntries[0].address));
-            
+        if (DEBUG) {
+            for (LineData data : lineInfo) {
+                System.out.println("Compiled file: " + data.sourceFiles[0]);
+                System.out.println("Start address: " +
+                        Utils.hex16(data.lineEntries[0].address));
+                System.out.println("End  address: " +
+                        Utils.hex16(data.lineEntries[data.lineEntries.length - 1].address));
+                System.out.println("Size: " +
+                        Utils.hex16(data.lineEntries[data.lineEntries.length - 1].address - data.lineEntries[0].address));
+            }
         }
     }
         
     /* DWARF - address ranges information */
     private void readAranges(ELFSection sec) {
-        System.out.println("DWARF Aranges - ELF Section length: " + sec.getSize());
+        if (DEBUG) System.out.println("DWARF Aranges - ELF Section length: " + sec.getSize());
         int pos = 0;
         int index = 0;
         do {
@@ -337,11 +344,13 @@ public class DwarfReader implements ELFDebug {
             arange.offset = sec.readElf32(pos + 6); /* 4 byte offset into debug_info section (?)*/
             arange.addressSize = sec.readElf8(pos + 10); /* size of address */
             arange.segmentSize = sec.readElf8(pos + 11); /* size of segment descriptor */
-            System.out.println("DWARF: aranges no " + index);
-            System.out.println("DWARF: Length: " + arange.length);
-            System.out.println("DWARF: Version: " + arange.version);
-            System.out.println("DWARF: Offset: " + arange.offset);
-            System.out.println("DWARF: Address size: " + arange.addressSize);
+            if (DEBUG) {
+                System.out.println("DWARF: aranges no " + index);
+                System.out.println("DWARF: Length: " + arange.length);
+                System.out.println("DWARF: Version: " + arange.version);
+                System.out.println("DWARF: Offset: " + arange.offset);
+                System.out.println("DWARF: Address size: " + arange.addressSize);
+            }
 
             index++;
             pos += 12;
@@ -352,7 +361,7 @@ public class DwarfReader implements ELFDebug {
                     addr = sec.readElf16(pos);
                     len = sec.readElf16(pos + 2);
                     pos += 4;
-                    System.out.println("DWARF: ($" + Utils.hex16(addr) + "," + len + ")");
+                    if (DEBUG) System.out.println("DWARF: ($" + Utils.hex16(addr) + "," + len + ")");
                 } while (addr != 0 || len != 0);
             }
         } while (pos < sec.getSize());
