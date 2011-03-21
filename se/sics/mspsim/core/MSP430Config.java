@@ -1,6 +1,6 @@
 package se.sics.mspsim.core;
 
-public class MSP430Config {
+public abstract class MSP430Config {
     
     public class TimerConfig {
         int ccr0Vector;
@@ -29,6 +29,5 @@ public class MSP430Config {
     public int maxInterruptVector = 15;
     public boolean MSP430XArch = false;
     
-    public void setup() {        
-    }
+    public abstract int setup(MSP430Core cpu, IOUnit[] ioUnits, int ioPos);
 }

@@ -45,6 +45,7 @@ import java.io.IOException;
 import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.TR1001;
+import se.sics.mspsim.config.MSP430f1611Config;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
@@ -92,7 +93,7 @@ public class ESBNode extends GenericNode implements PortListener {
    */
   public ESBNode() {
       /* this should be a config for the MSP430f149 */
-      super("ESB", new MSP430Config());
+      super("ESB", new MSP430f1611Config());
   }
 
   public Leds getLeds() {

@@ -2,6 +2,7 @@ package se.sics.mspsim.platform.sky;
 import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.DS2411;
 import se.sics.mspsim.chip.PacketListener;
+import se.sics.mspsim.config.MSP430f1611Config;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
@@ -49,7 +50,7 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
 
     public CC2420Node(String id) {
         /* this should be a config for the MSP430x1611 */
-        super(id, new MSP430Config());
+        super(id, new MSP430f1611Config());
     }
 
     public void setDebug(boolean debug) {

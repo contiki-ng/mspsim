@@ -199,17 +199,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[i] = mp;
     }
 
-    USART usart0 = new USART(this, 0, memory, 0x70);
-    USART usart1 = new USART(this, 1, memory, 0x78);
-    
-    for (int i = 0, n = 8; i < n; i++) {
-      memOut[0x70 + i] = usart0;
-      memIn[0x70 + i] = usart0;
-
-      memOut[0x78 + i] = usart1;
-      memIn[0x78 + i] = usart1;
-    }
-    
     
     // Add port 1,2 with interrupt capability!
     ioUnits[0] = new IOPort(this, 1, 4, memory, 0x20);
@@ -240,9 +229,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     ioUnits[passIO++] = sfr;
     ioUnits[passIO++] = bcs;
 
-    // Usarts
-    ioUnits[passIO++] = usart0;
-    ioUnits[passIO++] = usart1;
+    passIO += config.setup(this, ioUnits, passIO);
     
     // Add the timers
     ioUnits[passIO++] = ta;
@@ -266,26 +253,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memIn[0x1A0 + i] = adc12;
     }
     
-    
-    DMA dma = new DMA("dma", memory, 0, this);
-    for (int i = 0, n = 24; i < n; i++) {    
-        memOut[0x1E0 + i] = dma;
-        memIn[0x1E0 + i] = dma;
-    }
-    /* DMA Ctl */
-    memOut[0x122] = dma;
-    memIn[0x124] = dma;
-    
-    /* configure the DMA */
-    dma.setDMATrigger(DMA.URXIFG0, usart0, 0);
-    dma.setDMATrigger(DMA.UTXIFG0, usart0, 1);
-    dma.setDMATrigger(DMA.URXIFG1, usart1, 0);
-    dma.setDMATrigger(DMA.UTXIFG1, usart1, 1);
-
-    dma.setInterruptMultiplexer(new InterruptMultiplexer(this, 0));
-    
-    ioUnits[passIO++] = dma;
-    
+        
     if (DEBUG) System.out.println("Number of passive: " + passIO);
   }
 

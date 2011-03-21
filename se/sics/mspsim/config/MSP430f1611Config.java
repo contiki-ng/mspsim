@@ -35,8 +35,13 @@
 
 package se.sics.mspsim.config;
 
+import se.sics.mspsim.core.DMA;
+import se.sics.mspsim.core.IOUnit;
+import se.sics.mspsim.core.InterruptMultiplexer;
 import se.sics.mspsim.core.MSP430Config;
+import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Timer;
+import se.sics.mspsim.core.USART;
 
 public class MSP430f1611Config extends MSP430Config {
 
@@ -49,4 +54,44 @@ public class MSP430f1611Config extends MSP430Config {
         TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
         timerConfig = new TimerConfig[] {timerA, timerB};
     }
+    
+
+    public int setup(MSP430Core cpu, IOUnit[] ioUnits, int ioPos) {
+        System.out.println("*** Setting up f1611 IO!");
+
+        USART usart0 = new USART(cpu, 0, cpu.memory, 0x70);
+        USART usart1 = new USART(cpu, 1, cpu.memory, 0x78);
+        
+        for (int i = 0, n = 8; i < n; i++) {
+          cpu.memOut[0x70 + i] = usart0;
+          cpu.memIn[0x70 + i] = usart0;
+
+          cpu.memOut[0x78 + i] = usart1;
+          cpu.memIn[0x78 + i] = usart1;
+        }
+        
+        // Usarts
+        ioUnits[ioPos] = usart0;
+        ioUnits[ioPos + 1] = usart1;
+
+        DMA dma = new DMA("dma", cpu.memory, 0, cpu);
+        for (int i = 0, n = 24; i < n; i++) {    
+            cpu.memOut[0x1E0 + i] = dma;
+            cpu.memIn[0x1E0 + i] = dma;
+        }
+
+        /* DMA Ctl */
+        cpu.memOut[0x122] = dma;
+        cpu.memIn[0x124] = dma;
+        
+        /* configure the DMA */
+        dma.setDMATrigger(DMA.URXIFG0, usart0, 0);
+        dma.setDMATrigger(DMA.UTXIFG0, usart0, 1);
+        dma.setDMATrigger(DMA.URXIFG1, usart1, 0);
+        dma.setDMATrigger(DMA.UTXIFG1, usart1, 1);
+        dma.setInterruptMultiplexer(new InterruptMultiplexer(cpu, 0));
+
+        ioUnits[ioPos + 2] = dma;        
+        return 3;
+    }    
 }

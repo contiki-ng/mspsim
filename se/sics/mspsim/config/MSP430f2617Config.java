@@ -35,7 +35,9 @@
 
 package se.sics.mspsim.config;
 
+import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430Config;
+import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Timer;
 
 public class MSP430f2617Config extends MSP430Config {
@@ -51,4 +53,9 @@ public class MSP430f2617Config extends MSP430Config {
         TimerConfig timerB = new TimerConfig(29, 28, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
         timerConfig = new TimerConfig[] {timerA, timerB};
     }
+
+    public int setup(MSP430Core cpu, IOUnit[] ioUnits, int ioPos) {
+        return 0;
+    }
+    
 }
