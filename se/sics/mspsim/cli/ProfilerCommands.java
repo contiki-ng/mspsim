@@ -50,6 +50,7 @@ import se.sics.mspsim.ui.CPUHeatMap;
 import se.sics.mspsim.ui.WindowManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.SimpleProfiler;
+import se.sics.mspsim.util.StackMonitor;
 
 /**
  *
@@ -119,9 +120,15 @@ public class ProfilerCommands implements CommandBundle {
           profiler.printStackTrace(context.out);
           return 0;
         }
-
       });
 
+      ch.registerCommand("stackprof", new BasicCommand("Start stack profiler", "") {
+          public int executeCommand(CommandContext context) {
+              new StackMonitor(cpu);
+              return 0;
+          }
+      });
+      
 //      ch.registerCommand("irqprofile", new BasicCommand("show interrupt profile", "") {
 //        public int executeCommand(CommandContext context) {
 //          long[] time = cpu.getInterruptTime();

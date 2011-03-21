@@ -81,6 +81,8 @@ public class SimpleProfiler implements Profiler, EventListener {
   private int interruptLevel;
   private int interruptFrom;
   private boolean newIRQ;
+
+  private StackMonitor stackMonitor;
   
   public SimpleProfiler() {
     profileData = new HashMap<MapEntry, CallEntry>();
@@ -140,7 +142,17 @@ public class SimpleProfiler implements Profiler, EventListener {
     ce.hide = hide;
     ce.fromPC = from;
     newIRQ = false;
+
     
+    if (stackMonitor != null) {
+        /* get the current stack MAX for previous function */
+        if (cSP > 1) {
+            callStack[cSP - 2].currentStackMax = stackMonitor.getProfStackMax();
+        }
+        /* start stack here! */
+        ce.stackStart = stackMonitor.getStack();
+        stackMonitor.setProfStackMax(stackMonitor.getStack());
+    }
 
     CallListener[] listeners = callListeners;
     if (listeners != null) {
@@ -164,12 +176,14 @@ public class SimpleProfiler implements Profiler, EventListener {
     CallEntry cspEntry = callStack[--cSP];
     MapEntry fkn = cspEntry.function;
 //     System.out.println("Profiler: return / call stack: " + cSP + ", " + fkn);
-
+    
     long elapsed = cycles - cspEntry.cycles;
     long exElapsed = cycles - cspEntry.exclusiveCycles;
     if (cSP != 0) {
       callStack[cSP-1].exclusiveCycles += elapsed;
     }
+    int maxUsage = 0;
+    
     if (cspEntry.calls >= 0) {
       CallEntry ce = profileData.get(fkn);
       if (ce == null) {
@@ -179,6 +193,21 @@ public class SimpleProfiler implements Profiler, EventListener {
       ce.cycles += elapsed;
       ce.exclusiveCycles += exElapsed;
       ce.calls++;
+      
+      if (stackMonitor != null) {
+          maxUsage = stackMonitor.getProfStackMax() - cspEntry.stackStart;
+          ce.stackStart = cspEntry.stackStart;
+          if (maxUsage > ce.currentStackMax) {
+              ce.currentStackMax = maxUsage;
+          }
+          if (cSP != 0) {
+              /* put the max for previous function back into the max profiler */ 
+              stackMonitor.setProfStackMax(callStack[cSP-1].currentStackMax);
+          }
+      }
+
+      
+      
       if (cSP != 0) {
         MapEntry caller = callStack[cSP-1].function;
         HashMap<MapEntry,CallCounter> callers = ce.callers;
@@ -195,7 +224,7 @@ public class SimpleProfiler implements Profiler, EventListener {
         if ((cspEntry.hide <= 1) && (!hideIRQ || servicedInterrupt == -1)) {
           if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
           printSpace(logger, (cSP - interruptLevel) * 2);
-          logger.println("return from " + ce.function.getInfo() + " elapsed: " + elapsed);
+          logger.println("return from " + ce.function.getInfo() + " elapsed: " + elapsed + " maxStackUsage: " + maxUsage);
         }
       }
 
@@ -408,6 +437,9 @@ public class SimpleProfiler implements Profiler, EventListener {
     long exclusiveCycles;
     int calls;
     int hide;
+    int stackStart;
+    int currentStackMax;
+    
     HashMap<MapEntry,CallCounter> callers;
     
     public CallEntry() {
@@ -520,5 +552,10 @@ public class SimpleProfiler implements Profiler, EventListener {
 
   public String getCall(int i) {
       return callStack[cSP - i].function.getInfo();
+  }
+
+  public void setStackMonitor(StackMonitor stackMonitor) {
+      System.out.println("Setting Stack monitor to: " + stackMonitor);
+      this.stackMonitor = stackMonitor;
   }
 }

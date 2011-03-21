@@ -41,8 +41,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.net.URL;
+
+import javax.swing.JFrame;
+
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.cli.FileCommands;
@@ -58,6 +62,7 @@ import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.extutil.highlight.HighlightSourceViewer;
+import se.sics.mspsim.ui.ConsoleUI;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.ui.JFrameWindowManager;
 import se.sics.mspsim.ui.StackUI;
@@ -207,10 +212,25 @@ public abstract class GenericNode extends Chip implements Runnable {
     cpu.setEmulationLogger(logger);
     
     CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
+
     if (ch == null) {
-      ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
-      registry.registerComponent("commandHandler", ch);
+        if (!config.getPropertyAsBoolean("nogui", false)) {
+            ConsoleUI console = new ConsoleUI();
+            PrintStream consoleStream = new PrintStream(console.getOutputStream());
+            ch = new CommandHandler(consoleStream, consoleStream);
+            JFrame w = new JFrame("ConsoleUI");
+            w.add(console);
+            w.setBounds(20, 20, 520, 400);
+            w.setLocationByPlatform(true);
+            w.setVisible(true);
+            console.setCommandHandler(ch);
+            registry.registerComponent("commandHandler", ch);
+        } else {
+            ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
+            registry.registerComponent("commandHandler", ch);
+        }
     }
+    
     stats = new OperatingModeStatistics(cpu);
     
     registry.registerComponent("pluginRepository", new PluginRepository());
