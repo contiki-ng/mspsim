@@ -47,6 +47,7 @@ import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.USART;
+import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.platform.sky.CC2420Node;
 import se.sics.mspsim.util.ArgumentManager;
 
@@ -91,7 +92,7 @@ public class SentillaUSBNode extends CC2420Node {
 
     // USART Listener
     @Override
-    public void dataReceived(USART source, int data) {
+    public void dataReceived(USARTSource source, int data) {
         radio.dataReceived(source, data);
         flash.dataReceived(source, data);
         /* if nothing selected, just write back a random byte to this device */

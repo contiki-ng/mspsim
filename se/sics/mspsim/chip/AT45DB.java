@@ -141,7 +141,7 @@ public abstract class AT45DB extends Chip implements USARTListener {
         status &= ~STATUS_RDY;
     }
 
-    public void dataReceived(USART source, int data) {
+    public void dataReceived(USARTSource source, int data) {
       int buf_num = 1;
 
       if (chipSelect) {

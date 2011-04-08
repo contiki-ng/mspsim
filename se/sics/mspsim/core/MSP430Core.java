@@ -61,7 +61,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // Try it out with 64 k memory
   public static final int MAX_MEM = 64*1024;
-  public static final int MAX_MEM_IO = 0x200;
+  public final int MAX_MEM_IO;
   public static final int PORTS = 6;
   
   // 16 registers of which some are "special" - PC, SP, etc.
@@ -86,11 +86,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   // Most HW needs only notify write and clocking, others need also read...
   // For notify write...
-  public IOUnit[] memOut = new IOUnit[MAX_MEM_IO];
+  public IOUnit[] memOut;
   // For notify read... -> which will happen before actual read!
-  public IOUnit[] memIn = new IOUnit[MAX_MEM_IO];
+  public IOUnit[] memIn;
 
-  private IOUnit[] ioUnits;
+  private ArrayList<IOUnit> ioUnits;
   private SFR sfr;
   private Watchdog watchdog;
 
@@ -142,6 +142,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public MSP430Core(int type, ComponentRegistry registry, MSP430Config config) {
     super("MSP430", "MSP430 Core", null);
     MAX_INTERRUPT = config.maxInterruptVector;
+    MAX_MEM_IO = config.maxMemIO;
+    memOut = new IOUnit[MAX_MEM_IO];
+    memIn = new IOUnit[MAX_MEM_IO];
     this.registry = registry;
     this.config = config;
     // The CPU need to register itself as chip
@@ -149,10 +152,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // Ignore type for now...
     setModeNames(MODE_NAMES);
-    int passIO = 0;
     // IOUnits should likely be placed in a hashtable?
     // Maybe for debugging purposes...
-    ioUnits = new IOUnit[PORTS + 9];
+    ioUnits = new ArrayList<IOUnit>();
 
     // first step towards making core configurable
     Timer ta = new Timer(this, memory, config.timerConfig[0]);
@@ -201,44 +203,45 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     
     // Add port 1,2 with interrupt capability!
-    ioUnits[0] = new IOPort(this, 1, 4, memory, 0x20);
-    ioUnits[1] = new IOPort(this, 2, 1, memory, 0x28);
+    ioUnits.add(new IOPort(this, 1, 4, memory, 0x20));
+    ioUnits.add(new IOPort(this, 2, 1, memory, 0x28));
     for (int i = 0, n = 8; i < n; i++) {
-      memOut[0x20 + i] = ioUnits[0];
-      memOut[0x28 + i] = ioUnits[1];
+      memOut[0x20 + i] = ioUnits.get(0);
+      memOut[0x28 + i] = ioUnits.get(1);
     }
 
     // Add port 3,4 & 5,6
     for (int i = 0, n = 2; i < n; i++) {
-      ioUnits[i + 2] = new IOPort(this, (3 + i), 0, memory, 0x18 + i * 4);
-      memOut[0x18 + i * 4] = ioUnits[i + 2];
-      memOut[0x19 + i * 4] = ioUnits[i + 2];
-      memOut[0x1a + i * 4] = ioUnits[i + 2];
-      memOut[0x1b + i * 4] = ioUnits[i + 2];
+      ioUnits.add(new IOPort(this, (3 + i), 0, memory, 0x18 + i * 4));
+      memOut[0x18 + i * 4] = ioUnits.get(i + 2);
+      memOut[0x19 + i * 4] = ioUnits.get(i + 2);
+      memOut[0x1a + i * 4] = ioUnits.get(i + 2);
+      memOut[0x1b + i * 4] = ioUnits.get(i + 2);
+	}
 
-      ioUnits[i + 4] = new IOPort(this, (5 + i), 0, memory, 0x30 + i * 4);
+    for (int i = 0, n = 2; i < n; i++) {
+      ioUnits.add(new IOPort(this, (5 + i), 0, memory, 0x30 + i * 4));
 
-      memOut[0x30 + i * 4] = ioUnits[i + 4];
-      memOut[0x31 + i * 4] = ioUnits[i + 4];
-      memOut[0x32 + i * 4] = ioUnits[i + 4];
-      memOut[0x33 + i * 4] = ioUnits[i + 4];
+      memOut[0x30 + i * 4] = ioUnits.get(i + 4);
+      memOut[0x31 + i * 4] = ioUnits.get(i + 4);
+      memOut[0x32 + i * 4] = ioUnits.get(i + 4);
+      memOut[0x33 + i * 4] = ioUnits.get(i + 4);
     }
-    passIO = 6;
     
     // SFR and Basic clock system.
-    ioUnits[passIO++] = sfr;
-    ioUnits[passIO++] = bcs;
+    ioUnits.add(sfr);
+    ioUnits.add(bcs);
 
-    passIO += config.setup(this, ioUnits, passIO);
+    config.setup(this, ioUnits);
     
     // Add the timers
-    ioUnits[passIO++] = ta;
-    ioUnits[passIO++] = tb;
+    ioUnits.add(ta);
+    ioUnits.add(tb);
 
     ADC12 adc12 = new ADC12(this);
-    ioUnits[passIO++] = adc12;
+    ioUnits.add(adc12);
 
-    ioUnits[passIO++] = watchdog;
+    ioUnits.add(watchdog);
     
     for (int i = 0, n = 16; i < n; i++) {
       memOut[0x80 + i] = adc12;
@@ -252,9 +255,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[0x1A0 + i] = adc12;
       memIn[0x1A0 + i] = adc12;
     }
-    
-        
-    if (DEBUG) System.out.println("Number of passive: " + passIO);
+
+    if (DEBUG) System.out.println("Number of passive: " + ioUnits.size());
   }
 
   public Profiler getProfiler() {
@@ -278,7 +280,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   /* returns port 1 ... 6 */
   public IOPort getIOPort(int portID) {
     if (portID > 0 && portID < 7) {
-     return (IOPort) ioUnits[portID - 1];
+     return (IOPort) ioUnits.get(portID - 1);
     }
     return null;
   }
@@ -311,12 +313,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public Loggable[] getLoggables() {
-      Loggable[] ls = new Loggable[ioUnits.length + chips.size()];
-      for (int i = 0; i < ioUnits.length; i++) {
-          ls[i] = ioUnits[i];
+      Loggable[] ls = new Loggable[ioUnits.size() + chips.size()];
+      for (int i = 0; i < ioUnits.size(); i++) {
+          ls[i] = ioUnits.get(i);
       }
       for (int i = 0; i < chips.size(); i++) {
-          ls[i + ioUnits.length] = chips.get(i);
+          ls[i + ioUnits.size()] = chips.get(i);
       }
       return ls;
   }
@@ -580,17 +582,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
-    for (int i = 0, n = ioUnits.length; i < n; i++) {
-      if (name.equalsIgnoreCase(ioUnits[i].getID()) || name.equalsIgnoreCase(ioUnits[i].getName())) {
-	return ioUnits[i];
+    for (int i = 0, n = ioUnits.size(); i < n; i++) {
+        IOUnit ioUnit = ioUnits.get(i);
+      if (ioUnit != null && name.equalsIgnoreCase(ioUnit.getID()) ||
+              name.equalsIgnoreCase(ioUnit.getName())) {
+	return ioUnit;
       }
     }
     return null;
   }
 
   private void resetIOUnits() {
-    for (int i = 0, n = ioUnits.length; i < n; i++) {
-      ioUnits[i].reset(RESET_POR);
+    for (int i = 0, n = ioUnits.size(); i < n; i++) {
+      ioUnits.get(i).reset(RESET_POR);
     }
   }
   

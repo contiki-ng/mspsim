@@ -11,6 +11,8 @@ import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
+import se.sics.mspsim.core.USARTSource;
+import se.sics.mspsim.core.USCI;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.util.ArgumentManager;
@@ -59,7 +61,8 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
         registry.registerComponent("xmem", flash);
     }
 
-    public void dataReceived(USART source, int data) {
+    public void dataReceived(USARTSource source, int data) {
+        USCI s = (USCI) source;
         radio.dataReceived(source, data);
         flash.dataReceived(source, data);
         /* if nothing selected, just write back a random byte to these devs */
@@ -69,17 +72,16 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
     }
 
     public void portWrite(IOPort source, int data) {
-        System.out.println("Write to port: " + source + " => " + data);
         if (source == port5) {
             System.out.println("LEDS GREEN = " + ((data & LEDS_CONF_GREEN) > 0));
             System.out.println("LEDS RED = " + ((data & LEDS_CONF_RED) > 0));
             System.out.println("LEDS YELLOW = " + ((data & LEDS_CONF_YELLOW) > 0));
         }
         if (source == port3) {
+            // Chip select = active low...
             radio.setChipSelect((data & CC2420_CHIP_SELECT) == 0);
         }
         if (source == port4) {
-            // Chip select = active low...
             radio.setVRegOn((data & CC2420_VREG) != 0);
             //radio.portWrite(source, data);
             flash.portWrite(source, data);
@@ -112,18 +114,17 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
             port5.setPortListener(this);
         }
 
-        IOUnit usart0 = cpu.getIOUnit("USART0");
-        if (usart0 instanceof USART) {
+        IOUnit usart0 = cpu.getIOUnit("USCI B0");
+        if (usart0 instanceof USCI) {
             radio = new CC2420(cpu);
             radio.setCCAPort(port1, CC2420_CCA);
             radio.setFIFOPPort(port1, CC2420_FIFOP);
             radio.setFIFOPort(port1, CC2420_FIFO);
 
-            ((USART) usart0).setUSARTListener(this);
+            ((USARTSource) usart0).setUSARTListener(this);
             if (port4 != null) {
                 radio.setSFDPort(port4, CC2420_SFD);
             }
-
         }
     }
 
@@ -151,9 +152,9 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
             setupGUI();
 
             // Add some windows for listening to serial output
-            IOUnit usart = cpu.getIOUnit("USART1");
-            if (usart instanceof USART) {
-                SerialMon serial = new SerialMon((USART)usart, "USART1 Port Output");
+            IOUnit usart = cpu.getIOUnit("USCI A0");
+            if (usart instanceof USARTSource) {
+                SerialMon serial = new SerialMon((USARTSource)usart, "USART1 Port Output");
                 registry.registerComponent("serialgui", serial);
             }
         }
@@ -175,4 +176,5 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
         config.handleArguments(args);
         node.setupArgs(config);
     }
+
 }

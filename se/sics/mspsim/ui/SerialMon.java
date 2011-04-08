@@ -54,9 +54,10 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.StateChangeListener;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
+import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ServiceComponent;
 
@@ -67,7 +68,7 @@ public class SerialMon implements USARTListener, StateChangeListener, ServiceCom
   private String name;
   private ServiceComponent.Status status = Status.STOPPED;
 
-  private final USART usart;
+  private final USARTSource usart;
   private final String title;  
 
   private JFrame window;
@@ -86,7 +87,7 @@ public class SerialMon implements USARTListener, StateChangeListener, ServiceCom
   private int lines = 1;
   private boolean isUpdatePending = false;
 
-  public SerialMon(USART usart, String title) {
+  public SerialMon(USARTSource usart, String title) {
     this.usart = usart;
     this.title = title;
   }
@@ -199,7 +200,7 @@ public class SerialMon implements USARTListener, StateChangeListener, ServiceCom
     if (window == null) {
       initGUI();
       usart.setUSARTListener(this);
-      usart.addStateChangeListener(this);
+      ((IOUnit) usart).addStateChangeListener(this);
     }
     window.setVisible(true);
     status = Status.STARTED;
@@ -212,7 +213,7 @@ public class SerialMon implements USARTListener, StateChangeListener, ServiceCom
     }
   }
 
-  public void dataReceived(USART source, int data) {
+  public void dataReceived(USARTSource source, int data) {
     if (data == '\n') {
       if (lines >= MAX_LINES) {
 	int index = text.indexOf('\n');

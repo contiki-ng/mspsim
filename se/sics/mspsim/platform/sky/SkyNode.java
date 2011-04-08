@@ -45,6 +45,7 @@ import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.USART;
+import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.util.ArgumentManager;
 
 /**
@@ -74,7 +75,7 @@ public class SkyNode extends MoteIVNode {
   }
 
   // USART Listener
-  public void dataReceived(USART source, int data) {
+  public void dataReceived(USARTSource source, int data) {
     radio.dataReceived(source, data);
     flash.dataReceived(source, data);
     /* if nothing selected, just write back a random byte to these devs */

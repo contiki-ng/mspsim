@@ -65,11 +65,12 @@ public class SFR extends IOUnit {
   private int[] memory;
   private MSP430Core cpu;
 
-  private SFRModule[] sfrModule = new SFRModule[16];
-  private int[] irqVector = new int[16];
-  private boolean[] irqTriggered = new boolean[16];
-  private boolean[] autoclear = new boolean[16];
-  private int[] irqTriggeredPos = new int[16];
+  /* 64 = max number of interrupts */
+  private SFRModule[] sfrModule = new SFRModule[64];
+  private int[] irqVector = new int[64];
+  private boolean[] irqTriggered = new boolean[64];
+  private boolean[] autoclear = new boolean[64];
+  private int[] irqTriggeredPos = new int[64];
   
   public SFR(MSP430Core cpu, int[] memory) {
     super("SFR", "Special Function Register", memory, 0);
@@ -223,6 +224,7 @@ public class SFR extends IOUnit {
     int change = value ^ after;
     if (index == 0) ifg1 = after;
     else ifg2 = after;
+    
     updateIRQ(index, change);
   }
 

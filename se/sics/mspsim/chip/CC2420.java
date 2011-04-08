@@ -715,7 +715,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       configurationChanged(address, oldValue, data);
   }
     
-  public void dataReceived(USART source, int data) {
+  public void dataReceived(USARTSource source, int data) {
     int oldStatus = status;
     if (DEBUG) {
       log("byte received: " + Utils.hex8(data) +
@@ -880,6 +880,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         break;
       }
       source.byteReceived(oldStatus);  
+    } else {
+        /* No VREG but chip select */
+        if (chipSelect) source.byteReceived(0);
+        System.out.println("**** Warning - writing to CC2420 when VREG is off!!!");
     }
   }
 
@@ -1268,7 +1272,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
     if(newOn) {
       // 0.6ms maximum vreg startup from datasheet pg 13
-      cpu.scheduleTimeEventMillis(vregEvent, 0.1);
+      // but Z1 platform does not work with 0.1 so trying with lower...
+      cpu.scheduleTimeEventMillis(vregEvent, 0.05);
       if (DEBUG) log("Scheduling vregEvent at: cyc = " + cpu.cycles +
          " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     } else {

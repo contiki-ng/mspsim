@@ -35,6 +35,7 @@
 
 package se.sics.mspsim.config;
 
+import java.util.ArrayList;
 import se.sics.mspsim.core.DMA;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.InterruptMultiplexer;
@@ -56,7 +57,7 @@ public class MSP430f1611Config extends MSP430Config {
     }
     
 
-    public int setup(MSP430Core cpu, IOUnit[] ioUnits, int ioPos) {
+    public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {
         System.out.println("*** Setting up f1611 IO!");
 
         USART usart0 = new USART(cpu, 0, cpu.memory, 0x70);
@@ -71,8 +72,8 @@ public class MSP430f1611Config extends MSP430Config {
         }
         
         // Usarts
-        ioUnits[ioPos] = usart0;
-        ioUnits[ioPos + 1] = usart1;
+        ioUnits.add(usart0);
+        ioUnits.add(usart1);
 
         DMA dma = new DMA("dma", cpu.memory, 0, cpu);
         for (int i = 0, n = 24; i < n; i++) {    
@@ -91,7 +92,7 @@ public class MSP430f1611Config extends MSP430Config {
         dma.setDMATrigger(DMA.UTXIFG1, usart1, 1);
         dma.setInterruptMultiplexer(new InterruptMultiplexer(cpu, 0));
 
-        ioUnits[ioPos + 2] = dma;        
+        ioUnits.add(dma);
         return 3;
     }    
 }

@@ -43,5 +43,5 @@ package se.sics.mspsim.core;
 
 public interface USARTListener {
   public static int RXFLAG_CLEARED = 1;
-  public void dataReceived(USART source, int data);
+  public void dataReceived(USARTSource source, int data);
 }

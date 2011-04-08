@@ -10,6 +10,7 @@ import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
+import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
 import se.sics.mspsim.extutil.jfreechart.DataSourceSampler;
 import se.sics.mspsim.platform.GenericNode;
@@ -200,7 +201,7 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
 
     protected abstract void flashWrite(IOPort source, int data);
 
-    public abstract void dataReceived(USART source, int data);
+    public abstract void dataReceived(USARTSource source, int data);
 
     public void stateChanged(int state) {
         // Ignore UART state changes by default
