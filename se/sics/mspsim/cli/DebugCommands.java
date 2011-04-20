@@ -323,7 +323,7 @@ public class DebugCommands implements CommandBundle {
             int adr = context.getArgumentAsAddress(0);
             if (adr != -1) {
               try {
-                context.out.println(context.getArgument(0) + " = $" + Utils.hex16(cpu.read(adr, adr >= 0x100)));
+                context.out.println(context.getArgument(0) + " = $" + Utils.hex16(cpu.read(adr, adr >= 0x100 ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE)));
               } catch (Exception e) {
                 e.printStackTrace(context.err);
               }
@@ -433,7 +433,7 @@ public class DebugCommands implements CommandBundle {
                 int val = context.getArgumentAsInt(i);
                 boolean word = Utils.size(type) == 2 | val > 0xff;
                 try {
-                  cpu.write(adr, val, word);
+                  cpu.write(adr, val, word ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE);
                   adr += word ? 2 : 1;
                 } catch (EmulationException e) {
                   e.printStackTrace(context.out);
@@ -441,7 +441,7 @@ public class DebugCommands implements CommandBundle {
               } else if (mode == Utils.ASCII) {
                 String data = context.getArgument(i);
                 for (int j = 0; j < data.length(); j++) {
-                  cpu.write(adr++, data.charAt(j) & 0xff, false);                    
+                  cpu.write(adr++, data.charAt(j) & 0xff, MSP430Constants.MODE_WORD);
                 }
               }
             }

@@ -48,6 +48,12 @@ public interface MSP430Constants {
   public static final int MISALIGNED_READ = 0;
   public static final int MISALIGNED_WRITE = 1;
   
+  public static final int MODE_BYTE = 0;
+  public static final int MODE_WORD = 1;
+  public static final int MODE_WORD20 = 2;
+  
+  public static final int MODE_MASK[] = {0xff, 0xffff, 0xfffff};
+  
   /* memory tags - not used yet*/
   public static final int READ_MONITOR = 0x1000;
   public static final int WRITE_MONITOR = 0x2000;

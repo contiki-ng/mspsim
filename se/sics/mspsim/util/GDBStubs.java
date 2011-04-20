@@ -47,6 +47,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import se.sics.mspsim.core.EmulationException;
+import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.MSP430Core;
 
 public class GDBStubs implements Runnable {
@@ -175,7 +176,7 @@ public class GDBStubs implements Runnable {
                 for (int i = 0; i < len; i++) {
                     System.out.println("Writing: " + cmdBytes[cPos] + " to "
                             + addr + " cpos=" + cPos);
-                    cpu.write(addr++, cmdBytes[cPos++], false);
+                    cpu.write(addr++, cmdBytes[cPos++], MSP430Constants.MODE_BYTE);
                 }
                 sendResponse(OK);
             }
