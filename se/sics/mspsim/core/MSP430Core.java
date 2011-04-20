@@ -212,20 +212,22 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // Add port 3,4 & 5,6
     for (int i = 0, n = 2; i < n; i++) {
-      ioUnits.add(new IOPort(this, (3 + i), 0, memory, 0x18 + i * 4));
-      memOut[0x18 + i * 4] = ioUnits.get(i + 2);
-      memOut[0x19 + i * 4] = ioUnits.get(i + 2);
-      memOut[0x1a + i * 4] = ioUnits.get(i + 2);
-      memOut[0x1b + i * 4] = ioUnits.get(i + 2);
-	}
+      IOPort p = new IOPort(this, (3 + i), 0, memory, 0x18 + i * 4);
+      ioUnits.add(p);
+      memOut[0x18 + i * 4] = p;
+      memOut[0x19 + i * 4] = p;
+      memOut[0x1a + i * 4] = p;
+      memOut[0x1b + i * 4] = p;
+    }
 
     for (int i = 0, n = 2; i < n; i++) {
-      ioUnits.add(new IOPort(this, (5 + i), 0, memory, 0x30 + i * 4));
+      IOPort p = new IOPort(this, (5 + i), 0, memory, 0x30 + i * 4);
+      ioUnits.add(p);
 
-      memOut[0x30 + i * 4] = ioUnits.get(i + 4);
-      memOut[0x31 + i * 4] = ioUnits.get(i + 4);
-      memOut[0x32 + i * 4] = ioUnits.get(i + 4);
-      memOut[0x33 + i * 4] = ioUnits.get(i + 4);
+      memOut[0x30 + i * 4] = p;
+      memOut[0x31 + i * 4] = p;
+      memOut[0x32 + i * 4] = p;
+      memOut[0x33 + i * 4] = p;
     }
     
     // SFR and Basic clock system.
@@ -579,13 +581,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
       out.println("Virtual time event queue: (next time: " + nextVTimeEventCycles + ")");
       vTimeEventQueue.print(out);
   }
-  
+ 
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
-    for (int i = 0, n = ioUnits.size(); i < n; i++) {
-        IOUnit ioUnit = ioUnits.get(i);
-      if (ioUnit != null && name.equalsIgnoreCase(ioUnit.getID()) ||
-              name.equalsIgnoreCase(ioUnit.getName())) {
+    for (IOUnit ioUnit : ioUnits) {
+      if (name.equalsIgnoreCase(ioUnit.getID()) ||
+          name.equalsIgnoreCase(ioUnit.getName())) {
 	return ioUnit;
       }
     }
