@@ -47,6 +47,8 @@ public interface MSP430Constants {
 
   public static final int MISALIGNED_READ = 0;
   public static final int MISALIGNED_WRITE = 1;
+  public static final int ADDRESS_OUT_OF_BOUNDS_READ = 2;
+  public static final int ADDRESS_OUT_OF_BOUNDS_WRITE = 3;
   
   public static final int MODE_BYTE = 0;
   public static final int MODE_WORD = 1;

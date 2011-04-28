@@ -239,7 +239,7 @@ public class ProfilerCommands implements CommandBundle {
           private CPUHeatMap hm;
 
           public int executeCommand(CommandContext context) {
-              hm = new CPUHeatMap((WindowManager) registry.getComponent(WindowManager.class));
+              hm = new CPUHeatMap(cpu, (WindowManager) registry.getComponent(WindowManager.class));
               cpu.setGlobalMonitor(hm);
               return 0;
           }

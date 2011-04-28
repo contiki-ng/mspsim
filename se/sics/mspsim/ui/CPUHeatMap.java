@@ -22,13 +22,20 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
     
     private ManagedWindow window;
     private BufferedImage heatmap;
-    private int[] heatR = new int[MSP430Core.MAX_MEM];
-    private int[] heatW = new int[MSP430Core.MAX_MEM];
-    private int[] heatE = new int[MSP430Core.MAX_MEM];
+    private int[] heatR;
+    private int[] heatW;
+    private int[] heatE;
     private int heatMax = 0;
     private int mode = 1;
     
-    public CPUHeatMap(WindowManager windowManager) {
+    private MSP430Core cpu;
+    
+    public CPUHeatMap(MSP430Core cpu, WindowManager windowManager) {
+        this.cpu = cpu;
+        heatR = new int[cpu.MAX_MEM];
+        heatW = new int[cpu.MAX_MEM];
+        heatE = new int[cpu.MAX_MEM];
+        
         window = windowManager.createWindow("CPU Heat Map");
         heatmap = new BufferedImage(128, 512, BufferedImage.TYPE_INT_RGB);
         setPreferredSize(new Dimension(140, 530));
@@ -69,7 +76,7 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
         switch (mode) {
         case 0:
             int me, mr, mw;
-            for (int i = 0; i < MSP430Core.MAX_MEM; i++) {
+            for (int i = 0; i < cpu.MAX_MEM; i++) {
                 mw = me = mr = 0;
                 if (heatW[i] > 0) mw = 80;
                 if (heatR[i] > 0) mr = 80;
@@ -83,7 +90,7 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
             break;
         case 1:
             /* slow... */
-            for (int i = 0; i < MSP430Core.MAX_MEM; i++) {
+            for (int i = 0; i < cpu.MAX_MEM; i++) {
                 int r = heatW[i];
                 int g = heatR[i];
                 int b = heatE[i];

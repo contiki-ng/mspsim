@@ -55,6 +55,7 @@ public abstract class MSP430Config {
     };
     
     public int maxMemIO = 0x200;
+    public int maxMem = 64*1024;
     public int maxInterruptVector = 15;
     public boolean MSP430XArch = false;
     

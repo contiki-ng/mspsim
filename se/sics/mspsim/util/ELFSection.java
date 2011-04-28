@@ -114,7 +114,8 @@ public class ELFSection {
     int pos = getOffset() + i;
     StringBuffer sb = new StringBuffer();
     char c;
-    while ((c = (char) elf.elfData[pos++]) != 0) {
+    int elfSize = elf.elfData.length;
+    while (pos < elfSize && (c = (char) elf.elfData[pos++]) != 0) {
       sb.append(c);
     }
     return sb.toString();

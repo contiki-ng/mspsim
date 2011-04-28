@@ -60,7 +60,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public static final boolean EXCEPTION_ON_BAD_OPERATION = true;
 
   // Try it out with 64 k memory
-  public static final int MAX_MEM = 64*1024;
+  public final int MAX_MEM;
   public final int MAX_MEM_IO;
   public static final int PORTS = 6;
   
@@ -74,11 +74,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   // For breakpoints, etc... how should memory monitors be implemented?
   // Maybe monitors should have a "next" pointer...? or just have a [][]?
-  public CPUMonitor[] breakPoints = new CPUMonitor[MAX_MEM];
+  public CPUMonitor[] breakPoints;
   // true => breakpoints can occur!
   boolean breakpointActive = true;
 
-  public int memory[] = new int[MAX_MEM];
+  public int memory[];
   public long cycles = 0;
   public long cpuCycles = 0;
   MapTable map;
@@ -144,9 +144,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
     super("MSP430", "MSP430 Core", null);
     MAX_INTERRUPT = config.maxInterruptVector;
     MAX_MEM_IO = config.maxMemIO;
+    MAX_MEM = config.maxMem;
     memOut = new IOUnit[MAX_MEM_IO];
     memIn = new IOUnit[MAX_MEM_IO];
 
+    memory = new int[MAX_MEM];
+    breakPoints = new CPUMonitor[MAX_MEM];
+    
     /* this is for detecting writes/read to/from non-existing IO */
     IOUnit voidIO = new IOUnit(id, memory, 0) {
         public void interruptServiced(int vector) {
@@ -726,6 +730,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Read method that handles read from IO units!
   public int read(int address, int mode) throws EmulationException {
       int val = 0;
+      if (address > MAX_MEM) {
+          printWarning(ADDRESS_OUT_OF_BOUNDS_READ, address);
+          address %= MAX_MEM;
+      }
       boolean word = mode != MODE_BYTE;
       // Only word reads at 0x1fe which is highest address...
       if (address < MAX_MEM_IO) {
@@ -766,7 +774,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public void write(int dstAddress, int dst, int mode) throws EmulationException {
     // TODO: optimize memory usage by tagging memory's higher bits.
     // will also affect below flash write stuff!!!
-    if (breakPoints[dstAddress] != null) {
+      if (dstAddress > MAX_MEM) {
+          printWarning(ADDRESS_OUT_OF_BOUNDS_WRITE, dstAddress);
+          dstAddress %= MAX_MEM;
+      }
+      
+      if (breakPoints[dstAddress] != null) {
       breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
     }
     boolean word = mode != MODE_BYTE;
@@ -816,6 +829,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
       message = "**** Illegal write - misaligned word to $" +
       Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
       break;
+    case ADDRESS_OUT_OF_BOUNDS_READ:
+        message = "**** Illegal read - out of bounds from $" +
+        Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+        break;
+    case ADDRESS_OUT_OF_BOUNDS_WRITE:
+        message = "**** Illegal write -  out of bounds from $" +
+        Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+        
+        break;
     }
     if (logger != null && message != null) {
       logger.warning(this, message);
