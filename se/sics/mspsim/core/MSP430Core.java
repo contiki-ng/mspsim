@@ -988,6 +988,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     op = instruction >> 12;
     int sp = 0;
     int sr = 0;
+    int rval = 0; /* register value */
     boolean word = (instruction & 0x40) == 0;
 
     // Destination vars
@@ -1059,8 +1060,20 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  break;
 	case AM_INDEX:
 	  // TODO: needs to handle if SR is used!
-	  dstAddress = readRegisterCG(dstRegister, ad) + read(pc, MODE_WORD);
-//	  memory[pc] + (memory[pc + 1] << 8);
+	  rval = readRegisterCG(dstRegister, ad);
+
+	  /* Support for MSP430X and below / above 64 KB */
+	  /* if register is pointing to <64KB then it needs to be truncated to below 64 */
+	  if (rval < 0xffff) {
+	      dstAddress = (rval + read(pc, MODE_WORD)) & 0xffff;
+	  } else {
+              dstAddress = read(pc, MODE_WORD);
+              if ((dstAddress & 0x8000) > 0) {
+                  dstAddress |= 0xf0000;
+              }
+              dstAddress += rval;
+              dstAddress &= 0xfffff;
+	  }
 
 	  // When is PC incremented - assuming immediately after "read"?
 	  pc += 2;
@@ -1300,6 +1313,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  srcAddress = readRegisterCG(srcRegister, as) + read(pc, MODE_WORD);
 //	    memory[pc] + (memory[pc + 1] << 8);
 	  // When is PC incremented - assuming immediately after "read"?
+	  
+	  
 	  incRegister(PC, 2);
 	  cycles += dstRegMode ? 3 : 6;
 	  break;
@@ -1344,8 +1359,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
           dstAddress = read(pc, MODE_WORD); //memory[pc] + (memory[pc + 1] << 8);
         } else {
           // CG here - probably not!???
-          dstAddress = readRegister(dstRegister) + read(pc, MODE_WORD);
-//          + memory[pc] + (memory[pc + 1] << 8);
+          rval = readRegister(dstRegister);
+          /* Support for MSP430X and below / above 64 KB */
+          /* if register is pointing to <64KB then it needs to be truncated to below 64 */
+          if (rval < 0xffff) {
+              dstAddress = (rval + read(pc, MODE_WORD)) & 0xffff;
+          } else {
+              dstAddress = read(pc, MODE_WORD);
+              if ((dstAddress & 0x8000) > 0) {
+                  dstAddress |= 0xf0000;
+              }
+              dstAddress += rval;
+              dstAddress &= 0xfffff;
+          }
         }
 
         if (op != MOV)
