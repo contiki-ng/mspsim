@@ -82,7 +82,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public long cycles = 0;
   public long cpuCycles = 0;
   MapTable map;
-  public MSP430Config config;
+  public final MSP430Config config;
 
   // Most HW needs only notify write and clocking, others need also read...
   // For notify write...
@@ -422,7 +422,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       if (oldIE == false && interruptsEnabled && servicedInterrupt >= 0) {
 //          System.out.println("*** Interrupts enabled while in interrupt : " +
-//                  servicedInterrupt + " PC: " + Utils.hex16(reg[PC]));
+//                  servicedInterrupt + " PC: $" + getAddressAsString(reg[PC]));
           /* must handle pending immediately */
           handlePendingInterrupts();
       }
@@ -832,19 +832,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
     switch(type) {
     case MISALIGNED_READ:
       message = "**** Illegal read - misaligned word from $" +
-      Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+      getAddressAsString(address) + " at $" + getAddressAsString(reg[PC]);
       break;
     case MISALIGNED_WRITE:
       message = "**** Illegal write - misaligned word to $" +
-      Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+      getAddressAsString(address) + " at $" + getAddressAsString(reg[PC]);
       break;
     case ADDRESS_OUT_OF_BOUNDS_READ:
         message = "**** Illegal read - out of bounds from $" +
-        Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+        getAddressAsString(address) + " at $" + getAddressAsString(reg[PC]);
         break;
     case ADDRESS_OUT_OF_BOUNDS_WRITE:
         message = "**** Illegal write -  out of bounds from $" +
-        Utils.hex16(address) + " at $" + Utils.hex16(reg[PC]);
+        getAddressAsString(address) + " at $" + getAddressAsString(reg[PC]);
         
         break;
     }
@@ -899,7 +899,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     reevaluateInterrupts();
     
     if (servicedInterrupt == MAX_INTERRUPT) {
-        if (debugInterrupts) System.out.println("**** Servicing RESET! => " + Utils.hex16(pc));
+        if (debugInterrupts) System.out.println("**** Servicing RESET! => $" + getAddressAsString(pc));
         internalReset();
     }
     
@@ -1018,7 +1018,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         // MSP430X - additional instructions
         op = instruction & 0xf0f0;
         System.out.println("Executing MSP430X instruction op:" + Utils.hex16(op) +
-                " ins:" + Utils.hex16(instruction) + " PC = " + Utils.hex16(pc - 2));
+                " ins:" + Utils.hex16(instruction) + " PC = $" + getAddressAsString(pc - 2));
         int src = 0;
         /* data is either bit 19-16 or src register */
         int srcData = (instruction & 0x0f00) >> 8;
@@ -1029,7 +1029,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
             src = read(pc, MODE_WORD);
             writeRegister(PC, pc += 2);
             dst = src + (srcData << 16);
-            System.out.println("*** Writing $" + Utils.hex16(dst) + " to reg: " + dstData);
+            System.out.println("*** Writing $" + getAddressAsString(dst) + " to reg: " + dstData);
             writeRegister(dstData, dst);
             break;
         case CMPA_IMM:
@@ -1402,7 +1402,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	src = read(srcAddress, word ? MODE_WORD : MODE_BYTE);
 
 	// 	  if (debug) {
-	// 	    System.out.println("Reading from " + Utils.hex16(srcAddress) +
+	// 	    System.out.println("Reading from " + getAddressAsString(srcAddress) +
 	// 			       " => " + src);
 	// 	  }
       }
@@ -1582,7 +1582,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   MapEntry getFunction(MapTable map, int address) {
     MapEntry function = new MapEntry(MapEntry.TYPE.function, address, 0,
-        "fkn at $" + Utils.hex16(address), null, true);
+        "fkn at $" + getAddressAsString(address), null, true);
     map.setEntry(function);
     return function;
   }
@@ -1590,13 +1590,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public int getPC() {
     return reg[PC];
   }
-  
+
+  public String getAddressAsString(int addr) {
+      return config.getAddressAsString(addr);
+  }
+
   public int getConfiguration(int parameter) {
       return 0;
   }
   
   public String info() {
-      StringBuffer buf = new StringBuffer();
+      StringBuilder buf = new StringBuilder();
       for (int i = 0; i < 16; i++) {
           buf.append("Vector: at $"  + Utils.hex16(0xfffe - i * 2) + " -> $" +
                   Utils.hex16(read(0xfffe - i * 2, MODE_WORD)) + "\n");

@@ -41,6 +41,7 @@ import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Timer;
 import se.sics.mspsim.core.USCI;
+import se.sics.mspsim.util.Utils;
 
 public class MSP430f2617Config extends MSP430Config {
 
@@ -100,5 +101,10 @@ public class MSP430f2617Config extends MSP430Config {
         /* 4 usci units */
         return 4;
     }
-    
+
+    @Override
+    public String getAddressAsString(int addr) {
+        return Utils.hex20(addr);
+    }
+
 }

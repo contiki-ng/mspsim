@@ -106,6 +106,22 @@ public class Utils {
     return s;
   }
 
+  public static String hex20(int addr) {
+      String s = Integer.toString(addr & 0xfffff, 16);
+      if (s.length() < 5) {
+          s = str16.substring(0, 5 - s.length()) + s;
+      }
+      return s;
+  }
+
+  public static String hex24(int addr) {
+      String s = Integer.toString(addr & 0xffffff, 16);
+      if (s.length() < 6) {
+          s = str16.substring(0, 6 - s.length()) + s;
+      }
+      return s;
+  }
+
   public static void fill(byte[] array, int pos, int len, byte value) {
     for (int i = 0; i < len; i++) {
       array[pos++] = value;

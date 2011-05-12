@@ -2,6 +2,8 @@ package se.sics.mspsim.core;
 
 import java.util.ArrayList;
 
+import se.sics.mspsim.util.Utils;
+
 public abstract class MSP430Config {
     
     public class TimerConfig {
@@ -60,4 +62,9 @@ public abstract class MSP430Config {
     public boolean MSP430XArch = false;
     
     public abstract int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits);
+
+    
+    public String getAddressAsString(int addr) {
+        return Utils.hex16(addr);
+    }
 }

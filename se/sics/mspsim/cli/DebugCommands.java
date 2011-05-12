@@ -81,11 +81,11 @@ public class DebugCommands implements CommandBundle {
           cpu.setBreakPoint(address = baddr,
               new CPUMonitor() {
                 public void cpuAction(int type, int adr, int data) {
-                  context.out.println("*** Break at $" + Utils.hex16(adr));
+                  context.out.println("*** Break at $" + cpu.getAddressAsString(adr));
 		  cpu.stop();
                 }
           });
-          context.err.println("Breakpoint set at $" + Utils.hex16(baddr));
+          context.err.println("Breakpoint set at $" + cpu.getAddressAsString(baddr));
           return 0;
         }
         public void stopCommand(CommandContext context) {
@@ -122,8 +122,8 @@ public class DebugCommands implements CommandBundle {
               public void cpuAction(int type, int adr, int data) {
                   if (mode == 0 || mode == 10) {
                       int pc = cpu.readRegister(0);
-                      String adrStr = getSymOrAddr(context, adr);
-                      String pcStr = getSymOrAddrELF(getELF(), pc);
+                      String adrStr = getSymOrAddr(cpu, context, adr);
+                      String pcStr = getSymOrAddrELF(cpu, getELF(), pc);
                       String op = "op";
                       if (type == MEMORY_READ) {
                           op = "Read";
@@ -154,7 +154,7 @@ public class DebugCommands implements CommandBundle {
                   cpu.setBreakPoint(address + i, monitor);
             }
           }
-          context.err.println("Watch set at $" + Utils.hex16(baddr));
+          context.err.println("Watch set at $" + cpu.getAddressAsString(baddr));
           return 0;
         }
 
@@ -187,7 +187,7 @@ public class DebugCommands implements CommandBundle {
               if (mode == 0) {
                 int pc = cpu.readRegister(0);
                 String adrStr = getRegisterName(register);
-                String pcStr = getSymOrAddrELF(getELF(), pc);
+                String pcStr = getSymOrAddrELF(cpu, getELF(), pc);
                 context.out.println("*** Write from " + pcStr +
                     ": " + adrStr + " = " + data);
               } else {
@@ -221,7 +221,7 @@ public class DebugCommands implements CommandBundle {
             MapEntry mapEntry = entries[i];
             int address = mapEntry.getAddress();
             context.out.println(" " + mapEntry.getName() + " at $" +
-                Utils.hex16(address) + " (" + Utils.hex8(cpu.memory[address]) +
+                  cpu.getAddressAsString(address) + " (" + Utils.hex8(cpu.memory[address]) +
                   " " + Utils.hex8(cpu.memory[address + 1]) + ") " + mapEntry.getType() +
                   " in file " + mapEntry.getFile());
             found = true;
@@ -255,7 +255,7 @@ public class DebugCommands implements CommandBundle {
         ch.registerCommand("stop", new BasicCommand("stop the CPU", "") {
           public int executeCommand(CommandContext context) {
             node.stop();
-            context.out.println("CPU stopped at: $" + Utils.hex16(cpu.readRegister(0)));
+            context.out.println("CPU stopped at: $" + cpu.getAddressAsString(cpu.readRegister(0)));
             return 0;
           }
         });
@@ -284,7 +284,7 @@ public class DebugCommands implements CommandBundle {
             } catch (Exception e) {
               e.printStackTrace(context.out);
             }
-            context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)) +
+            context.out.println("CPU stepped to: $" + cpu.getAddressAsString(cpu.readRegister(0)) +
                 " in " + (cpu.cycles - cyc) + " cycles (" + cpu.cycles + ")");
             return 0;
           }
@@ -303,7 +303,7 @@ public class DebugCommands implements CommandBundle {
             } catch (Exception e) {
               e.printStackTrace(context.out);
             }
-            context.out.println("CPU stepped to: $" + Utils.hex16(cpu.readRegister(0)) +
+            context.out.println("CPU stepped to: $" + cpu.getAddressAsString(cpu.readRegister(0)) +
                 " in " + (cpu.cycles - cyc) + " cycles (" + cpu.cycles + ") - next exec time: " + nxt);
             return 0;
           }
@@ -314,7 +314,7 @@ public class DebugCommands implements CommandBundle {
             int stackEnd = context.getMapTable().heapStartAddress;
             int stackStart = context.getMapTable().stackStartAddress;
             int current = cpu.readRegister(MSP430Constants.SP);
-            context.out.println("Current stack: $" + Utils.hex16(current) + " (" + (stackStart - current) + " used of " + (stackStart - stackEnd) + ')');
+            context.out.println("Current stack: $" + cpu.getAddressAsString(current) + " (" + (stackStart - current) + " used of " + (stackStart - stackEnd) + ')');
             return 0;
           }
         });
@@ -594,20 +594,20 @@ public class DebugCommands implements CommandBundle {
     }
   }
 
-  private static String getSymOrAddr(CommandContext context, int adr) {
+  private static String getSymOrAddr(MSP430 cpu, CommandContext context, int adr) {
     MapEntry me = context.getMapTable().getEntry(adr);
     if (me != null) {
       return me.getName();
     }
-    return '$' + Utils.hex16(adr);
+    return '$' + cpu.getAddressAsString(adr);
   }
 
-  private static String getSymOrAddrELF(ELF elf, int adr) {
+  private static String getSymOrAddrELF(MSP430 cpu, ELF elf, int adr) {
     DebugInfo me = elf.getDebugInfo(adr);
     if (me != null) {
       return me.toString();
     }
-    return '$' + Utils.hex16(adr);
+    return '$' + cpu.getAddressAsString(adr);
   }
 
   private static String getRegisterName(int register) {
