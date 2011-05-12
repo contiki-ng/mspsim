@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * IOPort
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package  se.sics.mspsim.core;
@@ -52,6 +48,7 @@ public class IOPort extends IOUnit {
   private static final String[] names = {
     "IN", "OUT", "DIR", "SEL" };
 
+  private final int port;
   private final int interrupt;
   private final MSP430Core cpu;
   private int interruptFlag;
@@ -84,9 +81,14 @@ public class IOPort extends IOUnit {
   public IOPort(MSP430Core cpu, int port,
 		int interrupt, int[] memory, int offset) {
     super("P" + port, "Port " + port, memory, offset);
+    this.port = port;
     this.interrupt = interrupt;
     this.interruptEnable = 0;
     this.cpu = cpu;
+  }
+
+  public int getPort() {
+      return port;
   }
 
   public int getIn() {
