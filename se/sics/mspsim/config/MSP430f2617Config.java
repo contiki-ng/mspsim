@@ -80,6 +80,11 @@ public class MSP430f2617Config extends MSP430Config {
             cpu.memOut[0xd8 + i] = usciB1;
             cpu.memIn[0xd8 + i] = usciB1;
           }
+        /* usciBx for i2c mode */
+        cpu.setIO(0x118, usciB0, true);
+        cpu.setIO(0x11a, usciB0, true);
+        cpu.setIO(0x17c, usciB1, true);
+        cpu.setIO(0x17e, usciB1, true);
 
         ioUnits.add(usciA0);
         ioUnits.add(usciB0);

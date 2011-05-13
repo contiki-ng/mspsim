@@ -140,6 +140,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   boolean isFlashBusy;
   
+  public void setIO(int adr, IOUnit io, boolean word) {
+      memOut[adr] = io;
+      memIn[adr] = io;
+      if (word) {
+          memOut[adr + 1] = io;
+          memIn[adr + 1] = io;
+      }
+  }
+  
   public MSP430Core(int type, ComponentRegistry registry, MSP430Config config) {
     super("MSP430", "MSP430 Core", null);
     MAX_INTERRUPT = config.maxInterruptVector;
@@ -1022,6 +1031,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
             dst = src + (srcData << 16);
             System.out.println("*** Writing $" + Utils.hex16(dst) + " to reg: " + dstData);
             writeRegister(dstData, dst);
+            break;
+        case CMPA_IMM:
+            break;
+        case CMPA_REG:
             break;
         default:
             System.out.println("MSP430X instructions not yet supported...");
