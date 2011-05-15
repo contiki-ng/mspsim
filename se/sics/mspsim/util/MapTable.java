@@ -73,8 +73,9 @@ public class MapTable {
   private int dataFill = 0;
 
   private ArrayList<MapEntry> modules = new ArrayList<MapEntry>();
-  private MapEntry[] entries;
-
+  private ArrayList<MapEntry> entries = new ArrayList<MapEntry>();
+  private HashMap<Integer, MapEntry> addressMap = new HashMap<Integer, MapEntry>();
+  
   public MapTable() {
   }
 
@@ -203,43 +204,29 @@ public class MapTable {
   }
 
   public String getFunctionName(int address) {
-    if (entries != null && entries[address] != null) {
-      return entries[address].getName();
-    } else {
-      return null;
-    }
+      MapEntry entry = getEntry(address);
+      if (entry != null) {
+          return entry.getName();
+      } else {
+          return null;
+      }
   }
 
   public MapEntry getEntry(int address) {
-    if (entries != null) {
-      return entries[address];
-    }
-    return null;
+      return addressMap.get(address);
   }
 
   public MapEntry[] getAllEntries() {
-    ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
-    if (entries != null) {
-      for (int address = 0; address < entries.length; address++) {
-        MapEntry entry = getEntry(address);
-        if (entry != null) {
-          allEntries.add(entry);
-        }
-      }
-    }
-    return allEntries.toArray(new MapEntry[allEntries.size()]);
+    return entries.toArray(new MapEntry[entries.size()]);
   }
 
   public MapEntry[] getEntries(String regexp) {
     Pattern pattern = Pattern.compile(regexp);
     ArrayList<MapEntry> allEntries = new ArrayList<MapEntry>();
-    if (entries != null) {
-      for (int address = 0; address < entries.length; address++) {
-        MapEntry entry = getEntry(address);
-        if (entry != null && pattern.matcher(entry.getName()).find()) {
-          allEntries.add(entry);
+    for (MapEntry entry : entries) {
+        if (pattern.matcher(entry.getName()).find()) {
+            allEntries.add(entry);
         }
-      }
     }
     return allEntries.toArray(new MapEntry[allEntries.size()]);
   }
@@ -250,24 +237,18 @@ public class MapTable {
   }
 
   public void setEntry(MapEntry entry) {
-    if (entries == null) {
-      entries = new MapEntry[0x10000];
-    }
-    if (entry.getAddress() < 0x10000) {
-      entries[entry.getAddress()] = entry;
-    }
+    entries.add(entry);
+    addressMap.put(entry.getAddress(), entry);
   }
 
   // Really slow way to find a specific function address!!!!
   // Either reimplement this or cache in hashtable...
   public int getFunctionAddress(String function) {
-    if (entries != null) {
-      for (int i = 0, n = entries.length; i < n; i++) {
-        if (entries[i] != null && function.equals(entries[i].getName())) {
-          return i;
+      for (MapEntry entry : entries) {
+        if (function.equals(entry.getName())) {
+          return entry.getAddress();
         }
       }
-    }
     return -1;
   }
 
