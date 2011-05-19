@@ -416,7 +416,7 @@ public class ELF {
         		   " type: " + type + " size: " + size);
       }
 
-      if (sAddr > 0 && sAddr < 0x10000) {
+      if (sAddr > 0 && sAddr < 0x100000) {
 	String symbolName = sn;
 //	if (bind == ELFSection.SYMBIND_LOCAL) {
 //	  symbolName += " (" + currentFile + ')';
