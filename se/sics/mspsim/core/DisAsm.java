@@ -57,6 +57,7 @@ public class DisAsm implements MSP430Constants {
   private BufferedReader input =
     new BufferedReader(new InputStreamReader(System.in));
 
+  
   public void setMap(MapTable m) {
     map = m;
   }
@@ -119,6 +120,74 @@ public class DisAsm implements MSP430Constants {
     size += 2;
 
     switch (op) {
+    case 0: // MSP430X instructions
+    {
+        // MSP430X - additional instructions
+        String opstr = "";
+        op = instruction & 0xf0f0;
+        int srcdata = (instruction & 0x0f00) >> 8;
+        int dst = instruction & 0x000f;
+        int nextData = memory[pc] + (memory[pc + 1] << 8);
+
+        switch(op) {
+        case MOVA_IND0:
+            opstr = "MOVA @R" + srcdata +  ",R" + dst;
+            break;
+        case MOVA_IND1:
+            opstr = "MOVA @R" + srcdata +  "+,R" + dst;
+            break;
+        case MOVA_ABS2REG:
+            opstr = "MOVA &$" + Utils.hex20(((srcdata << 16) | nextData)) +  "," + dst;
+            size += 2;
+            break;
+        case MOVA_INDX2REG:
+            opstr = "MOVA $" + Utils.hex16(nextData) +  "(R" + srcdata + "),R" + dst;
+            size += 2;
+            break;
+        case MOVA_REG2ABS:
+            opstr = "MOVA R" + srcdata + ",&$" + Utils.hex20(((dst << 16) | nextData));
+            size += 2;
+            break;
+        case MOVA_REG2INDX:
+            opstr = "MOVA R" + srcdata + ",$" + Utils.hex16(nextData) + "(R" + dst + ")";
+            size += 2;
+            break;
+        case MOVA_IMM2REG:
+            opstr = "MOVA #$" + Utils.hex20(((srcdata << 16) | nextData)) +  ",R" + dst;
+            size += 2;
+            break;
+        case CMPA_IMM:
+            opstr = "CMPA #$" + Utils.hex20(((srcdata << 16) | nextData)) +  ",R" + dst;
+            size += 2;
+            break;
+        case ADDA_IMM:
+            opstr = "ADDA #$" + Utils.hex20(((srcdata << 16) | nextData)) +  ",R" + dst;
+            size += 2;
+            break;
+        case SUBA_IMM:
+            opstr = "SUBA #$" + Utils.hex20(((srcdata << 16) | nextData)) +  ",R" + dst;
+            size += 2;
+            break;
+        case MOVA_REG:
+            opstr = "MOVA R" + srcdata +  ",R" + dst;
+            break;
+        case CMPA_REG:
+            opstr = "CMPA R" + srcdata +  ",R" + dst;
+            break;
+        case ADDA_REG:
+            opstr = "ADDA R" + srcdata +  ",R" + dst;
+            break;
+        case SUBA_REG:
+            opstr = "SUBA R" + srcdata +  ",R" + dst;
+            break;
+        }
+        
+        output += dumpMem(startPC, size, memory);
+        output += opstr + " ";
+        regs = "R" + srcdata + "=" + Utils.hex16(reg[srcdata]);
+        regs += " SP=" + Utils.hex16(reg[SP]);
+    }
+    break;
     case 1: // Single operand instructions
     {
       // Register
