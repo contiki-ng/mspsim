@@ -82,6 +82,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public long cycles = 0;
   public long cpuCycles = 0;
   MapTable map;
+  public final boolean MSP430XArch;
   public final MSP430Config config;
 
   // Most HW needs only notify write and clocking, others need also read...
@@ -156,6 +157,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     MAX_MEM = config.maxMem;
     memOut = new IOUnit[MAX_MEM_IO];
     memIn = new IOUnit[MAX_MEM_IO];
+    MSP430XArch = config.MSP430XArch;
 
     memory = new int[MAX_MEM];
     breakPoints = new CPUMonitor[MAX_MEM];
@@ -883,7 +885,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       write(sp, pc, MODE_WORD);
 
       writeRegister(SP, sp = sp - 2);
-      write(sp, sr, MODE_WORD);
+      write(sp, sr & 0x0fff | (pc & 0xf0000) >> 4, MODE_WORD);
     }
     // Clear SR
     writeRegister(SR, 0); // sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
@@ -1209,12 +1211,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	// Put Top of stack to Status DstRegister (TOS -> SR)
         servicedInterrupt = -1; /* needed before write to SR!!! */
 	sp = readRegister(SP);
-        writeRegister(SR, read(sp, MODE_WORD));
-        sp = sp + 2;
+	sr = read(sp, MODE_WORD);
+	writeRegister(SR, sr & 0x0fff);
+	sp = sp + 2;
         //	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
 	// TOS -> PC
 //	writeRegister(PC, memory[sp++] + (memory[sp++] << 8));
-        writeRegister(PC, read(sp, MODE_WORD));
+	writeRegister(PC, read(sp, MODE_WORD) | (sr & 0xf000) << 4);
         sp = sp + 2;
 	writeRegister(SP, sp);
 	write = false;
