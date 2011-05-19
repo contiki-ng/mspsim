@@ -90,36 +90,28 @@ public class Utils {
     return s;
   }
 
+  public static String hex(int data, int len) {
+      String s = Integer.toString(data, 16);
+      if (s.length() < len) {
+        s = str16.substring(0, len - s.length()) + s;
+      }
+      return s;
+  }
+
   public static String hex8(int data) {
-    String s = Integer.toString(data & 0xff, 16);
-    if (s.length() < 2) {
-      s = str16.substring(0, 2 - s.length()) + s;
-    }
-    return s;
+      return hex(data & 0xff, 2);
   }
 
   public static String hex16(int data) {
-    String s = Integer.toString(data & 0xffff, 16);
-    if (s.length() < 4) {
-      s = str16.substring(0, 4 - s.length()) + s;
-    }
-    return s;
+      return hex(data & 0xffff, 4);
   }
 
-  public static String hex20(int addr) {
-      String s = Integer.toString(addr & 0xfffff, 16);
-      if (s.length() < 5) {
-          s = str16.substring(0, 5 - s.length()) + s;
-      }
-      return s;
+  public static String hex20(int data) {
+      return hex(data & 0xfffff, 5);
   }
 
-  public static String hex24(int addr) {
-      String s = Integer.toString(addr & 0xffffff, 16);
-      if (s.length() < 6) {
-          s = str16.substring(0, 6 - s.length()) + s;
-      }
-      return s;
+  public static String hex24(int data) {
+      return hex(data & 0xffffff, 6);
   }
 
   public static void fill(byte[] array, int pos, int len, byte value) {
