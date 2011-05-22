@@ -1601,12 +1601,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public int getConfiguration(int parameter) {
       return 0;
   }
-  
+
   public String info() {
       StringBuilder buf = new StringBuilder();
+      buf.append(" Mode: " + getModeName(getMode())
+              + "  ACLK: " + aclkFrq + " Hz  SMCLK: " + smclkFrq + " Hz\n"
+              + " Cycles: " + cycles + "  CPU Cycles: " + cpuCycles
+              + "  Time: " + (long)getTimeMillis() + " msec\n");
       for (int i = 0; i < 16; i++) {
-          buf.append("Vector: at $"  + Utils.hex16(0xfffe - i * 2) + " -> $" +
-                  Utils.hex16(read(0xfffe - i * 2, MODE_WORD)) + "\n");
+            buf.append(" Vector " + (15 - i) + " at $"
+                    + Utils.hex16(0xfffe - i * 2) + " -> $"
+                    + Utils.hex16(read(0xfffe - i * 2, MODE_WORD)) + "\n");
       }
       return buf.toString();
   }

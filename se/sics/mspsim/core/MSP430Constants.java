@@ -65,7 +65,7 @@ public interface MSP430Constants {
   
   public static final int RESET_PUC = 0;
   public static final int RESET_POR = 1;
-  
+
   // MODES
   public static final int MODE_ACTIVE = 0;
   public static final int MODE_LPM0 = 1;
@@ -76,9 +76,9 @@ public interface MSP430Constants {
   public static final int MODE_MAX = MODE_LPM4;
 
   public static String[] MODE_NAMES = {
-    "active", "lpm0", "lpm1", "lpm2", "lpm3", "lpm4" 
+    "Active", "LPM0", "LPM1", "LPM2", "LPM3", "LPM4"
   };
-  
+
   public static final int CLK_ACLK = 1;
   public static final int CLK_SMCLK = 2;
 
