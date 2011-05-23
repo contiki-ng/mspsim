@@ -750,6 +750,8 @@ public class Timer extends IOUnit {
           resetCounter(cycles);
         }
       }
+      if (ccr[index] == null)
+          System.out.println("Timer write to " + Utils.hex16(address));
       ccr[index].tccr = data;
 
       int diff = data - counter;

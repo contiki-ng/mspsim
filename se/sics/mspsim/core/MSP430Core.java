@@ -885,7 +885,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       write(sp, pc, MODE_WORD);
 
       writeRegister(SP, sp = sp - 2);
-      write(sp, sr & 0x0fff | (pc & 0xf0000) >> 4, MODE_WORD);
+      write(sp, (sr & 0x0fff) | ((pc & 0xf0000) >> 4), MODE_WORD);
     }
     // Clear SR
     writeRegister(SR, 0); // sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
