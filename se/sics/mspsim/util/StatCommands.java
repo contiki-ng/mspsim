@@ -74,7 +74,14 @@ public class StatCommands implements CommandBundle {
             if (unit == null) {
               context.out.println("  " + unitName + ": NOT FOUND");
             } else {
-              context.out.println(unitName + ": " + unit);
+              String id = unit.getID();
+              String name = unit.getName();
+              if (id == name) {
+                context.out.println(unit.getName() + ": " + unit.getClass().getName());
+              } else {
+                context.out.println(unit.getID() + " (" + unit.getName() + "): "
+                    + unit.getClass().getName());
+              }
               String info = unit.info();
               if (info != null) {
                 context.out.println(info);
