@@ -306,27 +306,40 @@ public class MiscCommands implements CommandBundle {
       }
     });
     
-    handler.registerCommand("service", new BasicCommand("handle service plugins", "[class name|service name] [start|stop]") {
+    handler.registerCommand("service", new BasicCommand("handle service plugins", "[-f] [class name|service name] [start|stop]") {
       @Override
       public int executeCommand(CommandContext context) {
-        if (context.getArgumentCount() == 0) {
+        int index = 0;
+        boolean verbose = true;
+        if (context.getArgumentCount() > 0 && "-f".equals(context.getArgument(index))) {
+          index++;
+          verbose = false;
+        }
+        if (context.getArgumentCount() == index) {
           ServiceComponent[] sc = (ServiceComponent[]) registry.getAllComponents(ServiceComponent.class);
-          for (int i = 0; i < sc.length; i++) {
-            context.out.printf(" %-20s %s\n", sc[i].getName(), sc[i].getStatus());
+          if (sc.length == 0) {
+            context.out.println("No services found.");
+          } else {
+            for (ServiceComponent service : sc) {
+              context.out.printf(" %-20s %s\n", service.getName(), service.getStatus());
+            }
           }
           return 0;
         }
-        String name = context.getArgument(0);
+        String name = context.getArgument(index++);
         ServiceComponent sc = getServiceForName(registry, name);
         if (sc == null) {
-          context.err.println("could not find service '" + name + "'");
-          return 1;
+          if (verbose) {
+            context.err.println("could not find service '" + name + "'");
+            return 1;
+          }
+          return 0;
         }
-        if (context.getArgumentCount() == 1) {
+        if (context.getArgumentCount() == index) {
           context.out.printf(" %-20s %s\n", sc.getName(), sc.getStatus());
           return 0;
         }
-        String operation = context.getArgument(1);
+        String operation = context.getArgument(index);
         if ("start".equals(operation)) {
           if (sc.getStatus() == ServiceComponent.Status.STARTED) {
             context.out.println("service " + sc.getName() + " already started");

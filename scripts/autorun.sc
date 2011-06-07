@@ -8,10 +8,10 @@
 # contikichecker
 
 #start the nodegui service
-service controlgui start
-service nodegui start
-service serialgui start
-#service stackchart start
+service -f controlgui start
+service -f nodegui start
+service -f serialgui start
+#service -f stackchart start
 #rflistener output CC2420 >> rfdata.txt
 stop
 #start
