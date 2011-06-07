@@ -44,8 +44,6 @@ import se.sics.mspsim.util.Utils;
 
 public class BasicClockModule extends IOUnit {
 
-  public static final boolean DEBUG = false;
-  
   public static final int DCOCTL = 0x56; // 0x60
   public static final int BCSCTL1 = 0x57; // 0x84 
   public static final int BCSCTL2 = 0x58;
@@ -109,7 +107,7 @@ public class BasicClockModule extends IOUnit {
 
   public void write(int address, int data, boolean word, long cycles) {
     // Currently ignores the word flag...
-    if (DEBUG) System.out.println("Write to BasicClockModule: " +
+    if (DEBUG) log("Write to BasicClockModule: " +
 		       Utils.hex16(address) + " => " + Utils.hex16(data));
 
     memory[address] = data & 0xff;
@@ -120,7 +118,7 @@ public class BasicClockModule extends IOUnit {
     case DCOCTL:
       dcoFrequency = (data >> 5) & 0x7;
       dcoModulator = data & 0x1f;
-      if (DEBUG) System.out.println("Write: BCM DCOCTL0: DCO Frq:" + dcoFrequency +
+      if (DEBUG) log("Write: BCM DCOCTL0: DCO Frq:" + dcoFrequency +
 			 "  dcoMod:" + dcoModulator);
       break;
     case BCSCTL1:
@@ -128,7 +126,7 @@ public class BasicClockModule extends IOUnit {
       divAclk = 1 << ((data >> 4) & 3);
       lfxt1Mode = (data >> 6) & 1;
       xt2Off = (data >> 7) & 1;
-      if (DEBUG) System.out.println("Write: BCM BCSCTL1: RSel:" + resistorSel +
+      if (DEBUG) log("Write: BCM BCSCTL1: RSel:" + resistorSel +
 			 " DivACLK:" + divAclk + " ACLKFrq: " +
 			 ACLK_FRQ / divAclk);
       core.setACLKFrq(ACLK_FRQ / divAclk);
@@ -140,7 +138,7 @@ public class BasicClockModule extends IOUnit {
       smclSel = (data >> 3) & 1;
       divSMclk = 1 << ((data >> 2) & 3);
       dcoResitorSel = data & 1;
-      if (DEBUG) System.out.println("Write: BCM BCSCTL2: SMCLKDIV: " +
+      if (DEBUG) log("Write: BCM BCSCTL2: SMCLKDIV: " +
 			 divSMclk + " SMCLK_SEL: "
 			 + smclSel + " MCLKSel: " + mclkSel + " divMclk: " +
 			 divMclk + " DCOResitorSel: " + dcoResitorSel);
@@ -153,7 +151,7 @@ public class BasicClockModule extends IOUnit {
 			 (resistorSel << 8)) * DCO_FACTOR + MIN_DCO_FRQ;
     if (newcalcDCOFrq != calcDCOFrq) {
       calcDCOFrq = newcalcDCOFrq;
-      if (DEBUG) System.out.println("BCM  DCO_Speed: " + calcDCOFrq);
+      if (DEBUG) log("BCM  DCO_Speed: " + calcDCOFrq);
       core.setDCOFrq(calcDCOFrq, calcDCOFrq / divSMclk);
       updateTimers(cycles);
     }

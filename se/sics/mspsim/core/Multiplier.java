@@ -44,8 +44,6 @@ import se.sics.mspsim.util.Utils;
 
 public class Multiplier extends IOUnit {
 
-  public static final boolean DEBUG = false;
-
   public static final int MPY = 0x130;
   public static final int MPYS = 0x132;
   public static final int MAC = 0x134;
@@ -93,23 +91,22 @@ public class Multiplier extends IOUnit {
     case OP2:
       return op2;
     case RESHI:
-      if (DEBUG) System.out.println(getName() + " read res hi: " + resHi );
+      if (DEBUG) log("read res hi: " + resHi );
       return resHi;
     case RESLO:
-      if (DEBUG) System.out.println(getName() + " read res lo: " + resLo );
+      if (DEBUG) log("read res lo: " + resLo );
       return resLo;
     case SUMEXT:
-      if (DEBUG) System.out.println(getName() + " read sumext: " + sumext);
+      if (DEBUG) log("read sumext: " + sumext);
       return sumext;
     }
-    System.out.println(getName() + " read other address:" + address);
+    logw("read other address:" + address);
     return 0;
   }
 
   public void write(int address, int data, boolean word, long cycles) {
     if (DEBUG) {
-      System.out.println("Multiplier: write to: " + Utils.hex16(address) +
-			 " data = " + data + " word = " + word);
+      log("write to: " + Utils.hex16(address) + " data = " + data + " word = " + word);
     }
     if (MSP430Constants.DEBUGGING_LEVEL > 0) {
       System.out.println("Write to HW Multiplier: " +
@@ -119,25 +116,25 @@ public class Multiplier extends IOUnit {
     switch(address) {
     case MPY:
       op1 = mpy = data;
-      if (DEBUG) System.out.println(getName() + " Write to MPY: " + data);
+      if (DEBUG) log("Write to MPY: " + data);
       signed = false;
       accumulating = false;
       break;
     case MPYS:
       op1 = mpys = data;
-      if (DEBUG) System.out.println(getName() + " Write to MPYS: " + data);
+      if (DEBUG) log("Write to MPYS: " + data);
       signed = true;
       accumulating = false;
       break;
     case MAC:
       op1 = mac = data;
-      if (DEBUG) System.out.println(getName() + " Write to MAC: " + data);
+      if (DEBUG) log("Write to MAC: " + data);
       signed = false;
       accumulating = true;
       break;
     case MACS:
       op1 = macs = data;
-      if (DEBUG) System.out.println(getName() + " Write to MACS: " + data);
+      if (DEBUG) log("Write to MACS: " + data);
       signed = true;
       accumulating = true;
       break;
@@ -148,7 +145,7 @@ public class Multiplier extends IOUnit {
       resHi = data;
       break;
     case OP2:
-      if (DEBUG) System.out.println(getName() + " Write to OP2: " + data);
+      if (DEBUG) log("Write to OP2: " + data);
       sumext = 0;
       op2 = data;
       // Expand to word
@@ -162,7 +159,7 @@ public class Multiplier extends IOUnit {
       }
       
       long res = (long) op1 * (long) op2;
-      if (DEBUG) System.out.println("O1:" + op1 + " * " + op2 + " = " + res);
+      if (DEBUG) log("O1:" + op1 + " * " + op2 + " = " + res);
 
       if (signed) {
         sumext = res < 0 ? 0xffff : 0;
@@ -179,7 +176,7 @@ public class Multiplier extends IOUnit {
       
       resHi = (int) ((res >> 16) & 0xffff);
       resLo = (int) (res & 0xffff);
-      if (DEBUG) System.out.println(" ===> result = " + res);
+      if (DEBUG) log(" ===> result = " + res);
       break;
     }
   }

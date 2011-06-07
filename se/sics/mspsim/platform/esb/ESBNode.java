@@ -49,7 +49,6 @@ import se.sics.mspsim.config.MSP430f1611Config;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.extutil.jfreechart.DataChart;
@@ -60,8 +59,6 @@ import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.OperatingModeStatistics;
 
 public class ESBNode extends GenericNode implements PortListener {
-
-  public static final boolean DEBUG = false;
 
   public static final int PIR_PIN = 3;
   public static final int VIB_PIN = 4;

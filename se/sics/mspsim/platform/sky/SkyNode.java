@@ -44,7 +44,6 @@ import java.io.IOException;
 import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.util.ArgumentManager;
 
@@ -52,8 +51,6 @@ import se.sics.mspsim.util.ArgumentManager;
  * Emulation of Sky Mote
  */
 public class SkyNode extends MoteIVNode {
-
-  public static final boolean DEBUG = false;
 
   private M25P80 flash;
 

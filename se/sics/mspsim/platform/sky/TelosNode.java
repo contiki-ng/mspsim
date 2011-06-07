@@ -44,7 +44,6 @@ import java.io.IOException;
 import se.sics.mspsim.chip.AT45DB;
 import se.sics.mspsim.chip.FileAT45DB;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.util.ArgumentManager;
 
@@ -54,7 +53,6 @@ import se.sics.mspsim.util.ArgumentManager;
  * TODO: Cleanup the MoteIVNode, SkyNode and TelosNode
  */
 public class TelosNode extends MoteIVNode {
-  public static final boolean DEBUG = false;
 
   // P4.4 - Output: SPI Flash Chip Select
   public static final int FLASH_RESET = (1<<3);

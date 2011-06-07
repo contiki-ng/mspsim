@@ -51,8 +51,6 @@ import java.util.Arrays;
 
 public class ADC12 extends IOUnit {
 
-  private static final boolean DEBUG = false;
-  
   public static final int ADC12CTL0 = 0x01A0;// Reset with POR
   public static final int ADC12CTL1 = 0x01A2;// Reset with POR
   public static final int ADC12IFG = 0x01A4; //Reset with POR
@@ -188,7 +186,7 @@ public class ADC12 extends IOUnit {
       enableConversion = (value & 0x02) > 0;
       startConversion = (value & 0x01) > 0;
       
-      if (DEBUG) System.out.println(getName() + ": Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
+      if (DEBUG) log("Set SHTime0: " + shTime0 + " SHTime1: " + shTime1 + " ENC:" +
           enableConversion + " Start: " + startConversion + " ADC12ON: " + adc12On);
       if (adc12On && enableConversion && startConversion && !isConverting) {
         // Set the start time to be now!
@@ -210,7 +208,7 @@ public class ADC12 extends IOUnit {
         adcSSel = (value >> 3) & 0x03;
       }
       conSeq = (value >> 1) & 0x03;
-      if (DEBUG) System.out.println(getName() + ": Set startMem: " + startMem + " SHSource: " + shSource +
+      if (DEBUG) log("Set startMem: " + startMem + " SHSource: " + shSource +
           " ConSeq-mode:" + conSeq + " Div: " + adcDiv + " ADCSSEL: " + adcSSel);
       break;
     case ADC12IE:
@@ -225,7 +223,7 @@ public class ADC12 extends IOUnit {
           /* Ongoing conversion: not possible to modify */
         } else {
           adc12mctl[address - ADC12MCTL0] = value & 0xff;
-          if (DEBUG) System.out.println("ADC12MCTL" + (address - ADC12MCTL0)
+          if (DEBUG) log("ADC12MCTL" + (address - ADC12MCTL0)
               + " source = " + (value & 0xf)
               + (((value & EOS_MASK) != 0) ? " EOS bit set" : ""));
         }

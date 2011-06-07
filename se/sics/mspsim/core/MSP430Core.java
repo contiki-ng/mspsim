@@ -54,7 +54,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public static final int RETURN = 0x4130;
 
-  public static final boolean DEBUG = false;
   public static final boolean debugInterrupts = false;
 
   public static final boolean EXCEPTION_ON_BAD_OPERATION = true;
@@ -167,10 +166,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
         public void interruptServiced(int vector) {
         }
         public void write(int address, int value, boolean word, long cycles) {
-            System.out.println("*** IOUnit write to non-existent IO at " + address);
+            logw("*** IOUnit write to non-existent IO at " + address);
         }
         public int read(int address, boolean word, long cycles) {
-            System.out.println("*** IOUnit read from non-existent IO at " + address);
+            logw("*** IOUnit read from non-existent IO at " + address);
             return 0;
         }
     };
@@ -304,8 +303,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
       memOut[0x1A0 + i] = adc12;
       memIn[0x1A0 + i] = adc12;
     }
-
-    if (DEBUG) System.out.println("Number of passive: " + ioUnits.size());
   }
 
   public Profiler getProfiler() {
@@ -502,7 +499,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //    System.out.println("*** DCO: MAX:" + BasicClockModule.MAX_DCO_FRQ +
 //    " current: " + frequency + " DCO_FAC = " + currentDCOFactor);
     if (DEBUG)
-      System.out.println("Set smclkFrq: " + smclkFrq);
+      log("Set smclkFrq: " + smclkFrq);
     dcoReset();
   }
 
@@ -1238,8 +1235,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
 	break;
       default:
-	System.out.println("Error: Not implemented instruction:" +
-			   instruction);
+	logw("Error: Not implemented instruction:" + instruction);
       }
     }
     break;
@@ -1281,8 +1277,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	jump = true;
 	break;
       default:
-        System.out.println("Not implemented instruction: " +
-            Utils.binary16(instruction));
+        logw("Not implemented instruction: " + Utils.binary16(instruction));
       }
       // Perform the Jump
       if (jump) {
@@ -1476,7 +1471,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	break;
       case DADD: // DADD
 	if (DEBUG)
-	  System.out.println("DADD: Decimal add executed - result error!!!");
+	  log("DADD: Decimal add executed - result error!!!");
 	// Decimal add... this is wrong... each nibble is 0-9...
 	// So this has to be reimplemented...
 	dst = dst + src + ((readRegister(SR) & CARRY) > 0 ? 1 : 0);
@@ -1533,7 +1528,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         writeRegister(SR, sr);
         break;
       default:
-	System.out.println("DoubleOperand not implemented: op = " + op + " at " + pc);
+	logw("DoubleOperand not implemented: op = " + op + " at " + pc);
 	if (EXCEPTION_ON_BAD_OPERATION) {
 	  EmulationException ex = new EmulationException("Bad operation: " + op + " at " + pc);
 	  ex.initCause(new Throwable("" + pc));

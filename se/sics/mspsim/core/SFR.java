@@ -46,8 +46,6 @@ package se.sics.mspsim.core;
  */
 public class SFR extends IOUnit {
 
-  private boolean DEBUG = false;
-
   public static final int IE1 = 0;
   public static final int IE2 = 1;
   public static final int IFG1 = 2;
@@ -107,7 +105,7 @@ public class SFR extends IOUnit {
   // write a value to the IO unit
   public void write(int address, int value, boolean word,
 			     long cycles) {
-    if (DEBUG ) System.out.println(getName() + " write to: " + address + " = " + value);
+    if (DEBUG) log("write to: " + address + " = " + value);
     switch (address) {
     case IE1:
     case IE2:
@@ -127,7 +125,7 @@ public class SFR extends IOUnit {
   // read
   // read a value from the IO unit
   public int read(int address, boolean word, long cycles) {
-    if (DEBUG) System.out.println(getName() + " read from: " + address);
+    if (DEBUG) log("read from: " + address);
     switch (address) {
     case IE1:
       return ie1;
@@ -181,7 +179,7 @@ public class SFR extends IOUnit {
     for (int i = 0; i < 8; i++) {
       if ((change & 1) == 1)  {
         if (sfrModule[pos] != null) {
-          if (DEBUG) System.out.println("Calling enable changed on module: " +
+          if (DEBUG) log("Calling enable changed on module: " +
               sfrModule[pos].getName() + " enabled = " + (value & 1) + " bit " + i);
           sfrModule[pos].enableChanged(reg, i, (value & 1) > 0);
         }
@@ -200,7 +198,7 @@ public class SFR extends IOUnit {
       if ((change & 1) == 1)  {
         if (sfrModule[pos] != null && !irqTriggered[irqVector[pos]]) {
           /* interrupt goes directly to the module responsible */
-          if (DEBUG) System.out.println("SFR: flagging interrupt: " +
+          if (DEBUG) log("flagging interrupt: " +
               sfrModule[pos].getName() + " pos: " + pos + " ie: " + (ie & 1) + " ifg:" + (ifg & 1) + " chg: " + change);
           if ((ie & ifg & 1) > 0) {
             int vector = irqVector[pos];
@@ -264,7 +262,7 @@ public class SFR extends IOUnit {
             ifg2 &= ~(1 << bit);
         }
         if (DEBUG) {
-            System.out.println("SFR: cleared interrupt for " + sfrModule[pos] + " vector: " + vector);
+            log("cleared interrupt for " + sfrModule[pos] + " vector: " + vector);
         }
     }
     cpu.flagInterrupt(vector, this, false);

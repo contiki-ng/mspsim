@@ -72,6 +72,7 @@ public class Leds extends Chip {
             int oldLeds = this.leds;
             this.leds = leds;
             fireStateChanged(oldLeds, leds);
+            if (DEBUG) log(ledColors.length <= 8 ? Utils.binary8(leds) : Utils.binary16(leds));
         }
     }
 

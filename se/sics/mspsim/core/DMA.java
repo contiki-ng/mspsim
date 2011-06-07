@@ -68,7 +68,7 @@ public class DMA extends IOUnit {
         }
 
         public void setTrigger(DMATrigger t, int index) {
-            System.out.println("Setting trigger to " + t);
+            if (DEBUG) log("Setting trigger to " + t);
             trigger = t;
             triggerIndex = index;
         }
@@ -87,7 +87,7 @@ public class DMA extends IOUnit {
                 enable = (data & 0x10) > 0; /* bit 4 */
                 dmaIFG = (data & IFG_MASK) > 0; /* bit 3 */
                 dmaIE = (data & 0x04) > 0; /* bit 2 */
-                System.out.println("DMA Ch." + channelNo + ": config srcIncr: " + srcIncr + " dstIncr:" + dstIncr
+                if (DEBUG) log("DMA Ch." + channelNo + ": config srcIncr: " + srcIncr + " dstIncr:" + dstIncr
                         + " en: " + enable + " srcB:" + srcByteMode + " dstB:" + dstByteMode + " level: " + dmaLevel +
                         " transferMode: " + transferMode + " ie:" + dmaIE);
                 /* this might be wrong ? */
@@ -122,7 +122,7 @@ public class DMA extends IOUnit {
             case 6:
                 return size;
             }
-            System.out.println("Illegal read of DMA Channel register");
+            logw("Illegal read of DMA Channel register");
             return 0;
         }
         
@@ -131,7 +131,7 @@ public class DMA extends IOUnit {
             /* NOTE: show config byte/word also !!! */
             if (enable) {
                 int data = cpu.read(currentSourceAddress, MSP430Constants.MODE_BYTE);
-                System.out.println("DMA Triggered reading from: " +
+                if (DEBUG) log("DMA Triggered reading from: " +
                         currentSourceAddress + " => " + data + " " + (char) data +
                         " size:" + size + " index:" + index);
                 trigger.clearDMATrigger(index);
@@ -206,7 +206,7 @@ public class DMA extends IOUnit {
     }
 
     public void write(int address, int value, boolean word, long cycles) {
-        System.out.println("DMA write to: " + Utils.hex16(address) + ": " + value);
+        if (DEBUG) log("DMA write to: " + Utils.hex16(address) + ": " + value);
         switch (address) {
         case DMACTL0:
             /* DMA Control 0 */
