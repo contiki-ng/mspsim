@@ -723,8 +723,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           " CS: " + chipSelect + " SPI state: " + state + " StateMachine: " + stateMachine);
     }
 
-    if ((stateMachine != RadioState.VREG_OFF) && chipSelect) {
+    if (!chipSelect) {
+      // Chip is not selected
 
+    } else if (stateMachine != RadioState.VREG_OFF) {
       switch(state) {
       case WAITING:
         if ((data & FLAG_READ) != 0) {
@@ -882,8 +884,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       source.byteReceived(oldStatus);  
     } else {
         /* No VREG but chip select */
-        if (chipSelect) source.byteReceived(0);
-        System.out.println("**** Warning - writing to CC2420 when VREG is off!!!");
+        source.byteReceived(0);
+        logw("**** Warning - writing to CC2420 when VREG is off!!!");
     }
   }
 
