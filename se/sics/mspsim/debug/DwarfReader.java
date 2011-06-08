@@ -49,7 +49,7 @@ import se.sics.mspsim.util.ELFSection;
 
 public class DwarfReader implements ELFDebug {
 
-    public boolean DEBUG = false;
+    public static final boolean DEBUG = false;
     
     /* Operands for lines */
     public static final int    DW_LNS_EXT = 0;

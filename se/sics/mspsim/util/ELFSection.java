@@ -41,6 +41,8 @@
 
 package se.sics.mspsim.util;
 
+import se.sics.mspsim.debug.DwarfReader;
+
 public class ELFSection {
 
   public static final int TYPE_NULL       =   0;
@@ -161,12 +163,12 @@ public class ELFSection {
           bitPos += 7;
       } while ((b & 128) != 0);
       long negval = 0x1 << bitPos;
-      if (b < 0x40)
+      if (b < 0x40) {
           return val;
-      else {
-          System.out.println("Line: read negative : " + val + " negval: " + negval);
-          return -(negval - val);
       }
+      if (ELF.DEBUG || DwarfReader.DEBUG)
+          System.out.println("Line: read negative : " + val + " negval: " + negval);
+      return -(negval - val);
   }
 
   public int readElf8(int pos) {
