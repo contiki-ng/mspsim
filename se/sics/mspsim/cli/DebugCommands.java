@@ -569,13 +569,17 @@ public class DebugCommands implements CommandBundle {
             public int executeCommand(CommandContext context) {
         	if ("show".equals(context.getArgument(0))) {
         	    int size = cpu.getTraceSize();
-        	    DisAsm disAsm = cpu.getDisAsm();
-        	    for (int i = 0; i < size; i++) {
-        		int pc = cpu.getBackTrace(size - 1 - i);
-        		DbgInstruction inst = disAsm.getDbgInstruction(pc, cpu);
-        		inst.setPos(pc);
-			System.out.println(inst);
-		    }
+                    if (size == 0) {
+                        context.err.println("trace size is set to 0");
+                    } else {
+                        DisAsm disAsm = cpu.getDisAsm();
+                        for (int i = 0; i < size; i++) {
+                            int pc = cpu.getBackTrace(size - 1 - i);
+                            DbgInstruction inst = disAsm.getDbgInstruction(pc, cpu);
+                            inst.setPos(pc);
+                            context.out.println(inst);
+                        }
+                    }
         	} else {
         	    cpu.setTrace(context.getArgumentAsInt(0));
         	}
