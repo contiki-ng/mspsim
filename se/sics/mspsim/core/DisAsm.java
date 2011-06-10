@@ -213,7 +213,7 @@ public class DisAsm implements MSP430Constants {
             opstr = "CALLA " + Utils.hex20(((dst << 16) | nextData)) + "(PC)";
             size += 2;
             break;
-        case CALLA_IMMREG:
+        case CALLA_IMM:
             opstr = "CALLA #" + Utils.hex20(((dst << 16) | nextData));
             size += 2;
             break;

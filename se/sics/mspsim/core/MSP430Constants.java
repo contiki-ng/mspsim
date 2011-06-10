@@ -134,12 +134,13 @@ public interface MSP430Constants {
   public static final int ADDA_REG = 0x00e0;
   public static final int SUBA_REG = 0x00f0;
   
+  public static final int CALLA_MASK = 0x13f0;
   public static final int CALLA_REG = 0x1340;
   public static final int CALLA_IND = 0x1360;
   public static final int CALLA_IND_AUTOINC = 0x1370;
   public static final int CALLA_ABS = 0x1380;
   public static final int CALLA_EDE = 0x1390; /* x(PC) */
-  public static final int CALLA_IMMREG = 0x13b0;
+  public static final int CALLA_IMM = 0x13b0;
     
   
   

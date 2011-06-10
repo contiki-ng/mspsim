@@ -1048,195 +1048,224 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       // Register
       dstRegister = instruction & 0xf;
-      // Address mode of destination...
-      int ad = (instruction >> 4) & 3;
-      int nxtCarry = 0;
-      op = instruction & 0xff80;
-      if (op == PUSH || op == CALL) {
-	// The PUSH and CALL operations increase the SP before 
-        // address resolution!
-	// store on stack - always move 2 steps (W) even if B./
-	sp = readRegister(SP) - 2;
-	writeRegister(SP, sp);
-      }
-
-      if ((dstRegister == CG1 && ad > AM_INDEX) || dstRegister == CG2) {
-	dstRegMode = true;
-	cycles++;
+      
+      /* check if this is a MSP430X CALLA instruction */
+      if ((op = instruction & CALLA_MASK) > RETI) {
+          pc = readRegister(PC);
+          dst = -1;
+          switch(op) {
+          case CALLA_IMM:
+              dst = (dstRegister << 16) | read(pc, MODE_WORD);
+              pc += 2;
+              cycles += 4;
+              break;
+          default:
+              System.out.println("CALLA: mode not implemented");
+          }
+          // store current PC on stack. (current PC points to next instr.)
+          /* store 20 bits on stack (costs two words) */
+          if (dst != -1) {
+              sp = readRegister(SP) - 2;
+              write(sp, (pc >> 16) & 0xf, MODE_WORD);
+              sp = sp - 2;
+              write(sp, pc & 0xffff, MODE_WORD);
+              writeRegister(SP, sp);
+              writeRegister(PC, dst);
+          }
       } else {
-	switch(ad) {
-	  // Operand in register!
-	case AM_REG:
-	  dstRegMode = true;
-	  cycles++;
-	  break;
-	case AM_INDEX:
-	  // TODO: needs to handle if SR is used!
-	  rval = readRegisterCG(dstRegister, ad);
+          // Address mode of destination...
+          int ad = (instruction >> 4) & 3;
+          int nxtCarry = 0;
+          op = instruction & 0xff80;
+          if (op == PUSH || op == CALL) {
+              // The PUSH and CALL operations increase the SP before 
+              // address resolution!
+              // store on stack - always move 2 steps (W) even if B./
+              sp = readRegister(SP) - 2;
+              writeRegister(SP, sp);
+          }
 
-	  /* Support for MSP430X and below / above 64 KB */
-	  /* if register is pointing to <64KB then it needs to be truncated to below 64 */
-	  if (rval < 0xffff) {
-	      dstAddress = (rval + read(pc, MODE_WORD)) & 0xffff;
-	  } else {
-              dstAddress = read(pc, MODE_WORD);
-              if ((dstAddress & 0x8000) > 0) {
-                  dstAddress |= 0xf0000;
-              }
-              dstAddress += rval;
-              dstAddress &= 0xfffff;
-	  }
-
-	  // When is PC incremented - assuming immediately after "read"?
-	  pc += 2;
-	  writeRegister(PC, pc);
-	  cycles += 4;
-	  break;
-	  // Indirect register
-	case AM_IND_REG:
-	  dstAddress = readRegister(dstRegister);
-	  cycles += 3;
-	  break;
-	  // Bugfix suggested by Matt Thompson
-        case AM_IND_AUTOINC:
-          if(dstRegister == PC) {
-            dstAddress = readRegister(PC);
-            pc += 2;
-            writeRegister(PC, pc);
+          if ((dstRegister == CG1 && ad > AM_INDEX) || dstRegister == CG2) {
+              dstRegMode = true;
+              cycles++;
           } else {
-            dstAddress = readRegister(dstRegister);
-            writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
+              switch(ad) {
+              // Operand in register!
+              case AM_REG:
+                  dstRegMode = true;
+                  cycles++;
+                  break;
+              case AM_INDEX:
+                  // TODO: needs to handle if SR is used!
+                  rval = readRegisterCG(dstRegister, ad);
+
+                  /* Support for MSP430X and below / above 64 KB */
+                  /* if register is pointing to <64KB then it needs to be truncated to below 64 */
+                  if (rval < 0xffff) {
+                      dstAddress = (rval + read(pc, MODE_WORD)) & 0xffff;
+                  } else {
+                      dstAddress = read(pc, MODE_WORD);
+                      if ((dstAddress & 0x8000) > 0) {
+                          dstAddress |= 0xf0000;
+                      }
+                      dstAddress += rval;
+                      dstAddress &= 0xfffff;
+                  }
+
+                  // When is PC incremented - assuming immediately after "read"?
+                  pc += 2;
+                  writeRegister(PC, pc);
+                  cycles += 4;
+                  break;
+                  // Indirect register
+              case AM_IND_REG:
+                  dstAddress = readRegister(dstRegister);
+                  cycles += 3;
+                  break;
+                  // Bugfix suggested by Matt Thompson
+              case AM_IND_AUTOINC:
+                  if(dstRegister == PC) {
+                      dstAddress = readRegister(PC);
+                      pc += 2;
+                      writeRegister(PC, pc);
+                  } else {
+                      dstAddress = readRegister(dstRegister);
+                      writeRegister(dstRegister, dstAddress + (word ? 2 : 1));
+                  }
+                  cycles += 3;
+                  break;
+              }
           }
-          cycles += 3;
-          break;
-	}
-      }
 
 
-      // Perform the read
-      if (dstRegMode) {
-	dst = readRegisterCG(dstRegister, ad);
+          // Perform the read
+          if (dstRegMode) {
+              dst = readRegisterCG(dstRegister, ad);
 
-	if (!word) {
-	  dst &= 0xff;
-	}
-      } else {
-	dst = read(dstAddress, word ? MODE_WORD : MODE_BYTE);
-      }
-
-      switch(op) {
-      case RRC:
-	nxtCarry = (dst & 1) > 0 ? CARRY : 0;
-	dst = dst >> 1;
-	if (word) {
-	  dst |= (readRegister(SR) & CARRY) > 0 ? 0x8000 : 0;
-	} else {
-	  dst |= (readRegister(SR) & CARRY) > 0 ? 0x80 : 0;
-	}
-	// Indicate write to memory!!
-	write = true;
-	// Set the next carry!
-	writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
-	break;
-      case SWPB:
-	int tmp = dst;
-	dst = ((tmp >> 8) & 0xff) + ((tmp << 8) & 0xff00);
-	write = true;
-	break;
-      case RRA:
-	nxtCarry = (dst & 1) > 0 ? CARRY : 0;
-	if (word) {
-	  dst = (dst & 0x8000) | (dst >> 1);
-	} else {
-	  dst = (dst & 0x80) | (dst >> 1);
-	}
-	write = true;
-	writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
-	break;
-      case SXT:
-        // Extend Sign (bit 8-15 => same as bit 7)
-        sr = readRegister(SR);
-        dst = (dst & 0x80) > 0 ? dst | 0xff00 : dst & 0x7f;
-        write = true;
-        sr = sr & ~(CARRY | OVERFLOW);
-        if (dst != 0) {
-          sr |= CARRY;
-        }
-        writeRegister(SR, sr);
-        break;
-      case PUSH:
-	if (word) {
-	  // Put lo & hi on stack!
-//	  memory[sp] = dst & 0xff;
-//	  memory[sp + 1] = dst >> 8;
-	  write(sp, dst, MODE_WORD);
-	} else {
-	  // Byte => only lo byte
-//	  memory[sp] = dst & 0xff;
-//	  memory[sp + 1] = 0;
-          write(sp, dst & 0xff, MODE_WORD);
-	}
-	/* if REG or INDIRECT AUTOINC then add 2 cycles, otherwise 1 */
-	cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
-	write = false;
-	updateStatus = false;
-	break;
-      case CALL:        
-        // store current PC on stack. (current PC points to next instr.)
-	pc = readRegister(PC);
-//	memory[sp] = pc & 0xff;
-//	memory[sp + 1] = pc >> 8;
-	write(sp, pc, MODE_WORD);
-	writeRegister(PC, dst);
-
-	/* Additional cycles: REG => 3, AM_IND_AUTO => 2, other => 1 */
-	cycles += (ad == AM_REG) ? 3 : (ad == AM_IND_AUTOINC) ? 2 : 1;
-
-        /* profiler will be called during calls */
-        if (profiler != null) {
-          MapEntry function = map.getEntry(dst);
-          if (function == null) {
-            function = getFunction(map, dst);
+              if (!word) {
+                  dst &= 0xff;
+              }
+          } else {
+              dst = read(dstAddress, word ? MODE_WORD : MODE_BYTE);
           }
-          profiler.profileCall(function, cpuCycles, pc);
-        }
-	
-	write = false;
-	updateStatus = false;
-	break;
-      case RETI:
-	// Put Top of stack to Status DstRegister (TOS -> SR)
-        servicedInterrupt = -1; /* needed before write to SR!!! */
-	sp = readRegister(SP);
-	sr = read(sp, MODE_WORD);
-	writeRegister(SR, sr & 0x0fff);
-	sp = sp + 2;
-        //	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
-	// TOS -> PC
-//	writeRegister(PC, memory[sp++] + (memory[sp++] << 8));
-	writeRegister(PC, read(sp, MODE_WORD) | (sr & 0xf000) << 4);
-        sp = sp + 2;
-	writeRegister(SP, sp);
-	write = false;
-	updateStatus = false;
 
-	cycles += 4;
-	
-	if (debugInterrupts) {
-	  System.out.println("### RETI at " + pc + " => " + reg[PC] +
-			     " SP after: " + reg[SP]);
-	}        
-	if (profiler != null) {
-	  profiler.profileRETI(cycles);
-	}
-	
-	// This assumes that all interrupts will get back using RETI!
-	handlePendingInterrupts();
+          switch(op) {
+          case RRC:
+              nxtCarry = (dst & 1) > 0 ? CARRY : 0;
+              dst = dst >> 1;
+              if (word) {
+                  dst |= (readRegister(SR) & CARRY) > 0 ? 0x8000 : 0;
+              } else {
+                  dst |= (readRegister(SR) & CARRY) > 0 ? 0x80 : 0;
+              }
+              // Indicate write to memory!!
+              write = true;
+              // Set the next carry!
+              writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
+              break;
+          case SWPB:
+              int tmp = dst;
+              dst = ((tmp >> 8) & 0xff) + ((tmp << 8) & 0xff00);
+              write = true;
+              break;
+          case RRA:
+              nxtCarry = (dst & 1) > 0 ? CARRY : 0;
+              if (word) {
+                  dst = (dst & 0x8000) | (dst >> 1);
+              } else {
+                  dst = (dst & 0x80) | (dst >> 1);
+              }
+              write = true;
+              writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
+              break;
+          case SXT:
+              // Extend Sign (bit 8-15 => same as bit 7)
+              sr = readRegister(SR);
+              dst = (dst & 0x80) > 0 ? dst | 0xff00 : dst & 0x7f;
+              write = true;
+              sr = sr & ~(CARRY | OVERFLOW);
+              if (dst != 0) {
+                  sr |= CARRY;
+              }
+              writeRegister(SR, sr);
+              break;
+          case PUSH:
+              if (word) {
+                  // Put lo & hi on stack!
+                  //	  memory[sp] = dst & 0xff;
+                  //	  memory[sp + 1] = dst >> 8;
+                  write(sp, dst, MODE_WORD);
+              } else {
+                  // Byte => only lo byte
+                  //	  memory[sp] = dst & 0xff;
+                  //	  memory[sp + 1] = 0;
+                  write(sp, dst & 0xff, MODE_WORD);
+              }
+              /* if REG or INDIRECT AUTOINC then add 2 cycles, otherwise 1 */
+              cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
+              write = false;
+              updateStatus = false;
+              break;
+          case CALL:
+              // store current PC on stack. (current PC points to next instr.)
+              pc = readRegister(PC);
+              //	memory[sp] = pc & 0xff;
+              //	memory[sp + 1] = pc >> 8;
+              write(sp, pc, MODE_WORD);
+              writeRegister(PC, dst);
 
-	break;
-      default:
-	logw("Error: Not implemented instruction:" + instruction);
+              /* Additional cycles: REG => 3, AM_IND_AUTO => 2, other => 1 */
+              cycles += (ad == AM_REG) ? 3 : (ad == AM_IND_AUTOINC) ? 2 : 1;
+
+              /* profiler will be called during calls */
+              if (profiler != null) {
+                  MapEntry function = map.getEntry(dst);
+                  if (function == null) {
+                      function = getFunction(map, dst);
+                  }
+                  profiler.profileCall(function, cpuCycles, pc);
+              }
+
+              write = false;
+              updateStatus = false;
+              break;
+          case RETI:
+              // Put Top of stack to Status DstRegister (TOS -> SR)
+              servicedInterrupt = -1; /* needed before write to SR!!! */
+              sp = readRegister(SP);
+              sr = read(sp, MODE_WORD);
+              writeRegister(SR, sr & 0x0fff);
+              sp = sp + 2;
+              //	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
+              // TOS -> PC
+              //	writeRegister(PC, memory[sp++] + (memory[sp++] << 8));
+              writeRegister(PC, read(sp, MODE_WORD) | (sr & 0xf000) << 4);
+              sp = sp + 2;
+              writeRegister(SP, sp);
+              write = false;
+              updateStatus = false;
+
+              cycles += 4;
+
+              if (debugInterrupts) {
+                  System.out.println("### RETI at " + pc + " => " + reg[PC] +
+                          " SP after: " + reg[SP]);
+              }        
+              if (profiler != null) {
+                  profiler.profileRETI(cycles);
+              }
+
+              // This assumes that all interrupts will get back using RETI!
+              handlePendingInterrupts();
+
+              break;
+          default:
+              System.out.println("Error: Not implemented instruction:" +
+                      instruction);
+          }
       }
+      write = false;
+      updateStatus = false;
     }
     break;
     // Jump instructions
