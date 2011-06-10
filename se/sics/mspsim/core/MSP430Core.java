@@ -1264,8 +1264,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
                       instruction);
           }
       }
-      write = false;
-      updateStatus = false;
     }
     break;
     // Jump instructions
