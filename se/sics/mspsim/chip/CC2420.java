@@ -836,7 +836,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
         if(txCursor == 0) {
           if ((data & 0xff) > 127) {
-            logger.warning(this, "CC2420: Warning - packet size too large");
+            logger.warning(this, "CC2420: Warning - packet size too large: " + (data & 0xff));
           }
         } else if (txCursor > 127) {
           logger.warning(this, "CC2420: Warning - TX Cursor wrapped");
