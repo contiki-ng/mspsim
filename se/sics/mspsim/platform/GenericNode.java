@@ -63,6 +63,7 @@ import se.sics.mspsim.ui.ConsoleUI;
 import se.sics.mspsim.ui.ControlUI;
 import se.sics.mspsim.ui.JFrameWindowManager;
 import se.sics.mspsim.ui.StackUI;
+import se.sics.mspsim.ui.WindowUtils;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
@@ -222,13 +223,15 @@ public abstract class GenericNode extends Chip implements Runnable {
             w.add(console);
             w.setBounds(20, 20, 520, 400);
             w.setLocationByPlatform(true);
+            String key = "console";
+            WindowUtils.restoreWindowBounds(key, w);
+            WindowUtils.addSaveOnShutdown(key, w);
             w.setVisible(true);
             console.setCommandHandler(ch);
-            registry.registerComponent("commandHandler", ch);
         } else {
             ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
-            registry.registerComponent("commandHandler", ch);
         }
+        registry.registerComponent("commandHandler", ch);
     }
     
     stats = new OperatingModeStatistics(cpu);
