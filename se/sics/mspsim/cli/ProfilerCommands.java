@@ -145,22 +145,45 @@ public class ProfilerCommands implements CommandBundle {
 //
 //      });
       
-      ch.registerCommand("logevents", new BasicAsyncCommand("log events", "") {
-        Chip chip;
-        public int executeCommand(CommandContext context) {
-          chip = cpu.getChip(context.getArgument(0));
-          if (chip == null) {
-            context.err.println("Can not find chip: " + context.getArgument(0));
-          }
-          chip.setEventListener(new EventListener() {
-            public void event(EventSource source, String event, Object data) {
-              System.out.println("Event:" + source.getName() + ":" + event);
-            }            
-          });
-          return 0;
+      ch.registerCommand("logevents", new BasicAsyncCommand("log events", "[chips...]") {
+        Chip[] chips;
+        public int executeCommand(final CommandContext context) {
+            if (context.getArgumentCount() == 0) {
+                context.out.println("Available chips:");
+                for(Chip chip : cpu.getChips()) {
+                    String id = chip.getID();
+                    String name = chip.getName();
+                    if (id == name) {
+                        context.out.println("  " + id);
+                    } else {
+                        context.out.println("  " + id + " (" + name + ')');
+                    }
+                }
+                context.exit(0);
+                return 0;
+            }
+            chips = new Chip[context.getArgumentCount()];
+            for(int i = 0, n = chips.length; i < n; i++) {
+                chips[i] = cpu.getChip(context.getArgument(i));
+                if (chips[i] == null) {
+                    context.err.println("Can not find chip: " + context.getArgument(i));
+                    return 1;
+                }
+            }
+            EventListener listener = new EventListener() {
+                public void event(EventSource source, String event, Object data) {
+                    context.out.println("Event:" + source.getName() + ":" + event);
+                }
+            };
+            for (Chip chip : chips) {
+                chip.setEventListener(listener);
+            }
+            return 0;
         }
         public void stopCommand(CommandContext context) {
-          chip.setEventListener(null);
+            for (Chip chip : chips) {
+                chip.setEventListener(null);
+            }
         }
       });
 
@@ -173,10 +196,12 @@ public class ProfilerCommands implements CommandBundle {
           Chip chipE1 = cpu.getChip(chip1[0]);
           if (chipE1 == null) {
             context.err.println("Can not find chip: " + chip1[0]);
+            return 1;
           }
           Chip chipE2 = cpu.getChip(chip2[0]);
           if (chipE2 == null) {
             context.err.println("Can not find chip: " + chip2[0]);
+            return 1;
           }
           Profiler profiler = cpu.getProfiler();
           SimpleProfiler sprof = (SimpleProfiler) profiler;
