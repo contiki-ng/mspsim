@@ -133,7 +133,7 @@ public abstract class Chip implements Loggable, EventSource {
   
   public void setEventListener(EventListener e) {
     eventListener = e;
-    sendEvents = true;
+    sendEvents = eventListener != null;
   }
   
   protected void sendEvent(String event, Object data) {
