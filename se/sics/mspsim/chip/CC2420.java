@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, 2008, 2009, 2010 Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2011 Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,6 @@
  * SUCH DAMAGE.
  *
  * This file is part of MSPSim.
- *
- * $Id$
  *
  * -----------------------------------------------------------------
  *
@@ -266,10 +264,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private boolean addressDecode = false;
   private boolean ackRequest = false;
   private boolean autoCRC = false;
+
+  // Data from last received packet
   private int dsn = 0;
   private int fcf0 = 0;
   private int fcf1 = 0;
   private int frameType = 0;
+  private boolean crcOk = false;
   
   private int activeFrequency = 0;
   private int activeChannel = 0;
@@ -517,6 +518,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         rxFIFO.mark();
         rxread = 0;
         frameRejected = false;
+        shouldAck = false;
+        crcOk = false;
         break;
     }
 
@@ -538,7 +541,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       frameRejected = true;
   }
   
-  /* variables for the address recognigion */
+  /* variables for the address recognition */
   int destinationAddressMode = 0;
   boolean decodeAddress = false;
   /* Receive a byte from the radio medium
@@ -648,16 +651,17 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   int crc = rxFIFO.get(-2) << 8;
                   crc += rxFIFO.get(-1); //memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
 
-                  if (DEBUG && crc != rxCrc.getCRCBitrev()) {
+                  crcOk = crc == rxCrc.getCRCBitrev();
+                  if (DEBUG && !crcOk) {
                       log("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
                   }
                   // Should take a RSSI value as input or use a set-RSSI value...
                   rxFIFO.set(-2, registers[REG_RSSI] & 0xff); 
-                  rxFIFO.set(-1, 37 | (crc == rxCrc.getCRCBitrev() ? 0x80 : 0));
+                  rxFIFO.set(-1, 37 | (crcOk ? 0x80 : 0));
                   //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = ;
                   //          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
                   //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
-                  //              (crc == rxCrc.getCRCBitrev() ? 0x80 : 0);
+                  //              (crcOk ? 0x80 : 0);
 
                   /* set FIFOP only if this is the first received packet - e.g. if rxfifoLen is at most rxlen + 1
                    * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP
@@ -672,8 +676,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
                   /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
                   /* Autoack-mode + good CRC => autoack */
-                  //          System.out.println("Autoack " + autoAck + " checkAutoack " + checkAutoack() + " shouldAck " + shouldAck);
-                  if ((autoAck && ackRequest && (crc == rxCrc.getCRCBitrev())) || shouldAck) {
+                  if (((autoAck && ackRequest) || shouldAck) && crcOk) {
                       setState(RadioState.TX_ACK_CALIBRATE);
                   } else {
                       setState(RadioState.RX_WAIT);
@@ -984,7 +987,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       stopOscillator();
       break;
     case REG_SACK:
-        setState(RadioState.TX_ACK_CALIBRATE);
+        if (stateMachine == RadioState.RX_FRAME) {
+            shouldAck = true;
+        } else if (crcOk) {
+            setState(RadioState.TX_ACK_CALIBRATE);
+        }
         break;
     default:
       if (DEBUG) {
