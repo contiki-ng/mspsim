@@ -210,6 +210,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   // FCF High
   public static final int FRAME_TYPE = 0x07;
   public static final int SECURITY_ENABLED = (1<<3);
+  public static final int FRAME_PENDING = (1<<4);
   public static final int ACK_REQUEST = (1<<5);
   public static final int INTRA_PAN = (1<<6);
 
@@ -385,6 +386,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int ackPos;
   /* type = 2 (ACK), third byte needs to be sequence number... */
   private int[] ackBuf = {0x05, 0x02, 0x00, 0x00, 0x00, 0x00};
+  private boolean ackFramePending = false;
   private CCITT_CRC rxCrc = new CCITT_CRC();
   private CCITT_CRC txCrc = new CCITT_CRC();
 
@@ -478,6 +480,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
     case TX_FRAME:
       txfifoPos = 0;
+      // Reset CRC ok flag to disable software acknowledgments until next received packet 
+      crcOk = false;
       txNext();
       break;
 
@@ -511,6 +515,8 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         break;
     case TX_ACK:
         ackPos = 0;
+        // Reset CRC ok flag to disable software acknowledgments until next received packet 
+        crcOk = false;
         ackNext();
         break;
     case RX_FRAME:
@@ -621,13 +627,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                           if (destinationAddressMode == LONG_ADDRESS && rxread == 8 + 5) {
                               /* here we need to check that this address is correct compared to the stored address */
                               flushPacket = !rxFIFO.tailEquals(memory, RAM_IEEEADDR, 8);
-                              flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 8);
+                              flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 8)
+                                      && !rxFIFO.tailEquals(BC_ADDRESS, 0, 2, 8);
                               decodeAddress = false;
                           } else if (destinationAddressMode == SHORT_ADDRESS && rxread == 2 + 5){
                               /* should check short address */
-                              flushPacket = !rxFIFO.tailEquals(BC_ADDRESS, 0, 2) && 
-                              !rxFIFO.tailEquals(memory, RAM_SHORTADDR, 2);
-                              flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 2);
+                              flushPacket = !rxFIFO.tailEquals(BC_ADDRESS, 0, 2)
+                                      && !rxFIFO.tailEquals(memory, RAM_SHORTADDR, 2);
+                              flushPacket |= !rxFIFO.tailEquals(memory, RAM_PANID, 2, 2)
+                                      && !rxFIFO.tailEquals(BC_ADDRESS, 0, 2, 2);
                               decodeAddress = false;
                           }
                           if (flushPacket) {
@@ -987,6 +995,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       stopOscillator();
       break;
     case REG_SACK:
+    case REG_SACKPEND:
+        // Set the frame pending flag for all future autoack based on SACK/SACKPEND
+        ackFramePending = data == REG_SACKPEND;
         if (stateMachine == RadioState.RX_FRAME) {
             shouldAck = true;
         } else if (crcOk) {
@@ -1065,6 +1076,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       if (ackPos < ackBuf.length) {
           if(ackPos == 0) {
               txCrc.setCRC(0);
+              if (ackFramePending) {
+                  ackBuf[1] |= FRAME_PENDING;
+              } else {
+                  ackBuf[1] &= ~FRAME_PENDING;
+              }
               // set dsn
               ackBuf[3] = dsn;
               int len = 4;
