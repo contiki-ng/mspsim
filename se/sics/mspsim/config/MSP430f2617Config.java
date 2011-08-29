@@ -36,6 +36,8 @@
 package se.sics.mspsim.config;
 
 import java.util.ArrayList;
+
+import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
@@ -98,8 +100,46 @@ public class MSP430f2617Config extends MSP430Config {
         cpu.memOut[7] = usciA1;
         cpu.memIn[7] = usciA1;
 
-        /* 4 usci units */
-        return 4;
+        // Add port 1,2 with interrupt capability!
+        ioUnits.add(new IOPort(cpu, 1, 4, cpu.memory, 0x20));
+        ioUnits.add(new IOPort(cpu, 2, 1, cpu.memory, 0x28));
+        for (int i = 0, n = 8; i < n; i++) {
+          cpu.memOut[0x20 + i] = ioUnits.get(0);
+          cpu.memOut[0x28 + i] = ioUnits.get(1);
+          cpu.memIn[0x20 + i] = ioUnits.get(0);
+          cpu.memIn[0x28 + i] = ioUnits.get(1);
+        }
+
+        // Add port 3,4 & 5,6
+        for (int i = 0, n = 2; i < n; i++) {
+          IOPort p = new IOPort(cpu, (3 + i), 0, cpu.memory, 0x18 + i * 4);
+          ioUnits.add(p);
+          cpu.memOut[0x18 + i * 4] = p;
+          cpu.memOut[0x19 + i * 4] = p;
+          cpu.memOut[0x1a + i * 4] = p;
+          cpu.memOut[0x1b + i * 4] = p;
+          cpu.memIn[0x18 + i * 4] = p;
+          cpu.memIn[0x19 + i * 4] = p;
+          cpu.memIn[0x1a + i * 4] = p;
+          cpu.memIn[0x1b + i * 4] = p;
+        }
+
+        for (int i = 0, n = 2; i < n; i++) {
+          IOPort p = new IOPort(cpu, (5 + i), 0, cpu.memory, 0x30 + i * 4);
+          ioUnits.add(p);
+          cpu.memOut[0x30 + i * 4] = p;
+          cpu.memOut[0x31 + i * 4] = p;
+          cpu.memOut[0x32 + i * 4] = p;
+          cpu.memOut[0x33 + i * 4] = p;
+          cpu.memIn[0x30 + i * 4] = p;
+          cpu.memIn[0x31 + i * 4] = p;
+          cpu.memIn[0x32 + i * 4] = p;
+          cpu.memIn[0x33 + i * 4] = p;
+        }
+        
+        
+        /* 4 usci units + 6 io port*/
+        return 4 + 6;
     }
 
     @Override

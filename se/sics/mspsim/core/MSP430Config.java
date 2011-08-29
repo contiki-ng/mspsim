@@ -56,9 +56,17 @@ public abstract class MSP430Config {
             new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB")
     };
     
+    /* Memory configuration */
     public int maxMemIO = 0x200;
     public int maxMem = 64*1024;
     public int maxInterruptVector = 15;
+    
+    public int mainFlashStart = 0x0000;
+    public int mainFlashSize = 48 * 1024;
+
+    public int infoMemStart = 0x0000;
+    public int infoMemSize = 2 * 128;
+    
     public boolean MSP430XArch = false;
     
     public abstract int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits);
@@ -67,4 +75,25 @@ public abstract class MSP430Config {
     public String getAddressAsString(int addr) {
         return Utils.hex16(addr);
     }
+
+
+    public void infoMemConfig(int start, int size) {
+        infoMemStart = start;
+        infoMemSize = size;
+    }
+    
+    public void mainFlashConfig(int start, int size) {
+        mainFlashStart = start;
+        mainFlashSize = size;
+        if (maxMem < start + size) {
+            maxMem = start + size;
+        }
+    }
+    
+    /* ignored for now */
+    public void ramConfig(int start, int size) {
+       
+    }
+
+
 }

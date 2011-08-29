@@ -148,6 +148,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
           memIn[adr + 1] = io;
       }
   }
+
+  public void setIORange(int adr, int size, IOUnit io) {
+      for (int i = 0; i < size; i++) {
+          memOut[adr + i] = io;
+          memIn[adr + i] = io;        
+      }
+  }
   
   public MSP430Core(int type, ComponentRegistry registry, MSP430Config config) {
     super("MSP430", "MSP430 Core", null);
@@ -238,43 +245,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
 
     
-    // Add port 1,2 with interrupt capability!
-    ioUnits.add(new IOPort(this, 1, 4, memory, 0x20));
-    ioUnits.add(new IOPort(this, 2, 1, memory, 0x28));
-    for (int i = 0, n = 8; i < n; i++) {
-      memOut[0x20 + i] = ioUnits.get(0);
-      memOut[0x28 + i] = ioUnits.get(1);
-      memIn[0x20 + i] = ioUnits.get(0);
-      memIn[0x28 + i] = ioUnits.get(1);
-    }
-
-    // Add port 3,4 & 5,6
-    for (int i = 0, n = 2; i < n; i++) {
-      IOPort p = new IOPort(this, (3 + i), 0, memory, 0x18 + i * 4);
-      ioUnits.add(p);
-      memOut[0x18 + i * 4] = p;
-      memOut[0x19 + i * 4] = p;
-      memOut[0x1a + i * 4] = p;
-      memOut[0x1b + i * 4] = p;
-      memIn[0x18 + i * 4] = p;
-      memIn[0x19 + i * 4] = p;
-      memIn[0x1a + i * 4] = p;
-      memIn[0x1b + i * 4] = p;
-    }
-
-    for (int i = 0, n = 2; i < n; i++) {
-      IOPort p = new IOPort(this, (5 + i), 0, memory, 0x30 + i * 4);
-      ioUnits.add(p);
-
-      memOut[0x30 + i * 4] = p;
-      memOut[0x31 + i * 4] = p;
-      memOut[0x32 + i * 4] = p;
-      memOut[0x33 + i * 4] = p;
-      memIn[0x30 + i * 4] = p;
-      memIn[0x31 + i * 4] = p;
-      memIn[0x32 + i * 4] = p;
-      memIn[0x33 + i * 4] = p;
-    }
     
     // SFR and Basic clock system.
     ioUnits.add(sfr);
@@ -1037,6 +1007,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
             break;
         default:
             System.out.println("MSP430X instructions not yet supported...");
+            throw new EmulationException("MSP430X instructions not yet supported...");
         }
         
         break;

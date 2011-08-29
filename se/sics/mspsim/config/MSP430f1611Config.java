@@ -37,6 +37,7 @@ package se.sics.mspsim.config;
 
 import java.util.ArrayList;
 import se.sics.mspsim.core.DMA;
+import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.InterruptMultiplexer;
 import se.sics.mspsim.core.MSP430Config;
@@ -54,6 +55,11 @@ public class MSP430f1611Config extends MSP430Config {
         TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA");
         TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
         timerConfig = new TimerConfig[] {timerA, timerB};
+        
+        /* configure memory */
+        infoMemConfig(0x1000, 128 * 2);
+        mainFlashConfig(0x4000, 48 * 1024);
+        ramConfig(0x1100, 10 * 1024);
     }
     
 
@@ -93,6 +99,45 @@ public class MSP430f1611Config extends MSP430Config {
         dma.setInterruptMultiplexer(new InterruptMultiplexer(cpu, 0));
 
         ioUnits.add(dma);
-        return 3;
+        
+        // Add port 1,2 with interrupt capability!
+        ioUnits.add(new IOPort(cpu, 1, 4, cpu.memory, 0x20));
+        ioUnits.add(new IOPort(cpu, 2, 1, cpu.memory, 0x28));
+        for (int i = 0, n = 8; i < n; i++) {
+          cpu.memOut[0x20 + i] = ioUnits.get(0);
+          cpu.memOut[0x28 + i] = ioUnits.get(1);
+          cpu.memIn[0x20 + i] = ioUnits.get(0);
+          cpu.memIn[0x28 + i] = ioUnits.get(1);
+        }
+
+        // Add port 3,4 & 5,6
+        for (int i = 0, n = 2; i < n; i++) {
+          IOPort p = new IOPort(cpu, (3 + i), 0, cpu.memory, 0x18 + i * 4);
+          ioUnits.add(p);
+          cpu.memOut[0x18 + i * 4] = p;
+          cpu.memOut[0x19 + i * 4] = p;
+          cpu.memOut[0x1a + i * 4] = p;
+          cpu.memOut[0x1b + i * 4] = p;
+          cpu.memIn[0x18 + i * 4] = p;
+          cpu.memIn[0x19 + i * 4] = p;
+          cpu.memIn[0x1a + i * 4] = p;
+          cpu.memIn[0x1b + i * 4] = p;
+        }
+
+        for (int i = 0, n = 2; i < n; i++) {
+          IOPort p = new IOPort(cpu, (5 + i), 0, cpu.memory, 0x30 + i * 4);
+          ioUnits.add(p);
+          cpu.memOut[0x30 + i * 4] = p;
+          cpu.memOut[0x31 + i * 4] = p;
+          cpu.memOut[0x32 + i * 4] = p;
+          cpu.memOut[0x33 + i * 4] = p;
+          cpu.memIn[0x30 + i * 4] = p;
+          cpu.memIn[0x31 + i * 4] = p;
+          cpu.memIn[0x32 + i * 4] = p;
+          cpu.memIn[0x33 + i * 4] = p;
+        }
+        
+        
+        return 3 + 6;
     }    
 }
