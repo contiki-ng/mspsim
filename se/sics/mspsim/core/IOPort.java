@@ -36,235 +36,378 @@
  */
 
 package  se.sics.mspsim.core;
+import se.sics.mspsim.util.ArrayUtils;
 import se.sics.mspsim.util.Utils;
 
 public class IOPort extends IOUnit {
 
-  public static final int PIN_LOW = 0;
-  public static final int PIN_HI = 1;
+    public static final int PIN_LOW = 0;
+    public static final int PIN_HI = 1;
 
-  private static final String[] iNames = {
-    "IN", "OUT", "DIR", "IFG", "IES", "IE", "SEL" };
-  private static final String[] names = {
-    "IN", "OUT", "DIR", "SEL" };
+    private final int port;
+    private final int interrupt;
+    private final MSP430Core cpu;
 
-  private final int port;
-  private final int interrupt;
-  private final MSP430Core cpu;
-  private int interruptFlag;
-  private int interruptEnable;
+    // External pin state!
+    private int pinState[] = new int[8];
 
-  // External pin state!
-  private int pinState[] = new int[8];
+    /* NOTE: The offset needs to be configurable since the new IOPorts on 
+     * the 5xxx series are located at other addresses.
+     * Maybe create another IOPort that just convert IOAddress to this 'old' mode?
+     * - will be slightly slower on IOWrite/read but very easy to implement.
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     */
+    
+    enum PortReg {IN, OUT, DIR, SEL, IFG, IES, IE, REN, DS, IV_L, IV_H};
+    
+    public static final int IN = 0;
+    public static final int OUT = 1;
+    public static final int DIR = 2;
+    public static final int SEL = 4; /* what about SEL2? */
+    public static final int IFG = 5;
+    public static final int IES = 6;
+    public static final int IE = 7;
+    public static final int REN = 8;
+    public static final int DS = 9;
+    public static final int IV_L = 10;
+    public static final int IV_H = 11;
 
-  public static final int IN = 0;
-  public static final int OUT = 1;
-  public static final int DIR = 2;
-  public static final int SEL = 3;
-  public static final int IFG = 3;
-  public static final int IES = 4;
-  public static final int IE = 5;
-  public static final int ISEL = 6;
+    private static final String[] names = {
+        "IN", "OUT", "DIR", "SEL", "IFG", "IES", "IE", "REN", "DS" };
 
-  // One listener per port maximum (now at least)
-  private PortListener listener;
-  // represents the direction register
-  private int dirReg;
-  private int out;
-  
-  private Timer[] timerCapture = new Timer[8];
 
-  /**
-   * Creates a new <code>IOPort</code> instance.
-   *
-   */
-  public IOPort(MSP430Core cpu, int port,
-		int interrupt, int[] memory, int offset) {
-    super("P" + port, "Port " + port, memory, offset);
-    this.port = port;
-    this.interrupt = interrupt;
-    this.interruptEnable = 0;
-    this.cpu = cpu;
-  }
+    /* portmaps for 1611 */
+    private static final PortReg[] PORTMAP_INTERRUPT = 
+        {PortReg.IN, PortReg.OUT, PortReg.DIR, PortReg.IFG, PortReg.IES, PortReg.IE, PortReg.SEL}; 
+    private static final PortReg[] PORTMAP_NO_INTERRUPT = 
+        {PortReg.IN, PortReg.OUT, PortReg.DIR, PortReg.SEL};
 
-  public int getPort() {
-      return port;
-  }
+    private PortReg[] portMap;
 
-  public int getIn() {
-      return memory[offset + IN];
-  }
+    private PortListener[] listeners = new PortListener[0];
+    // represents the direction register
 
-  public int getOut() {
-      return out;
-  }
+    /* Registers for Digital I/O */
 
-  public int getDirection() {
-      return dirReg;
-  }
+    private int in;
+    private int out;
+    private int dir;
+    private int sel;
+    private int ie;
+    private int ifg;
+    private int ies; /* edge select */
+    private int ren;
+    private int ds;
 
-  public int getSelect() {
-      return memory[offset + (interrupt > 0 ? ISEL : SEL)];
-  }
+    private int iv; /* low / high */
 
-  public void setPortListener(PortListener listener) {
-    this.listener = listener;
-  }
+    private Timer[] timerCapture = new Timer[8];
 
-  public void setTimerCapture(Timer timer, int pin) {
-    if (DEBUG) {
-      log("Setting timer capture for pin: " + pin);
-    }
-    timerCapture[pin] = timer;
-  }
-  
-  public int read(int address, boolean word, long cycles) {
-    if (DEBUG) {
-      log("Notify read: " + address);
-    }
+    private IOPort ioPair;
+    
+    /**
+     * Creates a new <code>IOPort</code> instance.
+     *
+     */
+    public IOPort(MSP430Core cpu, int port,
+            int interrupt, int[] memory, int offset) {
+        super("P" + port, "Port " + port, memory, offset);
+        this.port = port;
+        this.interrupt = interrupt;
+        this.ie = 0;
+        this.ifg = 0;
+        this.cpu = cpu;
 
-    int val = memory[address];
-    if (word) {
-      val |= memory[(address + 1) & 0xffff] << 8;
-    }
-    return val;
-  }
-
-  public void write(int address, int data, boolean word, long cycles) {
-    // This does not handle word writes yet...
-    int iAddress = address - offset;
-
-    if (iAddress == IN) {
-      logw("WARNING: writing to read-only " + getID() + "IN");
-      throw new EmulationException("Writing to read-only " + getID() + "IN");
-    } else {
-      memory[address] = data & 0xff;
-      if (word) {
-        memory[address + 1] = (data >> 8) & 0xff;
-      }
-      if (DEBUG) {
-        try {
-          log("Writing to " + getID() +
-              (interrupt > 0? iNames[iAddress] : names[iAddress]) +
-              "  $" + Utils.hex8(address) +
-              " => $" + Utils.hex8(data) + "=#" +
-              Utils.binary8(data) + " word: " + word);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }
-    }
-
-    switch (iAddress) {
-    case IN:
-      break;
-    case OUT:
-      out = data;
-      if (listener != null) {
-        // Any output configured pin (pin-bit = 0) should have 1 here?! 
-//        if (name.equals("1"))
-//          System.out.println(getName() + " write to IOPort via OUT reg: " + Utils.hex8(data));
-        listener.portWrite(this, out | (~dirReg)&0xff);
-      }
-      break;
-    case DIR:
-      dirReg = data;
-      if (listener != null) {
-        // Any output configured pin (pin-bit = 0) should have 1 here?! 
-//        if (name.equals("1"))
-//          System.out.println(getName() + " write to IOPort via DIR reg: " + Utils.hex8(data));
-        listener.portWrite(this, out | (~dirReg)&0xff);
-      }
-      break;
-      // SEL & IFG is the same but behaviour differs between p1,p2 and rest...
-    case SEL:
-      //   case IFG:
-      if (interrupt > 0) {
-	// IFG - writing a zero => clear the flag!
-	if (DEBUG) {
-	  log("Clearing IFlag: " + data);
-	}
-	interruptFlag &= data;
-	memory[offset + IFG] = interruptFlag;
-	cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
-      } else {
-	// Same as ISEL!!!
-      }
-      break;
-    case IES:
-      break;
-    case IE:
-      interruptEnable = data;
-      break;
-    case ISEL:
-    }
-  }
-
-  public void interruptServiced(int vector) {
-  }
-
-  // for HW to set hi/low on the pins...
-  public void setPinState(int pin, int state) {
-    if (pinState[pin] != state) {
-      pinState[pin] = state;
-      int bit = 1 << pin;
-      if (state == PIN_HI) {
-        memory[IN + offset] |= bit;
-      } else {
-        memory[IN + offset] &= ~bit;
-      }
-      if (interrupt > 0) {
-        if ((memory[offset + IES] & bit) == 0) {
-          // LO/HI transition
-          if (state == PIN_HI) {
-            interruptFlag |= bit;
-            if (DEBUG) {
-              log("Flagging interrupt (HI): " + bit);
-            }
-          }
+        if (interrupt == 0) {
+            portMap = PORTMAP_NO_INTERRUPT;
         } else {
-          // HI/LO transition
-          if (state == PIN_LOW) {
-            interruptFlag |= bit;
-            if (DEBUG) {
-              log("Flagging interrupt (LOW): " + bit);
-            }
-          }
+            portMap = PORTMAP_INTERRUPT;
         }
-        memory[offset + IFG] = interruptFlag;
-        // Maybe this is not the only place where we should flag int?
-        cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
-      }
-      
-      if (timerCapture[pin] != null) {
-        /* should not be pin and 0 here
-         * pin might need configuration and 0 can maybe also be 1? 
-         */
-//        if (DEBUG) log("Notifying timer of changed pin value");
-        timerCapture[pin].capture(pin, 0, state);
-      }
-      
     }
-  }
 
-  public void reset(int type) {
-    for (int i = 0, n = 8; i < n; i++) {
-      pinState[i] = PIN_LOW;
+    /* Create an IOPort with a special PortMap */
+    public IOPort(MSP430Core cpu, int port,
+            int interrupt, int[] memory, int offset, PortReg[] portMap) {
+        this(cpu, port, interrupt, memory, offset);
+        this.portMap = portMap;
+        
+        System.out.println("Port " + port + " interrupt vector: " + interrupt);
+        /* register all the registers from the port-map */
+        for (int i = 0; i < portMap.length; i++) {
+            if (portMap[i] != null) {
+                System.out.println("  P" + port + portMap[i] + " at " + Utils.hex16(offset + i));
+                cpu.setIO(offset + i, this, false);
+            }
+        }
     }
-    interruptFlag = 0;
-    interruptEnable = 0;
-    cpu.flagInterrupt(interrupt, this, (interruptFlag & interruptEnable) > 0);
-  }
+    
+    public static IOPort parseIOPort(MSP430Core cpu, int interrupt, String specification) {
+        /* Specification = Px=Offset,REG Off, ... */
+        String[] specs = specification.split(",");
+        int port = specs[0].charAt(1) - '0';
+        int offset = Integer.parseInt(specs[0].substring(3), 16);
+        
+        PortReg[] portMap = new PortReg[0x20]; /* Worst case port-map */
+        
+        for (int i = 1; i < specs.length; i++) {
+            String[] preg = specs[i].split(" ");
+            PortReg pr = PortReg.valueOf(preg[0]);
+            int offs = Integer.parseInt(preg[1], 16);
+            portMap[offs] = pr;
+        }
+        
+        return new IOPort(cpu, port, interrupt, cpu.memory, offset, portMap);
+    }
 
-  public String info() {
-      StringBuilder sb = new StringBuilder();
-      String[] regs = (interrupt > 0) ? iNames : names;
-      sb.append('$').append(Utils.hex16(offset)).append(':');
-      for (int i = 0, n = regs.length; i < n; i++) {
-        sb.append(' ').append(regs[i]).append(":$")
-        .append(Utils.hex8(memory[offset + i]));
-      }
-      return sb.toString();
-  }
+    public int getPort() {
+        return port;
+    }
+
+    public int getIn() {
+        return in;
+    }
+
+    public int getOut() {
+        return out;
+    }
+
+    public int getDirection() {
+        return dir;
+    }
+
+    public int getSelect() {
+        return sel;
+    }
+
+    public void setPortListener(PortListener listener) {
+    	/* 2011-09-11: XXX should now be named addPortListener() */
+        listeners = (PortListener[]) ArrayUtils.add(PortListener.class, listeners, listener);
+    }
+
+    public void setTimerCapture(Timer timer, int pin) {
+        if (DEBUG) {
+            log("Setting timer capture for pin: " + pin);
+        }
+        timerCapture[pin] = timer;
+    }
+
+    public void updateIV() {
+        int bitval = 0x01;
+        iv = 0;
+        int ie_ifg = ifg & ie;
+        for (int i = 0; i < 8; i++) {
+            if ((bitval & ie_ifg) > 0) {
+                iv = 2 + i * 2;
+                break;
+            }
+            bitval = bitval << 1;
+        }
+        //System.out.println("*** Setting IV to: " + iv + " ifg: " + ifg);
+    }
+    
+    /* only byte access!!! */
+    int read_port(PortReg function, long cycles) {
+        switch(function) {
+        case OUT:
+            return out;
+        case IN:
+            return in;
+        case DIR:
+            return dir;
+        case REN:
+            return ren;
+        case IFG:
+            return ifg;
+        case IE:
+            return ie;
+        case IES:
+            return ies;
+        case SEL:
+            return sel;
+        case IV_L:
+            return iv & 0xff;
+        case IV_H:
+            int v = iv >> 8;
+            updateIV();
+            return v;
+        }
+        /* default is zero ??? */
+        return 0;
+    }
+
+    void write_port(PortReg function, int data, long cycles) {
+        switch(function) {
+        case OUT:
+            out = data;
+            for (PortListener listener: listeners) {
+            	listener.portWrite(this, out | (~dir) & 0xff);
+            }
+            break;
+        case IN:
+            logw("WARNING: writing to read-only " + getID() + "IN");
+            throw new EmulationException("Writing to read-only " + getID() + "IN");
+            //          in = data;
+        case DIR:
+            dir = data;
+            for (PortListener listener: listeners) {
+                // Any output configured pin (pin-bit = 0) should have 1 here?! 
+                //              if (name.equals("1"))
+                //                System.out.println(getName() + " write to IOPort via DIR reg: " + Utils.hex8(data));
+                listener.portWrite(this, out | (~dir)&0xff);
+            }
+            break;
+        case REN:
+            ren = data;
+            break;
+        case IFG:
+            if (DEBUG) {
+                log("Clearing IFlag: " + data);
+            }
+            ifg &= data;
+            updateIV();
+            cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
+            break;
+        case IE:
+            ie = data;
+            if (DEBUG) {
+                log("Setting IE: " + data);
+            }
+            cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
+            break;
+        case IES:
+            ies = data;
+            break;
+        case SEL:
+            sel = data;
+            break;
+            /* Can IV be written ? */
+        case IV_L:
+            iv = (iv & 0xff00) | data;
+            break;
+        case IV_H:
+            iv = (iv & 0x00ff) | (data << 8);
+            break;
+        }
+    }
+
+
+    public int read(int address, boolean word, long cycles) {
+        if (DEBUG) {
+            log("Notify read: " + address);
+        }
+        PortReg reg = portMap[address - offset];
+        
+        /* only byte read allowed if not having an ioPair */
+        if (word && reg == PortReg.IV_L) {
+            /* Always read low first then high => update on high!!! */
+            return read_port(reg, cycles) | (read_port(PortReg.IV_H, cycles) << 8);
+        } else if (word && ioPair != null) {
+            /* read same function from both */
+            return read_port(reg, cycles) | (ioPair.read_port(reg, cycles) << 8);
+        }
+        /* NOTE: read of PIV might be wrong here - might be word access on IV? */
+        return read_port(reg, cycles);
+    }
+
+
+    public void write(int address, int data, boolean word, long cycles) {
+        int iAddress = address - offset;
+
+        if (DEBUG) {
+            try {
+                log("Writing to " + getID() +
+                        portMap[iAddress] +
+                        "  $" + Utils.hex8(address) +
+                        " => $" + Utils.hex8(data) + "=#" +
+                        Utils.binary8(data) + " word: " + word);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        /* only byte write - need to convert any word write here... */
+        PortReg fun = portMap[iAddress];
+        if (word && ioPair != null) {
+            write_port(fun, data & 0xff, cycles);
+            ioPair.write_port(fun, data >> 8, cycles);
+        } else {
+            write_port(fun, data, cycles);
+        }
+    }
+
+    public void interruptServiced(int vector) {
+    }
+
+    // for HW to set hi/low on the pins...
+    public void setPinState(int pin, int state) {
+        if (pinState[pin] != state) {
+            pinState[pin] = state;
+            int bit = 1 << pin;
+            if (state == PIN_HI) {
+                in |= bit;
+            } else {
+                in &= ~bit;
+            }
+            if (interrupt > 0) {
+                if ((ies & bit) == 0) {
+                    // LO/HI transition
+                    if (state == PIN_HI) {
+                        ifg |= bit;
+                        updateIV();
+                        if (DEBUG) {
+                            log("Flagging interrupt (HI): " + bit);
+                        }
+                    }
+                } else {
+                    // HI/LO transition
+                    if (state == PIN_LOW) {
+                        ifg |= bit;
+                        updateIV();
+                        if (DEBUG) {
+                            log("Flagging interrupt (LOW): " + bit);
+                        }
+                    }
+                }
+                // Maybe this is not the only place where we should flag int?
+                cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
+            }
+
+            if (timerCapture[pin] != null) {
+                /* should not be pin and 0 here
+                 * pin might need configuration and 0 can maybe also be 1? 
+                 */
+                //        if (DEBUG) log("Notifying timer of changed pin value");
+                timerCapture[pin].capture(pin, 0, state);
+            }
+
+        }
+    }
+
+    public void reset(int type) {
+        for (int i = 0, n = 8; i < n; i++) {
+            pinState[i] = PIN_LOW;
+        }
+        ifg = 0;
+        ie = 0;
+        iv = 0;
+        cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
+    }
+
+    public String info() {
+        StringBuilder sb = new StringBuilder();
+        /* TODO: USE PORTMAP FOR THIS!!! */
+        String[] regs = names;
+        sb.append('$').append(Utils.hex16(offset)).append(':');
+        for (int i = 0, n = regs.length; i < n; i++) {
+            sb.append(' ').append(regs[i]).append(":$")
+            .append(Utils.hex8(0));
+        }
+        return sb.toString();
+    }
 
 }

@@ -71,6 +71,7 @@ import se.sics.mspsim.util.Utils;
  */
 public class Timer extends IOUnit {
 
+    public static final boolean DEBUG = false;
   public static final int TBIV = 0x011e;
   public static final int TAIV = 0x012e;
 
@@ -172,6 +173,11 @@ public class Timer extends IOUnit {
     "NONE", "RISING", "FALLING", "BOTH"
   };
 
+  public static final String[] modeNames = {
+      "STOP", "UP", "CONT", "UPDWN"
+  };
+
+  
   private final int tiv;
   private int inputDivider = 1;
 
@@ -283,9 +289,11 @@ public class Timer extends IOUnit {
           /* trigger if trigger should be... */
           if ((tcctl & CC_TRIGGER_INT) == CC_TRIGGER_INT) {
               if (index == 0) {
+                  log("triggering interrupt");
                   core.flagInterrupt(interruptVector, Timer.this, true);                  
               } else if (lastTIV == 0) {
                   lastTIV = index * 2;
+                  log("triggering interrupt TIV: " + lastTIV);
                   core.flagInterrupt(interruptVector, Timer.this, true);
               } else if (lastTIV > index * 2) {
                   /* interrupt already triggered, but set to this lower IRQ */
@@ -368,10 +376,19 @@ public class Timer extends IOUnit {
               }
           }
       }
-      
+
+      public String info() {
+          return "CCR" + index + ":" +
+          "  CM: " + capNames[capMode] +
+          "  CCIS:" + inputSel + "  Source: " +
+          getSourceName(inputSrc) +
+          "  Capture: " + captureOn +
+          " IFG: " + ((tcctl & CC_IFG) > 0) + " IE: " + ((tcctl & CC_IE) > 0);
+      }
+
   }
   
-  private CCR ccr[] = new CCR[7];
+  private CCR ccr[];
 
   private TimeEvent counterTrigger = new TimeEvent(0, "Timer Counter Trigger") {
       public void execute(long t) {
@@ -407,24 +424,28 @@ public class Timer extends IOUnit {
     super(config.name, config.name, memory, config.offset);
     this.srcMap = config.srcMap;
     this.core = core;
-    noCompare = (srcMap.length / 4) - 1;
+    // noCompare = (srcMap.length / 4) - 1;
+    noCompare = config.ccrCount;
     if (srcMap == TIMER_Ax149) {
-      tiv = TAIV;
       timerOverflow = 0x0a;
     } else {
-      tiv = TBIV;
       timerOverflow = 0x0e;
     }
+    tiv = config.timerIVAddr;
     ccr0Vector = config.ccr0Vector;
     ccr1Vector = config.ccrXVector;
 
     counterTrigger.name += ' ' + config.name;
 
+    ccr = new CCR[noCompare];
     for (int i = 0; i < noCompare; i++) {
         ccr[i] = new CCR(0, "CCR" + i + " " + config.name, i == 0 ? ccr0Vector : ccr1Vector, i);
     }
     
     reset(0);
+    
+    if (DEBUG) setLogStream(System.out);
+    
   }
 
   public void reset(int type) {
@@ -461,7 +482,10 @@ public class Timer extends IOUnit {
 
   // Should handle read of byte also (currently ignores that...)
   public int read(int address, boolean word, long cycles) {
-    if (address == TAIV || address == TBIV) {
+
+      if (DEBUG) System.out.println(getName() + " read from: " + Utils.hex16(address));
+
+      if (address == tiv) {
       // should clear registers for cause of interrupt (highest value)?
       // but what if a higher value have been triggered since this was
       // triggered??? -> does that matter???
@@ -518,7 +542,7 @@ public class Timer extends IOUnit {
       val = ccr[i].tccr;
       break;
     default:
-      logw("Not supported read, returning zero!!!");
+      logw("Not supported read, returning zero!!! addr: " + index + " addr: " + Utils.hex16(address));
     }
     
     if (DEBUG) {
@@ -587,7 +611,7 @@ public class Timer extends IOUnit {
     // This does not handle word/byte difference yet... assumes it gets
     // all 16 bits when called!!!
 
-    if (address == TAIV || address == TBIV) {
+    if (address == tiv) {
       // should clear registers for cause of interrupt (highest value)?
       // but what if a higher value have been triggered since this was
       // triggered??? -> does that matter???
@@ -596,8 +620,11 @@ public class Timer extends IOUnit {
       resetTIV(cycles);
     }
 
-
     int iAddress = address - offset;
+
+    if (DEBUG) System.out.println(getName() + " write to: " + Utils.hex16(address) +
+            " => " + iAddress + " = " + data);
+
 
     switch (iAddress) {
     case TR:
@@ -700,7 +727,7 @@ public class Timer extends IOUnit {
       if (!oldCapture && reg.captureOn && (src & SRC_PORT) != 0) {
         int port = (src & 0xff) >> 4;
         int pin = src & 0x0f;
-        IOPort ioPort = core.getIOPort(port);
+        IOPort ioPort = (IOPort) core.getIOUnit("P" + port);
         if (DEBUG) log("Assigning Port: " + port + " pin: " + pin +
             " for capture");
         ioPort.setTimerCapture(this, pin);
@@ -947,5 +974,17 @@ public class Timer extends IOUnit {
     if (reg == 0x10) return "TR";
     if (reg < 0x20) return "TCCR" + (reg - 0x12) / 2;
     return " UNDEF(" + Utils.hex16(address) + ")";
-  }  
+  }
+  
+  public String info() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("  Source: " + getSourceName(clockSource) + "  Speed: " + clockSpeed
+              + " Hz  inDiv: " + inputDivider + "  Multiplyer: " + cyclesMultiplicator + '\n'
+              + "  Mode: " + modeNames[mode] + "  IEn: " + interruptEnable
+              + "  IFG: " + interruptPending + "  TR: " + updateCounter(core.cycles) + '\n');
+      for (CCR reg : ccr) {
+          if (reg != null) sb.append("  ").append(reg.info()).append('\n');
+      }
+      return sb.toString();
+  }
 }

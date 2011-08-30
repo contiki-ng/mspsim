@@ -130,14 +130,14 @@ public class DisAsm implements MSP430Constants {
         int nextData = memory[pc] + (memory[pc + 1] << 8);
 
         switch(op) {
-        case MOVA_IND0:
+        case MOVA_IND:
             opstr = "MOVA @R" + srcdata +  ",R" + dst;
             break;
-        case MOVA_IND1:
+        case MOVA_IND_AUTOINC:
             opstr = "MOVA @R" + srcdata +  "+,R" + dst;
             break;
         case MOVA_ABS2REG:
-            opstr = "MOVA &$" + Utils.hex20(((srcdata << 16) | nextData)) +  "," + dst;
+            opstr = "MOVA &$" + Utils.hex20(((srcdata << 16) | nextData)) +  ",R" + dst;
             size += 2;
             break;
         case MOVA_INDX2REG:
@@ -191,7 +191,6 @@ public class DisAsm implements MSP430Constants {
     case 1: // Single operand instructions
     {
         /* check CALLA first */
-        int srcdata = (instruction & 0x0f00) >> 8;
         int dst = instruction & 0x000f;
         int nextData = memory[pc] + (memory[pc + 1] << 8);
         String opstr = null;
@@ -217,11 +216,26 @@ public class DisAsm implements MSP430Constants {
             opstr = "CALLA #" + Utils.hex20(((dst << 16) | nextData));
             size += 2;
             break;
+        default:
+            switch (instruction & 0xff00) {
+            case PUSHM_A:
+                opstr = "PUSHM.A #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                break;
+            case PUSHM_W:
+                opstr = "PUSHM.W #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                break;
+            case POPM_A:
+                opstr = "POPM.A #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                break;
+            case POPM_W:
+                opstr = "POPM.W #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                break;                
+            }
         }
         if (opstr != null) {        
             output += dumpMem(startPC, size, memory);
             output += opstr + " ";
-            regs = "R" + srcdata + "=" + Utils.hex16(reg[srcdata]);
+            regs = "R" + dst + "=" + Utils.hex16(reg[dst]);
             regs += " SP=" + Utils.hex16(reg[SP]);
         } else {
             // Register
@@ -289,7 +303,19 @@ public class DisAsm implements MSP430Constants {
                 opstr = "RETI";
                 break;
             default:
-                System.out.println("Not implemented instruction: " + instruction);
+                if ((instruction & 0xf800) == 0x1800) {
+                    int zc = (instruction & EXTWORD_ZC) > 0 ? 1 : 0;
+                    int al = (instruction & EXTWORD_AL) > 0 ? 1 : 0;
+                    int rp = (instruction & EXTWORD_REPEAT) > 0 ? 1 : 0;
+                    int shi = (instruction & EXTWORD_SRC) >> 7;
+                    int dhi = (instruction & EXTWORD_DST);
+                    opstr = "ExtWord " + Utils.hex16(instruction) + ":ZC:" + zc + " #:" + rp +
+                    " A/L:" + al + " src:" + shi + " dst:" + dhi;
+                } else {
+                    System.out.println("Not implemented instruction: $" + Utils.hex16(instruction) +
+                            " at " + Utils.hex16(startPC));
+                    opstr = "<Unkown>";
+                }
             }
             output += dumpMem(startPC, size, memory);
             output += opstr + " " + adr;

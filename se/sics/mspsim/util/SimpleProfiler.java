@@ -167,9 +167,9 @@ public class SimpleProfiler implements Profiler, EventListener {
       /* the stack pointer might have been messed with? */
       PrintStream logger = this.logger;
       if (logger != null) {
-        logger.println("SimpleProfiler: Too many returns?");
+          // logger.println("SimpleProfiler: Too many returns?");
       } else {
-        System.err.println("SimpleProfiler: Too many returns?");
+        // System.err.println("SimpleProfiler: Too many returns?");
       }
       return;
     }

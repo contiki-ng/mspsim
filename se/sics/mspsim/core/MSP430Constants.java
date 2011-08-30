@@ -119,8 +119,8 @@ public interface MSP430Constants {
 
   
   // MSP430X instructions
-  public static final int MOVA_IND0 = 0x0000;
-  public static final int MOVA_IND1 = 0x0010;
+  public static final int MOVA_IND = 0x0000;
+  public static final int MOVA_IND_AUTOINC = 0x0010; /* Indirect with increment */
   public static final int MOVA_ABS2REG = 0x0020;
   public static final int MOVA_INDX2REG = 0x0030;
   public static final int MOVA_REG2ABS = 0x0060;
@@ -134,14 +134,37 @@ public interface MSP430Constants {
   public static final int ADDA_REG = 0x00e0;
   public static final int SUBA_REG = 0x00f0;
   
-  public static final int CALLA_MASK = 0x13f0;
+  public static final int RRXX_ADDR = 0x0040;
+  public static final int RRXX_WORD = 0x0050;
+  
+  public static final int RRMASK = 0x0300;
+  public static final int RRCM = 0x0000; /* rotate right through carry C -> MSB -> MSB-1 ... -> C */
+  public static final int RRAM = 0x0100; /* rotate right arithmetically MSB -> MSB -> MSB-1 ...->C*/ 
+  public static final int RLAM = 0x0200; /* rotate left arithm. C <- MSB-1 ... <- 0 */
+  public static final int RRUM = 0x0300; /* rotate right unsigned 0 -> MSB -> MSB -1, ... */
+
+  
+  public static final int CALLA_MASK = 0xfff0;
   public static final int CALLA_REG = 0x1340;
   public static final int CALLA_IND = 0x1360;
   public static final int CALLA_IND_AUTOINC = 0x1370;
   public static final int CALLA_ABS = 0x1380;
   public static final int CALLA_EDE = 0x1390; /* x(PC) */
   public static final int CALLA_IMM = 0x13b0;
+  
+  public static final int PUSHM_A = 0x1400;
+  public static final int PUSHM_W = 0x1500;
+  public static final int POPM_A = 0x1600;
+  public static final int POPM_W = 0x1700;
     
+  
+  public static final int EXTWORD_ZC = 0x100;
+  public static final int EXTWORD_REPEAT = 0x80;
+  public static final int EXTWORD_AL = 0x40;
+  public static final int EXTWORD_SRC = 0x780;
+  public static final int EXTWORD_DST = 0x0f;
+  
+  
   
   
   public static final String[] TWO_OPS = {

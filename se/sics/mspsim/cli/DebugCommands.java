@@ -233,6 +233,14 @@ public class DebugCommands implements CommandBundle {
         }
       });
 
+      ch.registerCommand("debug", new BasicCommand("set debug to on or off", "0/1") {
+          public int executeCommand(final CommandContext context) {
+              cpu.setDebug("1".equals(context.getArgument(0)));
+              context.out.println("Set debug to " + "1".equals(context.getArgument(0)));
+              return 0;
+          }
+      });
+      
       ch.registerCommand("line", new BasicCommand("print line number of address/symbol", "<address or symbol>") {
         public int executeCommand(final CommandContext context) {
           int adr = context.getArgumentAsAddress(0);
@@ -409,7 +417,7 @@ public class DebugCommands implements CommandBundle {
                     if ((fkn = dbg.getFunction()) != null) {
                         context.out.println("//// " + fkn);
                     }
-                    context.out.println(dbg.getASMLine());
+                    context.out.println(dbg.getASMLine(false));
                     start += dbg.getSize();
                 } else {
                     int data = 0;

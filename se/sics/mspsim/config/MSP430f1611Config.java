@@ -36,6 +36,8 @@
 package se.sics.mspsim.config;
 
 import java.util.ArrayList;
+
+import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.DMA;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
@@ -53,8 +55,9 @@ public class MSP430f1611Config extends MSP430Config {
         maxInterruptVector = 15;
 
         /* configuration for the timers */
-        TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA");
-        TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
+        TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA", Timer.TAIV);
+        TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB", Timer.TBIV);
+ 
         timerConfig = new TimerConfig[] {timerA, timerB};
         
         /* configure memory */
@@ -147,6 +150,21 @@ public class MSP430f1611Config extends MSP430Config {
           cpu.memIn[0x33 + i * 4] = p;
         }
         
+        ADC12 adc12 = new ADC12(cpu);
+        ioUnits.add(adc12);
+
+        for (int i = 0, n = 16; i < n; i++) {
+            cpu.memOut[0x80 + i] = adc12;
+            cpu.memIn[0x80 + i] = adc12;
+            cpu.memOut[0x140 + i] = adc12;
+            cpu.memIn[0x140 + i] = adc12;
+            cpu.memOut[0x150 + i] = adc12;
+            cpu.memIn[0x150 + i] = adc12;
+        }
+        for (int i = 0, n = 8; i < n; i++) {    
+            cpu.memOut[0x1A0 + i] = adc12;
+            cpu.memIn[0x1A0 + i] = adc12;
+        }
         
         return 3 + 6;
     }

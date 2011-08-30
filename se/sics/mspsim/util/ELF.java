@@ -358,7 +358,10 @@ public class ELF {
   }
 
   public DebugInfo getDebugInfo(int adr) {
-    return debug.getDebugInfo(adr);
+      if (debug != null) {
+          return debug.getDebugInfo(adr);
+      }
+      return null;
   }
 
   public String lookupFile(int address) {
