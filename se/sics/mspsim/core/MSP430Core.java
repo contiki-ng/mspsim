@@ -167,6 +167,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     memory = new int[MAX_MEM];
     breakPoints = new CPUMonitor[MAX_MEM];
+
+    System.out.println("Set up MSP430 Core with " + MAX_MEM + " bytes memory");
     
     /* this is for detecting writes/read to/from non-existing IO */
     IOUnit voidIO = new IOUnit(id, memory, 0) {
@@ -614,7 +616,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   private void internalReset() {
-    for (int i = 0, n = 16; i < n; i++) {
+    for (int i = 0, n = 64; i < n; i++) {
       interruptSource[i] = null;
     }
     servicedInterruptUnit = null;
@@ -896,7 +898,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   /* returns true if any instruction was emulated - false if CpuOff */
-  public boolean emulateOP(long maxCycles) throws EmulationException {
+  public int emulateOP(long maxCycles) throws EmulationException {
     //System.out.println("CYCLES BEFORE: " + cycles);
     int pc = readRegister(PC);
     long startCycles = cycles;
@@ -926,7 +928,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
       if (interruptsEnabled && interruptMax > 0) {
           /* can not allow for jumping to nextEventCycles since that would jump too far */
-          return false;
+          return -1;
       }
 
       if (maxCycles >= 0 && maxCycles < nextEventCycles) {
@@ -935,7 +937,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       } else {
         cycles = nextEventCycles;
       }
-      return false;
+      return -1;
     }
 
     // This is quite costly... should probably be made more
@@ -944,7 +946,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (breakpointActive) {
 	breakPoints[pc].cpuAction(CPUMonitor.EXECUTE, pc, 0);
 	breakpointActive = false;
-	return false;
+	return -1;
       }
       // Execute this instruction - this is second call...
       breakpointActive = true;
@@ -953,6 +955,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         globalMonitor.cpuAction(CPUMonitor.EXECUTE, pc, 0);
     }
 
+    int pcBefore = pc;
     instruction = read(pc, MODE_WORD);
     
     /* check for extension words */
@@ -1275,7 +1278,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	jump = true;
 	break;
       default:
-        logw("Not implemented instruction: " + Utils.binary16(instruction));
+        logw("Not implemented instruction: #" + Utils.binary16(instruction));
       }
       // Perform the Jump
       if (jump) {
@@ -1569,7 +1572,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     cpuCycles += cycles - startCycles;
     
-    return true;
+    /* return the address that was executed */
+    return pcBefore;
   }
   
   public int getModeMax() {

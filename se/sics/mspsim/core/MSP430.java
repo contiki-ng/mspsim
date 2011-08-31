@@ -101,7 +101,8 @@ public class MSP430 extends MSP430Core {
   }
 
   private void run() throws EmulationException {
-    while (isRunning()) {
+      int pc;
+      while (isRunning()) {
       // -------------------------------------------------------------------
       // Debug information
       // -------------------------------------------------------------------
@@ -118,14 +119,14 @@ public class MSP430 extends MSP430Core {
 	nextOut = cycles + 20000007;
       }
 
-      if (emulateOP(-1)) {
+      if ((pc = emulateOP(-1)) >= 0) {
 	instCtr++;
 
 	if (execCounter != null) {
-	  execCounter[reg[PC]]++;
+	  execCounter[pc]++;
 	}
 	if (trace != null) {
-	    trace[tracePos++] = reg[PC];
+	    trace[tracePos++] = pc;
 	    if (tracePos >= trace.length)
 		tracePos = 0;
 	}
@@ -163,24 +164,24 @@ public class MSP430 extends MSP430Core {
 
 
     while (count-- > 0 && isRunning()) {
-      if (debug) {
-        if (servicedInterrupt >= 0) {
-          disAsm.disassemble(reg[PC], memory, reg, servicedInterrupt);
-        } else {
-          disAsm.disassemble(reg[PC], memory, reg);
-        }
-      }
 
-      boolean emuOP = emulateOP(-1);
-      if (emuOP) {
+      int pc = emulateOP(-1);
+      if (pc >= 0) {
         if (execCounter != null) {
-          execCounter[reg[PC]]++;
+          execCounter[pc]++;
         }
         if (trace != null) {
-  	  trace[tracePos++] = reg[PC];
+  	  trace[tracePos++] = pc;
   	  if (tracePos > trace.length)
   	      tracePos = 0;
         }
+      }
+      if (debug) {
+          if (servicedInterrupt >= 0) {
+              disAsm.disassemble(reg[PC], memory, reg, servicedInterrupt);
+          } else {
+              disAsm.disassemble(reg[PC], memory, reg);
+          }
       }
     }
     setRunning(false);
@@ -206,6 +207,7 @@ public class MSP430 extends MSP430Core {
    */
   long maxCycles = 0;
   public long stepMicros(long jumpMicros, long executeMicros) throws EmulationException {
+    int pc;
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
@@ -249,20 +251,9 @@ public class MSP430 extends MSP430Core {
     /*System.out.println("Current cycles: " + cycles + " additional micros: " + (jumpMicros) +
           " exec micros: " + executeMicros + " => Execute until cycles: " + maxCycles);*/
 
-    // -------------------------------------------------------------------
-    // Debug information
-    // -------------------------------------------------------------------
-    if (debug) {
-      if (servicedInterrupt >= 0) {
-	disAsm.disassemble(reg[PC], memory, reg, servicedInterrupt);
-      } else {
-	disAsm.disassemble(reg[PC], memory, reg);
-      }
-    }
-
 
     while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
-        if (emulateOP(maxCycles)) {
+        if ((pc = emulateOP(maxCycles)) >= 0) {
             if (execCounter != null) {
                 execCounter[reg[PC]]++;
             }
@@ -270,7 +261,17 @@ public class MSP430 extends MSP430Core {
               if (tracePos > trace.length) {
                 tracePos = 0;
               }
-              trace[tracePos++] = reg[PC];
+              trace[tracePos++] = pc;
+            }
+            // -------------------------------------------------------------------
+            // Debug information
+            // -------------------------------------------------------------------
+            if (debug) {
+              if (servicedInterrupt >= 0) {
+                disAsm.disassemble(pc, memory, reg, servicedInterrupt);
+              } else {
+                disAsm.disassemble(pc, memory, reg);
+              }
             }
         }
     }
