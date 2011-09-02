@@ -37,10 +37,17 @@
  */
 
 #include "msp430setup.h"
+#if __MSPGCC__
+#include <msp430.h>
+#include <msp430libc.h>
+#include <legacymsp430.h>
+#include <sys/crtld.h>
+#else /* __MSPGCC__ */
 #include <io.h>
 #include <signal.h>
-#include <stdio.h>
 #include <sys/unistd.h>
+#endif /* __MSPGCC__ */
+#include <stdio.h>
 
 
 /*--------------------------------------------------------------------------*/
@@ -330,7 +337,14 @@ msp430_setup(void)
 #define asmv(arg) __asm__ __volatile__(arg)
 
 #define STACK_EXTRA 32
-static char *cur_break = (char *)(&__bss_end + 1);
+
+static char *cur_break = (char *)(
+#if defined(__MSP430_LIBC__) && 20110612 <= __MSP430_LIBC__
+				  __bss_end
+#else
+				  &__bss_end + 1
+#endif
+);
 
 /*
  * Allocate memory from the heap. Check that we don't collide with the

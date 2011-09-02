@@ -38,10 +38,17 @@
  */
 
 #include "msp430setup.h"
-#include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#if __MSPGCC__
+#include <msp430.h>
+#include <legacymsp430.h>
+#define eint() __eint()
+#define dint() __dint()
+#else /* __MSPGCC__ */
+#include <signal.h>
 #include <io.h>
+#endif /* __MSPGCC__ */
 
 /* From Adams test-suite */
 #define TEST(...) if(__VA_ARGS__) {					 \
@@ -211,7 +218,6 @@ static struct {
 				     crashed gcc... */
 } invert;
 
-#include <io.h>
 #ifndef BV
 #define BV(n) (1 << (n))
 #endif

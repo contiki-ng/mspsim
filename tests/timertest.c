@@ -38,10 +38,15 @@
  */
 
 #include "msp430setup.h"
+#if __MSPGCC__
+#include <msp430.h>
+#include <legacymsp430.h>
+#else /* __MSPGCC__ */
 #include <signal.h>
-#include <stdio.h>
-#include <string.h>
 #include <io.h>
+#endif /* __MSPGCC__ */
+#include <string.h>
+#include <stdio.h>
 
 /* From Adams test-suite */
 #define TEST(...) if(__VA_ARGS__) {					 \
