@@ -337,13 +337,17 @@ public class ELF {
 			 int fill) {
     if (DEBUG) {
       System.out.println("Loading " + len + " bytes into " +
-             Integer.toString(addr, 16));
+             Integer.toString(addr, 16) + " fill " + fill);
     }
     for (int i = 0, n = len; i < n; i++) {
       memory[addr++] = elfData[offset++] & 0xff;
     }
     if (fill > len) {
-      for (int i = 0, n = fill - len; i < n; i++) {
+      int n = fill - len;
+      if (n + addr > memory.length) {
+	n = memory.length - addr;
+      }
+      for (int i = 0; i < n; i++) {
 	memory[addr++] = 0;
       }
     }
