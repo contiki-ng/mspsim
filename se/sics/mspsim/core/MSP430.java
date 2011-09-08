@@ -255,7 +255,7 @@ public class MSP430 extends MSP430Core {
     while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
         if ((pc = emulateOP(maxCycles)) >= 0) {
             if (execCounter != null) {
-                execCounter[reg[PC]]++;
+                execCounter[pc]++;
             }
             if (trace != null) {
               if (tracePos > trace.length) {

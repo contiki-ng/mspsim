@@ -42,6 +42,7 @@ import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.InterruptMultiplexer;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.Multiplier;
 import se.sics.mspsim.core.Timer;
 import se.sics.mspsim.core.USART;
 
@@ -52,8 +53,8 @@ public class MSP430f1611Config extends MSP430Config {
         maxInterruptVector = 15;
 
         /* configuration for the timers */
-        TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA");
-        TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
+        TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA", Timer.TAIV);
+        TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB", Timer.TBIV);
         timerConfig = new TimerConfig[] {timerA, timerB};
         
         /* configure memory */
@@ -75,6 +76,13 @@ public class MSP430f1611Config extends MSP430Config {
 
           cpu.memOut[0x78 + i] = usart1;
           cpu.memIn[0x78 + i] = usart1;
+        }
+        
+        Multiplier mp = new Multiplier(cpu, cpu.memory, 0);
+        // Only cares of writes!
+        for (int i = 0x130, n = 0x13f; i < n; i++) {
+          cpu.memOut[i] = mp;
+          cpu.memIn[i] = mp;
         }
         
         // Usarts
@@ -139,5 +147,8 @@ public class MSP430f1611Config extends MSP430Config {
         
         
         return 3 + 6;
-    }    
+    }
+    
+    
+    
 }

@@ -31,7 +31,7 @@
  *
  * -----------------------------------------------------------------
  *
- * USART
+ * USCI Module for the MSP430xf2xxx series.
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007

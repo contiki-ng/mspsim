@@ -41,6 +41,7 @@ import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.Multiplier;
 import se.sics.mspsim.core.Timer;
 import se.sics.mspsim.core.USCI;
 import se.sics.mspsim.util.Utils;
@@ -54,8 +55,8 @@ public class MSP430f2617Config extends MSP430Config {
         MSP430XArch = true;
         
         /* configuration for the timers */
-        TimerConfig timerA = new TimerConfig(25, 24, 3, 0x160, Timer.TIMER_Ax149, "TimerA");
-        TimerConfig timerB = new TimerConfig(29, 28, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
+        TimerConfig timerA = new TimerConfig(25, 24, 3, 0x160, Timer.TIMER_Ax149, "TimerA", Timer.TAIV);
+        TimerConfig timerB = new TimerConfig(29, 28, 7, 0x180, Timer.TIMER_Bx149, "TimerB", Timer.TBIV);
         timerConfig = new TimerConfig[] {timerA, timerB};
         
         /* TX Vec, RX Vec, TX Bit, RX Bit, SFR-reg, Offset, Name, A?*/
@@ -67,6 +68,14 @@ public class MSP430f2617Config extends MSP430Config {
     }
 
     public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {
+
+        Multiplier mp = new Multiplier(cpu, cpu.memory, 0);
+        // Only cares of writes!
+        for (int i = 0x130, n = 0x13f; i < n; i++) {
+          cpu.memOut[i] = mp;
+          cpu.memIn[i] = mp;
+        }
+        
         USCI usciA0 = new USCI(cpu, 0, cpu.memory, this);
         USCI usciB0 = new USCI(cpu, 1, cpu.memory, this);
         USCI usciA1 = new USCI(cpu, 2, cpu.memory, this);

@@ -41,9 +41,10 @@ import se.sics.mspsim.util.Utils;
 
 public class Flash extends IOUnit {
   
-  private static final int FCTL1 = 0x0128;
-  private static final int FCTL2 = 0x012a;
-  private static final int FCTL3 = 0x012c;
+  private static final int FCTL1 = 0x00;
+  private static final int FCTL2 = 0x02;
+  private static final int FCTL3 = 0x04;
+  private static final int FCTL4 = 0x06;
 
   private static final int FRKEY =   0x9600;
   private static final int FWKEY =   0xA500;
@@ -164,8 +165,8 @@ public class Flash extends IOUnit {
   };
   
   public Flash(MSP430Core cpu, int[] memory, FlashRange main_range,
-      FlashRange info_range) {
-    super("Flash", "Internal Flash", memory, FCTL1);
+      FlashRange info_range, int offset) {
+    super("Flash", "Internal Flash", memory, offset);
     this.cpu = cpu;
     this.memory = memory;
     this.main_range = main_range;
@@ -374,6 +375,8 @@ public class Flash extends IOUnit {
   }
   
   public int read(int address, boolean word, long cycles) {
+    address = address - offset;
+      
     if (address == FCTL1) {
       return mode | FRKEY;
     }
@@ -485,6 +488,7 @@ public class Flash extends IOUnit {
   }
   
   public void write(int address, int value, boolean word, long cycles) {
+    address = address - offset;
     if (!word) {
       logw("Invalid access type to flash controller");
       return;

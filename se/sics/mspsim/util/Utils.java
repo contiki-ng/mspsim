@@ -52,11 +52,12 @@ public class Utils {
   public static final int HEX = 2;
   public static final int DEC = 3;
   public static final int ASCII_UNMODIFIED = 4;
+  public static final int DIS_ASM = 5;
   
   public static int size(int type) {
       return 1 + (type / 2);
   }
-  
+
   public static String toString(int data, int type, int mode) {
       int size = 1 + type / 2;
       switch (mode) {

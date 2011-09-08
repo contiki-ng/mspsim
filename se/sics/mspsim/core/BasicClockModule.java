@@ -87,10 +87,10 @@ public class BasicClockModule extends IOUnit {
     super("BasicClockModule", memory, offset);
     this.core = core;
     this.timers = timers;
-    reset();
+    reset(0);
   }
 
-  public void reset() {
+  public void reset(int type) {
     write(DCOCTL, 0x60, false, core.cycles);
     write(BCSCTL1, 0x84, false, core.cycles);
     write(BCSCTL2, 0, false, core.cycles);

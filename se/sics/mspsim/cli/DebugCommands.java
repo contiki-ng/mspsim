@@ -363,7 +363,7 @@ public class DebugCommands implements CommandBundle {
           }
         });
 
-        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_entries> [type] [hex|char]") {
+        ch.registerCommand("mem", new BasicCommand("dump memory", "<start address> <num_entries> [type] [hex|char|dis]") {
           public int executeCommand(final CommandContext context) {
             int start = context.getArgumentAsAddress(0);
             if (start < 0) {
@@ -393,17 +393,33 @@ public class DebugCommands implements CommandBundle {
                     } else if ("char".equals(tS)) {
                         mode = Utils.ASCII;
                         type = Utils.BYTE;
+                    } else if ("dis".equals(tS)) {
+                        mode = Utils.DIS_ASM;
+                        type = Utils.WORD;
                     }
                 }
             }
             // Does not yet handle signed data...
+            DisAsm disAsm = cpu.getDisAsm();
             for (int i = 0; i < count; i++) {
-                int data = 0;
-                data = cpu.memory[start++];
-                if (Utils.size(type) == 2) {
-                    data = data  + (cpu.memory[start++] << 8);
+                if (mode == Utils.DIS_ASM) {
+                    DbgInstruction dbg = disAsm.disassemble(start, cpu.memory, cpu.reg, new DbgInstruction(),
+                            0);
+                    String fkn;
+                    if ((fkn = dbg.getFunction()) != null) {
+                        context.out.println("//// " + fkn);
+                    }
+                    context.out.println(dbg.getASMLine());
+                    start += dbg.getSize();
+                } else {
+                    int data = 0;
+                    data = cpu.memory[start++];
+                    if (Utils.size(type) == 2) {
+                        data = data  + (cpu.memory[start++] << 8);
+                    }
+                    context.out.print((mode != Utils.ASCII ? " " : "") + 
+                            Utils.toString(data, type, mode));
                 }
-                context.out.print((mode != Utils.ASCII ? " " : "") + Utils.toString(data, type, mode));
             }
             context.out.println();
             return 0;
