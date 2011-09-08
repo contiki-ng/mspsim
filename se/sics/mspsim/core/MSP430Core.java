@@ -212,11 +212,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     /* TODO: this range is only valid for the F1611 series (Sky, etc) */
     flash = new Flash(this, memory,
-        new FlashRange(0x4000, 0x10000, 512, 64),
-        new FlashRange(0x1000, 0x01100, 128, 64));
-    for (int i = 0x128; i < 0x12e; i++) {
-      memOut[i] = flash;
-      memIn[i] = flash;
+            new FlashRange(config.mainFlashStart, config.mainFlashStart + config.mainFlashSize, 512, 64),
+            new FlashRange(config.infoMemStart, config.infoMemStart + config.infoMemSize, 128, 64),
+            0x128);
+    for (int i = 0; i < 8; i++) {
+        memOut[i + 0x128] = flash;
+        memIn[i + 0x128] = flash;
     }
     
     sfr = new SFR(this, memory);
@@ -627,7 +628,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     cycleEventQueue.removeAll();
     vTimeEventQueue.removeAll();
 
-    bcs.reset();
+    bcs.reset(0);
     for (Chip chip : chips) {
       chip.notifyReset();
     }

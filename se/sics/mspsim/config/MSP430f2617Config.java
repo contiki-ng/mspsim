@@ -55,8 +55,8 @@ public class MSP430f2617Config extends MSP430Config {
         MSP430XArch = true;
         
         /* configuration for the timers */
-        TimerConfig timerA = new TimerConfig(25, 24, 3, 0x160, Timer.TIMER_Ax149, "TimerA", Timer.TAIV);
-        TimerConfig timerB = new TimerConfig(29, 28, 7, 0x180, Timer.TIMER_Bx149, "TimerB", Timer.TBIV);
+        TimerConfig timerA = new TimerConfig(25, 24, 3, 0x160, Timer.TIMER_Ax149, "TimerA");
+        TimerConfig timerB = new TimerConfig(29, 28, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
         timerConfig = new TimerConfig[] {timerA, timerB};
         
         /* TX Vec, RX Vec, TX Bit, RX Bit, SFR-reg, Offset, Name, A?*/

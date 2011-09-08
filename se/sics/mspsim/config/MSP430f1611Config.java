@@ -53,8 +53,8 @@ public class MSP430f1611Config extends MSP430Config {
         maxInterruptVector = 15;
 
         /* configuration for the timers */
-        TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA", Timer.TAIV);
-        TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB", Timer.TBIV);
+        TimerConfig timerA = new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA");
+        TimerConfig timerB = new TimerConfig(13, 12, 7, 0x180, Timer.TIMER_Bx149, "TimerB");
         timerConfig = new TimerConfig[] {timerA, timerB};
         
         /* configure memory */
