@@ -215,7 +215,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
 
     if (ch == null) {
-        if (!config.getPropertyAsBoolean("nogui", false)) {
+        if (config.getPropertyAsBoolean("jconsole", false)) {
             ConsoleUI console = new ConsoleUI();
             PrintStream consoleStream = new PrintStream(console.getOutputStream());
             ch = new CommandHandler(consoleStream, consoleStream);
