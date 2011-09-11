@@ -110,13 +110,15 @@ public class MSP430f2617Config extends MSP430Config {
         cpu.memIn[7] = usciA1;
 
         // Add port 1,2 with interrupt capability!
-        ioUnits.add(new IOPort(cpu, 1, 4, cpu.memory, 0x20));
-        ioUnits.add(new IOPort(cpu, 2, 1, cpu.memory, 0x28));
+        IOPort io1;
+        IOPort io2;
+        ioUnits.add(io1 = new IOPort(cpu, 1, 4, cpu.memory, 0x20));
+        ioUnits.add(io2 = new IOPort(cpu, 2, 1, cpu.memory, 0x28));
         for (int i = 0, n = 8; i < n; i++) {
-          cpu.memOut[0x20 + i] = ioUnits.get(0);
-          cpu.memOut[0x28 + i] = ioUnits.get(1);
-          cpu.memIn[0x20 + i] = ioUnits.get(0);
-          cpu.memIn[0x28 + i] = ioUnits.get(1);
+          cpu.memOut[0x20 + i] = io1;
+          cpu.memOut[0x28 + i] = io2;
+          cpu.memIn[0x20 + i] = io1;
+          cpu.memIn[0x28 + i] = io2;
         }
 
         // Add port 3,4 & 5,6
