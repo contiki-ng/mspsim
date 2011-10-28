@@ -376,7 +376,7 @@ public class DwarfReader implements ELFDebug {
             if (address <= end && address >= start) {
                 for (int j = 0; j < data.lineEntries.length; j++) {
                     if (data.lineEntries[j].address >= address) {
-                        return new DebugInfo(data.lineEntries[j].line, ".", data.sourceFiles[0], "* not available");
+                        return new DebugInfo(data.lineEntries[j].line, "", data.sourceFiles[0], "* not available");
                     }
                 }
             }
@@ -385,10 +385,21 @@ public class DwarfReader implements ELFDebug {
     }
 
     public ArrayList<Integer> getExecutableAddresses() {
-        return null;
+        ArrayList<Integer> executableAddresses = new ArrayList<Integer>();
+        for (LineData data: lineInfo) {
+            for (LineEntry entry: data.lineEntries) {
+                executableAddresses.add(entry.address);
+            }
+        }
+	return executableAddresses;
     }
 
     public String[] getSourceFiles() {
-        return null;
+        String[] sourceFilesArray = new String[lineInfo.size()];
+        for (int i = 0; i < lineInfo.size(); i++) {
+            sourceFilesArray[i] = lineInfo.get(i).sourceFiles[0];
+        }
+
+        return sourceFilesArray;
     }
 }
