@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * MapTable
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.util;
@@ -265,7 +261,7 @@ public class MapTable {
     int totsize = 0;
     int totdata = map.dataFill, totbss = map.bssFill;
     int totmemory = totdata + totbss;
-    System.out.printf("%6s %6s %6s  %4s %s\n",
+    System.out.printf("%7s %7s %7s  %4s %s\n",
                       "text", "data", "bss", "addr", "name");
     for (int i = 0; i < map.modules.size(); i++) {
       MapEntry module = map.modules.get(i);
