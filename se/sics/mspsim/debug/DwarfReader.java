@@ -376,7 +376,7 @@ public class DwarfReader implements ELFDebug {
             if (address <= end && address >= start) {
                 for (int j = 0; j < data.lineEntries.length; j++) {
                     if (data.lineEntries[j].address >= address) {
-                        return new DebugInfo(data.lineEntries[j].line, "", data.sourceFiles[0], "* not available");
+                        return new DebugInfo(data.lineEntries[j].line, null, data.sourceFiles[0], "* not available");
                     }
                 }
             }
