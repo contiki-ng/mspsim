@@ -73,7 +73,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   // For breakpoints, etc... how should memory monitors be implemented?
   // Maybe monitors should have a "next" pointer...? or just have a [][]?
-  public CPUMonitor[] breakPoints;
+  public CPUMonitor[] watchPoints;
   // true => breakpoints can occur!
   boolean breakpointActive = true;
 
@@ -165,7 +165,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     MSP430XArch = config.MSP430XArch;
 
     memory = new int[MAX_MEM];
-    breakPoints = new CPUMonitor[MAX_MEM];
+    watchPoints = new CPUMonitor[MAX_MEM];
 
     System.out.println("Set up MSP430 Core with " + MAX_MEM + " bytes memory");
     
@@ -322,17 +322,27 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public Chip[] getChips() {
     return chips.toArray(new Chip[chips.size()]);
   }
-  
+
+  public synchronized void addWatchPoint(int address, CPUMonitor mon) {
+      watchPoints[address] = CPUMonitorProxy.addCPUMonitor(watchPoints[address], mon);
+  }
+
+  public synchronized void removeWatchPoint(int address, CPUMonitor mon) {
+      watchPoints[address] = CPUMonitorProxy.removeCPUMonitor(watchPoints[address], mon);
+  }
+
+  @Deprecated
   public void setBreakPoint(int address, CPUMonitor mon) {
-    breakPoints[address] = mon;
+      addWatchPoint(address, mon);
   }
 
   public boolean hasBreakPoint(int address) {
-    return breakPoints[address] != null;
+    return watchPoints[address] != null;
   }
   
-  public void clearBreakPoint(int address) {
-    breakPoints[address] = null;
+  @Deprecated
+  public synchronized void clearBreakPoint(int address) {
+    watchPoints[address] = null;
   }
 
   public void setRegisterWriteMonitor(int r, CPUMonitor mon) {
@@ -714,60 +724,64 @@ public class MSP430Core extends Chip implements MSP430Constants {
               }
           }
       }
-      if (breakPoints[address] != null) {
-          breakPoints[address].cpuAction(CPUMonitor.MEMORY_READ, address, val);
+      CPUMonitor wp = watchPoints[address];
+      if (wp != null) {
+          wp.cpuAction(CPUMonitor.MEMORY_READ, address, val);
       }
       /* is a null check as fast as a boolean check ?*/
-      if (globalMonitor != null) {
-          globalMonitor.cpuAction(CPUMonitor.MEMORY_READ, address, val);
+      wp = globalMonitor;
+      if (wp != null) {
+          wp.cpuAction(CPUMonitor.MEMORY_READ, address, val);
       }
       return val;
   }
   
   public void write(int dstAddress, int dst, int mode) throws EmulationException {
     // TODO: optimize memory usage by tagging memory's higher bits.
-    // will also affect below flash write stuff!!!
+      // will also affect below flash write stuff!!!
       if (dstAddress > MAX_MEM) {
           printWarning(ADDRESS_OUT_OF_BOUNDS_WRITE, dstAddress);
           dstAddress %= MAX_MEM;
       }
-      
-      if (breakPoints[dstAddress] != null) {
-      breakPoints[dstAddress].cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
-    }
-    boolean word = mode != MODE_BYTE;
 
-    // Only word writes at 0x1fe which is highest address...
-    if (dstAddress < MAX_MEM_IO) {
-      if (!word) dst &= 0xff;
-      memOut[dstAddress].write(dstAddress, dst & 0xffff, mode != MODE_BYTE, cycles);
-      if (mode > MODE_WORD) {
-          memOut[dstAddress].write(dstAddress + 2, dst >> 16, mode != MODE_BYTE, cycles);
+      CPUMonitor wp = watchPoints[dstAddress]; 
+      if (wp != null) {
+          wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
       }
-      // check for Flash
-    } else if (flash.addressInFlash(dstAddress)) {
-      flash.flashWrite(dstAddress, dst & 0xffff, word);
-      if (mode > MODE_WORD) {
-          flash.flashWrite(dstAddress + 2, dst >> 16, word);
+      boolean word = mode != MODE_BYTE;
+
+      // Only word writes at 0x1fe which is highest address...
+      if (dstAddress < MAX_MEM_IO) {
+          if (!word) dst &= 0xff;
+          memOut[dstAddress].write(dstAddress, dst & 0xffff, mode != MODE_BYTE, cycles);
+          if (mode > MODE_WORD) {
+              memOut[dstAddress].write(dstAddress + 2, dst >> 16, mode != MODE_BYTE, cycles);
+          }
+          // check for Flash
+      } else if (flash.addressInFlash(dstAddress)) {
+          flash.flashWrite(dstAddress, dst & 0xffff, word);
+          if (mode > MODE_WORD) {
+              flash.flashWrite(dstAddress + 2, dst >> 16, word);
+          }
+      } else {
+          // assume RAM
+          memory[dstAddress] = dst & 0xff;
+          if (word) {
+              memory[dstAddress + 1] = (dst >> 8) & 0xff;
+              if ((dstAddress & 1) != 0) {
+                  printWarning(MISALIGNED_WRITE, dstAddress);
+              }
+              if (mode > MODE_WORD) {
+                  memory[dstAddress + 2] = (dst >> 16) & 0xff; /* should be 0x0f ?? */
+                  memory[dstAddress + 3] = (dst >> 24) & 0xff; /* will be only zeroes*/
+              }
+          }
       }
-    } else {
-      // assume RAM
-      memory[dstAddress] = dst & 0xff;
-      if (word) {
-        memory[dstAddress + 1] = (dst >> 8) & 0xff;
-        if ((dstAddress & 1) != 0) {
-          printWarning(MISALIGNED_WRITE, dstAddress);
-        }
-        if (mode > MODE_WORD) {
-            memory[dstAddress + 2] = (dst >> 16) & 0xff; /* should be 0x0f ?? */
-            memory[dstAddress + 3] = (dst >> 24) & 0xff; /* will be only zeroes*/
-        }
+      /* is a null check as fast as a boolean check */
+      wp = globalMonitor;
+      if (wp != null) {
+          wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
       }
-    }
-    /* is a null check as fast as a boolean check */
-    if (globalMonitor != null) {
-        globalMonitor.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
-    }
 
   }
 
@@ -922,9 +936,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // This is quite costly... should probably be made more
     // efficiently
-    if (breakPoints[pc] != null) {
+    if (watchPoints[pc] != null) {
       if (breakpointActive) {
-	breakPoints[pc].cpuAction(CPUMonitor.EXECUTE, pc, 0);
+	watchPoints[pc].cpuAction(CPUMonitor.EXECUTE, pc, 0);
 	breakpointActive = false;
 	return -1;
       }
