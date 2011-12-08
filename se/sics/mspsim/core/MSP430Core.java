@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * MSP430Core
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -66,14 +62,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // 16 registers of which some are "special" - PC, SP, etc.
   public int[] reg = new int[16];
 
-  public CPUMonitor globalMonitor;
+  private CPUMonitor globalMonitor;
   
-  public CPUMonitor[] regWriteMonitors = new CPUMonitor[16];
-  public CPUMonitor[] regReadMonitors = new CPUMonitor[16];
-  
-  // For breakpoints, etc... how should memory monitors be implemented?
-  // Maybe monitors should have a "next" pointer...? or just have a [][]?
-  public CPUMonitor[] watchPoints;
+  private final CPUMonitor[] regWriteMonitors = new CPUMonitor[16];
+  private final CPUMonitor[] regReadMonitors = new CPUMonitor[16];
+
+  private CPUMonitor[] watchPoints;
   // true => breakpoints can occur!
   boolean breakpointActive = true;
 
@@ -265,6 +259,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
     profiler.setCPU(this);
   }
 
+  public synchronized void addGlobalMonitor(CPUMonitor mon) {
+      globalMonitor = CPUMonitorProxy.addCPUMonitor(globalMonitor, mon);
+  }
+
+  public synchronized void removeGlobalMonitor(CPUMonitor mon) {
+      globalMonitor = CPUMonitorProxy.removeCPUMonitor(globalMonitor, mon);
+  }
+
+  @Deprecated
   public void setGlobalMonitor(CPUMonitor mon) {
       globalMonitor = mon;
   }
@@ -323,6 +326,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return chips.toArray(new Chip[chips.size()]);
   }
 
+  public boolean hasWatchPoint(int address) {
+      return watchPoints[address] != null;
+  }
+
   public synchronized void addWatchPoint(int address, CPUMonitor mon) {
       watchPoints[address] = CPUMonitorProxy.addCPUMonitor(watchPoints[address], mon);
   }
@@ -333,24 +340,55 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   @Deprecated
   public void setBreakPoint(int address, CPUMonitor mon) {
-      addWatchPoint(address, mon);
+      if (mon != null) {
+          addWatchPoint(address, mon);
+      } else {
+          clearBreakPoint(address);
+      }
   }
 
+  @Deprecated
   public boolean hasBreakPoint(int address) {
     return watchPoints[address] != null;
   }
-  
+
   @Deprecated
   public synchronized void clearBreakPoint(int address) {
-    watchPoints[address] = null;
+      watchPoints[address] = null;
   }
 
-  public void setRegisterWriteMonitor(int r, CPUMonitor mon) {
-    regWriteMonitors[r] = mon;
+  public synchronized void addRegisterWriteMonitor(int r, CPUMonitor mon) {
+      regWriteMonitors[r] = CPUMonitorProxy.addCPUMonitor(regWriteMonitors[r], mon);
   }
 
-  public void setRegisterReadMonitor(int r, CPUMonitor mon) {
-    regReadMonitors[r] = mon;
+  public synchronized void removeRegisterWriteMonitor(int r, CPUMonitor mon) {
+      regWriteMonitors[r] = CPUMonitorProxy.removeCPUMonitor(regWriteMonitors[r], mon);
+  }
+
+  public synchronized void addRegisterReadMonitor(int r, CPUMonitor mon) {
+      regReadMonitors[r] = CPUMonitorProxy.addCPUMonitor(regReadMonitors[r], mon);
+  }
+
+  public synchronized void removeRegisterReadMonitor(int r, CPUMonitor mon) {
+      regReadMonitors[r] = CPUMonitorProxy.removeCPUMonitor(regReadMonitors[r], mon);
+  }
+
+  @Deprecated
+  public synchronized void setRegisterWriteMonitor(int r, CPUMonitor mon) {
+      if (mon != null) {
+          regWriteMonitors[r] = CPUMonitorProxy.addCPUMonitor(regWriteMonitors[r], mon);
+      } else {
+          regWriteMonitors[r] = null;
+      }
+  }
+
+  @Deprecated
+  public synchronized void setRegisterReadMonitor(int r, CPUMonitor mon) {
+      if (mon != null) {
+          regReadMonitors[r] = CPUMonitorProxy.addCPUMonitor(regReadMonitors[r], mon);
+      } else {
+          regReadMonitors[r] = null;
+      }
   }
 
   public int[] getMemory() {
@@ -359,8 +397,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   public void writeRegister(int r, int value) {
     // Before the write!
-    if (regWriteMonitors[r] != null) {
-      regWriteMonitors[r].cpuAction(CPUMonitor.REGISTER_WRITE, r, value);
+    CPUMonitor rwm = regWriteMonitors[r];
+    if (rwm != null) {
+      rwm.cpuAction(CPUMonitor.REGISTER_WRITE, r, value);
     }
     reg[r] = value;
     if (r == SR) {
@@ -408,8 +447,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public int readRegister(int r) {
-    if (regReadMonitors[r] != null) {
-      regReadMonitors[r].cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
+    CPUMonitor rrm = regReadMonitors[r];
+    if (rrm != null) {
+      rrm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
     }
     return reg[r];
   }
@@ -420,19 +460,21 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // No monitoring here... just return the CG values
       return CREG_VALUES[r - 2][m];
     }
-    if (regReadMonitors[r] != null) {
-      regReadMonitors[r].cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
+    CPUMonitor rrm = regReadMonitors[r];
+    if (rrm != null) {
+      rrm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
     }
     return reg[r];
   }
 
   public int incRegister(int r, int value) {
-    if (regReadMonitors[r] != null) {
-      regReadMonitors[r].cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
+    CPUMonitor rm = regReadMonitors[r];
+    if (rm != null) {
+      rm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
     }
-    if (regWriteMonitors[r] != null) {
-      regWriteMonitors[r].cpuAction(CPUMonitor.REGISTER_WRITE, r,
-				    reg[r] + value);
+    rm = regWriteMonitors[r];
+    if (rm != null) {
+      rm.cpuAction(CPUMonitor.REGISTER_WRITE, r, reg[r] + value);
     }
     reg[r] += value;
     return reg[r];
@@ -600,7 +642,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
   
   private void internalReset() {
-    for (int i = 0, n = 64; i < n; i++) {
+    for (int i = 0, n = interruptSource.length; i < n; i++) {
       interruptSource[i] = null;
     }
     servicedInterruptUnit = null;
@@ -936,17 +978,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // This is quite costly... should probably be made more
     // efficiently
-    if (watchPoints[pc] != null) {
+    CPUMonitor wp = watchPoints[pc];
+    if (wp != null) {
       if (breakpointActive) {
-	watchPoints[pc].cpuAction(CPUMonitor.EXECUTE, pc, 0);
+	wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
 	breakpointActive = false;
 	return -1;
       }
       // Execute this instruction - this is second call...
       breakpointActive = true;
     }
-    if (globalMonitor != null) {
-        globalMonitor.cpuAction(CPUMonitor.EXECUTE, pc, 0);
+    wp = globalMonitor;
+    if (wp != null) {
+        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
     }
 
     int pcBefore = pc;
