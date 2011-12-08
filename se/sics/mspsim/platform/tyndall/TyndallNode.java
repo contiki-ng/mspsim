@@ -1,19 +1,14 @@
 package se.sics.mspsim.platform.tyndall;
-
 import java.io.IOException;
 
 import se.sics.mspsim.chip.CC2420;
-import se.sics.mspsim.chip.FileM25P80;
-import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.config.MSP430f5437Config;
 import se.sics.mspsim.core.EmulationException;
-import se.sics.mspsim.core.GenericUSCI;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
-import se.sics.mspsim.core.USCI;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.util.ArgumentManager;
@@ -100,36 +95,36 @@ public class TyndallNode extends GenericNode implements PortListener, USARTListe
         IOUnit unit = cpu.getIOUnit("P1");
         if (unit instanceof IOPort) {
             port1 = (IOPort) unit;
-            port1.setPortListener(this);
+            port1.addPortListener(this);
         }
         unit = cpu.getIOUnit("P3");
         if (unit instanceof IOPort) {
             port3 = (IOPort) unit;
-            port3.setPortListener(this);
+            port3.addPortListener(this);
         }
         
         unit = cpu.getIOUnit("P4");
         if (unit instanceof IOPort) {
             port4 = (IOPort) unit;
-            port4.setPortListener(this);
+            port4.addPortListener(this);
         }
         
         unit = cpu.getIOUnit("P5");
         if (unit instanceof IOPort) {
             port5 = (IOPort) unit;
-            port5.setPortListener(this);
+            port5.addPortListener(this);
         }
 
         unit = cpu.getIOUnit("P7");
         if (unit instanceof IOPort) {
             port7 = (IOPort) unit;
-            port7.setPortListener(this);
+            port7.addPortListener(this);
         }
 
         unit = cpu.getIOUnit("P8");
         if (unit instanceof IOPort) {
             port8 = (IOPort) unit;
-            port8.setPortListener(this);
+            port8.addPortListener(this);
         }
 
         

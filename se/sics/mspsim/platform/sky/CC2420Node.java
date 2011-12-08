@@ -6,7 +6,6 @@ import se.sics.mspsim.config.MSP430f1611Config;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
@@ -76,26 +75,26 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
         IOUnit unit = cpu.getIOUnit("P1");
         if (unit instanceof IOPort) {
             port1 = (IOPort) unit;
-            port1.setPortListener(this);
+            port1.addPortListener(this);
         }
 
         unit = cpu.getIOUnit("P2");
         if (unit instanceof IOPort) {
             port2 = (IOPort) unit;
             ds2411.setDataPort(port2, DS2411_DATA_PIN);
-            port2.setPortListener(this);
+            port2.addPortListener(this);
         }
 
         unit = cpu.getIOUnit("P4");
         if (unit instanceof IOPort) {
             port4 = (IOPort) unit;
-            port4.setPortListener(this);
+            port4.addPortListener(this);
         }
 
         unit = cpu.getIOUnit("P5");
         if (unit instanceof IOPort) {
             port5 = (IOPort) unit;
-            port5.setPortListener(this);
+            port5.addPortListener(this);
         }
 
         IOUnit usart0 = cpu.getIOUnit("USART0");

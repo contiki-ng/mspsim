@@ -9,7 +9,6 @@ import se.sics.mspsim.config.MSP430f2617Config;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.PortListener;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.core.USCI;
@@ -62,7 +61,7 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
     }
 
     public void dataReceived(USARTSource source, int data) {
-        USCI s = (USCI) source;
+        // USCI s = (USCI) source;
         radio.dataReceived(source, data);
         flash.dataReceived(source, data);
         /* if nothing selected, just write back a random byte to these devs */
@@ -96,22 +95,22 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
         IOUnit unit = cpu.getIOUnit("P1");
         if (unit instanceof IOPort) {
             port1 = (IOPort) unit;
-            port1.setPortListener(this);
+            port1.addPortListener(this);
         }
         unit = cpu.getIOUnit("P3");
         if (unit instanceof IOPort) {
             port3 = (IOPort) unit;
-            port3.setPortListener(this);
+            port3.addPortListener(this);
         }
         unit = cpu.getIOUnit("P4");
         if (unit instanceof IOPort) {
             port4 = (IOPort) unit;
-            port4.setPortListener(this);
+            port4.addPortListener(this);
         }
         unit = cpu.getIOUnit("P5");
         if (unit instanceof IOPort) {
             port5 = (IOPort) unit;
-            port5.setPortListener(this);
+            port5.addPortListener(this);
         }
 
         IOUnit usart0 = cpu.getIOUnit("USCI B0");
