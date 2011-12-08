@@ -36,7 +36,6 @@
  */
 
 package  se.sics.mspsim.core;
-import se.sics.mspsim.util.ArrayUtils;
 import se.sics.mspsim.util.Utils;
 
 public class IOPort extends IOUnit {
@@ -89,7 +88,7 @@ public class IOPort extends IOUnit {
 
     private PortReg[] portMap;
 
-    private PortListener[] listeners = new PortListener[0];
+    private PortListener portListener = null;
     // represents the direction register
 
     /* Registers for Digital I/O */
@@ -102,7 +101,7 @@ public class IOPort extends IOUnit {
     private int ifg;
     private int ies; /* edge select */
     private int ren;
-    private int ds;
+//    private int ds;
 
     private int iv; /* low / high */
 
@@ -184,9 +183,21 @@ public class IOPort extends IOUnit {
         return sel;
     }
 
-    public void setPortListener(PortListener listener) {
-    	/* 2011-09-11: XXX should now be named addPortListener() */
-        listeners = (PortListener[]) ArrayUtils.add(PortListener.class, listeners, listener);
+    public synchronized void addPortListener(PortListener newListener) {
+        portListener = PortListenerProxy.addPortListener(portListener, newListener);
+    }
+
+    public synchronized void removePortListener(PortListener oldListener) {
+        portListener = PortListenerProxy.removePortListener(portListener, oldListener);
+    }
+
+    @Deprecated
+    public synchronized void setPortListener(PortListener listener) {
+        if (listener != null) {
+            addPortListener(listener);
+        } else {
+            portListener = null;
+        }
     }
 
     public void setTimerCapture(Timer timer, int pin) {
@@ -242,25 +253,29 @@ public class IOPort extends IOUnit {
 
     void write_port(PortReg function, int data, long cycles) {
         switch(function) {
-        case OUT:
+        case OUT: {
             out = data;
-            for (PortListener listener: listeners) {
+            PortListener listener = portListener;
+            if (listener != null) {
             	listener.portWrite(this, out | (~dir) & 0xff);
             }
             break;
+        }
         case IN:
             logw("WARNING: writing to read-only " + getID() + "IN");
             throw new EmulationException("Writing to read-only " + getID() + "IN");
             //          in = data;
-        case DIR:
+        case DIR: {
             dir = data;
-            for (PortListener listener: listeners) {
+            PortListener listener = portListener;
+            if (listener != null) {
                 // Any output configured pin (pin-bit = 0) should have 1 here?! 
                 //              if (name.equals("1"))
                 //                System.out.println(getName() + " write to IOPort via DIR reg: " + Utils.hex8(data));
-                listener.portWrite(this, out | (~dir)&0xff);
+                listener.portWrite(this, out | (~dir) & 0xff);
             }
             break;
+        }
         case REN:
             ren = data;
             break;
