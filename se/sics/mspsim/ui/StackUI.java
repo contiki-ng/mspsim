@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * StackUI
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.ui;
@@ -52,7 +48,6 @@ import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.ServiceComponent;
-import se.sics.mspsim.util.ServiceComponent.Status;
 
 public class StackUI extends JPanel implements CPUMonitor, ServiceComponent {
 
@@ -80,13 +75,13 @@ public class StackUI extends JPanel implements CPUMonitor, ServiceComponent {
 
   private boolean update = false;
 
-private Status status = Status.STOPPED;
+  private Status status = Status.STOPPED;
 
-private ComponentRegistry registry;
+  private ComponentRegistry registry;
 
-private ManagedWindow window;
+  private ManagedWindow window;
 
-private String name;
+  private String name;
 
   public StackUI(MSP430 cpu) {
     this(cpu, 2500);
@@ -96,7 +91,7 @@ private String name;
     super(new BorderLayout());
     this.updateCyclePeriod = updateCyclePeriod;
     this.cpu = cpu;
-    this.cpu.setRegisterWriteMonitor(MSP430.SP, this);
+    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
 
     if (cpu.getDisAsm() != null) {
       MapTable mapTable = cpu.getDisAsm().getMap();
@@ -194,28 +189,28 @@ private String name;
     }
   }
 
-public Status getStatus() {
+  public Status getStatus() {
     return status;
-}
+  }
 
-public void init(String name, ComponentRegistry registry) {
+  public void init(String name, ComponentRegistry registry) {
     this.registry = registry;
     this.name = name;
-}
+  }
 
-public String getName() {
+  public String getName() {
     return name;
-}
+  }
 
-public void start() {
+  public void start() {
     setup();
     status = Status.STARTED;
     window.setVisible(true);
-}
+  }
 
-public void stop() {
+  public void stop() {
     status = Status.STOPPED;
     window.setVisible(false);
-}
+  }
 
 }

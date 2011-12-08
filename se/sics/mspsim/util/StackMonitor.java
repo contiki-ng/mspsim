@@ -2,7 +2,6 @@ package se.sics.mspsim.util;
 
 import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.MSP430Constants;
 
 public class StackMonitor implements CPUMonitor {
 
@@ -48,7 +47,7 @@ public class StackMonitor implements CPUMonitor {
   
   public StackMonitor(MSP430 cpu) {
     this.cpu = cpu;
-    this.cpu.setRegisterWriteMonitor(MSP430.SP, this);
+    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
     Object p = cpu.getRegistry().getComponent("profiler");
     if (p instanceof SimpleProfiler) {
         ((SimpleProfiler) p).setStackMonitor(this);

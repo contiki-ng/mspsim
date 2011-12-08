@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * DebugUI
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.ui;
@@ -56,6 +52,8 @@ import se.sics.mspsim.core.*;
 import se.sics.mspsim.util.Utils;
 
 public class DebugUI extends JPanel {
+
+  private static final long serialVersionUID = 2123628878332126912L;
 
   private JList disList;
   private JLabel[] regsLabel;
@@ -105,6 +103,8 @@ public class DebugUI extends JPanel {
   }
 
   private class DbgListModel extends AbstractListModel {
+    private static final long serialVersionUID = -2856626511548201481L;
+
     int startPos = -1;
     int endPos = -1;
     final int size = 21;
@@ -112,7 +112,7 @@ public class DebugUI extends JPanel {
     DbgInstruction[] instructions = new DbgInstruction[size];
 
     // 64K Dbg instructions...
-    private DbgInstruction[] instrs = new DbgInstruction[0x10000];
+    // private DbgInstruction[] instrs = new DbgInstruction[0x10000];
 
     public void setCurrentAddress(int address) {
       startPos = address;
@@ -127,7 +127,7 @@ public class DebugUI extends JPanel {
     }
 
     private void checkPC() {
-      int pc = cpu.reg[cpu.PC];
+      int pc = cpu.reg[MSP430Core.PC];
       if (pc < startPos || pc > endPos) {
 	startPos = pc;
 	// recalulate index!!! with PC at the top of the "page"
@@ -165,6 +165,8 @@ public class DebugUI extends JPanel {
 
   class MyCellRenderer extends JLabel implements ListCellRenderer {
 
+    private static final long serialVersionUID = -2633138712695105181L;
+
     public MyCellRenderer() {
       setOpaque(true);
     }
@@ -188,7 +190,7 @@ public class DebugUI extends JPanel {
 	     s += ";   " + i.getFunction();
 	   }
 	   pos = i.getPos();
-	   if (cpu.hasBreakPoint(pos)) {
+	   if (cpu.hasWatchPoint(pos)) {
 	     s = "*B " + s;
 	   } else {
 	     s = "   " + s;
@@ -198,7 +200,7 @@ public class DebugUI extends JPanel {
 	 }
        }
        setText(s);
-       if (pos == cpu.reg[cpu.PC]) {
+       if (pos == cpu.reg[MSP430Core.PC]) {
 	 setBackground(Color.green);
        } else {
 	 if (isSelected) {

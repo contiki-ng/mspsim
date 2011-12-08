@@ -59,6 +59,8 @@ public class ContikiChecker implements CallListener, ActiveComponent {
     private ComponentRegistry registry;
 
     private CommandContext context;
+    private CPUMonitor monitor;
+    private MSP430 cpu;
     private Profiler profiler;
 
     private Hashtable<String,Integer> callTable = new Hashtable<String,Integer>();
@@ -79,7 +81,7 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                         context.err.println("already running");
                         return 1;
                     }
-                    final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+                    cpu = (MSP430) registry.getComponent(MSP430.class);
                     profiler = cpu.getProfiler();
                     if (profiler == null) {
                         context.err.println("no profiler available");
@@ -89,7 +91,7 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                     profiler.addCallListener(ContikiChecker.this);
 
                     context.out.println("Installing watchpoints...");
-                    CPUMonitor mon = new CPUMonitor() {
+                    monitor = new CPUMonitor() {
                         public void cpuAction(int type, int adr, int data) {
                             if (type == CPUMonitor.MEMORY_WRITE) {
                                 context.out.println("Warning: write to " + adr +
@@ -99,12 +101,19 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                         }
                     };
                     for (int i = 0; i < 0x100; i++) {
-                        cpu.setBreakPoint(i, mon);
+                        cpu.addWatchPoint(i, monitor);
                     }
                     return 0;
                 }
 
                 public void stopCommand(CommandContext context) {
+                    if (monitor != null) {
+                        for (int i = 0; i < 0x100; i++) {
+                            cpu.removeWatchPoint(i, monitor);
+                        }
+                        monitor = null;
+                        cpu = null;
+                    }
                     if (profiler != null) {
                         profiler.removeCallListener(ContikiChecker.this);
                         profiler = null;

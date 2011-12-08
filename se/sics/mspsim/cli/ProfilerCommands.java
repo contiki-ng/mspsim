@@ -265,13 +265,13 @@ public class ProfilerCommands implements CommandBundle {
 
           public int executeCommand(CommandContext context) {
               hm = new CPUHeatMap(cpu, (WindowManager) registry.getComponent(WindowManager.class));
-              cpu.setGlobalMonitor(hm);
+              cpu.addGlobalMonitor(hm);
               return 0;
           }
 
           public void stopCommand(CommandContext context) {
               if (hm != null) {
-                  cpu.setGlobalMonitor(null);
+                  cpu.removeGlobalMonitor(hm);
                   hm.close();
                   hm = null;
               }
