@@ -41,7 +41,7 @@ public class CPUMonitorProxy implements CPUMonitor {
             return null;
         }
         if (mons.length == 1) {
-            return monitors[0];
+            return mons[0];
         }
         monitors = mons;
         return this;
