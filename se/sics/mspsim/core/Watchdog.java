@@ -66,7 +66,7 @@ public class Watchdog extends IOUnit implements SFRModule {
   };
   
   private int wdtctl;
-  private boolean wdtOn = true;
+  public boolean wdtOn = true;
   private boolean hold = false;
   private MSP430Core cpu;
 
