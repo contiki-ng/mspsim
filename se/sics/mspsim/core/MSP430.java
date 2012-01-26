@@ -172,7 +172,7 @@ public class MSP430 extends MSP430Core {
         }
         if (trace != null) {
   	  trace[tracePos++] = pc;
-  	  if (tracePos > trace.length)
+  	  if (tracePos >= trace.length)
   	      tracePos = 0;
         }
       }
@@ -258,7 +258,7 @@ public class MSP430 extends MSP430Core {
                 execCounter[pc]++;
             }
             if (trace != null) {
-              if (tracePos > trace.length) {
+              if (tracePos >= trace.length) {
                 tracePos = 0;
               }
               trace[tracePos++] = pc;
