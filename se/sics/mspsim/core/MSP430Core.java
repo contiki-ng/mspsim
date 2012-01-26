@@ -735,7 +735,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Read method that handles read from IO units!
   public int read(int address, int mode) throws EmulationException {
       int val = 0;
-      if (address > MAX_MEM) {
+      if (address >= MAX_MEM) {
           printWarning(ADDRESS_OUT_OF_BOUNDS_READ, address);
           address %= MAX_MEM;
       }
