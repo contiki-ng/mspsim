@@ -105,9 +105,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   protected boolean cpuOff = false;
 
   // Not private since they are needed (for fast access...)
-  protected int dcoFrq = 2500000;
+  public int dcoFrq = 2500000;
   int aclkFrq = 32768;
-  int smclkFrq = dcoFrq;
+  public int smclkFrq = dcoFrq;
 
   long lastCyclesTime = 0;
   long lastVTime = 0;
