@@ -431,6 +431,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       flushRX();
       flushTX();
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
+      crcOk = false;
       reset();
       setMode(MODE_POWER_OFF);
       updateCCA();
@@ -439,6 +440,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     case POWER_DOWN:
       rxFIFO.reset();
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
+      crcOk = false;
       reset();
       setMode(MODE_POWER_OFF);
       updateCCA();
@@ -1214,6 +1216,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     setFIFO(false);
     setSFD(false);
     overflow = true;
+    shouldAck = false;
     setState(RadioState.RX_OVERFLOW);
   }
   
