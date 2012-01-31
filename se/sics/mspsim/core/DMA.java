@@ -91,7 +91,7 @@ public class DMA extends IOUnit {
                         + " en: " + enable + " srcB:" + srcByteMode + " dstB:" + dstByteMode + " level: " + dmaLevel +
                         " transferMode: " + transferMode + " ie:" + dmaIE);
                 /* this might be wrong ? */
-                if (enabling) trigger(trigger, triggerIndex);
+                /*if (enabling) trigger(trigger, triggerIndex);*/
                 interruptMultiplexer.updateInterrupt(dmaIFG & dmaIE, channelNo);
                 break;
             case 2:
