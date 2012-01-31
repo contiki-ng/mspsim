@@ -42,24 +42,24 @@
 package se.sics.mspsim.core;
 import se.sics.mspsim.util.Utils;
 
-public class BasicClockModule extends IOUnit {
+public class BasicClockModule extends ClockSystem {
 
-  public static final int DCOCTL = 0x56; // 0x60
-  public static final int BCSCTL1 = 0x57; // 0x84 
-  public static final int BCSCTL2 = 0x58;
+  private static final int DCOCTL = 0x56; // 0x60
+  private static final int BCSCTL1 = 0x57; // 0x84 
+  private static final int BCSCTL2 = 0x58;
 
-  public static final int ACLK_FRQ = 32768;
+  private static final int ACLK_FRQ = 32768;
   // DCO_FRQ what default frq is the DCO running at???
-  public static final int DCO_FRQ = 2500000;
+  private static final int DCO_FRQ = 2500000;
   // What frequency steps to take for the DCO?
   // We have 8 bits + 3 => 11 bits => 2048 combinations...
   // => What is lowest frq??? (zero)
   // Max speed is 8Mhz (CPU limits it) - is max DCO 8Mhz?
   // Based on the scatterweb code it looks like less than
   // 5Mhz is more correct...
-  public static final int MAX_DCO_FRQ = 4915200;
-  public static final int MIN_DCO_FRQ = 1000;
-  public static final int DCO_FACTOR = (MAX_DCO_FRQ - MIN_DCO_FRQ) / 2048;
+  private static final int MAX_DCO_FRQ = 4915200;
+  private static final int MIN_DCO_FRQ = 1000;
+  private static final int DCO_FACTOR = (MAX_DCO_FRQ - MIN_DCO_FRQ) / 2048;
 
 
   private MSP430Core core;
@@ -87,7 +87,19 @@ public class BasicClockModule extends IOUnit {
     super("BasicClockModule", memory, offset);
     this.core = core;
     this.timers = timers;
-    reset(0);
+    //    reset(0);
+  }
+
+  public int getMaxDCOFrequency() {
+    return MAX_DCO_FRQ;
+  }
+
+  public int getAddressRangeMin() {
+    return DCOCTL;
+  }
+
+  public int getAddressRangeMax() {
+    return BCSCTL2;
   }
 
   public void reset(int type) {
