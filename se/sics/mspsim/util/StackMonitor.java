@@ -47,7 +47,7 @@ public class StackMonitor implements CPUMonitor {
   
   public StackMonitor(MSP430 cpu) {
     this.cpu = cpu;
-    this.cpu.setRegisterWriteMonitor(MSP430.SP, this);
+    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
     Object p = cpu.getRegistry().getComponent("profiler");
     if (p instanceof SimpleProfiler) {
         ((SimpleProfiler) p).setStackMonitor(this);
