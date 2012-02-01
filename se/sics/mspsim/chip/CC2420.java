@@ -258,7 +258,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private static int RSSI_OFFSET = -45; /* cc2420 datasheet */
   /* current CCA value */
   private boolean cca = false;
-  
+
+  /* FIFOP Threshold */
+  private int fifopThr = 64;
+
   /* if autoack is configured or if */
   private boolean autoAck = false;
   private boolean shouldAck = false;
@@ -591,7 +594,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                       rxCrc.setCRC(0);
                       rxlen = data & 0xff;
                       //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
-                      decodeAddress = false;
+                      decodeAddress = addressDecode;
                       if (DEBUG) log("RX: Start frame length " + rxlen);
                       // FIFO pin goes high after length byte is written to RXFIFO
                       setFIFO(true);
@@ -603,7 +606,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                           frameType = fcf0 & FRAME_TYPE;
                       } else if (rxread == 2) {
                           fcf1 = data & 0xff;
-                          decodeAddress = addressDecode;
                           if (frameType == TYPE_DATA_FRAME) {
                               ackRequest = (fcf0 & ACK_REQUEST) > 0;
                               destinationAddressMode = (fcf1 >> 2) & 3;
@@ -645,9 +647,19 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                           }
                       }
                   }
+
+                  /* In RX mode, FIFOP goes high when the size of the first enqueued packet exceeds
+                   * the programmable threshold and address recognition isn't ongoing */ 
+                  if(fifoP == false
+                          && rxFIFO.length() <= rxlen + 1
+                          && !decodeAddress && !frameRejected
+                          && rxFIFO.length() > fifopThr) {
+                      setFIFOP(true);
+                      if (DEBUG) log("RX: FIFOP Threshold reached - setting FIFOP");
+                  }
               }
-              
-              if(rxread++ == rxlen) {
+
+              if (rxread++ == rxlen) {
                   if (frameRejected) {
                       log("Frame rejected - setting SFD to false and RXWAIT\n");
                       setSFD(false);
@@ -674,8 +686,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   //              (crcOk ? 0x80 : 0);
 
                   /* set FIFOP only if this is the first received packet - e.g. if rxfifoLen is at most rxlen + 1
-                   * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP
-                   *       fix support for FIFOP threshold  */
+                   * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP */
                   if (rxFIFO.length() <= rxlen + 1) {
                       setFIFOP(true);
                   } else {
@@ -701,7 +712,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       registers[address] = data;
       switch(address) {
       case REG_IOCFG0:
-          setFIFOP(false);
+          fifopThr = data & FIFOP_THR;
           if (DEBUG) log("IOCFG0: " + registers[address]);
           break;
       case REG_IOCFG1:
@@ -812,13 +823,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           source.byteReceived(fifoData);
 
           /* first check and clear FIFOP - since we now have read a byte! */
-          // TODO:
-          // -MT FIFOP is lowered when there are less than IOCFG0:FIFOP_THR bytes in the RXFIFO
-          // If FIFO_THR is greater than the frame length, FIFOP goes low when the first byte is read out.
-          // As long as we are in "OVERFLOW" the fifoP is not cleared.
           if (fifoP && !overflow) {
-              if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
-              setFIFOP(false);
+              /* FIFOP is lowered when rxFIFO is lower than or equal to fifopThr */
+              if(rxFIFO.length() <= fifopThr) {
+                  if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
+                  setFIFOP(false);
+              }
           }
 
           /* initiate read of another packet - update some variables to keep track of packet reading... */
@@ -827,10 +837,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
               if (DEBUG) log("Init read of packet - len: " + rxfifoReadLeft +
                       " fifo: " + rxFIFO.stateToString());
           } else if (--rxfifoReadLeft == 0) {
-              /* check if we have another complete packet in buffer... */
-              if (rxFIFO.length() > 0 && rxFIFO.length() > rxFIFO.peek(0)) {
-                  if (DEBUG) log("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
-                  if (!overflow) setFIFOP(true);
+              /* check if we have another packet in buffer */
+              if (rxFIFO.length() > 0) {
+                  /* check if the packet is complete or longer than fifopThr */
+                  if (rxFIFO.length() > rxFIFO.peek(0) ||
+                          (rxFIFO.length() > fifopThr && !decodeAddress && !frameRejected)) {
+                      if (DEBUG) log("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
+                      if (!overflow) setFIFOP(true);
+                  }
               }
           }
           // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
@@ -1392,6 +1406,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
     "  LongAddr: 0x" + getLongAddress() +
     "\n Channel: " + activeChannel +
+    "\n FIFOP Threshold: " + fifopThr +
     "\n";
   }
 
