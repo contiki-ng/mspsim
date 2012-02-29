@@ -502,7 +502,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       break;
       
     case TX_ACK_CALIBRATE:
-        /* TX active during ACK + NOTE: we ignore the SFD when receiveing full packets so
+        /* TX active during ACK + NOTE: we ignore the SFD when receiving full packets so
          * we need to add another extra 2 symbols here to get a correct timing */
         status |= STATUS_TX_ACTIVE;
         setSymbolEvent(12 + 2 + 2);
@@ -661,7 +661,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
               if (rxread++ == rxlen) {
                   if (frameRejected) {
-                      log("Frame rejected - setting SFD to false and RXWAIT\n");
+                      if (DEBUG) log("Frame rejected - setting SFD to false and RXWAIT\n");
                       setSFD(false);
                       setState(RadioState.RX_WAIT);
                       return;
@@ -1063,7 +1063,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           memory[RAM_TXFIFO + len] = txCrc.getCRCLow();
       }
       if (txfifoPos > 0x7f) {
-        log("Warning: packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
+        logw("**** Warning - packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
       }
       if (listener != null) {
         if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
