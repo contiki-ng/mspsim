@@ -430,7 +430,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
   }
   
-  private static class CallEntry {
+  public static class CallEntry {
     int fromPC;
     MapEntry function;
     long cycles;
@@ -551,7 +551,11 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
 
   public String getCall(int i) {
-      return callStack[cSP - i].function.getInfo();
+    return callStack[cSP - i - 1].function.getInfo();
+  }
+
+  public MapEntry getCallMapEntry(int i) {
+    return callStack[cSP - i - 1].function;
   }
 
   public void setStackMonitor(StackMonitor stackMonitor) {
