@@ -44,21 +44,21 @@ public class CommandHandler implements ActiveComponent, LineListener {
 
   public int executeCommand(String commandLine, CommandContext context) {
     String[][] parts;
-    PrintStream out = context == null ? this.out : context.out;
-    PrintStream err = context == null ? this.err : context.err;
-
+    final PrintStream cOut = context == null ? this.out : context.out;
+    final PrintStream cErr = context == null ? this.err : context.err;
+    
     try {
       parts = CommandParser.parseCommandLine(commandLine);
     } catch (Exception e) {
-      err.println("Error: failed to parse command:");
-      e.printStackTrace(err);
+      cErr.println("Error: failed to parse command:");
+      e.printStackTrace(cErr);
       return -1;
     }
     if (parts == null || parts.length == 0) {
       // Nothing to execute
       return 0;
     }
-    Command[] cmds = createCommands(parts);
+    Command[] cmds = createCommands(parts, cErr);
     if(cmds != null && cmds.length > 0) {
       CommandContext[] commands = new CommandContext[parts.length];
       boolean error = false;
@@ -73,11 +73,11 @@ public class CommandHandler implements ActiveComponent, LineListener {
         
         if (i > 0) {
           PrintStream po = new PrintStream(new LineOutputStream((LineListener) commands[i].getCommand()));
-          commands[i - 1].setOutput(po, err);
+          commands[i - 1].setOutput(po, cErr);
         }
         // Last element also needs output!
         if (i == parts.length - 1) {
-          commands[i].setOutput(out, err);
+          commands[i].setOutput(cOut, cErr);
         }
         // TODO: Check if first command is also LineListener and set it up for input!!
       }
@@ -87,14 +87,14 @@ public class CommandHandler implements ActiveComponent, LineListener {
         for (; index >= 0; index--) {
           int code = commands[index].getCommand().executeCommand(commands[index]);
           if (code != 0) {
-            err.println("command '" + commands[index].getCommandName() + "' failed with error code " + code);
+            cErr.println("command '" + commands[index].getCommandName() + "' failed with error code " + code);
             error = true;
             break;
           }
         }
       } catch (Exception e) {
-        err.println("Error: Command failed: " + e.getMessage());
-        e.printStackTrace(err);
+        cErr.println("Error: Command failed: " + e.getMessage());
+        e.printStackTrace(cErr);
         error = true;
         if (e instanceof EmulationException) {
             throw (EmulationException) e;
@@ -143,7 +143,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
     return null;
   }
 
-  private Command[] createCommands(String[][] commandList) {
+  private Command[] createCommands(String[][] commandList, PrintStream err) {
     Command[] cmds = new Command[commandList.length];
     for (int i = 0; i < commandList.length; i++) {
       Command command = getCommand(commandList[i][0]);
