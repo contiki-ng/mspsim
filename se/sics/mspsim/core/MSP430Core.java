@@ -801,10 +801,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
           dstAddress %= MAX_MEM;
       }
 
+      /* is a null check as fast as a boolean check? */
       CPUMonitor wp = watchPoints[dstAddress];
       if (wp != null) {
           wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
       }
+      wp = globalMonitor;
+      if (wp != null) {
+          wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
+      }
+
       boolean word = mode != MODE_BYTE;
 
       // Only word writes at 0x1fe which is highest address...
@@ -834,11 +840,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
               }
           }
       }
-      /* is a null check as fast as a boolean check */
-      wp = globalMonitor;
-      if (wp != null) {
-          wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
-      }
   }
 
   void profileCall(int dst, int pc) {
@@ -867,7 +868,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
     case ADDRESS_OUT_OF_BOUNDS_WRITE:
         message = "**** Illegal write -  out of bounds from $" +
         getAddressAsString(address) + " at $" + getAddressAsString(reg[PC]);
-        
         break;
     }
     if (logger != null && message != null) {
