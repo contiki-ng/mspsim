@@ -68,6 +68,7 @@ public class DwarfReader implements ELFDebug {
     public static final int    DW_LNE_end_sequence = 1;
     public static final int    DW_LNE_set_address = 2;    
     public static final int    DW_LNE_define_file = 3;
+    public static final int    DW_LNE_set_discriminator = 4; /* DWARF > 2.0 */
     
     ELF elfFile;
 
@@ -133,6 +134,7 @@ public class DwarfReader implements ELFDebug {
         int endPos = 0;
         ArrayList<LineEntry> lineData = new ArrayList<LineEntry>();
         while (sec.getPosition() < sec.getSize()) {
+            if (DEBUG) System.out.println(" --- Reading debug info --- ");
             /* here starts the reading of one file's (?) debug info */
             int totLen = sec.readElf32();
             int version = sec.readElf16();
@@ -203,7 +205,7 @@ public class DwarfReader implements ELFDebug {
              * line <=> address table
              */
             if (DEBUG) {
-                System.out.println("Line: position: " + sec.getPosition());
+                System.out.println("Line: position: " + sec.getPosition() + " endPos: " + endPos);
                 System.out.println("Line: first bytes of the machine: ");
                 System.out.print("Line: ");
             }
@@ -222,12 +224,13 @@ public class DwarfReader implements ELFDebug {
                 
                 while(!endSequence) {
                     int ins =  sec.readElf8();
-                    if (DEBUG) System.out.print(Utils.hex8(ins) + " ");
+                    if (DEBUG) System.out.print("POS: " + sec.getPosition() + " INS: " + Utils.hex8(ins) + " ");
                     switch(ins) {
                     case DW_LNS_EXT:
                         /* extended instruction */
                         int len = sec.readElf8();
                         int extIns = sec.readElf8();
+                        if (DEBUG) System.out.println("EXT: " + Utils.hex8(extIns));
                         switch(extIns) {
                         case DW_LNE_end_sequence:
                             endSequence = true;
@@ -246,10 +249,16 @@ public class DwarfReader implements ELFDebug {
                             if (DEBUG) System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
                                     " (len: " + len + ")");
                             break;
+                        case DW_LNE_set_discriminator: // DWARF 4.0?
+                            /* currently just read it but ignore it - TODO: use this info */
+                            sec.readLEB128();
+                            break;
                         }
                         break;
                     case DW_LNS_copy:
                         /* copy data to matrix... */
+                        if (DEBUG) System.out.println("Line: copy data (" + lineLine + "," +
+                                Utils.hex16(lineAddress) + ") to matrix...");
                         lineData.add(new LineEntry(lineLine, lineAddress));
                         isBasicBlock = false;
                         break;
@@ -289,6 +298,9 @@ public class DwarfReader implements ELFDebug {
                         if (DEBUG) System.out.println("Line: *** Increased address to: " + Utils.hex16(lineAddress));
                         break;
                     default:
+                        if (DEBUG) {
+                            System.out.println("INS: " + Utils.hex8(ins));
+                        }
                         int lineInc = lineBase + ((ins - opcodeBase) % lineRange);
                         int addrInc = (ins - opcodeBase) / lineRange;
                         lineAddress += addrInc * minOpLen;
@@ -300,7 +312,8 @@ public class DwarfReader implements ELFDebug {
                                 Utils.hex16(lineAddress) + " Line: " + lineLine + " lineInc: " + lineInc);
                     }
                 }
-                if (DEBUG) System.out.println("Line - Position " + sec.getPosition() + " totLen: " + totLen);
+                if (DEBUG) System.out.println("Line - Position " + sec.getPosition() + " totLen: " + totLen +
+                        " endPos: " + endPos);
 
                 if (lineData.size() > 0) {
                     /* create a block of line-address data that can be used for lookup later.*/
