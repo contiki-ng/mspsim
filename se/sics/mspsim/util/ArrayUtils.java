@@ -2,26 +2,28 @@ package se.sics.mspsim.util;
 
 public class ArrayUtils {
 
-  public static Object[] add(Class<?> componentType, Object[] array, Object value) {
-    Object[] tmp;
+  @SuppressWarnings("unchecked")
+  public static <T> T[] add(Class<T> componentType, T[] array, T value) {
+    T[] tmp;
     if (array == null) {
-      tmp = (Object[]) java.lang.reflect.Array.newInstance(componentType, 1);
+      tmp = (T[]) java.lang.reflect.Array.newInstance(componentType, 1);
     } else {
-      tmp = (Object[]) java.lang.reflect.Array.newInstance(componentType, array.length + 1);
+      tmp = (T[]) java.lang.reflect.Array.newInstance(componentType, array.length + 1);
       System.arraycopy(array, 0, tmp, 0, array.length);
     }
     tmp[tmp.length - 1] = value;
     return tmp;
   }
 
-  public static Object[] remove(Object[] array, Object value) {
+  public static <T> T[] remove(T[] array, T value) {
     if (array != null) {
       for (int index = 0, n = array.length; index < n; index++) {
         if (value.equals(array[index])) {
           if (n == 1) {
             return null;
           }
-          Object[] tmp = (Object[]) java.lang.reflect.Array.newInstance(array.getClass().getComponentType(), array.length - 1);
+          @SuppressWarnings("unchecked")
+          T[] tmp = (T[]) java.lang.reflect.Array.newInstance(array.getClass().getComponentType(), array.length - 1);
           if (index > 0) {
             System.arraycopy(array, 0, tmp, 0, index);
           }

@@ -136,6 +136,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public static final int FIFOP_POLARITY = (1<<9);
   public static final int SFD_POLARITY = (1<<8);
   public static final int CCA_POLARITY = (1<<7);
+  public static final int POLARITY_MASK = FIFO_POLARITY | FIFOP_POLARITY | SFD_POLARITY | CCA_POLARITY;
   public static final int FIFOP_THR = 0x7F;
 
   // IOCFG1 Register Bit Masks
@@ -240,8 +241,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private static final int[] BC_ADDRESS = new int[] {0xff, 0xff};
   
   private SpiState state = SpiState.WAITING;
-  private int pos;
-  private int address;
+  private int usartDataPos;
+  private int usartDataAddress;
+  private int usartDataValue;
   private int shrPos;
   private int txfifoPos;
   private boolean txfifoFlush;	// TXFIFO is automatically flushed on next write
@@ -296,8 +298,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private IOPort fifopPort = null;
   private int fifopPin;
-  /* fifoP state */
-  private boolean fifoP = false;
 
   private IOPort fifoPort = null;
   private int fifoPin;
@@ -376,8 +376,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       }
     }
   };
+  private boolean currentCCA;
   private boolean currentSFD;
   private boolean currentFIFO;
+  private boolean currentFIFOP;
   private boolean overflow = false;
   private boolean frameRejected = false;
 
@@ -411,7 +413,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     registers[REG_TXCTRL] = 0xa0ff;
     setModeNames(MODE_NAMES);
     setMode(MODE_POWER_OFF);
-    fifoP = false;
+    currentFIFOP = false;
     rxFIFO.reset();
     overflow = false;
     reset();
@@ -650,7 +652,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
                   /* In RX mode, FIFOP goes high when the size of the first enqueued packet exceeds
                    * the programmable threshold and address recognition isn't ongoing */ 
-                  if(fifoP == false
+                  if (currentFIFOP == false
                           && rxFIFO.length() <= rxlen + 1
                           && !decodeAddress && !frameRejected
                           && rxFIFO.length() > fifopThr) {
@@ -713,15 +715,20 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       switch(address) {
       case REG_IOCFG0:
           fifopThr = data & FIFOP_THR;
-          if (DEBUG) log("IOCFG0: " + registers[address]);
+          if (DEBUG) log("IOCFG0: 0x" + Utils.hex16(oldValue) + " => 0x" + Utils.hex16(data));
+          if ((oldValue & POLARITY_MASK) != (data & POLARITY_MASK)) {
+              // Polarity has changed - must update pins
+              setFIFOP(currentFIFOP);
+              setFIFO(currentFIFO);
+              setSFD(currentSFD);
+              setCCA(currentCCA);
+          }
           break;
       case REG_IOCFG1:
           if (DEBUG)
             log("IOCFG1: SFDMUX "
                           + ((registers[address] & SFDMUX) >> SFDMUX)
                           + " CCAMUX: " + (registers[address] & CCAMUX));
-//        if( (registers[address] & CCAMUX) == CCA_CCA)
-//          setCCA(false);
           updateCCA();
           break;
       case REG_MDMCTRL0:
@@ -738,7 +745,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       }
       configurationChanged(address, oldValue, data);
   }
-    
+
   public void dataReceived(USARTSource source, int data) {
     int oldStatus = status;
     if (DEBUG) {
@@ -760,16 +767,16 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         }
         if ((data & FLAG_RAM) != 0) {
           state = SpiState.RAM_ACCESS;
-          address = data & 0x7f;
+          usartDataAddress = data & 0x7f;
         } else {
           // The register address
-          address = data & 0x3f;
+          usartDataAddress = data & 0x3f;
 
-          if (address == REG_RXFIFO) {
+          if (usartDataAddress == REG_RXFIFO) {
             // check read/write???
             //          log("Reading RXFIFO!!!");
             state = SpiState.READ_RXFIFO;
-          } else if (address == REG_TXFIFO) {
+          } else if (usartDataAddress == REG_TXFIFO) {
             state = SpiState.WRITE_TXFIFO;
           }
         }
@@ -777,41 +784,41 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           strobe(data);
           state = SpiState.WAITING;
         }
-        pos = 0;
+        usartDataPos = 0;
         // Assuming that the status always is sent back???
         //source.byteReceived(status);
         break;
                 
       case WRITE_REGISTER:
-        if (pos == 0) {
-          source.byteReceived(registers[address] >> 8);
+        if (usartDataPos == 0) {
+          source.byteReceived(registers[usartDataAddress] >> 8);
           // set the high bits
-          registers[address] = (registers[address] & 0xff) | (data << 8);
-          pos = 1;
+          usartDataValue = data << 8;
+          // registers[usartDataAddress] = (registers[usartDataAddress] & 0xff) | (data << 8);
+          usartDataPos = 1;
         } else {
-          source.byteReceived(registers[address] & 0xff);
+          source.byteReceived(registers[usartDataAddress] & 0xff);
           // set the low bits
-          registers[address] = (registers[address] & 0xff00) | data;
+          usartDataValue |= data;
+          // registers[usartDataAddress] = (registers[usartDataAddress] & 0xff00) | data;
 
           if (DEBUG) {
-            log("wrote to " + Utils.hex8(address) + " = "
-                + registers[address]);
+            log("wrote to " + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
           }
-          data = registers[address];
-          setReg(address, data);
-          /* register written - go back to wating... */
+          setReg(usartDataAddress, usartDataValue);
+          /* register written - go back to waiting... */
           state = SpiState.WAITING;
         }
         break;
       case READ_REGISTER:
-        if (pos == 0) {
-          source.byteReceived(registers[address] >> 8);
-          pos = 1;
+        if (usartDataPos == 0) {
+          source.byteReceived(registers[usartDataAddress] >> 8);
+          usartDataPos = 1;
         } else {
-          source.byteReceived(registers[address] & 0xff);
+          source.byteReceived(registers[usartDataAddress] & 0xff);
           if (DEBUG) {
-            log("read from " + Utils.hex8(address) + " = "
-                + registers[address]);
+            log("read from " + Utils.hex8(usartDataAddress) + " = "
+                + registers[usartDataAddress]);
           }
           state = SpiState.WAITING;
         }
@@ -823,7 +830,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           source.byteReceived(fifoData);
 
           /* first check and clear FIFOP - since we now have read a byte! */
-          if (fifoP && !overflow) {
+          if (currentFIFOP && !overflow) {
               /* FIFOP is lowered when rxFIFO is lower than or equal to fifopThr */
               if(rxFIFO.length() <= fifopThr) {
                   if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
@@ -876,32 +883,31 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
         }
         break;
       case RAM_ACCESS:
-        if (pos == 0) {
-          address |= (data << 1) & 0x180;
-          ramRead = (data & 0x20) != 0;
+        if (usartDataPos == 0) {
+          usartDataAddress |= (data << 1) & 0x180;
+          ramRead = (data & FLAG_RAM_READ) != 0;
           if (DEBUG) {
-            log("Address: " + Utils.hex16(address) +
-                " read: " + ramRead);
+            log("Address: " + Utils.hex16(usartDataAddress) + " read: " + ramRead);
           }
-          pos++;
+          usartDataPos++;
         } else {
           if (!ramRead) {
-            memory[address++] = data;
-            if (address >= 0x180) {
+            memory[usartDataAddress++] = data;
+            if (usartDataAddress >= 0x180) {
               logger.warning(this, "CC2420: Warning - RAM position too big - wrapping!");
-              address = 0;
+              usartDataAddress = 0;
             }
-            if (DEBUG && address == RAM_PANID + 2) {
+            if (DEBUG && usartDataAddress == RAM_PANID + 2) {
               log("Pan ID set to: 0x" +
                   Utils.hex8(memory[RAM_PANID]) +
                   Utils.hex8(memory[RAM_PANID + 1]));
             }
           } else {
             //log("Read RAM Addr: " + address + " Data: " + memory[address]);  
-            source.byteReceived(memory[address++]);
-            if (address >= 0x180) {
+            source.byteReceived(memory[usartDataAddress++]);
+            if (usartDataAddress >= 0x180) {
               logger.warning(this, "CC2420: Warning - RAM position too big - wrapping!");
-              address = 0;
+              usartDataAddress = 0;
             }      
             return;
           }
@@ -1185,21 +1191,21 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   private void setInternalCCA(boolean clear) {
-    setCCAPin(clear);
+    setCCA(clear);
     if (DEBUG) log("Internal CCA: " + clear);
   }
 
-  
   private void setSFD(boolean sfd) {
+    currentSFD = sfd;
     if( (registers[REG_IOCFG0] & SFD_POLARITY) == SFD_POLARITY)
       sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
     else 
       sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
-    currentSFD = sfd;
     if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
   }
 
-  private void setCCAPin(boolean cca) {
+  private void setCCA(boolean cca) {
+    currentCCA = cca;
     if (DEBUG) log("Setting CCA to: " + cca);
     if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
       ccaPort.setPinState(ccaPin, cca ? 0 : 1);
@@ -1208,7 +1214,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   private void setFIFOP(boolean fifop) {
-    fifoP = fifop;
+    currentFIFOP = fifop;
     if (DEBUG) log("Setting FIFOP to " + fifop);
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
@@ -1218,12 +1224,15 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   private void setFIFO(boolean fifo) {
-    if (DEBUG) log("Setting FIFO to " + fifo);
     currentFIFO = fifo;
-    fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
+    if (DEBUG) log("Setting FIFO to " + fifo);
+    if((registers[REG_IOCFG0] & FIFO_POLARITY) == FIFO_POLARITY) {
+      fifoPort.setPinState(fifoPin, fifo ? 0 : 1);
+    } else {
+      fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
+    }
   }
 
-  
   private void setRxOverflow() {
     if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxFIFO.stateToString());
     setFIFOP(true);
@@ -1327,6 +1336,14 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   public void setChipSelect(boolean select) {
     chipSelect = select;
     if (!chipSelect) {
+      if (state == SpiState.WRITE_REGISTER && usartDataPos == 1) {
+          // Register write incomplete. Do a 8 bit register write.
+          usartDataValue = (registers[usartDataAddress] & 0xff) | (usartDataValue & 0xff00);
+          if (DEBUG) {
+              log("wrote 8 MSB to 0x" + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
+          }
+          setReg(usartDataAddress, usartDataValue);
+      }
       state = SpiState.WAITING;
     }
 
@@ -1362,7 +1379,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   // -------------------------------------------------------------------
   // Methods for accessing and writing to registers, etc from outside
-  // And for receiveing data
+  // And for receiving data
   // -------------------------------------------------------------------
 
   public int getRegister(int register) {
@@ -1398,7 +1415,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
     "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
-    "  FIFOP: " + fifoP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD + 
+    "  FIFOP: " + currentFIFOP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD + 
     "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
     "\n Radio State: " + stateMachine + "  SPI State: " + state + 
     "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
