@@ -52,7 +52,6 @@ import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.SimEvent;
 import se.sics.mspsim.core.SimEventListener;
 import se.sics.mspsim.platform.GenericNode;
@@ -117,7 +116,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 	  dui.repaint();
 	  if (elfData != null && sourceViewer != null
 	      && sourceViewer.isVisible()) {
-	    int pc = ControlUI.this.cpu.readRegister(MSP430Constants.PC);
+	    int pc = ControlUI.this.cpu.getPC();
 	    DebugInfo dbg = elfData.getDebugInfo(pc);
 	    if (dbg != null) {
 	      if (ControlUI.this.cpu.getDebug()) {
@@ -197,7 +196,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
       //       cpu.step();
 //       dui.repaint();
     } else if ("Show Source".equals(cmd)) {
-      int pc = cpu.readRegister(MSP430Constants.PC);
+      int pc = cpu.getPC();
       if (elfData != null) {
 	DebugInfo dbg = elfData.getDebugInfo(pc);
 	if (dbg != null) {

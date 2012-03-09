@@ -2081,6 +2081,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       return reg[SR];
   }
 
+  public int getSP() {
+      return reg[SP];
+  }
+
   public int getRegister(int register) {
       return reg[register];
   }

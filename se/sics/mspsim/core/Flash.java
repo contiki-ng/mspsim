@@ -99,7 +99,7 @@ public class Flash extends IOUnit {
 
   private static final int FN_MASK = 0x3f;
 
-  private MSP430Core cpu;
+  private final MSP430Core cpu;
   private FlashRange main_range;
   private FlashRange info_range;
   private int[] memory;
@@ -203,7 +203,7 @@ public class Flash extends IOUnit {
   }
   
   private void waitFlashProcess(int time) {
-    int instr_addr = cpu.readRegister(MSP430.PC);
+    int instr_addr = cpu.getPC();
     int freqdiv = getFlashClockDiv();
     int myfreq;
     double finish_msec;
@@ -310,7 +310,7 @@ public class Flash extends IOUnit {
           if (DEBUG) {
             log("Flash write in block mode started @" + Utils.hex16(address));
           }
-          if (addressInFlash(cpu.readRegister(MSP430.PC))) {
+          if (addressInFlash(cpu.getPC())) {
             logw("Oops. Block write access only allowed when executing from RAM.");
           }
         } else {
@@ -340,7 +340,7 @@ public class Flash extends IOUnit {
     if (DEBUG) {
       if (wait == false && currentWriteMode == WriteMode.WRITE_BLOCK) {
 	log("Reading flash prohibited. Would read 0x3fff!!!"); 
-	log("CPU PC=" + Utils.hex16(cpu.readRegister(MSP430.PC)) 
+	log("CPU PC=$" + Utils.hex16(cpu.getPC()) 
 	    + " read address=" + Utils.hex16(address));
       }
     }
@@ -455,8 +455,7 @@ public class Flash extends IOUnit {
   }
   
   private void triggerAccessViolation(String reason) {
-    logw("Access violation: " + reason + ". PC=$"
-        + Utils.hex16(cpu.readRegister(MSP430.PC)));
+    logw("Access violation: " + reason + ". PC=$" + Utils.hex16(cpu.getPC()));
 
     statusreg |= ACCVIFG;
     if (cpu.getSFR().isIEBitsSet(SFR.IE1, ACCVIE)) {
