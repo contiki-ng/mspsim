@@ -76,6 +76,9 @@ public class Main {
       if ("esb".equals(platform)) {
           return "se.sics.mspsim.platform.esb.ESBNode";
       }
+      if ("exp5438".equals(platform)) {
+          return "se.sics.mspsim.platform.ti.Exp5438Node";
+      }
       // Try to guess the node type.
       return "se.sics.mspsim.platform." + platform + '.'
           + Character.toUpperCase(platform.charAt(0))
