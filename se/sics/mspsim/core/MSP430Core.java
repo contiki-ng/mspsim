@@ -411,6 +411,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   public void writeRegister(int r, int value) {
     // Before the write!
+//    if (value >= MAX_MEM) {
+//        System.out.println("Writing larger than MAX_MEM to " + r + " value:" + value);
+//        new Throwable().printStackTrace();
+//    }
     CPUMonitor rwm = regWriteMonitors[r];
     if (rwm != null) {
       rwm.cpuAction(CPUMonitor.REGISTER_WRITE, r, value);
@@ -1066,6 +1070,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     case 0:
         // MSP430X - additional instructions
         op = instruction & 0xf0f0;
+        if (!MSP430XArch) 
+            throw new EmulationException("Executing MSP430X instruction but MCU is not a MSP430X");
 //        System.out.println("Executing MSP430X instruction op:" + Utils.hex16(op) +
 //                " ins:" + Utils.hex16(instruction) + " PC = $" + getAddressAsString(pc - 2));
         int src = 0;
