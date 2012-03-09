@@ -440,15 +440,19 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
           return (getIFG() & utxifg) > 0;
       }
   }
-  
+
   public void clearDMATrigger(int index) {
-      System.out.println("UART clearing DMA " + index);
       if (index == 0) {
           /* clear RX - might be different in different modes... */
-          System.out.println("UART clearing read bit!");
+          if (DEBUG) {
+              log("clearing DMA read bit!");
+          }
           clrBitIFG(urxifg);
           stateChanged(USARTListener.RXFLAG_CLEARED, true);
       } else {
+          if (DEBUG) {
+              log("clearing DMA " + index);
+          }
           /* clear TX - might be different in different modes... */
           clrBitIFG(utxifg);
       }
