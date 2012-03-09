@@ -27,8 +27,6 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * MSP430Core
@@ -61,7 +59,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // Try it out with 64 k memory
   public final int MAX_MEM;
   public final int MAX_MEM_IO;
-  public static final int PORTS = 6;
   
   // 16 registers of which some are "special" - PC, SP, etc.
   public int[] reg = new int[16];
@@ -758,7 +755,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
           printWarning(ADDRESS_OUT_OF_BOUNDS_READ, address);
           address %= MAX_MEM;
       }
-      boolean word = mode != MODE_BYTE;
+      final boolean word = mode != MODE_BYTE;
       // Only word reads at 0x1fe which is highest address...
       if (address < MAX_MEM_IO) {
           val = memIn[address].read(address, word, cycles);
@@ -815,14 +812,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
           wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
       }
 
-      boolean word = mode != MODE_BYTE;
+      final boolean word = mode != MODE_BYTE;
 
       // Only word writes at 0x1fe which is highest address...
       if (dstAddress < MAX_MEM_IO) {
           if (!word) dst &= 0xff;
-          memOut[dstAddress].write(dstAddress, dst & 0xffff, mode != MODE_BYTE, cycles);
+          memOut[dstAddress].write(dstAddress, dst & 0xffff, word, cycles);
           if (mode > MODE_WORD) {
-              memOut[dstAddress].write(dstAddress + 2, dst >> 16, mode != MODE_BYTE, cycles);
+              memOut[dstAddress].write(dstAddress + 2, dst >> 16, word, cycles);
           }
           // check for Flash
       } else if (flash.addressInFlash(dstAddress)) {
@@ -1180,7 +1177,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    writeRegister(dstData, dst);
 	    cycles += 3;
 	    break;
-        case CMPA_IMM:
+
+	case CMPA_IMM: {
 	    /* Status Bits N: Set if result is negative (src > dst), reset if positive (src ≤ dst)
 	       Z: Set if result is zero (src = dst), reset otherwise (src ≠ dst)
 	       C: Set if there is a carry from the MSB, reset otherwise
@@ -1191,22 +1189,24 @@ public class MSP430Core extends Chip implements MSP430Constants {
             immData = read(pc, MODE_WORD) + (srcData << 16);
             writeRegister(PC, pc += 2);
 	    sr = readRegister(SR);
+
+	    int destRegValue = readRegister(dstData);
 	    sr &= ~(NEGATIVE | ZERO | CARRY | OVERFLOW);
-	    if (readRegister(dstData) >= immData) {
+	    if (destRegValue >= immData) {
 		sr |= CARRY;
 	    }
-	    if (readRegister(dstData) < immData) {
+	    if (destRegValue < immData) {
 		sr |= NEGATIVE;
 	    }
-	    if (readRegister(dstData) == immData) {
+	    if (destRegValue == immData) {
 		sr |= ZERO;
 	    }
 
-	    int cmpTmp = readRegister(dstData) - immData;
+	    int cmpTmp = destRegValue - immData;
 	    int b = 0x80000; // CMPA always use 20 bit data length
 
-	    if (((readRegister(dstData) ^ cmpTmp) & b) == 0 &&
-		(((readRegister(dstData) ^ immData) & b) != 0)) {
+	    if (((destRegValue ^ cmpTmp) & b) == 0 &&
+		(((destRegValue ^ immData) & b) != 0)) {
 		sr |= OVERFLOW;
 	    }
 
@@ -1214,7 +1214,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    updateStatus = false;
 	    cycles += 3;
 	    break;
-
+        }
         case SUBA_IMM:
             immData = read(pc, MODE_WORD) + (srcData << 16);
             writeRegister(PC, pc += 2);
@@ -1228,24 +1228,26 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    writeRegister(dstData, readRegister(srcData));
 	    break;
 
-        case CMPA_REG:
+        case CMPA_REG: {
 	    sr = readRegister(SR);
 	    sr &= ~(NEGATIVE | ZERO | CARRY | OVERFLOW);
-	    if (readRegister(dstData) >= readRegister(srcData)) {
+	    int destRegValue = readRegister(dstData);
+	    int srcRegValue = readRegister(srcData);
+	    if (destRegValue >= srcRegValue) {
 		sr |= CARRY;
 	    }
-	    if (readRegister(dstData) < readRegister(srcData)) {
+	    if (destRegValue < srcRegValue) {
 		sr |= NEGATIVE;
 	    }
-	    if (readRegister(dstData) == readRegister(srcData)) {
+	    if (destRegValue == srcRegValue) {
 		sr |= ZERO;
 	    }
 
-	    cmpTmp = readRegister(dstData) - readRegister(srcData);
-	    b = 0x80000; // CMPA always use 20 bit data length
+	    int cmpTmp = destRegValue - srcRegValue;
+	    int b = 0x80000; // CMPA always use 20 bit data length
 
-	    if (((readRegister(dstData) ^ cmpTmp) & b) == 0 &&
-		(((readRegister(dstData) ^ readRegister(srcData)) & b) != 0)) {
+	    if (((destRegValue ^ cmpTmp) & b) == 0 &&
+		(((destRegValue ^ srcRegValue) & b) != 0)) {
 		sr |= OVERFLOW;
 	    }
 
@@ -1253,6 +1255,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    updateStatus = false;
 	    cycles += 1;
 	    break;
+        }
 
 	case ADDA_REG:
 	    dst = readRegister(dstData) + readRegister(srcData);
@@ -1270,8 +1273,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
         case RRXX_WORD:
             int count = ((instruction >> 10) & 0x03) + 1;
             dst = readRegister(dstData);
+            sr = readRegister(SR);
             int nxtCarry = 0;
-	    int carry = (readRegister(SR) & CARRY) > 0? 1: 0;
+	    int carry = (sr & CARRY) > 0? 1: 0;
             if (rrword) {
                 dst = dst & 0xffff;
             }
@@ -1287,7 +1291,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 		 * instruction is complete. */
 		int dst_low = dst & ((1 << count) - 1);
 
-		/* Grab the bit that wlil be in the carry flag when instruction completes. */
+		/* Grab the bit that will be in the carry flag when instruction completes. */
 		nxtCarry = (dst & (1 << (count + 1))) > 0? CARRY: 0;
 
 		/* Rotate dst. */
@@ -1328,7 +1332,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
                 break;
             }
             /* clear overflow - set carry according to above OP */
-            writeRegister(SR, (readRegister(SR) & ~(CARRY | OVERFLOW)) | nxtCarry);
+            writeRegister(SR, (sr & ~(CARRY | OVERFLOW)) | nxtCarry);
             dst = dst & (rrword ? 0xffff : 0xfffff);
             writeRegister(dstData, dst);
             break;
@@ -1340,7 +1344,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 					 Utils.hex16(instruction) +
 					 " op " + Utils.hex16(op));
         }
-        
         break;
     case 1:
     {
@@ -2072,6 +2075,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public int getPC() {
     return reg[PC];
+  }
+
+  public int getSR() {
+      return reg[SR];
+  }
+
+  public int getRegister(int register) {
+      return reg[register];
   }
 
   public String getAddressAsString(int addr) {
