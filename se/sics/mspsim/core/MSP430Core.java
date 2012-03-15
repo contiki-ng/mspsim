@@ -1774,16 +1774,30 @@ public class MSP430Core extends Chip implements MSP430Constants {
           }
           
 	  break;
-	case AM_INDEX:
-	  // Indexed if reg != PC & CG1/CG2 - will PC be incremented?
-	  srcAddress = readRegisterCG(srcRegister, as) + read(pc, MODE_WORD);
-//	    memory[pc] + (memory[pc + 1] << 8);
+	case AM_INDEX: {
+          // Indexed if reg != PC & CG1/CG2 - will PC be incremented?
+          int sval = readRegisterCG(srcRegister, as);
+
+          /* Support for MSP430X and below / above 64 KB */
+          /* if register is pointing to <64KB then it needs to be truncated to below 64 */
+          if (sval < 0xffff) {
+            srcAddress = (sval + read(pc, MODE_WORD)) & 0xffff;
+          } else {
+            srcAddress = read(pc, MODE_WORD);
+            if ((srcAddress & 0x8000) > 0) {
+              // Negative index
+              srcAddress |= 0xf0000;
+            }
+            srcAddress += sval;
+            srcAddress &= 0xfffff;
+          }
+
 	  // When is PC incremented - assuming immediately after "read"?
-	  
-	  
-	  incRegister(PC, 2);
+
+          incRegister(PC, 2);
 	  cycles += dstRegMode ? 3 : 6;
 	  break;
+	}
 	  // Indirect register
 	case AM_IND_REG:
 	  srcAddress = readRegister(srcRegister);
