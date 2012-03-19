@@ -1267,10 +1267,17 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   public void setRSSI(int power) {
-    if (DEBUG) log("external setRSSI to: " + power);
-    if (power < -128) {
-      power = -128;
+    final int minp = -128 + RSSI_OFFSET;
+    final int maxp = 128 + RSSI_OFFSET;
+    if (power < minp) {
+        power = -minp;
     }
+    if(power > maxp){
+        power = maxp;
+    }
+
+    if (DEBUG) log("external setRSSI to: " + power);
+
     rssi = power;
     registers[REG_RSSI] = power - RSSI_OFFSET;
     updateCCA();
