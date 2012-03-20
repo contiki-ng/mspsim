@@ -40,6 +40,7 @@
  */
 
 package se.sics.mspsim.util;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -98,7 +99,7 @@ public class ELF {
   public static boolean isELF(File file) {
     InputStream input = null;
     try {
-      input = new FileInputStream(file);
+      input = new BufferedInputStream(new FileInputStream(file));
       for (int i = 0; i < MAGIC.length; i++) {
         if (MAGIC[i] != input.read()) {
           return false;
