@@ -168,7 +168,4 @@ public class MSP430f1611Config extends MSP430Config {
         
         return 3 + 6;
     }
-    
-    
-    
 }

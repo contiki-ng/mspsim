@@ -11,10 +11,10 @@ import java.awt.image.BufferedImage;
 import javax.swing.JComponent;
 import javax.swing.Timer;
 
-import se.sics.mspsim.core.CPUMonitor;
+import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.MSP430Core;
 
-public class CPUHeatMap extends JComponent implements CPUMonitor {
+public class CPUHeatMap extends JComponent implements MemoryMonitor {
 
     private static final long serialVersionUID = -7964848220064713887L;
 
@@ -119,19 +119,43 @@ public class CPUHeatMap extends JComponent implements CPUMonitor {
         int f = 1;
         if (mode == 1) f = 40;
         switch (type) {
-        case CPUMonitor.EXECUTE:
+        case MemoryMonitor.EXECUTE:
             val = heatE[adr] = heatE[adr] + f;
             break;
-        case CPUMonitor.MEMORY_READ:
+        case MemoryMonitor.MEMORY_READ:
             val = heatR[adr] = heatR[adr] + f;
             break;
-        case CPUMonitor.MEMORY_WRITE:
+        case MemoryMonitor.MEMORY_WRITE:
             val = heatW[adr] = heatW[adr] + f;
             break;
         }
         if (val > heatMax) {
             heatMax = val;
         }
+    }
+
+    @Override
+    public void notifyReadBefore(int addr, int mode, int type) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void notifyReadAfter(int addr, int mode, int type) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void notifyWriteBefore(int dstAddress, int data, int mode) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void notifyWriteAfter(int dstAddress, int data, int mode) {
+        // TODO Auto-generated method stub
+        
     }
 
 }

@@ -176,7 +176,7 @@ public class GDBStubs implements Runnable {
                 for (int i = 0; i < len; i++) {
                     System.out.println("Writing: " + cmdBytes[cPos] + " to "
                             + addr + " cpos=" + cPos);
-                    cpu.write(addr++, cmdBytes[cPos++], MSP430Constants.MODE_BYTE);
+                    cpu.currentSegment.write(addr++, cmdBytes[cPos++], MSP430Constants.MODE_BYTE);
                 }
                 sendResponse(OK);
             }

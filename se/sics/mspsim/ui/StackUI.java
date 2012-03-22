@@ -43,13 +43,13 @@ import java.awt.Graphics;
 
 import javax.swing.JPanel;
 
-import se.sics.mspsim.core.CPUMonitor;
+import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.ServiceComponent;
 
-public class StackUI extends JPanel implements CPUMonitor, ServiceComponent {
+public class StackUI extends JPanel implements ServiceComponent {
 
   private static final long serialVersionUID = 8648239617509299768L;
 
@@ -91,7 +91,7 @@ public class StackUI extends JPanel implements CPUMonitor, ServiceComponent {
     super(new BorderLayout());
     this.updateCyclePeriod = updateCyclePeriod;
     this.cpu = cpu;
-    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
+//    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
 
     if (cpu.getDisAsm() != null) {
       MapTable mapTable = cpu.getDisAsm().getMap();

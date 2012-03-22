@@ -40,7 +40,7 @@ import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
-import se.sics.mspsim.core.Memory;
+import se.sics.mspsim.chip.Memory;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
@@ -74,9 +74,15 @@ public class DebugCommands implements CommandBundle {
             return 1;
           }
           monitor = new CPUMonitor() {
-              public void cpuAction(int type, int adr, int data) {
+              public void notifyReadBefore(int type, int adr, int data) {
                   context.out.println("*** Break at $" + cpu.getAddressAsString(adr));
                   cpu.stop();
+              }
+              public void notifyReadAfter(int addr, int mode, int type) {
+              }
+              public void notifyWriteBefore(int dstAddress, int data, int mode) {
+              }
+              public void notifyWriteAfter(int dstAddress, int data, int mode) {
               }
           };
           cpu.addWatchPoint(address, monitor);
@@ -146,6 +152,17 @@ public class DebugCommands implements CommandBundle {
                       }
                   }
               }
+
+            public void notifyReadBefore(int addr, int mode, int type) {
+                cpuAction(CPUMonitor.MEMORY_READ, addr, 0);
+            }
+            public void notifyReadAfter(int addr, int mode, int type) {
+            }
+            public void notifyWriteBefore(int dstAddress, int data, int mode) {
+                cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, data);
+            }
+            public void notifyWriteAfter(int dstAddress, int data, int mode) {
+            }
           };
 
           for (int i = 0; i < length; i++) {
@@ -197,6 +214,16 @@ public class DebugCommands implements CommandBundle {
               } else {
                 context.out.println(data);
               }
+            }
+            public void notifyReadBefore(int addr, int mode, int type) {
+                cpuAction(CPUMonitor.MEMORY_READ, addr, 0);
+            }
+            public void notifyReadAfter(int addr, int mode, int type) {
+            }
+            public void notifyWriteBefore(int dstAddress, int data, int mode) {
+                cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, data);
+            }
+            public void notifyWriteAfter(int dstAddress, int data, int mode) {
             }
           };
           cpu.addRegisterWriteMonitor(register, monitor);
@@ -336,7 +363,8 @@ public class DebugCommands implements CommandBundle {
             int adr = context.getArgumentAsAddress(0);
             if (adr >= 0) {
               try {
-                context.out.println(context.getArgument(0) + " = $" + Utils.hex16(cpu.read(adr, adr >= 0x100 ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE)));
+                context.out.println(context.getArgument(0) + " = $" +
+                        Utils.hex16(cpu.currentSegment.read(adr, adr >= 0x100 ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE, 0)));
               } catch (Exception e) {
                 e.printStackTrace(context.err);
               }
@@ -462,7 +490,7 @@ public class DebugCommands implements CommandBundle {
                 int val = context.getArgumentAsInt(i);
                 boolean word = Utils.size(type) == 2 | val > 0xff;
                 try {
-                  cpu.write(adr, val, word ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE);
+                  cpu.currentSegment.write(adr, val, word ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE);
                   adr += word ? 2 : 1;
                 } catch (EmulationException e) {
                   e.printStackTrace(context.out);
@@ -470,7 +498,7 @@ public class DebugCommands implements CommandBundle {
               } else if (mode == Utils.ASCII) {
                 String data = context.getArgument(i);
                 for (int j = 0; j < data.length(); j++) {
-                  cpu.write(adr++, data.charAt(j) & 0xff, MSP430Constants.MODE_WORD);
+                  cpu.currentSegment.write(adr++, data.charAt(j) & 0xff, MSP430Constants.MODE_WORD);
                 }
               }
             }

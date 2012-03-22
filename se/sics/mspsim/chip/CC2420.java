@@ -1318,6 +1318,13 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     this.cl = cl;
   }
 
+  public void notifyReset() {
+    super.notifyReset();
+    setChipSelect(false);
+    status &= ~STATUS_TX_ACTIVE;
+    setVRegOn(false);
+  }
+
   public void setVRegOn(boolean newOn) {
     if(on == newOn) return;
 
