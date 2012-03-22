@@ -42,11 +42,12 @@ package se.sics.mspsim.core;
 
 public interface Memory {
 
-  public int readByte(int address);
-  public void writeByte(int address, int data);
-  
-  /**
-   * getSize returns the size of memory in bytes.
-   */
-  public int getSize();
+    public static int SEGMENT_SIZE = 256;
+    public static int TYPE_READ = 1; /* normal read */
+    public static int TYPE_EXECUTE = 2; /* instruction execution read */
+    public static int TYPE_ARG = 3; /* arguments for execution */
+    
+    public int read(int address, int mode, int type) throws EmulationException;
+    public void write(int dstAddress, int dst, int mode) throws EmulationException;
+
 }

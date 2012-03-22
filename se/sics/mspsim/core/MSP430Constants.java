@@ -54,6 +54,8 @@ public interface MSP430Constants {
   public static final int MODE_WORD = 1;
   public static final int MODE_WORD20 = 2;
   
+  public static final int MODE_BIT_SIZE[] = {8, 16, 20};
+  
   public static final int MODE_MASK[] = {0xff, 0xffff, 0xfffff};
   
   /* memory tags - not used yet*/

@@ -63,16 +63,19 @@ public class MSP430Core extends Chip implements MSP430Constants {
   // 16 registers of which some are "special" - PC, SP, etc.
   public int[] reg = new int[16];
 
-  private CPUMonitor globalMonitor;
+  private MemoryMonitor globalMonitor;
   
-  private final CPUMonitor[] regWriteMonitors = new CPUMonitor[16];
-  private final CPUMonitor[] regReadMonitors = new CPUMonitor[16];
+  private final RegisterMonitor[] regWriteMonitors = new RegisterMonitor[16];
+  private final RegisterMonitor[] regReadMonitors = new RegisterMonitor[16];
 
-  private CPUMonitor[] watchPoints;
   // true => breakpoints can occur!
   boolean breakpointActive = true;
 
   public int memory[];
+  
+  public Memory memorySegments[];
+  public Memory currentSegment;
+  
   public long cycles = 0;
   public long cpuCycles = 0;
   MapTable map;
@@ -162,7 +165,22 @@ public class MSP430Core extends Chip implements MSP430Constants {
     MSP430XArch = config.MSP430XArch;
 
     memory = new int[MAX_MEM];
-    watchPoints = new CPUMonitor[MAX_MEM];
+    memorySegments = new Memory[MAX_MEM >> 8];
+        
+    currentSegment = new Memory() {
+        /* just throw in the right segment... */
+        public int read(int address, int mode, int type) throws EmulationException {
+            currentSegment = memorySegments[address >> 8];
+            return currentSegment.read(address, mode, type);
+        }
+        public void write(int dstAddress, int dst, int mode)
+                throws EmulationException {
+            currentSegment = memorySegments[dstAddress >> 8];
+            currentSegment.write(dstAddress, dst, mode);
+        }
+    };
+    
+//    watchPoints = new CPUMonitor[MAX_MEM];
 
     System.out.println("Set up MSP430 Core with " + MAX_MEM + " bytes memory");
     
@@ -257,6 +275,24 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     ioUnits.add(watchdog);
 
+    /* setup memory segments */
+    int maxSeg = MAX_MEM >> 8;
+    for (int i = 0; i < maxSeg; i++) {
+        if (config.isRAM(i << 8)) {
+            System.out.println("Setting RAM segment at: " + Utils.hex16(i << 8));
+            memorySegments[i] = new RAMSegment(this, (i << 8));
+        } else if (config.isFlash(i << 8)) {
+            System.out.println("Setting Flash segment at: " + Utils.hex16(i << 8));
+            memorySegments[i] = new FlashSegment(this, flash, (i << 8));
+        } else if (config.isIO(i << 8)) {
+            System.out.println("Setting IO segment at: " + Utils.hex16(i << 8));
+            memorySegments[i] = new IOSegment(this, (i << 8));
+        } else {
+            System.out.println("Setting NoMem segment at: " + Utils.hex16(i << 8));
+            memorySegments[i] = new NoMemSegment(this, (i << 8));
+        }
+    }
+    
     bcs.reset(0);
   }
 
@@ -270,17 +306,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
     profiler.setCPU(this);
   }
 
-  public synchronized void addGlobalMonitor(CPUMonitor mon) {
-      globalMonitor = CPUMonitorProxy.addCPUMonitor(globalMonitor, mon);
+  public synchronized void addGlobalMonitor(MemoryMonitor mon) {
+      globalMonitor = MemoryMonitorProxy.addMemoryMonitor(globalMonitor, mon);
   }
 
-  public synchronized void removeGlobalMonitor(CPUMonitor mon) {
-      globalMonitor = CPUMonitorProxy.removeCPUMonitor(globalMonitor, mon);
-  }
-
-  @Deprecated
-  public void setGlobalMonitor(CPUMonitor mon) {
-      globalMonitor = mon;
+  public synchronized void removeGlobalMonitor(MemoryMonitor mon) {
+      globalMonitor = MemoryMonitorProxy.removeMemoryMonitor(globalMonitor, mon);
   }
 
   public ComponentRegistry getRegistry() {
@@ -338,70 +369,48 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public boolean hasWatchPoint(int address) {
-      return watchPoints[address] != null;
+      // FIX THIS!
+      return false;
+//      return watchPoints[address] != null;
   }
 
-  public synchronized void addWatchPoint(int address, CPUMonitor mon) {
-      watchPoints[address] = CPUMonitorProxy.addCPUMonitor(watchPoints[address], mon);
-  }
-
-  public synchronized void removeWatchPoint(int address, CPUMonitor mon) {
-      watchPoints[address] = CPUMonitorProxy.removeCPUMonitor(watchPoints[address], mon);
-  }
-
-  @Deprecated
-  public void setBreakPoint(int address, CPUMonitor mon) {
-      if (mon != null) {
-          addWatchPoint(address, mon);
+  public synchronized void addWatchPoint(int address, MemoryMonitor mon) {
+      WatchedMemory wm;
+      if (memorySegments[address >> 8] instanceof WatchedMemory) {
+          wm = (WatchedMemory) memorySegments[address >> 8];
       } else {
-          clearBreakPoint(address);
+          wm = new WatchedMemory(address >> 8, memorySegments[address >> 8]);
+          memorySegments[address >> 8] = wm;
       }
+      wm.addWatchPoint(address, mon);
+//      watchPoints[address] = CPUMonitorProxy.addCPUMonitor(watchPoints[address], mon);
   }
 
-  @Deprecated
-  public boolean hasBreakPoint(int address) {
-      return watchPoints[address] != null;
-  }
-
-  @Deprecated
-  public synchronized void clearBreakPoint(int address) {
-      watchPoints[address] = null;
-  }
-
-  public synchronized void addRegisterWriteMonitor(int r, CPUMonitor mon) {
-      regWriteMonitors[r] = CPUMonitorProxy.addCPUMonitor(regWriteMonitors[r], mon);
-  }
-
-  public synchronized void removeRegisterWriteMonitor(int r, CPUMonitor mon) {
-      regWriteMonitors[r] = CPUMonitorProxy.removeCPUMonitor(regWriteMonitors[r], mon);
-  }
-
-  public synchronized void addRegisterReadMonitor(int r, CPUMonitor mon) {
-      regReadMonitors[r] = CPUMonitorProxy.addCPUMonitor(regReadMonitors[r], mon);
-  }
-
-  public synchronized void removeRegisterReadMonitor(int r, CPUMonitor mon) {
-      regReadMonitors[r] = CPUMonitorProxy.removeCPUMonitor(regReadMonitors[r], mon);
-  }
-
-  @Deprecated
-  public synchronized void setRegisterWriteMonitor(int r, CPUMonitor mon) {
-      if (mon != null) {
-          regWriteMonitors[r] = CPUMonitorProxy.addCPUMonitor(regWriteMonitors[r], mon);
-      } else {
-          regWriteMonitors[r] = null;
+  public synchronized void removeWatchPoint(int address, MemoryMonitor mon) {
+      if (memorySegments[address >> 8] instanceof WatchedMemory) {
+          WatchedMemory wm = (WatchedMemory) memorySegments[address >> 8];
+          wm.removeWatchPoint(address, mon);
       }
+//      watchPoints[address] = MemoryMonitorProxy.removeMemoryMonitor(watchPoints[address], mon);
   }
 
-  @Deprecated
-  public synchronized void setRegisterReadMonitor(int r, CPUMonitor mon) {
-      if (mon != null) {
-          regReadMonitors[r] = CPUMonitorProxy.addCPUMonitor(regReadMonitors[r], mon);
-      } else {
-          regReadMonitors[r] = null;
-      }
-  }
 
+//  public synchronized void addRegisterWriteMonitor(int r, CPUMonitor mon) {
+//      regWriteMonitors[r] = CPUMonitorProxy.addCPUMonitor(regWriteMonitors[r], mon);
+//  }
+//
+//  public synchronized void removeRegisterWriteMonitor(int r, CPUMonitor mon) {
+//      regWriteMonitors[r] = CPUMonitorProxy.removeCPUMonitor(regWriteMonitors[r], mon);
+//  }
+//
+//  public synchronized void addRegisterReadMonitor(int r, CPUMonitor mon) {
+//      regReadMonitors[r] = CPUMonitorProxy.addCPUMonitor(regReadMonitors[r], mon);
+//  }
+//
+//  public synchronized void removeRegisterReadMonitor(int r, CPUMonitor mon) {
+//      regReadMonitors[r] = CPUMonitorProxy.removeCPUMonitor(regReadMonitors[r], mon);
+//  }
+ 
   public int[] getMemory() {
     return memory;
   }
@@ -412,10 +421,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //        System.out.println("Writing larger than MAX_MEM to " + r + " value:" + value);
 //        new Throwable().printStackTrace();
 //    }
-    CPUMonitor rwm = regWriteMonitors[r];
-    if (rwm != null) {
-      rwm.cpuAction(CPUMonitor.REGISTER_WRITE, r, value);
-    }
+// TODO - add RegisterMonitor for this...
+      //    CPUMonitor rwm = regWriteMonitors[r];
+//    if (rwm != null) {
+//      rwm.cpuAction(CPUMonitor.REGISTER_WRITE, r, value);
+//    }
     reg[r] = value;
     if (r == SR) {
       boolean oldCpuOff = cpuOff;
@@ -462,10 +472,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
   }
 
   public int readRegister(int r) {
-    CPUMonitor rrm = regReadMonitors[r];
-    if (rrm != null) {
-      rrm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
-    }
+// Register monitor here...
+//    CPUMonitor rrm = regReadMonitors[r];
+//    if (rrm != null) {
+//      rrm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
+//    }
     return reg[r];
   }
 
@@ -475,22 +486,22 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // No monitoring here... just return the CG values
       return CREG_VALUES[r - 2][m];
     }
-    CPUMonitor rrm = regReadMonitors[r];
-    if (rrm != null) {
-      rrm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
-    }
+//    CPUMonitor rrm = regReadMonitors[r];
+//    if (rrm != null) {
+//      rrm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
+//    }
     return reg[r];
   }
 
   public int incRegister(int r, int value) {
-    CPUMonitor rm = regReadMonitors[r];
-    if (rm != null) {
-        rm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
-    }
-    rm = regWriteMonitors[r];
-    if (rm != null) {
-      rm.cpuAction(CPUMonitor.REGISTER_WRITE, r, reg[r] + value);
-    }
+//    CPUMonitor rm = regReadMonitors[r];
+//    if (rm != null) {
+//        rm.cpuAction(CPUMonitor.REGISTER_READ, r, reg[r]);
+//    }
+//    rm = regWriteMonitors[r];
+//    if (rm != null) {
+//      rm.cpuAction(CPUMonitor.REGISTER_WRITE, r, reg[r] + value);
+//    }
     reg[r] += value;
     return reg[r];
   }
@@ -746,102 +757,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     
     servicedInterrupt = -1;
     servicedInterruptUnit = null;
-  }
-  
-  // Read method that handles read from IO units!
-  public int read(int address, int mode) throws EmulationException {
-      int val = 0;
-      if (address >= MAX_MEM) {
-          printWarning(ADDRESS_OUT_OF_BOUNDS_READ, address);
-          address %= MAX_MEM;
-      }
-      final boolean word = mode != MODE_BYTE;
-      // Only word reads at 0x1fe which is highest address...
-      if (address < MAX_MEM_IO) {
-          val = memIn[address].read(address, word, cycles);
-          if (mode == MODE_WORD20) {
-              val |= memIn[address + 2].read(address, word, cycles) << 16;
-          }
-      } else {
-          if (isFlashBusy && flash.addressInFlash(address)) {
-              flash.notifyRead(address);
-          }
-
-          val = memory[address] & 0xff;
-          if (mode > MODE_BYTE) {
-              val |= (memory[address + 1] << 8);
-              if ((address & 1) != 0) {
-                  printWarning(MISALIGNED_READ, address);
-              }
-              if (mode == MODE_WORD20) {
-                  /* will the read really get data from the full word? CHECK THIS */
-                  val |= (memory[address + 2] << 16) | (memory[address + 3] << 24);
-                  val &= 0xfffff;
-              } else {
-                  val &= 0xffff;
-              }
-          }
-      }
-      CPUMonitor wp = watchPoints[address];
-      if (wp != null) {
-          wp.cpuAction(CPUMonitor.MEMORY_READ, address, val);
-      }
-      /* is a null check as fast as a boolean check ?*/
-      wp = globalMonitor;
-      if (wp != null) {
-          wp.cpuAction(CPUMonitor.MEMORY_READ, address, val);
-      }
-      return val;
-  }
-  
-  public void write(int dstAddress, int dst, int mode) throws EmulationException {
-    // TODO: optimize memory usage by tagging memory's higher bits.
-      // will also affect below flash write stuff!!!
-      if (dstAddress > MAX_MEM) {
-          printWarning(ADDRESS_OUT_OF_BOUNDS_WRITE, dstAddress);
-          dstAddress %= MAX_MEM;
-      }
-
-      /* is a null check as fast as a boolean check? */
-      CPUMonitor wp = watchPoints[dstAddress];
-      if (wp != null) {
-          wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
-      }
-      wp = globalMonitor;
-      if (wp != null) {
-          wp.cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, dst);
-      }
-
-      final boolean word = mode != MODE_BYTE;
-
-      // Only word writes at 0x1fe which is highest address...
-      if (dstAddress < MAX_MEM_IO) {
-          if (!word) dst &= 0xff;
-          memOut[dstAddress].write(dstAddress, dst & 0xffff, word, cycles);
-          if (mode > MODE_WORD) {
-              memOut[dstAddress].write(dstAddress + 2, dst >> 16, word, cycles);
-          }
-          // check for Flash
-      } else if (flash.addressInFlash(dstAddress)) {
-          flash.flashWrite(dstAddress, dst & 0xffff, word);
-          if (mode > MODE_WORD) {
-              flash.flashWrite(dstAddress + 2, dst >> 16, word);
-          }
-      } else {
-          // assume RAM
-          memory[dstAddress] = dst & 0xff;
-          if (word) {
-              memory[dstAddress + 1] = (dst >> 8) & 0xff;
-              if ((dstAddress & 1) != 0) {
-                  printWarning(MISALIGNED_WRITE, dstAddress);
-              }
-              if (mode > MODE_WORD) {
-                  memory[dstAddress + 2] = (dst >> 16) & 0xff; /* should be 0x0f ?? */
-                  memory[dstAddress + 3] = (dst >> 24) & 0xff; /* will be only zeroes*/
-              }
-          }
-      }
-  }
+  }  
 
   void profileCall(int dst, int pc) {
       MapEntry function = map.getEntry(dst);
@@ -903,16 +819,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
       // Push PC and SR to stack
       // store on stack - always move 2 steps (W) even if B.
       writeRegister(SP, sp = spBefore - 2);
-      write(sp, pc, MODE_WORD);
+      currentSegment.write(sp, pc, MODE_WORD);
 
       writeRegister(SP, sp = sp - 2);
-      write(sp, (sr & 0x0fff) | ((pc & 0xf0000) >> 4), MODE_WORD);
+      currentSegment.write(sp, (sr & 0x0fff) | ((pc & 0xf0000) >> 4), MODE_WORD);
     }
     // Clear SR
     writeRegister(SR, 0); // sr & ~CPUOFF & ~SCG1 & ~OSCOFF);
 
     // Jump to the address specified in the interrupt vector
-    writeRegister(PC, pc = read(0xfffe - (MAX_INTERRUPT - interruptMax) * 2, MODE_WORD));
+    writeRegister(PC, pc = currentSegment.read(0xfffe - (MAX_INTERRUPT - interruptMax) * 2, MODE_WORD, Memory.TYPE_READ));
 
     servicedInterrupt = interruptMax;
     servicedInterruptUnit = interruptSource[servicedInterrupt];
@@ -993,23 +909,23 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // This is quite costly... should probably be made more
     // efficiently
-    CPUMonitor wp = watchPoints[pc];
-    if (wp != null) {
-      if (breakpointActive) {
-        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
-	breakpointActive = false;
-	return -1;
-      }
-      // Execute this instruction - this is second call...
-      breakpointActive = true;
-    }
-    wp = globalMonitor;
-    if (wp != null) {
-        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
-    }
+//    CPUMonitor wp = watchPoints[pc];
+//    if (wp != null) {
+//      if (breakpointActive) {
+//        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
+//	breakpointActive = false;
+//	return -1;
+//      }
+//      // Execute this instruction - this is second call...
+//      breakpointActive = true;
+//    }
+//    wp = globalMonitor;
+//    if (wp != null) {
+//        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
+//    }
     
     int pcBefore = pc;
-    instruction = read(pc, MODE_WORD);
+    instruction = currentSegment.read(pc, MODE_WORD, Memory.TYPE_EXECUTE);
     int ext3_0 = 0;
     boolean repeatsInDstReg = false;
     boolean wordx20 = false;
@@ -1034,7 +950,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	// that follows the extension word also has a zero bit data
 	// length mode.)
 	wordx20 = (instruction & 0x40) == 0;
-        instruction = read(pc, MODE_WORD);
+        instruction = currentSegment.read(pc, MODE_WORD, Memory.TYPE_EXECUTE);
 //        System.out.println("*** Extension word!!! " + Utils.hex16(extWord) +
 //                "  read the instruction too: " + Utils.hex16(instruction) + " at " + Utils.hex16(pc - 2));
     } else {
@@ -1094,7 +1010,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
             src = readRegister(srcData);
 //            System.out.println("Reading $" + getAddressAsString(src) +
 //                    " from register: " + srcData);
-            dst = read(src, MODE_WORD20);
+            dst = currentSegment.read(src, MODE_WORD20, Memory.TYPE_READ);
 //            System.out.println("Reading from mem: $" + getAddressAsString(dst));
             writeRegister(srcData, src + 4);
 //            System.out.println("*** Writing $" + getAddressAsString(dst) + " to reg: " + dstData);
@@ -1103,11 +1019,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    cycles += 3;
             break;
         case MOVA_ABS2REG:
-            src = read(pc, MODE_WORD);
+            src = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
             writeRegister(PC, pc += 2);
             dst = src + (srcData << 16);
             //System.out.println(Utils.hex20(pc) + " MOVA &ABS Reading from $" + getAddressAsString(dst) + " to reg: " + dstData);
-            dst = read(dst, MODE_WORD20);
+            dst = currentSegment.read(dst, MODE_WORD20,  Memory.TYPE_READ);
             //System.out.println("   => $" + getAddressAsString(dst));
             writeRegister(dstData, dst);
             updateStatus = false;
@@ -1116,7 +1032,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	case MOVA_INDX2REG:
 	    /* Read data from address in memory, indexed by source
 	     * register, and place into destination register. */
-	    int index = read(pc, MODE_WORD);
+	    int index = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
 	    int indexModifier = readRegister(srcData);
 	    if(index > 0x8000) {
 		index = -(0x10000 - index);
@@ -1124,16 +1040,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    if(indexModifier > 0x8000) {
 		indexModifier = -(0x10000 - indexModifier);
 	    }
-            writeRegister(dstData, read(indexModifier + index, MODE_WORD20));
+            writeRegister(dstData, currentSegment.read(indexModifier + index, MODE_WORD20, Memory.TYPE_READ));
 	    writeRegister(PC, pc += 2);
             updateStatus = false;
 	    cycles += 4;
 	    break;
 
 	case MOVA_REG2ABS:
-            dst = read(pc, MODE_WORD);
+            dst = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
             writeRegister(PC, pc += 2);
-	    write(dst + (dstData << 16), readRegister(srcData), MODE_WORD20);
+	    currentSegment.write(dst + (dstData << 16), readRegister(srcData), MODE_WORD20);
             updateStatus = false;
 	    cycles += 4;
             break;
@@ -1141,7 +1057,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	case MOVA_REG2INDX:
 	    /* Read data from register, write to address in memory,
 	     * indexed by source register. */
-	    index = read(pc, MODE_WORD);
+	    index = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
 	    indexModifier = readRegister(dstData);
 	    if(index > 0x8000) {
 		index = -(0x10000 - index);
@@ -1149,14 +1065,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    if(indexModifier > 0x8000) {
 		indexModifier = -(0x10000 - indexModifier);
 	    }
-	    write(indexModifier + index, readRegister(srcData), MODE_WORD20);
+	    currentSegment.write(indexModifier + index, readRegister(srcData), MODE_WORD20);
 	    writeRegister(PC, pc += 2);
             updateStatus = false;
 	    cycles += 4;
 	    break;
 
         case MOVA_IMM2REG:
-            src = read(pc, MODE_WORD);
+            src = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
             writeRegister(PC, pc += 2);
             dst = src + (srcData << 16);
 //            System.out.println("*** Writing $" + getAddressAsString(dst) + " to reg: " + dstData);
@@ -1171,7 +1087,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    // the data is stored in the following word (PC + 2) and
 	    // the high 4 bits in the instruction word, which we have
 	    // masked out as srcData.
-            int immData = read(pc, MODE_WORD) + (srcData << 16);
+            int immData = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ) + (srcData << 16);
             writeRegister(PC, pc += 2);
 	    dst = readRegister(dstData) + immData;
 	    writeRegister(dstData, dst);
@@ -1186,7 +1102,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	       operand delivers a negative result, or if the subtraction of a positive source
 	       operand from a negative destination operand delivers a positive result, reset
 	       otherwise (no overflow) */
-            immData = read(pc, MODE_WORD) + (srcData << 16);
+            immData = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ) + (srcData << 16);
             writeRegister(PC, pc += 2);
 	    sr = readRegister(SR);
 
@@ -1216,7 +1132,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    break;
         }
         case SUBA_IMM:
-            immData = read(pc, MODE_WORD) + (srcData << 16);
+            immData = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ) + (srcData << 16);
             writeRegister(PC, pc += 2);
 	    dst = readRegister(dstData) - immData;
 	    writeRegister(dstData, dst);
@@ -1362,14 +1278,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
           updateStatus = false;
           switch(op) {
           case CALLA_IMM:
-              dst = (dstRegister << 16) | read(pc, MODE_WORD);
+              dst = (dstRegister << 16) | currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
               pc += 2;
               cycles += 5;
               break;
           case CALLA_ABS:
               /* read the address of where the address to call is */
-              dst = (dstRegister << 16) | read(pc, MODE_WORD);
-              dst = read(dst, MODE_WORD20);
+              dst = (dstRegister << 16) | currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
+              dst = currentSegment.read(dst, MODE_WORD20, Memory.TYPE_READ);
               pc += 2;
               cycles += 7;
               break;
@@ -1394,7 +1310,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   for(int i = 0; i < n; i++) {
                       sp -= size;
 		      cycles += 2;
-                      write(sp, this.reg[regNo--], type);
+                      currentSegment.write(sp, this.reg[regNo--], type);
 //                      System.out.println("Saved reg: " + (regNo + 1) + " was " + reg[regNo + 1]);
 
                       /* what happens if regNo is wrapped ??? */
@@ -1415,7 +1331,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   /* read and increase stack pointer n times */
                   for(int i = 0; i < n; i++) {
 		      cycles += 2;
-                      this.reg[regNo++] = read(sp, type);
+                      this.reg[regNo++] = currentSegment.read(sp, type, Memory.TYPE_READ);
 //                      System.out.println("Restored reg: " + (regNo - 1) + " to " + reg[regNo - 1]);
                       sp += size;
                       /* what happens if regNo is wrapped ??? */
@@ -1434,9 +1350,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
           /* store 20 bits on stack (costs two words) */
           if (dst != -1) {
               sp = readRegister(SP) - 2;
-              write(sp, (pc >> 16) & 0xf, MODE_WORD);
+              currentSegment.write(sp, (pc >> 16) & 0xf, MODE_WORD);
               sp = sp - 2;
-              write(sp, pc & 0xffff, MODE_WORD);
+              currentSegment.write(sp, pc & 0xffff, MODE_WORD);
               writeRegister(SP, sp);
               writeRegister(PC, dst);
               
@@ -1474,9 +1390,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   /* Support for MSP430X and below / above 64 KB */
                   /* if register is pointing to <64KB then it needs to be truncated to below 64 */
                   if (rval < 0xffff) {
-                      dstAddress = (rval + read(pc, MODE_WORD)) & 0xffff;
+                      dstAddress = (rval + currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ)) & 0xffff;
                   } else {
-                      dstAddress = read(pc, MODE_WORD);
+                      dstAddress = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
                       if ((dstAddress & 0x8000) > 0) {
                           dstAddress |= 0xf0000;
                       }
@@ -1532,7 +1448,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //                  System.out.println("*** Repeat " + repeats + " ZeroCarry: " + zeroCarry);
 //              }
           } else {
-              dst = read(dstAddress, word ? MODE_WORD : MODE_BYTE);
+              dst = currentSegment.read(dstAddress, word ? MODE_WORD : MODE_BYTE, Memory.TYPE_READ);
           }
           
           /* TODO: test add the loop here! */
@@ -1595,12 +1511,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
                       // Put lo & hi on stack!
                       //	  memory[sp] = dst & 0xff;
                       //	  memory[sp + 1] = dst >> 8;
-                      write(sp, dst, MODE_WORD);
+                      currentSegment.write(sp, dst, MODE_WORD);
                   } else {
                       // Byte => only lo byte
                       //	  memory[sp] = dst & 0xff;
                       //	  memory[sp + 1] = 0;
-                      write(sp, dst & 0xff, MODE_WORD);
+                      currentSegment.write(sp, dst & 0xff, MODE_WORD);
                   }
                   /* if REG or INDIRECT AUTOINC then add 2 cycles, otherwise 1 */
                   cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
@@ -1612,7 +1528,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   pc = readRegister(PC);
                   //	memory[sp] = pc & 0xff;
                   //	memory[sp + 1] = pc >> 8;
-                  write(sp, pc, MODE_WORD);
+                  currentSegment.write(sp, pc, MODE_WORD);
                   writeRegister(PC, dst);
 
                   /* Additional cycles: REG => 3, AM_IND_AUTO => 2, other => 1 */
@@ -1630,13 +1546,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   // Put Top of stack to Status DstRegister (TOS -> SR)
                   servicedInterrupt = -1; /* needed before write to SR!!! */
                   sp = readRegister(SP);
-                  sr = read(sp, MODE_WORD);
+                  sr = currentSegment.read(sp, MODE_WORD, Memory.TYPE_READ);
                   writeRegister(SR, sr & 0x0fff);
                   sp = sp + 2;
                   //	writeRegister(SR, memory[sp++] + (memory[sp++] << 8));
                   // TOS -> PC
                   //	writeRegister(PC, memory[sp++] + (memory[sp++] << 8));
-                  writeRegister(PC, read(sp, MODE_WORD) | (sr & 0xf000) << 4);
+                  writeRegister(PC, currentSegment.read(sp, MODE_WORD, Memory.TYPE_READ) | (sr & 0xf000) << 4);
                   sp = sp + 2;
                   writeRegister(SP, sp);
                   write = false;
@@ -1776,7 +1692,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	  break;
 	case AM_INDEX:
 	  // Indexed if reg != PC & CG1/CG2 - will PC be incremented?
-	  srcAddress = readRegisterCG(srcRegister, as) + read(pc, MODE_WORD);
+	  srcAddress = readRegisterCG(srcRegister, as) + currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
 //	    memory[pc] + (memory[pc + 1] << 8);
 	  // When is PC incremented - assuming immediately after "read"?
 	  
@@ -1826,16 +1742,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
         pc = readRegister(PC);
         if (dstRegister == 2) {
           /* absolute mode */
-          dstAddress = read(pc, MODE_WORD); //memory[pc] + (memory[pc + 1] << 8);
+          dstAddress = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ); //memory[pc] + (memory[pc + 1] << 8);
         } else {
           // CG here - probably not!???
           rval = readRegister(dstRegister);
           /* Support for MSP430X and below / above 64 KB */
           /* if register is pointing to <64KB then it needs to be truncated to below 64 */
           if (rval < 0xffff) {
-              dstAddress = (rval + read(pc, MODE_WORD)) & 0xffff;
+              dstAddress = (rval + currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ)) & 0xffff;
           } else {
-              dstAddress = read(pc, MODE_WORD);
+              dstAddress = currentSegment.read(pc, MODE_WORD, Memory.TYPE_READ);
               if ((dstAddress & 0x8000) > 0) {
                   dstAddress |= 0xf0000;
               }
@@ -1845,7 +1761,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         }
 
         if (op != MOV)
-          dst = read(dstAddress, word ? MODE_WORD : MODE_BYTE);
+          dst = currentSegment.read(dstAddress, word ? MODE_WORD : MODE_BYTE, Memory.TYPE_READ);
         pc += 2;
         incRegister(PC, 2);
       }
@@ -1858,7 +1774,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //        }
 //	srcAddress = srcAddress & 0xffff;
 
-	src = read(srcAddress, word ? MODE_WORD : MODE_BYTE);
+	src = currentSegment.read(srcAddress, word ? MODE_WORD : MODE_BYTE, Memory.TYPE_READ);
 
 	// 	  if (debug) {
 	// 	    System.out.println("Reading from " + getAddressAsString(srcAddress) +
@@ -2032,7 +1948,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	writeRegister(dstRegister, dst);
       } else {
 	dstAddress &= 0xffff;
-	write(dstAddress, dst, word ? MODE_WORD : MODE_BYTE);
+	currentSegment.write(dstAddress, dst, word ? MODE_WORD : MODE_BYTE);
       }
     }
     if (updateStatus) {
@@ -2105,10 +2021,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
               + "  Time: " + (long)getTimeMillis() + " msec\n");
       buf.append(" Interrupt enabled: " + interruptsEnabled +  " HighestInterrupt: " + interruptMax);
       for (int i = 0; i < MAX_INTERRUPT; i++) {
-          if (read(0xfffe - i * 2, MODE_WORD) != 0xffff) {
+          if (currentSegment.read(0xfffe - i * 2, MODE_WORD, Memory.TYPE_READ) != 0xffff) {
               buf.append(" Vector " + (MAX_INTERRUPT - i) + " at $"
                       + Utils.hex16(0xfffe - i * 2) + " -> $"
-                      + Utils.hex16(read(0xfffe - i * 2, MODE_WORD)) + "\n");
+                      + Utils.hex16(currentSegment.read(0xfffe - i * 2, MODE_WORD, Memory.TYPE_READ)) + "\n");
           }
       }
       return buf.toString();

@@ -79,6 +79,10 @@ public abstract class MSP430Config {
 
     public int infoMemStart = 0x0000;
     public int infoMemSize = 2 * 128;
+
+    public int ramStart = 0x2000;
+    public int ramSize = 2048;
+
     
     public int flashControllerOffset = 0x128;
     
@@ -90,6 +94,18 @@ public abstract class MSP430Config {
     
     public abstract int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits);
 
+    
+    public boolean isRAM(int address) {
+        return address >= ramStart && address < ramStart + ramSize;
+    }
+
+    public boolean isFlash(int address) {
+        return address >= mainFlashStart && address < mainFlashStart + mainFlashSize;
+    }
+
+    public boolean isIO(int address) {
+        return address < maxMemIO;
+    }
     
     public String getAddressAsString(int addr) {
         return Utils.hex16(addr);
@@ -111,7 +127,8 @@ public abstract class MSP430Config {
     
     /* ignored for now */
     public void ramConfig(int start, int size) {
-       
+       ramStart = start;
+       ramSize = size;
     }
     
     public void ioMemSize(int size) {

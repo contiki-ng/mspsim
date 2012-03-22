@@ -130,12 +130,12 @@ public class DMA extends IOUnit {
             /* perform memory move and possibly clear triggering flag!!! */
             /* NOTE: show config byte/word also !!! */
             if (enable) {
-                int data = cpu.read(currentSourceAddress, MSP430Constants.MODE_BYTE);
+                int data = cpu.currentSegment.read(currentSourceAddress, MSP430Constants.MODE_BYTE, Memory.TYPE_READ);
                 if (DEBUG) log("DMA Triggered reading from: " +
                         currentSourceAddress + " => " + data + " " + (char) data +
                         " size:" + size + " index:" + index);
                 trigger.clearDMATrigger(index);
-                DMA.this.cpu.write(currentDestinationAddress, data, MSP430Constants.MODE_BYTE);
+                DMA.this.cpu.currentSegment.write(currentDestinationAddress, data, MSP430Constants.MODE_BYTE);
                 
                 currentSourceAddress += srcIncr;
                 currentDestinationAddress += dstIncr;
