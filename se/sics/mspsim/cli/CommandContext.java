@@ -123,7 +123,7 @@ public class CommandContext {
   public int getArgumentAsRegister(int index) {
     String symbol = getArgument(index);
     for (int i = 0, n = MSP430Constants.REGISTER_NAMES.length; i < n; i++) {
-      if (MSP430Constants.REGISTER_NAMES[i].equals(symbol)) {
+      if (MSP430Constants.REGISTER_NAMES[i].equalsIgnoreCase(symbol)) {
         return i;
       }
     }
