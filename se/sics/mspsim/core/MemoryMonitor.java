@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,33 +27,90 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
- * CPUMonitor
+ * MemoryMonitor
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
+import se.sics.mspsim.util.ProxySupport;
 
 public interface MemoryMonitor {
 
-  public static final int MEMORY_READ = 1;
-  public static final int MEMORY_WRITE = 2;
-  public static final int EXECUTE = 5;
-  
-  
-  //public void cpuAction(int type, int adr, int data);
-
-  public void notifyReadBefore(int addr, int mode, int type);
-  public void notifyReadAfter(int addr, int mode, int type);
+  public void notifyReadBefore(int addr, int mode, Memory.AccessType type);
+  public void notifyReadAfter(int addr, int mode, Memory.AccessType type);
 
   public void notifyWriteBefore(int dstAddress, int data, int mode);
   public void notifyWriteAfter(int dstAddress, int data, int mode);
-  
+
+  public static class Adapter implements MemoryMonitor {
+
+    @Override
+    public void notifyReadBefore(int addr, int mode, Memory.AccessType type) {
+    }
+
+    @Override
+    public void notifyReadAfter(int addr, int mode, Memory.AccessType type) {
+    }
+
+    @Override
+    public void notifyWriteBefore(int dstAddress, int data, int mode) {
+    }
+
+    @Override
+    public void notifyWriteAfter(int dstAddress, int data, int mode) {
+    }
+
+  }
+
+  public static class Proxy extends ProxySupport<MemoryMonitor> implements MemoryMonitor {
+      public static final Proxy INSTANCE = new Proxy();
+
+      private Proxy() {
+      }
+
+      @Override
+      protected MemoryMonitor create(MemoryMonitor oldListener, MemoryMonitor newListener) {
+          Proxy proxy = new Proxy();
+          proxy.listeners = new MemoryMonitor[] { oldListener, newListener };
+          return proxy;
+      }
+
+      @Override
+      public void notifyReadBefore(int address, int mode, Memory.AccessType type) {
+          MemoryMonitor[] listeners = this.listeners;
+          for(MemoryMonitor listener : listeners) {
+              listener.notifyReadBefore(address, mode, type);
+          }
+      }
+
+      @Override
+      public void notifyReadAfter(int address, int mode, Memory.AccessType type) {
+          MemoryMonitor[] listeners = this.listeners;
+          for(MemoryMonitor listener : listeners) {
+              listener.notifyReadAfter(address, mode, type);
+          }
+      }
+
+      @Override
+      public void notifyWriteBefore(int dstAddress, int data, int mode) {
+          MemoryMonitor[] listeners = this.listeners;
+          for(MemoryMonitor listener : listeners) {
+              listener.notifyWriteBefore(dstAddress, data, mode);
+          }
+      }
+
+      @Override
+      public void notifyWriteAfter(int dstAddress, int data, int mode) {
+          MemoryMonitor[] listeners = this.listeners;
+          for(MemoryMonitor listener : listeners) {
+              listener.notifyWriteAfter(dstAddress, data, mode);
+          }
+      }
+
+  }
+
 }

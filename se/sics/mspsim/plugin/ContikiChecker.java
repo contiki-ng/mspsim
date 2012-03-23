@@ -40,11 +40,12 @@
 
 package se.sics.mspsim.plugin;
 import java.util.Hashtable;
+
 import se.sics.mspsim.cli.BasicAsyncCommand;
 import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.cli.CommandHandler;
-import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.Profiler;
 import se.sics.mspsim.profiler.CallListener;
 import se.sics.mspsim.util.ActiveComponent;
@@ -81,7 +82,7 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                         context.err.println("already running");
                         return 1;
                     }
-                    cpu = (MSP430) registry.getComponent(MSP430.class);
+                    cpu = registry.getComponent(MSP430.class);
                     profiler = cpu.getProfiler();
                     if (profiler == null) {
                         context.err.println("no profiler available");
@@ -91,25 +92,12 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                     profiler.addCallListener(ContikiChecker.this);
 
                     context.out.println("Installing watchpoints...");
-                    monitor = new MemoryMonitor() {
-                        public void cpuAction(int type, int adr, int data) {
-                            if (type == MemoryMonitor.MEMORY_WRITE) {
-                                context.out.println("Warning: write to " + adr +
-                                        " from " + profiler.getCall(0));
+                    monitor = new MemoryMonitor.Adapter() {
+                        @Override
+                        public void notifyWriteBefore(int dstAddress, int data, int mode) {
+                            context.out.println("Warning: write to " + dstAddress +
+                                    " from " + profiler.getCall(0));
                                 //profiler.printStackTrace(context.out);
-                            }
-                        }
-                        public void notifyReadBefore(int addr, int mode,
-                                int type) {
-                        }
-                        public void notifyReadAfter(int addr, int mode, int type) {
-                        }
-                        public void notifyWriteBefore(int dstAddress, int data,
-                                int mode) {
-                            cpuAction(MemoryMonitor.MEMORY_WRITE, dstAddress, data);
-                        }
-                        public void notifyWriteAfter(int dstAddress, int data,
-                                int mode) {
                         }
                     };
                     for (int i = 0; i < 0x100; i++) {

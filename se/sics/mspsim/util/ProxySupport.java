@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,28 +27,59 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
- * CPUMonitor
+ * ProxySupport
  *
- * Author  : Joakim Eriksson
- * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
+ * Author  : Niclas Finne
+ * Created : 22 mar 2012
  */
 
-package se.sics.mspsim.core;
+package se.sics.mspsim.util;
 
-public interface CPUMonitor {
+public abstract class ProxySupport<T> {
 
-  public static final int MEMORY_READ = 1;
-  public static final int MEMORY_WRITE = 2;
-  public static final int REGISTER_READ = 3;
-  public static final int REGISTER_WRITE = 4;
-  public static final int EXECUTE = 5;
+    protected T[] listeners;
 
-  public void cpuAction(int type, int adr, int data);
+    protected ProxySupport() {
+    }
+
+    protected ProxySupport(T[] listeners) {
+        this.listeners = listeners;
+    }
+
+    @SuppressWarnings("unchecked")
+    public T add(T oldListener, T newListener) {
+        if (oldListener == null) {
+            return newListener;
+        }
+        if (oldListener instanceof ProxySupport<?>) {
+            ProxySupport<T> proxy = (ProxySupport<T>) oldListener;
+            proxy.listeners = ArrayUtils.add((Class<T>) newListener.getClass(), proxy.listeners, newListener);
+            return oldListener;
+        }
+        return create(oldListener, newListener);
+    }
+
+    public T remove(T oldListener, T listener) {
+        if (oldListener == listener) {
+            return null;
+        }
+        if (oldListener instanceof ProxySupport<?>) {
+            @SuppressWarnings("unchecked")
+            ProxySupport<T> proxy = (ProxySupport<T>) oldListener;
+            T[] l = ArrayUtils.remove(proxy.listeners, listener);
+            if (l == null) {
+                return null;
+            }
+            if (l.length == 1) {
+                return l[0];
+            }
+            proxy.listeners = l;
+        }
+        return oldListener;
+    }
+
+    protected abstract T create(T oldListener, T newListener);
 
 }

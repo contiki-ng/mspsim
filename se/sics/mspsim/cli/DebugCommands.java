@@ -33,14 +33,15 @@
  * Created : Mon Feb 11 2008
  */
 package se.sics.mspsim.cli;
-import se.sics.mspsim.core.CPUMonitor;
 import se.sics.mspsim.core.DbgInstruction;
 import se.sics.mspsim.core.DisAsm;
 import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
-import se.sics.mspsim.chip.Memory;
+import se.sics.mspsim.core.Memory;
+import se.sics.mspsim.core.MemoryMonitor;
+import se.sics.mspsim.core.RegisterMonitor;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
@@ -66,23 +67,18 @@ public class DebugCommands implements CommandBundle {
       ch.registerCommand("break", new BasicAsyncCommand("add a breakpoint to a given address or symbol",
           "<address or symbol>") {
         private int address;
-        private CPUMonitor monitor;
+        private MemoryMonitor monitor;
         public int executeCommand(final CommandContext context) {
           address = context.getArgumentAsAddress(0);
           if (address < 0) {
             context.err.println("unknown symbol: " + context.getArgument(0));
             return 1;
           }
-          monitor = new CPUMonitor() {
-              public void notifyReadBefore(int type, int adr, int data) {
-                  context.out.println("*** Break at $" + cpu.getAddressAsString(adr));
+          monitor = new MemoryMonitor.Adapter() {
+              @Override
+              public void notifyReadBefore(int address, int mode, Memory.AccessType type) {
+                  context.out.println("*** Break at $" + cpu.getAddressAsString(address));
                   cpu.stop();
-              }
-              public void notifyReadAfter(int addr, int mode, int type) {
-              }
-              public void notifyWriteBefore(int dstAddress, int data, int mode) {
-              }
-              public void notifyWriteAfter(int dstAddress, int data, int mode) {
               }
           };
           cpu.addWatchPoint(address, monitor);
@@ -99,7 +95,7 @@ public class DebugCommands implements CommandBundle {
         int mode = 0;
         int address = 0;
         int length = 1;
-        CPUMonitor monitor;
+        MemoryMonitor monitor;
         public int executeCommand(final CommandContext context) {
           address = context.getArgumentAsAddress(0);
           if (address < 0) {
@@ -124,16 +120,16 @@ public class DebugCommands implements CommandBundle {
               context.err.println("please specify a length of at least one byte");
               return -1;
           }
-          monitor = new CPUMonitor() {
-              public void cpuAction(int type, int adr, int data) {
+          monitor = new MemoryMonitor.Adapter() {
+              private void cpuAction(Memory.AccessType type, int adr, int data) {
                   if (mode == 0 || mode == 10) {
                       int pc = cpu.getPC();
                       String adrStr = getSymOrAddr(cpu, context, adr);
                       String pcStr = getSymOrAddrELF(cpu, getELF(), pc);
                       String op = "op";
-                      if (type == MEMORY_READ) {
+                      if (type == Memory.AccessType.READ) {
                           op = "Read";
-                      } else if (type == MEMORY_WRITE){
+                      } else if (type == Memory.AccessType.WRITE){
                           op = "Write";
                       }
                       context.out.println("*** " + op + " from " + pcStr +
@@ -153,15 +149,13 @@ public class DebugCommands implements CommandBundle {
                   }
               }
 
-            public void notifyReadBefore(int addr, int mode, int type) {
-                cpuAction(CPUMonitor.MEMORY_READ, addr, 0);
+            @Override
+            public void notifyReadBefore(int addr, int mode, Memory.AccessType type) {
+                cpuAction(Memory.AccessType.READ, addr, cpu.memory[addr]);
             }
-            public void notifyReadAfter(int addr, int mode, int type) {
-            }
+            @Override
             public void notifyWriteBefore(int dstAddress, int data, int mode) {
-                cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, data);
-            }
-            public void notifyWriteAfter(int dstAddress, int data, int mode) {
+                cpuAction(Memory.AccessType.WRITE, dstAddress, data);
             }
           };
 
@@ -186,9 +180,9 @@ public class DebugCommands implements CommandBundle {
 
       ch.registerCommand("watchreg",
           new BasicAsyncCommand("add a write watch to a given register", "<register> [int]") {
-        int mode = 0;
+        int watchMode = 0;
         int register = 0;
-        CPUMonitor monitor;
+        RegisterMonitor monitor;
         public int executeCommand(final CommandContext context) {
           register = context.getArgumentAsRegister(0);
           if (register < 0) {
@@ -197,33 +191,24 @@ public class DebugCommands implements CommandBundle {
           if (context.getArgumentCount() > 1) {
             String modeStr = context.getArgument(1);
             if ("int".equals(modeStr)) {
-              mode = 1;
+              watchMode = 1;
             } else {
               context.err.println("illegal argument: " + modeStr);
               return -1;
             }
           }
-          monitor = new CPUMonitor() {
-            public void cpuAction(int type, int adr, int data) {
-              if (mode == 0) {
-                int pc = cpu.getPC();
-                String adrStr = getRegisterName(register);
-                String pcStr = getSymOrAddrELF(cpu, getELF(), pc);
-                context.out.println("*** Write from " + pcStr +
-                    ": " + adrStr + " = " + data);
-              } else {
-                context.out.println(data);
-              }
-            }
-            public void notifyReadBefore(int addr, int mode, int type) {
-                cpuAction(CPUMonitor.MEMORY_READ, addr, 0);
-            }
-            public void notifyReadAfter(int addr, int mode, int type) {
-            }
-            public void notifyWriteBefore(int dstAddress, int data, int mode) {
-                cpuAction(CPUMonitor.MEMORY_WRITE, dstAddress, data);
-            }
-            public void notifyWriteAfter(int dstAddress, int data, int mode) {
+          monitor = new RegisterMonitor.Adapter() {
+            @Override
+            public void notifyWriteBefore(int register, int data, int mode) {
+                if (watchMode == 0) {
+                    int pc = cpu.getPC();
+                    String adrStr = getRegisterName(register);
+                    String pcStr = getSymOrAddrELF(cpu, getELF(), pc);
+                    context.out.println("*** Write from " + pcStr +
+                            ": " + adrStr + " = " + data);
+                } else {
+                    context.out.println(data);
+                }
             }
           };
           cpu.addRegisterWriteMonitor(register, monitor);
@@ -362,12 +347,11 @@ public class DebugCommands implements CommandBundle {
           public int executeCommand(CommandContext context) {
             int adr = context.getArgumentAsAddress(0);
             if (adr >= 0) {
-              try {
-                context.out.println(context.getArgument(0) + " = $" +
-                        Utils.hex16(cpu.currentSegment.read(adr, adr >= 0x100 ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE, 0)));
-              } catch (Exception e) {
-                e.printStackTrace(context.err);
+              int value = cpu.memory[adr];
+              if (adr >= 0x100 && adr + 1 < cpu.MAX_MEM) {
+                  value |= cpu.memory[adr + 1] << 8;
               }
+              context.out.println(context.getArgument(0) + " = $" + Utils.hex16(value));
               return 0;
             }
             context.err.println("unknown symbol: " + context.getArgument(0));
@@ -510,7 +494,7 @@ public class DebugCommands implements CommandBundle {
          ******************************************************/
         ch.registerCommand("xmem", new BasicCommand("dump flash memory", "<start address> <num_entries> [type]") {
           public int executeCommand(final CommandContext context) {
-            Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
+            se.sics.mspsim.chip.Memory xmem = DebugCommands.this.registry.getComponent(se.sics.mspsim.chip.Memory.class, "xmem");
             if (xmem == null) {
               context.err.println("No xmem component registered");
               return 0;
@@ -546,7 +530,7 @@ public class DebugCommands implements CommandBundle {
 
         ch.registerCommand("xmset", new BasicCommand("set memory", "<address> <value> [type]") {
           public int executeCommand(final CommandContext context) {
-            Memory xmem = (Memory) DebugCommands.this.registry.getComponent("xmem");
+            se.sics.mspsim.chip.Memory xmem = DebugCommands.this.registry.getComponent(se.sics.mspsim.chip.Memory.class, "xmem");
             if (xmem == null) {
               context.err.println("No xmem component registered");
               return 0;

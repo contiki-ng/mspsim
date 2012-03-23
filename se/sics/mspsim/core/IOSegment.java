@@ -1,21 +1,17 @@
 package se.sics.mspsim.core;
 
-import se.sics.mspsim.util.Utils;
-
 public class IOSegment implements Memory {
 
-    int memory[];
-    MSP430Core core;
-    int mask;
-    
+    private final MSP430Core core;
+    private final int mask;
+
     IOSegment(MSP430Core core, int mask) {
         this.core = core;
-        memory = core.memory;
         this.mask = mask;
     }
-    
+
     @Override
-    public int read(int address, int mode, int type) throws EmulationException {
+    public int read(int address, int mode, AccessType type) throws EmulationException {
         if ((address & 0xfff00) != mask) {
             core.currentSegment = core.memorySegments[address >> 8];
             return core.currentSegment.read(address, mode, type);

@@ -42,12 +42,16 @@ package se.sics.mspsim.core;
 
 public interface Memory {
 
-    public static int SEGMENT_SIZE = 256;
-    public static int TYPE_READ = 1; /* normal read */
-    public static int TYPE_EXECUTE = 2; /* instruction execution read */
-    public static int TYPE_ARG = 3; /* arguments for execution */
-    
-    public int read(int address, int mode, int type) throws EmulationException;
+    public enum AccessType {
+        READ,    /* normal read */
+        EXECUTE, /* instruction execution read */
+        ARG,     /* arguments for execution */
+        WRITE    /* write */
+    };
+
+    public static final int SEGMENT_SIZE = 256;
+
+    public int read(int address, int mode, AccessType type) throws EmulationException;
     public void write(int dstAddress, int dst, int mode) throws EmulationException;
 
 }

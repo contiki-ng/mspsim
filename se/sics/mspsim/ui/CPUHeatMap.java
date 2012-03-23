@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JComponent;
 import javax.swing.Timer;
 
+import se.sics.mspsim.core.Memory;
 import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.MSP430Core;
 
@@ -114,18 +115,18 @@ public class CPUHeatMap extends JComponent implements MemoryMonitor {
         g.drawImage(heatmap, 0, 0, getWidth(), getHeight(), this);
     }
 
-    public void cpuAction(int type, int adr, int data) {
+    private void cpuAction(int adr, Memory.AccessType type) {
         int val = 0;
         int f = 1;
         if (mode == 1) f = 40;
         switch (type) {
-        case MemoryMonitor.EXECUTE:
+        case EXECUTE:
             val = heatE[adr] = heatE[adr] + f;
             break;
-        case MemoryMonitor.MEMORY_READ:
+        case READ:
             val = heatR[adr] = heatR[adr] + f;
             break;
-        case MemoryMonitor.MEMORY_WRITE:
+        case WRITE:
             val = heatW[adr] = heatW[adr] + f;
             break;
         }
@@ -135,27 +136,21 @@ public class CPUHeatMap extends JComponent implements MemoryMonitor {
     }
 
     @Override
-    public void notifyReadBefore(int addr, int mode, int type) {
-        // TODO Auto-generated method stub
-        
+    public void notifyReadBefore(int addr, int mode, Memory.AccessType type) {
+        cpuAction(addr, type);
     }
 
     @Override
-    public void notifyReadAfter(int addr, int mode, int type) {
-        // TODO Auto-generated method stub
-        
+    public void notifyReadAfter(int addr, int mode, Memory.AccessType type) {
     }
 
     @Override
     public void notifyWriteBefore(int dstAddress, int data, int mode) {
-        // TODO Auto-generated method stub
-        
+        cpuAction(dstAddress, Memory.AccessType.WRITE);
     }
 
     @Override
     public void notifyWriteAfter(int dstAddress, int data, int mode) {
-        // TODO Auto-generated method stub
-        
     }
 
 }

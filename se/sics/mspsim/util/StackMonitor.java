@@ -1,11 +1,9 @@
 package se.sics.mspsim.util;
-
-import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.RegisterMonitor;
 
-public class StackMonitor {//implements CPUMonitor {
+public class StackMonitor {
 
-  private MSP430 cpu;
   private int heapStartAddress;
   private int stackStartAddress;
 
@@ -46,14 +44,12 @@ public class StackMonitor {//implements CPUMonitor {
   };
   
   public StackMonitor(MSP430 cpu) {
-    this.cpu = cpu;
-//    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
-    Object p = cpu.getRegistry().getComponent("profiler");
-    if (p instanceof SimpleProfiler) {
-        ((SimpleProfiler) p).setStackMonitor(this);
-        System.out.println("Found simple profiler!!!: " + p);
+    SimpleProfiler profiler = cpu.getRegistry().getComponent(SimpleProfiler.class);
+    if (profiler != null) {
+        profiler.setStackMonitor(this);
+        System.out.println("Found simple profiler!!!: " + profiler);
     } else {
-        System.out.println("Could not find simple profiler: " + p);
+        System.out.println("Could not find any suitable profiler");
     }
     if (cpu.getDisAsm() != null) {
       MapTable mapTable = cpu.getDisAsm().getMap();
@@ -62,6 +58,24 @@ public class StackMonitor {//implements CPUMonitor {
         this.stackStartAddress = mapTable.stackStartAddress;
       }
     }
+    cpu.addRegisterWriteMonitor(MSP430.SP, new RegisterMonitor.Adapter() {
+
+        @Override
+        public void notifyWriteBefore(int reg, int data, int mode) {
+            // TODO add support for 20 bit addresses
+            stack = ((stackStartAddress - data) + 0xffff) & 0xffff;
+            if (stack > stackMax) {
+              stackMax = stack;
+            }
+            if (stack < stackMin) {
+              stackMin = stack;
+            }
+            if (stack > profStackMax) {
+                profStackMax = stack;
+            }
+        }
+
+    });
   }
 
   public int getStackStart() {
@@ -100,16 +114,4 @@ public class StackMonitor {//implements CPUMonitor {
       return stack;
   }
   
-  public void cpuAction(int type, int adr, int data) {
-    stack = ((stackStartAddress - data) + 0xffff) & 0xffff;
-    if (stack > stackMax) {
-      stackMax = stack;
-    }
-    if (stack < stackMin) {
-      stackMin = stack;
-    }
-    if (stack > profStackMax) {
-        profStackMax = stack;
-    }
-  }
 }

@@ -2,20 +2,20 @@ package se.sics.mspsim.core;
 
 public class FlashSegment implements Memory {
 
-    int memory[];
-    MSP430Core core;
-    int mask;
-    private Flash flash;
+    private final MSP430Core core;
+    private final int memory[];
+    private final int mask;
+    private final Flash flash;
 
     public FlashSegment(MSP430Core core, Flash flash, int mask) {
         this.core = core;
-        memory = core.memory;
+        this.memory = core.memory;
         this.mask = mask;
         this.flash = flash;
     }
 
     @Override
-    public int read(int address, int mode, int type) throws EmulationException {
+    public int read(int address, int mode, AccessType type) throws EmulationException {
         if ((address & 0xfff00) != mask) {
             core.currentSegment = core.memorySegments[address >> 8];
             return core.currentSegment.read(address, mode, type);

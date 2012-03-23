@@ -43,8 +43,8 @@ import java.awt.Graphics;
 
 import javax.swing.JPanel;
 
-import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.RegisterMonitor;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.ServiceComponent;
@@ -56,7 +56,7 @@ public class StackUI extends JPanel implements ServiceComponent {
   private static final int STACK_FRAME = 1024;
   private int updateCyclePeriod = 2500;
 
-  private MSP430 cpu;
+  private final MSP430 cpu;
   private int heapStartAddress;
   private int stackStartAddress = 0xa00;
   private ChartPanel chartPanel;
@@ -80,6 +80,7 @@ public class StackUI extends JPanel implements ServiceComponent {
   private ComponentRegistry registry;
 
   private ManagedWindow window;
+  private RegisterMonitor registerMonitor;
 
   private String name;
 
@@ -91,7 +92,6 @@ public class StackUI extends JPanel implements ServiceComponent {
     super(new BorderLayout());
     this.updateCyclePeriod = updateCyclePeriod;
     this.cpu = cpu;
-//    this.cpu.addRegisterWriteMonitor(MSP430.SP, this);
 
     if (cpu.getDisAsm() != null) {
       MapTable mapTable = cpu.getDisAsm().getMap();
@@ -133,11 +133,36 @@ public class StackUI extends JPanel implements ServiceComponent {
       setSize(320, 200);
       setMinimumSize(new Dimension(320, 200));
       
-      WindowManager wm = (WindowManager) registry.getComponent("windowManager");
+      WindowManager wm = registry.getComponent(WindowManager.class);
       if (wm != null) {
           window = wm.createWindow("stackui");
           window.add(this);
       }
+
+      registerMonitor = new RegisterMonitor.Adapter() {
+          @Override
+          public void notifyWriteBefore(int type, int adr, int data) {
+              int size = ((stackStartAddress - data) + 0xffff) % 0xffff;
+              if (minData[pos] > size) {
+                  minData[pos] = size;
+              }
+              if (maxData[pos] < size) {
+                  maxData[pos] = size;
+              }
+              if (cpu.cpuCycles - lastCycles > updateCyclePeriod) {
+                  lastCycles = cpu.cpuCycles;
+//                    System.out.println("STACK UPDATE: " + type + "," + adr + "," + data + "," + pos);
+                  pos = (pos + 1) % minData.length;
+                  minData[pos] = Integer.MAX_VALUE;
+                  maxData[pos] = 0;
+                  update = true;
+                  repaint();
+//                    this.notes[pos] = null;
+//                    diagram.setData(0, this.minData, pos, this.minData.length);
+//                    diagram.setDataWithNotes(1, this.maxData, notes, pos, this.maxData.length);
+              }
+          }
+      };
   }
 
   public void paint(Graphics g) {
@@ -163,32 +188,6 @@ public class StackUI extends JPanel implements ServiceComponent {
     }
   }
 
-  // -------------------------------------------------------------------
-  // CPUMonitor
-  // -------------------------------------------------------------------
-
-  public void cpuAction(int type, int adr, int data) {
-    int size = ((stackStartAddress - data) + 0xffff) % 0xffff;
-    if (this.minData[pos] > size) {
-      this.minData[pos] = size;
-    }
-    if (this.maxData[pos] < size) {
-      this.maxData[pos] = size;
-    }
-    if (cpu.cpuCycles - lastCycles > updateCyclePeriod) {
-      lastCycles = cpu.cpuCycles;
-//      System.out.println("STACK UPDATE: " + type + "," + adr + "," + data + "," + pos);
-      pos = (pos + 1) % this.minData.length;
-      this.minData[pos] = Integer.MAX_VALUE;
-      this.maxData[pos] = 0;
-      update = true;
-      repaint();
-//      this.notes[pos] = null;
-//      diagram.setData(0, this.minData, pos, this.minData.length);
-//      diagram.setDataWithNotes(1, this.maxData, notes, pos, this.maxData.length);
-    }
-  }
-
   public Status getStatus() {
     return status;
   }
@@ -205,12 +204,16 @@ public class StackUI extends JPanel implements ServiceComponent {
   public void start() {
     setup();
     status = Status.STARTED;
+    cpu.addRegisterWriteMonitor(MSP430.SP, registerMonitor);
     window.setVisible(true);
   }
 
   public void stop() {
     status = Status.STOPPED;
     window.setVisible(false);
+    if (registerMonitor != null) {
+        cpu.addRegisterWriteMonitor(MSP430.SP, registerMonitor);
+    }
   }
 
 }
