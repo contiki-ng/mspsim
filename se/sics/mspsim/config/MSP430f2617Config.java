@@ -66,6 +66,11 @@ public class MSP430f2617Config extends MSP430Config {
         UARTConfig uA1 = new UARTConfig(16, 17, 1, 0, 6, 0xD0, "USCI A1", true);
         UARTConfig uB1 = new UARTConfig(16, 17, 3, 2, 6, 0xD0, "USCI B1", false);
         uartConfig = new UARTConfig[] {uA0, uB0, uA1, uB1};
+
+        /* configure memory */
+        infoMemConfig(0x1000, 128 * 2);
+        mainFlashConfig(0x3100, 92 * 1024);
+        ramConfig(0x1100, 8 * 1024);
     }
 
     public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {
