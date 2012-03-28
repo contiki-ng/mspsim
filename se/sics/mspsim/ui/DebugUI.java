@@ -130,7 +130,7 @@ public class DebugUI extends JPanel {
       int pc = cpu.reg[MSP430Core.PC];
       if (pc < startPos || pc > endPos) {
 	startPos = pc;
-	// recalulate index!!! with PC at the top of the "page"
+	// recalculate index!!! with PC at the top of the "page"
 	int currentPos = pc;
 	DbgInstruction inst;
 	for (int i = 0, n = size; i < n; i++) {

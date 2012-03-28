@@ -40,6 +40,8 @@ import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.Memory;
+import se.sics.mspsim.core.Memory.AccessMode;
+import se.sics.mspsim.core.Memory.AccessType;
 import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.RegisterMonitor;
 import se.sics.mspsim.platform.GenericNode;
@@ -76,7 +78,7 @@ public class DebugCommands implements CommandBundle {
           }
           monitor = new MemoryMonitor.Adapter() {
               @Override
-              public void notifyReadBefore(int address, int mode, Memory.AccessType type) {
+              public void notifyReadBefore(int address, AccessMode mode, AccessType type) {
                   context.out.println("*** Break at $" + cpu.getAddressAsString(address));
                   cpu.stop();
               }
@@ -121,15 +123,15 @@ public class DebugCommands implements CommandBundle {
               return -1;
           }
           monitor = new MemoryMonitor.Adapter() {
-              private void cpuAction(Memory.AccessType type, int adr, int data) {
+              private void cpuAction(AccessType type, int adr, int data) {
                   if (mode == 0 || mode == 10) {
                       int pc = cpu.getPC();
                       String adrStr = getSymOrAddr(cpu, context, adr);
                       String pcStr = getSymOrAddrELF(cpu, getELF(), pc);
                       String op = "op";
-                      if (type == Memory.AccessType.READ) {
+                      if (type == AccessType.READ) {
                           op = "Read";
-                      } else if (type == Memory.AccessType.WRITE){
+                      } else if (type == AccessType.WRITE){
                           op = "Write";
                       }
                       context.out.println("*** " + op + " from " + pcStr +
@@ -139,8 +141,9 @@ public class DebugCommands implements CommandBundle {
                       }
                   } else {
                       if (length > 1) {
+                          Memory mem = cpu.getMemory();
                           for (int i = address; i < address + length; i++) {
-                              context.out.print(Utils.toString(cpu.memory[i], Utils.BYTE, mode));
+                              context.out.print(Utils.toString(mem.get(i, AccessMode.BYTE), Utils.BYTE, mode));
                           }
                           context.out.println();
                       } else {
@@ -150,12 +153,12 @@ public class DebugCommands implements CommandBundle {
               }
 
             @Override
-            public void notifyReadBefore(int addr, int mode, Memory.AccessType type) {
-                cpuAction(Memory.AccessType.READ, addr, cpu.memory[addr]);
+            public void notifyReadBefore(int addr, AccessMode mode, AccessType type) {
+                cpuAction(AccessType.READ, addr, cpu.getMemory().get(addr, mode));
             }
             @Override
-            public void notifyWriteBefore(int dstAddress, int data, int mode) {
-                cpuAction(Memory.AccessType.WRITE, dstAddress, data);
+            public void notifyWriteBefore(int dstAddress, int data, AccessMode mode) {
+                cpuAction(AccessType.WRITE, dstAddress, data);
             }
           };
 
@@ -238,10 +241,11 @@ public class DebugCommands implements CommandBundle {
           } else {
               for (MapEntry mapEntry : entries) {
                   int address = mapEntry.getAddress();
-                  context.out.println(" " + mapEntry.getName() + " at $" +
-                          cpu.getAddressAsString(address) + " (" + Utils.hex8(cpu.memory[address]) +
-                          " " + Utils.hex8(cpu.memory[address + 1]) + ") " + mapEntry.getType() +
-                          " in file " + mapEntry.getFile());
+                  context.out.println(" " + mapEntry.getName() + " at $"
+                          + cpu.getAddressAsString(address) + " ($"
+                          + Utils.hex8(cpu.getMemory().get(address, AccessMode.BYTE))
+                          + ' ' + Utils.hex8(cpu.getMemory().get(address + 1, AccessMode.BYTE)) + ") "
+                          + mapEntry.getType() + " in file " + mapEntry.getFile());
               }
           }
           return 0;
@@ -472,17 +476,18 @@ public class DebugCommands implements CommandBundle {
             for (int i = typeRead ? 2 : 1; i < count; i++) {
               if (mode == Utils.DEC) {
                 int val = context.getArgumentAsInt(i);
-                boolean word = Utils.size(type) == 2 | val > 0xff;
+                AccessMode accessMode = Utils.size(type) == 2 || val > 0xff ? AccessMode.WORD : AccessMode.BYTE;
                 try {
-                  cpu.currentSegment.write(adr, val, word ? MSP430Constants.MODE_WORD : MSP430Constants.MODE_BYTE);
-                  adr += word ? 2 : 1;
+                  cpu.getMemory().set(adr, val, accessMode);
+                  adr += accessMode.bytes;
                 } catch (EmulationException e) {
                   e.printStackTrace(context.out);
                 }
               } else if (mode == Utils.ASCII) {
                 String data = context.getArgument(i);
+                Memory mem = cpu.getMemory();
                 for (int j = 0; j < data.length(); j++) {
-                  cpu.currentSegment.write(adr++, data.charAt(j) & 0xff, MSP430Constants.MODE_WORD);
+                  mem.set(adr++, data.charAt(j), AccessMode.BYTE);
                 }
               }
             }

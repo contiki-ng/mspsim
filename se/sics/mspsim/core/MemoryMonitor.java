@@ -40,28 +40,28 @@ import se.sics.mspsim.util.ProxySupport;
 
 public interface MemoryMonitor {
 
-  public void notifyReadBefore(int addr, int mode, Memory.AccessType type);
-  public void notifyReadAfter(int addr, int mode, Memory.AccessType type);
+  public void notifyReadBefore(int addr, Memory.AccessMode mode, Memory.AccessType type);
+  public void notifyReadAfter(int addr, Memory.AccessMode mode, Memory.AccessType type);
 
-  public void notifyWriteBefore(int dstAddress, int data, int mode);
-  public void notifyWriteAfter(int dstAddress, int data, int mode);
+  public void notifyWriteBefore(int dstAddress, int data, Memory.AccessMode mode);
+  public void notifyWriteAfter(int dstAddress, int data, Memory.AccessMode mode);
 
   public static class Adapter implements MemoryMonitor {
 
     @Override
-    public void notifyReadBefore(int addr, int mode, Memory.AccessType type) {
+    public void notifyReadBefore(int addr, Memory.AccessMode mode, Memory.AccessType type) {
     }
 
     @Override
-    public void notifyReadAfter(int addr, int mode, Memory.AccessType type) {
+    public void notifyReadAfter(int addr, Memory.AccessMode mode, Memory.AccessType type) {
     }
 
     @Override
-    public void notifyWriteBefore(int dstAddress, int data, int mode) {
+    public void notifyWriteBefore(int dstAddress, int data, Memory.AccessMode mode) {
     }
 
     @Override
-    public void notifyWriteAfter(int dstAddress, int data, int mode) {
+    public void notifyWriteAfter(int dstAddress, int data, Memory.AccessMode mode) {
     }
 
   }
@@ -80,7 +80,7 @@ public interface MemoryMonitor {
       }
 
       @Override
-      public void notifyReadBefore(int address, int mode, Memory.AccessType type) {
+      public void notifyReadBefore(int address, Memory.AccessMode mode, Memory.AccessType type) {
           MemoryMonitor[] listeners = this.listeners;
           for(MemoryMonitor listener : listeners) {
               listener.notifyReadBefore(address, mode, type);
@@ -88,7 +88,7 @@ public interface MemoryMonitor {
       }
 
       @Override
-      public void notifyReadAfter(int address, int mode, Memory.AccessType type) {
+      public void notifyReadAfter(int address, Memory.AccessMode mode, Memory.AccessType type) {
           MemoryMonitor[] listeners = this.listeners;
           for(MemoryMonitor listener : listeners) {
               listener.notifyReadAfter(address, mode, type);
@@ -96,7 +96,7 @@ public interface MemoryMonitor {
       }
 
       @Override
-      public void notifyWriteBefore(int dstAddress, int data, int mode) {
+      public void notifyWriteBefore(int dstAddress, int data, Memory.AccessMode mode) {
           MemoryMonitor[] listeners = this.listeners;
           for(MemoryMonitor listener : listeners) {
               listener.notifyWriteBefore(dstAddress, data, mode);
@@ -104,7 +104,7 @@ public interface MemoryMonitor {
       }
 
       @Override
-      public void notifyWriteAfter(int dstAddress, int data, int mode) {
+      public void notifyWriteAfter(int dstAddress, int data, Memory.AccessMode mode) {
           MemoryMonitor[] listeners = this.listeners;
           for(MemoryMonitor listener : listeners) {
               listener.notifyWriteAfter(dstAddress, data, mode);

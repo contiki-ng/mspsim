@@ -142,7 +142,7 @@ public class IHexReader {
 // 		       " T ^ F => " + (false ^ true));
 
     MSP430 cpu = new MSP430(0, new ComponentRegistry(), new MSP430f1611Config());
-    int[] memory = cpu.getMemory();
+    int[] memory = cpu.memory;
     reader.readFile(memory, args[0]);
     cpu.reset();
     cpu.cpuloop();

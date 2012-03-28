@@ -98,7 +98,7 @@ public class Test implements USARTListener {
     }
 
     try {
-      int[] memory = cpu.getMemory();
+      int[] memory = cpu.memory;
       ELF elf = ELF.readELF(args[index++]);
       elf.loadPrograms(memory);
       MapTable map = elf.getMap();

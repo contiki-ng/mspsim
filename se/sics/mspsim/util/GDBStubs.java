@@ -47,8 +47,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import se.sics.mspsim.core.EmulationException;
-import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.Memory;
 
 public class GDBStubs implements Runnable {
 
@@ -160,12 +160,13 @@ public class GDBStubs implements Runnable {
             int addr = Integer.decode("0x" + parts[0]);
             int len = Integer.decode("0x" + parts[1]);
             String data = "";
+            Memory mem = cpu.getMemory();
             if (c == 'm') {
                 System.out.println("Returning memory from: " + addr + " len = "
                         + len);
                 /* This might be wrong - which is the correct byte order? */
                 for (int i = 0; i < len; i++) {
-                    data += Utils.hex8(cpu.memory[addr++] & 0xff);
+                    data += Utils.hex8(mem.get(addr++, Memory.AccessMode.BYTE));
                 }
                 sendResponse(data);
             } else {
@@ -176,7 +177,7 @@ public class GDBStubs implements Runnable {
                 for (int i = 0; i < len; i++) {
                     System.out.println("Writing: " + cmdBytes[cPos] + " to "
                             + addr + " cpos=" + cPos);
-                    cpu.currentSegment.write(addr++, cmdBytes[cPos++], MSP430Constants.MODE_BYTE);
+                    mem.set(addr++, cmdBytes[cPos++], Memory.AccessMode.BYTE);
                 }
                 sendResponse(OK);
             }
@@ -226,7 +227,7 @@ public class GDBStubs implements Runnable {
         int cs = 0;
         if (resp != null) {
             for (int i = 0; i < resp.length(); i++) {
-                output.write((char) resp.charAt(i));
+                output.write(resp.charAt(i));
                 System.out.print(resp.charAt(i));
                 cs += resp.charAt(i);
             }

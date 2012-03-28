@@ -45,6 +45,7 @@ import se.sics.mspsim.cli.BasicAsyncCommand;
 import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.Memory.AccessMode;
 import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.Profiler;
 import se.sics.mspsim.profiler.CallListener;
@@ -94,7 +95,7 @@ public class ContikiChecker implements CallListener, ActiveComponent {
                     context.out.println("Installing watchpoints...");
                     monitor = new MemoryMonitor.Adapter() {
                         @Override
-                        public void notifyWriteBefore(int dstAddress, int data, int mode) {
+                        public void notifyWriteBefore(int dstAddress, int data, AccessMode mode) {
                             context.out.println("Warning: write to " + dstAddress +
                                     " from " + profiler.getCall(0));
                                 //profiler.printStackTrace(context.out);

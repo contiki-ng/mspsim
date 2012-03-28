@@ -103,6 +103,10 @@ public abstract class MSP430Config {
         return address >= mainFlashStart && address < mainFlashStart + mainFlashSize;
     }
 
+    public boolean isInfoMem(int address) {
+        return address >= infoMemStart && address < infoMemStart + infoMemSize;
+    }
+
     public boolean isIO(int address) {
         return address < maxMemIO;
     }

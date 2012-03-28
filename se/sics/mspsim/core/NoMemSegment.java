@@ -3,33 +3,32 @@ package se.sics.mspsim.core;
 public class NoMemSegment implements Memory {
 
     private final MSP430Core core;
-    private final int mask;
 
-    NoMemSegment(MSP430Core core, int mask) {
+    NoMemSegment(MSP430Core core) {
         this.core = core;
-        this.mask = mask;
     }
 
     @Override
-    public int read(int address, int mode, AccessType type) throws EmulationException {
-        if ((address & 0xfff00) != mask) {
-            core.currentSegment = core.memorySegments[address >> 8];
-            return core.currentSegment.read(address, mode, type);
-        }
-//        core.printWarning(MSP430Constants., address);
-        System.out.println("WARNING - no memory to read from...");
-        return 0;
+    public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
+        throw new EmulationException("Illegal read - out of bounds at $" + core.config.getAddressAsString(address));
+//        core.printWarning(MSP430Constants.ADDRESS_OUT_OF_BOUNDS_READ, address);
+//        return 0;
     }
 
     @Override
-    public void write(int dstAddress, int dst, int mode)
-            throws EmulationException {
-        if ((dstAddress & 0xfff00) != mask) {
-            core.currentSegment = core.memorySegments[dstAddress >> 8];
-            core.currentSegment.write(dstAddress, dst, mode);
-            return;
-        }
-        System.out.println("WARNING - no memory to write to...");
+    public void write(int dstAddress, int dst, AccessMode mode) throws EmulationException {
+        throw new EmulationException("Illegal write - out of bounds at $" + core.config.getAddressAsString(dstAddress));
+        // core.printWarning(MSP430Constants.ADDRESS_OUT_OF_BOUNDS_WRITE, dstAddress);
+    }
+
+    @Override
+    public int get(int address, AccessMode mode) {
+        return read(address, mode, AccessType.READ);
+    }
+
+    @Override
+    public void set(int address, int data, AccessMode mode) {
+        write(address, data, mode);
     }
 
 }

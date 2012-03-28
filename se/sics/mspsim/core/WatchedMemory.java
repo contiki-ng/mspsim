@@ -1,36 +1,25 @@
 package se.sics.mspsim.core;
-import se.sics.mspsim.util.ArrayUtils;
 
 public class WatchedMemory implements Memory {
 
-    private final MSP430Core core;
     private final int start;
     private final Memory wrappedMemory;
-    private final MemoryMonitor watchPoints[][] = new MemoryMonitor[Memory.SEGMENT_SIZE][];
+    private final MemoryMonitor watchPoints[] = new MemoryMonitor[Memory.SEGMENT_SIZE];
 
-    WatchedMemory(MSP430Core core, int start, Memory wrapped) {
-        this.core = core;
+    WatchedMemory(int start, Memory wrapped) {
         this.start = start;
         this.wrappedMemory = wrapped;
     }
-    
+
     @Override
-    public int read(int address, int mode, AccessType type) throws EmulationException {
-        if ((address & 0xfff00) != start) {
-            core.currentSegment = core.memorySegments[address >> 8];
-            return core.currentSegment.read(address, mode, type);
-        }
-        int a = address - start;
+    public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
+        final int a = address - start;
         int val;
-        MemoryMonitor mons[] = watchPoints[a];
-        if (mons != null) {
-            for(MemoryMonitor mon : mons){
-                mon.notifyReadBefore(address, mode, type);
-            }
+        MemoryMonitor mon = watchPoints[a];
+        if (mon != null) {
+            mon.notifyReadBefore(address, mode, type);
             val = wrappedMemory.read(address, mode, type);
-            for(MemoryMonitor mon : mons){
-                mon.notifyReadAfter(address, mode, type);
-            }
+            mon.notifyReadAfter(address, mode, type);
         } else {
             val = wrappedMemory.read(address, mode, type);
         }
@@ -38,42 +27,41 @@ public class WatchedMemory implements Memory {
     }
 
     @Override
-    public void write(int dstAddress, int dst, int mode) throws EmulationException {
-        if ((dstAddress & 0xfff00) != start) {
-            core.currentSegment = core.memorySegments[dstAddress >> 8];
-            core.currentSegment.write(dstAddress, dst, mode);
-            return;
-        }
-        int a = dstAddress - start;
-        MemoryMonitor mons[] = watchPoints[a];
-        if (mons != null) {
-            for(MemoryMonitor mon : mons){
-                mon.notifyWriteBefore(dstAddress, dst, mode);
-            }
+    public void write(int dstAddress, int dst, AccessMode mode) throws EmulationException {
+        final int a = dstAddress - start;
+        final MemoryMonitor mon = watchPoints[a];
+        if (mon != null) {
+            mon.notifyWriteBefore(dstAddress, dst, mode);
             wrappedMemory.write(dstAddress, dst, mode);
-            for(MemoryMonitor mon : mons){
-                mon.notifyWriteAfter(dstAddress, dst, mode);
-            }
+            mon.notifyWriteAfter(dstAddress, dst, mode);
         } else {
             wrappedMemory.write(dstAddress, dst, mode);
         }
     }
 
+    @Override
+    public int get(int address, AccessMode mode) {
+        return wrappedMemory.get(address, mode);
+    }
+
+    @Override
+    public void set(int address, int data, AccessMode mode) {
+        wrappedMemory.set(address, data, mode);
+    }
+
     public boolean hasWatchPoint(int address) {
-        MemoryMonitor[] monitors = watchPoints[address - start];
-        return monitors != null;
+        MemoryMonitor mon = watchPoints[address - start];
+        return mon != null;
     }
 
     public synchronized void addWatchPoint(int address, MemoryMonitor mon) {
-        MemoryMonitor[] monitors = watchPoints[address - start];
-        monitors = ArrayUtils.add(MemoryMonitor.class, monitors, mon);
-        watchPoints[address - start] = monitors;
+        final int a = address - start;
+        watchPoints[a] = MemoryMonitor.Proxy.INSTANCE.add(watchPoints[a], mon);
     }
 
     public synchronized void removeWatchPoint(int address, MemoryMonitor mon) {
-        MemoryMonitor[] monitors = watchPoints[address - start];
-        monitors = ArrayUtils.remove(monitors, mon);
-        watchPoints[address - start] = monitors;
+        final int a = address - start;
+        watchPoints[a] = MemoryMonitor.Proxy.INSTANCE.remove(watchPoints[a], mon);
     }
 
 }

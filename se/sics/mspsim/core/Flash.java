@@ -37,6 +37,7 @@ package se.sics.mspsim.core;
 
 import java.util.Arrays;
 
+import se.sics.mspsim.core.Memory.AccessMode;
 import se.sics.mspsim.util.Utils;
 
 public class Flash extends IOUnit {
@@ -244,7 +245,7 @@ public class Flash extends IOUnit {
     return false;
   }
   
-  public void flashWrite(int address, int data, boolean word) {
+  public void flashWrite(int address, int data, AccessMode dataMode) {
     int wait_time = -1;
     
     if (locked) {
@@ -321,11 +322,16 @@ public class Flash extends IOUnit {
       }
       /* Flash memory allows clearing bits only */
       memory[address] &= data & 0xff;
-      if (word) {
+      if (dataMode != AccessMode.BYTE) {
           memory[address + 1] &= (data >> 8) & 0xff;
+          if (dataMode == AccessMode.WORD20) {
+              /* TODO should the write really write the full word? CHECK THIS */
+              memory[address + 2] &= (data >> 16) & 0xff;
+              memory[address + 3] &= (data >> 24) & 0xff;
+          }
       }
       if (DEBUG) {
-        log("Writing " + data + " to $" + Utils.hex16(address));
+        log("Writing $" + Utils.hex20(data) + " to $" + Utils.hex16(address) + " (" + dataMode.bytes + " bytes)");
       }
       waitFlashProcess(wait_time);
       break;
@@ -341,7 +347,7 @@ public class Flash extends IOUnit {
       if (wait == false && currentWriteMode == WriteMode.WRITE_BLOCK) {
 	log("Reading flash prohibited. Would read 0x3fff!!!"); 
 	log("CPU PC=$" + Utils.hex16(cpu.getPC()) 
-	    + " read address=" + Utils.hex16(address));
+	    + " read address $" + Utils.hex16(address));
       }
     }
   }

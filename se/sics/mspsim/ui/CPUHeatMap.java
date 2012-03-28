@@ -136,21 +136,21 @@ public class CPUHeatMap extends JComponent implements MemoryMonitor {
     }
 
     @Override
-    public void notifyReadBefore(int addr, int mode, Memory.AccessType type) {
+    public void notifyReadBefore(int addr, Memory.AccessMode mode, Memory.AccessType type) {
         cpuAction(addr, type);
     }
 
     @Override
-    public void notifyReadAfter(int addr, int mode, Memory.AccessType type) {
+    public void notifyReadAfter(int addr, Memory.AccessMode mode, Memory.AccessType type) {
     }
 
     @Override
-    public void notifyWriteBefore(int dstAddress, int data, int mode) {
+    public void notifyWriteBefore(int dstAddress, int data, Memory.AccessMode mode) {
         cpuAction(dstAddress, Memory.AccessType.WRITE);
     }
 
     @Override
-    public void notifyWriteAfter(int dstAddress, int data, int mode) {
+    public void notifyWriteAfter(int dstAddress, int data, Memory.AccessMode mode) {
     }
 
 }

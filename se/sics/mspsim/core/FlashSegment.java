@@ -4,35 +4,48 @@ public class FlashSegment implements Memory {
 
     private final MSP430Core core;
     private final int memory[];
-    private final int mask;
     private final Flash flash;
 
-    public FlashSegment(MSP430Core core, Flash flash, int mask) {
+    public FlashSegment(MSP430Core core, Flash flash) {
         this.core = core;
         this.memory = core.memory;
-        this.mask = mask;
         this.flash = flash;
     }
 
     @Override
-    public int read(int address, int mode, AccessType type) throws EmulationException {
-        if ((address & 0xfff00) != mask) {
-            core.currentSegment = core.memorySegments[address >> 8];
-            return core.currentSegment.read(address, mode, type);
-        }
-        
-        int val = 0;
-        if (core.isFlashBusy && flash.addressInFlash(address)) {
+    public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
+        if (core.isFlashBusy) {
             flash.notifyRead(address);
         }
 
-        val = memory[address] & 0xff;
-        if (mode > MSP430Constants.MODE_BYTE) {
+        int val = memory[address] & 0xff;
+        if (mode != AccessMode.BYTE) {
+            val |= (memory[address + 1] & 0xff) << 8;
+            if ((address & 1) != 0) {
+                core.printWarning(MSP430Constants.MISALIGNED_READ, address);
+            }
+            if (mode == AccessMode.WORD20) {
+                /* will the read really get data from the full word? CHECK THIS */
+                val |= (memory[address + 2] & 0xf) << 16;
+            }
+        }
+        return val;
+    }
+
+    @Override
+    public void write(int dstAddress, int data, AccessMode mode) throws EmulationException {
+        flash.flashWrite(dstAddress, data, mode);
+    }
+
+    @Override
+    public int get(int address, AccessMode mode) {
+        int val = memory[address] & 0xff;
+        if (mode != AccessMode.BYTE) {
             val |= (memory[address + 1] << 8);
             if ((address & 1) != 0) {
                 core.printWarning(MSP430Constants.MISALIGNED_READ, address);
             }
-            if (mode == MSP430Constants.MODE_WORD20) {
+            if (mode == AccessMode.WORD20) {
                 /* will the read really get data from the full word? CHECK THIS */
                 val |= (memory[address + 2] << 16) | (memory[address + 3] << 24);
                 val &= 0xfffff;
@@ -44,20 +57,8 @@ public class FlashSegment implements Memory {
     }
 
     @Override
-    public void write(int dstAddress, int dst, int mode)
-            throws EmulationException {
-        if ((dstAddress & 0xfff00) != mask) {
-            core.currentSegment = core.memorySegments[dstAddress >> 8];
-            core.currentSegment.write(dstAddress, dst, mode);
-            return;
-        }
-        
-        boolean word = mode != MSP430Constants.MODE_BYTE;
-
-        flash.flashWrite(dstAddress, dst & 0xffff, word);
-        if (mode > MSP430Constants.MODE_WORD) {
-            flash.flashWrite(dstAddress + 2, dst >> 16, word);
-        }
+    public void set(int address, int data, AccessMode mode) {
+        write(address, data, mode);
     }
 
 }
