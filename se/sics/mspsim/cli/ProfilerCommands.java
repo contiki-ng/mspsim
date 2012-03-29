@@ -58,7 +58,7 @@ import se.sics.mspsim.util.StackMonitor;
 public class ProfilerCommands implements CommandBundle {
 
   public void setupCommands(final ComponentRegistry registry, CommandHandler ch) {
-    final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+    final MSP430 cpu = registry.getComponent(MSP430.class);
     if (cpu != null) {
       ch.registerCommand("profile", new BasicCommand("show profile information",
           "[-clear] [-sort column] [-showcallers] [regexp]") {
@@ -71,8 +71,9 @@ public class ProfilerCommands implements CommandBundle {
           String namematch = null;
           String sortMode = null;
           String showCaller = null;
+          int i;
 
-          for (int i = 0; i < context.getArgumentCount(); i++) {
+          for (i = 0; i < context.getArgumentCount(); i++) {
             String value = context.getArgument(i);
             if ("-clear".equals(value)) {
               profiler.clearProfile();
@@ -88,13 +89,29 @@ public class ProfilerCommands implements CommandBundle {
               }
             } else if ("-showcallers".equals(value)) {
               showCaller = value;
-            } else if (namematch != null) {
-              context.err.println("Too many arguments. Either clear or show profile information.");              
+            } else if ("--".equals(value)) {
+                /* Done with arguments */
+                break;
+            } else if (value.startsWith("-")) {
+                /* Unknown option */
+                context.err.println("Unknown option: " + value);
+                return 1;
             } else {
-              namematch = value;
+                break;
             }
           }
-          
+          if (i < context.getArgumentCount()) {
+              namematch = context.getArgument(i++);
+              if (i < context.getArgumentCount()) {
+                  // Multiple patterns
+                  namematch = "(" + namematch;
+                  for(; i < context.getArgumentCount(); i++) {
+                      namematch += "|" + context.getArgument(i);
+                  }
+                  namematch += ')';
+              }
+          }
+
           Properties params = new Properties();
           if (namematch != null) { 
             params.put(Profiler.PARAM_FUNCTION_NAME_REGEXP, namematch);
@@ -264,7 +281,7 @@ public class ProfilerCommands implements CommandBundle {
           private CPUHeatMap hm;
 
           public int executeCommand(CommandContext context) {
-              hm = new CPUHeatMap(cpu, (WindowManager) registry.getComponent(WindowManager.class));
+              hm = new CPUHeatMap(cpu, registry.getComponent(WindowManager.class));
               cpu.addGlobalMonitor(hm);
               return 0;
           }
