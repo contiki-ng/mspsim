@@ -2,7 +2,7 @@
 # Makefile for mspsim
 #
 # Needed stuff in the PATH:
-#  java, javac (JDK 1.5 or newer)
+#  java, javac (JDK 1.6 or newer)
 #
 # Under MS-DOS/Windows
 #  A GNU compatible Make (for example Cygwin's)
@@ -20,23 +20,20 @@ RM=rm -f
 # System dependent
 ###############################################################
 
-ifndef WINDIR
-  ifdef OS
-    ifneq (,$(findstring Windows,$(OS)))
-      WINDIR := Windows
-    endif
+ifndef HOST_OS
+  ifeq ($(OS),Windows_NT)
+    HOST_OS := Windows
+  else
+    HOST_OS := $(shell uname)
   endif
 endif
 
-ifndef WINDIR
-  # This settings are for UNIX
-  SEPARATOR=:
-  # Add "'" around filenames when removing them because UNIX expands "$"
-  APO='#'  (last apostrophe to avoid incorrect font-lock)
-else
+ifeq ($(HOST_OS),Windows)
   # These setting are for Windows
   SEPARATOR=;
-  APO=
+else
+  # This settings are for UNIX
+  SEPARATOR=:
 endif
 
 
@@ -47,8 +44,9 @@ endif
 EMPTY :=
 SPACE := ${EMPTY} ${EMPTY}
 LIBS := ${wildcard lib/*.jar}
-CLASSPATH=${subst ${SPACE},${SEPARATOR},. ${LIBS}}
-CCARGS=-deprecation -classpath "${CLASSPATH}"
+BUILD := build
+CLASSPATH=${subst ${SPACE},${SEPARATOR},$(BUILD)/ ${LIBS}}
+CCARGS=-deprecation -classpath "${CLASSPATH}" -d $(BUILD)
 
 JAVAARGS=-classpath "${CLASSPATH}"
 
@@ -58,10 +56,10 @@ JAVAARGS=-classpath "${CLASSPATH}"
 ###############################################################
 
 ifndef FIRMWAREFILE
-ESBFIRMWARE = firmware/esb/sensor-demo.firmware
-SKYFIRMWARE = firmware/sky/blink.firmware
-Z1FIRMWARE = firmware/z1/blink.firmware
-TYNDALLFIRMWARE = firmware/tyndall/blink.firmware
+ESBFIRMWARE = firmware/esb/sensor-demo.esb
+SKYFIRMWARE = firmware/sky/blink.sky
+Z1FIRMWARE = firmware/z1/blink.z1
+TYNDALLFIRMWARE = firmware/tyndall/blink.tyndall
 EXP5438FIRMWARE = firmware/exp5438/testcase-bits.exp5438
 else
 ESBFIRMWARE = ${FIRMWAREFILE}
@@ -81,7 +79,7 @@ PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli config debu
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
-OBJECTS := $(SOURCES:.java=.class)
+OBJECTS := ${addprefix $(BUILD)/,$(SOURCES:.java=.class)}
 
 JARFILE := mspsim.jar
 
@@ -95,15 +93,31 @@ all:	compile
 
 compile:	$(OBJECTS)
 
-jar:	compile JarManifest.txt
-	$(JAR) cfm $(JARFILE) JarManifest.txt ${addsuffix /*.class,$(PACKAGES)} images/*.jpg
-	-$(RM) JarManifest.txt
+jar:	$(JARFILE)
 
-JarManifest.txt:
-	@echo >>$@ "Manifest-Version: 1.0"
-	@echo >>$@ "Sealed: true"
-	@echo >>$@ "Main-Class: se.sics.mspsim.Main"
-	@echo >>$@ "Class-path: ${LIBS}"
+$(JARFILE):	$(OBJECTS)
+	-@$(RM) JarManifest.txt
+	@echo >>JarManifest.txt "Manifest-Version: 1.0"
+	@echo >>JarManifest.txt "Sealed: true"
+	@echo >>JarManifest.txt "Main-Class: se.sics.mspsim.Main"
+	@echo >>JarManifest.txt "Class-path: ${LIBS}"
+	$(JAR) cfm $(JARFILE) JarManifest.txt images/*.jpg -C $(BUILD) .
+	-@$(RM) JarManifest.txt
+
+%.esb:	jar
+	java -jar $(JARFILE) -platform=esb $(ARGS) $@
+
+%.sky:	jar
+	java -jar $(JARFILE) -platform=sky $(ARGS) $@
+
+%.z1:	jar
+	java -jar $(JARFILE) -platform=z1 $(ARGS) $@
+
+%.exp5438:	jar
+	java -jar $(JARFILE) -platform=exp5438 $(ARGS) $@
+
+%.tyndall:	jar
+	java -jar $(JARFILE) -platform=tyndall $(ARGS) $@
 
 help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
@@ -129,7 +143,6 @@ runtyndall:	compile
 
 runexp5438:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.ti.Exp5438Node $(ARGS) $(EXP5438FIRMWARE) $(MAPFILE)
-
 
 test:	cputest
 
@@ -161,7 +174,10 @@ source:
 # CLASS COMPILATION
 ###############################################################
 
-%.class : %.java
+$(BUILD):
+	@mkdir $@
+
+$(BUILD)/%.class : %.java $(BUILD)
 	$(CC) $(CCARGS) $<
 
 
@@ -172,8 +188,4 @@ source:
 .PHONY:	clean
 
 clean:
-ifdef WINDIR
-	-$(RM) *.class ${addsuffix /*.class,$(PACKAGES)}
-else
-	-$(RM) $(foreach f,$(wildcard *.class),$(APO)$(f)$(APO)) $(foreach dir,$(PACKAGES),$(dir)/*.class)
-endif
+	-$(RM) -r $(BUILD)
