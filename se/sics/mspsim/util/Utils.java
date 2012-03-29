@@ -115,12 +115,6 @@ public class Utils {
       return hex(data & 0xffffff, 6);
   }
 
-  public static void fill(byte[] array, int pos, int len, byte value) {
-    for (int i = 0; i < len; i++) {
-      array[pos++] = value;
-    }
-  }
-
   public static int decodeInt(String value) throws NumberFormatException {
     int radix = 10;
     int index = 0;
