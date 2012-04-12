@@ -46,7 +46,7 @@ SPACE := ${EMPTY} ${EMPTY}
 LIBS := ${wildcard lib/*.jar}
 BUILD := build
 CLASSPATH=${subst ${SPACE},${SEPARATOR},$(BUILD)/ ${LIBS}}
-CCARGS=-deprecation -classpath "${CLASSPATH}" -d $(BUILD)
+CCARGS=-deprecation -classpath ".${SEPARATOR}${CLASSPATH}" -d $(BUILD)
 
 JAVAARGS=-classpath "${CLASSPATH}"
 
