@@ -1450,7 +1450,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
                   /* Support for MSP430X and below / above 64 KB */
                   /* if register is pointing to <64KB then it needs to be truncated to below 64 */
-                  if (rval < 0xffff) {
+                  if (rval <= 0xffff) {
                       dstAddress = (rval + currentSegment.read(pc, AccessMode.WORD, AccessType.READ)) & 0xffff;
                   } else {
                       dstAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
@@ -1757,7 +1757,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
           /* Support for MSP430X and below / above 64 KB */
           /* if register is pointing to <64KB then it needs to be truncated to below 64 */
-          if (sval < 0xffff) {
+          if (sval <= 0xffff) {
             srcAddress = (sval + currentSegment.read(pc, AccessMode.WORD, AccessType.READ)) & 0xffff;
           } else {
             srcAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
@@ -1822,7 +1822,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
           rval = readRegister(dstRegister);
           /* Support for MSP430X and below / above 64 KB */
           /* if register is pointing to <64KB then it needs to be truncated to below 64 */
-          if (rval < 0xffff) {
+          if (rval <= 0xffff) {
               dstAddress = (rval + currentSegment.read(pc, AccessMode.WORD, AccessType.READ)) & 0xffff;
           } else {
               dstAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
