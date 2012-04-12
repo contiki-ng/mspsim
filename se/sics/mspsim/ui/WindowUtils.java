@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * WindowUtils
  *
- * Author  : Joakim Eriksson, Niclas Finne, Fredrik Österlind
+ * Author  : Joakim Eriksson, Niclas Finne, Fredrik Osterlind
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.ui;
