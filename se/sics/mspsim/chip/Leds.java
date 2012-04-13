@@ -45,7 +45,6 @@ package se.sics.mspsim.chip;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.StateChangeListener;
-import se.sics.mspsim.util.ArrayUtils;
 import se.sics.mspsim.util.Utils;
 
 public class Leds extends Chip {
@@ -53,7 +52,7 @@ public class Leds extends Chip {
     private final int[] ledColors;
 
     private int leds;
-    private StateChangeListener[] stateListeners;
+    private StateChangeListener stateListener;
 
     public Leds(MSP430Core cpu, int[] ledColors) {
         super("Leds", cpu);
@@ -89,20 +88,18 @@ public class Leds extends Chip {
     }
 
     private void fireStateChanged(int oldState, int newState) {
-        StateChangeListener[] listeners = this.stateListeners;
-        if (listeners != null) {
-            for(StateChangeListener listener : listeners) {
-                listener.stateChanged(this, oldState, newState);
-            }
+        StateChangeListener listener = this.stateListener;
+        if (listener != null) {
+            listener.stateChanged(this, oldState, newState);
         }
     }
 
-    public synchronized void addStateChangeListener(StateChangeListener l) {
-        this.stateListeners = (StateChangeListener[]) ArrayUtils.add(StateChangeListener.class, this.stateListeners, l);
+    public synchronized void addStateChangeListener(StateChangeListener listener) {
+        stateListener = StateChangeListener.Proxy.INSTANCE.add(stateListener, listener);
     }
 
-    public synchronized void removeStateChangeListener(StateChangeListener l) {
-        this.stateListeners = (StateChangeListener[]) ArrayUtils.remove(this.stateListeners, l);
+    public synchronized void removeStateChangeListener(StateChangeListener listener) {
+        stateListener = StateChangeListener.Proxy.INSTANCE.remove(stateListener, listener);
     }
 
     public int getModeMax() {

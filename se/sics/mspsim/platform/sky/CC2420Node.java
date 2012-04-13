@@ -104,7 +104,7 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
             radio.setFIFOPPort(port1, CC2420_FIFOP);
             radio.setFIFOPort(port1, CC2420_FIFO);
 
-            ((USART) usart0).setUSARTListener(this);
+            ((USART) usart0).addUSARTListener(this);
             if (port4 != null) {
                 radio.setSFDPort(port4, CC2420_SFD);
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2010-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,19 +28,16 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * StateChangeListener
  *
  * Authors : Joakim Eriksson, Niclas Finne
  * Created : 17 jul 2010
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
+import se.sics.mspsim.util.ProxySupport;
 
 /**
  *
@@ -49,4 +46,16 @@ public interface StateChangeListener {
 
     public void stateChanged(Object source, int oldState, int newState);
 
+    public static class Proxy extends ProxySupport<StateChangeListener> implements StateChangeListener {
+        public static final Proxy INSTANCE = new Proxy();
+
+        @Override
+        public void stateChanged(Object source, int oldState, int newState) {
+            StateChangeListener[] listeners = this.listeners;
+            for(StateChangeListener listener : listeners) {
+                listener.stateChanged(source, oldState, newState);
+            }
+        }
+
+    }
 }

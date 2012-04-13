@@ -43,8 +43,6 @@ package se.sics.mspsim.core;
 
 import java.io.PrintStream;
 
-import se.sics.mspsim.util.ArrayUtils;
-
 public abstract class IOUnit implements InterruptHandler, Loggable {
 
   int[] memory;
@@ -53,7 +51,7 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   protected final String id;
   protected final String name;
 
-  private StateChangeListener[] scListeners;
+  private StateChangeListener stateListener;
   private int ioState;
   
   protected EmulationLogger logger;
@@ -72,11 +70,11 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   }
 
   public void addStateChangeListener(StateChangeListener listener) {
-      scListeners = (StateChangeListener[]) ArrayUtils.add(StateChangeListener.class, scListeners, listener);
-    }
-    
+      stateListener = StateChangeListener.Proxy.INSTANCE.add(stateListener, listener);
+  }
+
   public void removeStateChangeListener(StateChangeListener listener) {
-      scListeners = (StateChangeListener[]) ArrayUtils.remove(scListeners, listener);
+      stateListener = StateChangeListener.Proxy.INSTANCE.remove(stateListener, listener);
   }
 
 
@@ -84,16 +82,14 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
       stateChanged(newState, false);
   }
   /* Called by subclasses to inform about changes of state */
-    protected void stateChanged(int newState, boolean forceCallback) {
+  protected void stateChanged(int newState, boolean forceCallback) {
       if (forceCallback || ioState != newState) {
           int oldState = ioState;
           ioState = newState;
           /* inform listeners */
-          StateChangeListener[] listeners = scListeners;
-          if (listeners != null) {
-              for (int i = 0, n = listeners.length; i < n; i++) {
-                  listeners[i].stateChanged(this, oldState, ioState);
-              }
+          StateChangeListener listener = stateListener;
+          if (listener != null) {
+              listener.stateChanged(this, oldState, ioState);
           }
       }
   }

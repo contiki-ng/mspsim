@@ -29,7 +29,7 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 
     public static final int SWRST = 0x01;
     
-    private USARTListener listener;
+    private USARTListener usartListener;
 
     private int ubr0;
     private int ubr1;
@@ -148,6 +148,7 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 
         if (transmitting) {
             /* in this case we have shifted out the last character */
+            USARTListener listener = this.usartListener;
             if (listener != null && txShiftReg != -1) {
                 listener.dataReceived(this, txShiftReg);
             }
@@ -331,8 +332,14 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     }
 
     /* reuse USART listener API for USCI */
-    public void setUSARTListener(USARTListener listener) {
-        this.listener = listener;
+    @Override
+    public synchronized void addUSARTListener(USARTListener listener) {
+        usartListener = USARTListener.Proxy.INSTANCE.add(usartListener, listener);
+    }
+
+    @Override
+    public synchronized void removeUSARTListener(USARTListener listener) {
+        usartListener = USARTListener.Proxy.INSTANCE.remove(usartListener, listener);
     }
 
     /*  default behavior assumes UART/SPI config */

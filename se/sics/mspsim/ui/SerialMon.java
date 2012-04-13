@@ -51,7 +51,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
@@ -194,8 +193,8 @@ public class SerialMon implements USARTListener, StateChangeListener, ServiceCom
   public void start() {
     if (window == null) {
       initGUI();
-      usart.setUSARTListener(this);
-      ((IOUnit) usart).addStateChangeListener(this);
+      usart.addUSARTListener(this);
+      usart.addStateChangeListener(this);
     }
     window.setVisible(true);
     status = Status.STARTED;
@@ -206,6 +205,8 @@ public class SerialMon implements USARTListener, StateChangeListener, ServiceCom
     if (window != null) {
       window.setVisible(false);
     }
+    usart.removeUSARTListener(this);
+    usart.removeStateChangeListener(this);
   }
 
   public void dataReceived(USARTSource source, int data) {

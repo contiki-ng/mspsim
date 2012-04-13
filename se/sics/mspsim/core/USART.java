@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * USART
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -82,7 +78,7 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
   public static final int UTCTL_TXEMPTY = 0x01;
   public static final int UTCTL_URXSE = 0x08;
 
-  private USARTListener listener;
+  private USARTListener usartListener;
 
   private int utxifg;
   private int urxifg;
@@ -208,8 +204,14 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
     return sfr.isIEBitsSet(uartID, bits);
   }
 
-  public void setUSARTListener(USARTListener listener) {
-    this.listener = listener;
+  @Override
+  public synchronized void addUSARTListener(USARTListener listener) {
+      usartListener = USARTListener.Proxy.INSTANCE.add(usartListener, listener);
+  }
+
+  @Override
+  public synchronized void removeUSARTListener(USARTListener listener) {
+      usartListener = USARTListener.Proxy.INSTANCE.remove(usartListener, listener);
   }
 
   // Only 8 bits / read!
@@ -371,6 +373,7 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
 
     if (transmitting) {
         /* in this case we have shifted out the last character */
+        USARTListener listener = this.usartListener;
         if (listener != null && txShiftReg != -1) {
             listener.dataReceived(this, txShiftReg);
         }

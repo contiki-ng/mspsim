@@ -87,7 +87,7 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
   public static final int UTCTL_URXSE = 0x08;
   public static final int USCI_BUSY = 0x01;
   
-  private USARTListener listener;
+  private USARTListener usartListener;
 
   private int utxifg;
   private int urxifg;
@@ -235,8 +235,14 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
   }
 
   /* reuse USART listener API for USCI */
-  public void setUSARTListener(USARTListener listener) {
-    this.listener = listener;
+  @Override
+  public synchronized void addUSARTListener(USARTListener listener) {
+      usartListener = USARTListener.Proxy.INSTANCE.add(usartListener, listener);
+  }
+
+  @Override
+  public synchronized void removeUSARTListener(USARTListener listener) {
+      usartListener = USARTListener.Proxy.INSTANCE.remove(usartListener, listener);
   }
 
   // Only 8 bits / read!
@@ -414,6 +420,7 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
 
     if (transmitting) {
         /* in this case we have shifted out the last character */
+        USARTListener listener = this.usartListener;
         if (listener != null && txShiftReg != -1) {
             listener.dataReceived(this, txShiftReg);
         }

@@ -120,7 +120,7 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
             radio.setFIFOPPort(port1, CC2420_FIFOP);
             radio.setFIFOPort(port1, CC2420_FIFO);
 
-            ((USARTSource) usart0).setUSARTListener(this);
+            ((USARTSource) usart0).addUSARTListener(this);
             if (port4 != null) {
                 radio.setSFDPort(port4, CC2420_SFD);
             }

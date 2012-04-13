@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,21 +27,33 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * USARTListener
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
+import se.sics.mspsim.util.ProxySupport;
 
 public interface USARTListener {
-  public static final int RXFLAG_CLEARED = 1;
-  public void dataReceived(USARTSource source, int data);
+
+    public static final int RXFLAG_CLEARED = 1;
+    public void dataReceived(USARTSource source, int data);
+
+    public static class Proxy extends ProxySupport<USARTListener> implements USARTListener {
+        public static final Proxy INSTANCE = new Proxy();
+
+        @Override
+        public void dataReceived(USARTSource source, int data) {
+            USARTListener[] listeners = this.listeners;
+            for(USARTListener listener : listeners) {
+                listener.dataReceived(source, data);
+            }
+        }
+
+    }
+
 }

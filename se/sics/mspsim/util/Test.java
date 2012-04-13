@@ -57,7 +57,7 @@ public class Test implements USARTListener {
     this.cpu = cpu;
     IOUnit usart = cpu.getIOUnit("USART 1");
     if (usart instanceof USART) {
-      ((USART) usart).setUSARTListener(this);
+      ((USART) usart).addUSARTListener(this);
     }
   }
 

@@ -108,7 +108,7 @@ public class Exp5438Node extends GenericNode implements PortListener, USARTListe
             radio.setFIFOPPort(port1, CC2420_FIFOP);
             radio.setFIFOPort(port1, CC2420_FIFO);
 
-            ((USARTSource) usart0).setUSARTListener(this);
+            ((USARTSource) usart0).addUSARTListener(this);
             if (port1 != null) {
                 radio.setSFDPort(port1, CC2420_SFD);
             }

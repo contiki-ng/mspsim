@@ -135,7 +135,7 @@ public class TyndallNode extends GenericNode implements PortListener, USARTListe
             radio.setFIFOPPort(port8, CC2420_FIFOP);
             radio.setFIFOPort(port8, CC2420_FIFO);
 
-            ((USARTSource) usart0).setUSARTListener(this);
+            ((USARTSource) usart0).addUSARTListener(this);
             if (port4 != null) {
                 radio.setSFDPort(port8, CC2420_SFD);
             }

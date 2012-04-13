@@ -61,7 +61,7 @@ public class TR1001 extends Chip implements RFListener, RFSource {
     this.usart = usart;
     setModeNames(MODE_NAMES);
     setMode(MODE_TXRX_OFF);
-    usart.setUSARTListener(new USARTListener() {
+    usart.addUSARTListener(new USARTListener() {
 
       public void dataReceived(USARTSource source, int data) {
         RFListener listener = rfListener;
