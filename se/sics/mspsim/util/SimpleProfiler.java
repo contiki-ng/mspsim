@@ -520,8 +520,8 @@ public class SimpleProfiler implements Profiler, EventListener {
     startTags.put(start, tagEntry);
     endTags.put(end, tagEntry);
     tagProfiles.put(tag, tagEntry);
-    chip.setEventListener(this);
-    chip2.setEventListener(this);
+    chip.addEventListener(this);
+    chip2.addEventListener(this);
   }
 
   public void event(EventSource source, String event, Object data) {

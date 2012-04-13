@@ -164,6 +164,7 @@ public class ProfilerCommands implements CommandBundle {
       
       ch.registerCommand("logevents", new BasicAsyncCommand("log events", "[chips...]") {
         Chip[] chips;
+        EventListener eventListener;
         public int executeCommand(final CommandContext context) {
             if (context.getArgumentCount() == 0) {
                 context.out.println("Available chips:");
@@ -187,19 +188,19 @@ public class ProfilerCommands implements CommandBundle {
                     return 1;
                 }
             }
-            EventListener listener = new EventListener() {
+            eventListener = new EventListener() {
                 public void event(EventSource source, String event, Object data) {
                     context.out.println("Event:" + source.getName() + ":" + event);
                 }
             };
             for (Chip chip : chips) {
-                chip.setEventListener(listener);
+                chip.addEventListener(eventListener);
             }
             return 0;
         }
         public void stopCommand(CommandContext context) {
             for (Chip chip : chips) {
-                chip.setEventListener(null);
+                chip.removeEventListener(eventListener);
             }
         }
       });

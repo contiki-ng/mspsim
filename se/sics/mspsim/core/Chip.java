@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * Chip
  *
  * Author  : Joakim Eriksson
  * Created : 17 jan 2008
- * Updated : $Date$
- *           $Revision$
  */
 package se.sics.mspsim.core;
 import java.io.PrintStream;
@@ -130,15 +126,20 @@ public abstract class Chip implements Loggable, EventSource {
     modeNames = names;
   }
 
-  
-  public void setEventListener(EventListener e) {
-    eventListener = e;
-    sendEvents = eventListener != null;
+  public synchronized void addEventListener(EventListener listener) {
+      eventListener = EventListener.Proxy.INSTANCE.add(eventListener, listener);
+      sendEvents = eventListener != null;
   }
-  
+
+  public synchronized void removeEventListener(EventListener listener) {
+      eventListener = EventListener.Proxy.INSTANCE.add(eventListener, listener);
+      sendEvents = eventListener != null;
+  }
+
   protected void sendEvent(String event, Object data) {
-    if (eventListener != null) {
-      eventListener.event(this, event, data);
+    EventListener listener = this.eventListener;
+    if (listener != null) {
+        listener.event(this, event, data);
     }
   }
   
