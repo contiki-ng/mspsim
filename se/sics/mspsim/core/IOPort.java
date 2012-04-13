@@ -191,15 +191,6 @@ public class IOPort extends IOUnit {
         portListener = PortListenerProxy.removePortListener(portListener, oldListener);
     }
 
-    @Deprecated
-    public synchronized void setPortListener(PortListener listener) {
-        if (listener != null) {
-            addPortListener(listener);
-        } else {
-            portListener = null;
-        }
-    }
-
     public void setTimerCapture(Timer timer, int pin) {
         if (DEBUG) {
             log("Setting timer capture for pin: " + pin);
