@@ -261,6 +261,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   /* current CCA value */
   private boolean cca = false;
 
+  /* This is the magical LQI */
+  private int corrval = 37;
+
   /* FIFOP Threshold */
   private int fifopThr = 64;
 
@@ -681,7 +684,7 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   }
                   // Should take a RSSI value as input or use a set-RSSI value...
                   rxFIFO.set(-2, registers[REG_RSSI] & 0xff); 
-                  rxFIFO.set(-1, 37 | (crcOk ? 0x80 : 0));
+                  rxFIFO.set(-1, (corrval & 0x7F) | (crcOk ? 0x80 : 0));
                   //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = ;
                   //          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
                   //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
@@ -1264,6 +1267,17 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   public int getOutputPowerIndicator() {
     return (registers[REG_TXCTRL] & 0x1f);
+  }
+
+  /**
+   * This is actually the "CORR" value.
+   * @param lqi The Corr-val
+   * @sa CC2420 Datasheet
+   */
+  public void setLQI(int lqi){
+      if(lqi < 0) lqi = 0;
+      else if(lqi > 0x7f ) lqi = 0x7f;
+      corrval = lqi;
   }
 
   public void setRSSI(int power) {
