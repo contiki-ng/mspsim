@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * MSP430
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -49,8 +45,6 @@ import se.sics.mspsim.util.SimpleProfiler;
 
 public class MSP430 extends MSP430Core {
 
-  public static final int RETURN = 0x4130;
-  
   private int[] execCounter;
   private int[] trace;
   private int tracePos;
@@ -68,7 +62,6 @@ public class MSP430 extends MSP430Core {
 
   private double lastCPUPercent = 0d;
 
-  private long instCtr = 0;
   private DisAsm disAsm;
 
   private SimEventListener[] simEventListeners;
@@ -120,8 +113,6 @@ public class MSP430 extends MSP430Core {
       }
 
       if ((pc = emulateOP(-1)) >= 0) {
-	instCtr++;
-
 	if (execCounter != null) {
 	  execCounter[pc]++;
 	}
@@ -207,14 +198,12 @@ public class MSP430 extends MSP430Core {
    */
   long maxCycles = 0;
   public long stepMicros(long jumpMicros, long executeMicros) throws EmulationException {
-    int pc;
     if (isRunning()) {
       throw new IllegalStateException("step not possible when CPU is running");
     }
 
     if (jumpMicros < 0) {
-      throw new IllegalArgumentException("Can not jump a negative time: " +
-          jumpMicros);
+      throw new IllegalArgumentException("Can not jump a negative time: " + jumpMicros);
     }
     /* quick hack - if microdelta == 0 => ensure that we have correct zery cycles
      */
@@ -253,7 +242,8 @@ public class MSP430 extends MSP430Core {
 
 
     while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
-        if ((pc = emulateOP(maxCycles)) >= 0) {
+        int pc = emulateOP(maxCycles);
+        if (pc >= 0) {
             if (execCounter != null) {
                 execCounter[pc]++;
             }
@@ -416,12 +406,11 @@ public class MSP430 extends MSP430Core {
   }
 
   public synchronized void addSimEventListener(SimEventListener l) {
-    simEventListeners = (SimEventListener[]) ArrayUtils.add(SimEventListener.class, simEventListeners, l);
+    simEventListeners = ArrayUtils.add(SimEventListener.class, simEventListeners, l);
   }
 
   public synchronized void removeSimEventListener(SimEventListener l) {
-    simEventListeners = (SimEventListener[]) ArrayUtils.remove(simEventListeners, l);
+    simEventListeners = ArrayUtils.remove(simEventListeners, l);
   }
 
-  
 }

@@ -61,7 +61,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public final int MAX_MEM_IO;
   
   // 16 registers of which some are "special" - PC, SP, etc.
-  public int[] reg = new int[16];
+  public final int[] reg = new int[16];
 
   private final RegisterMonitor[] regWriteMonitors = new RegisterMonitor[16];
   private final RegisterMonitor[] regReadMonitors = new RegisterMonitor[16];
@@ -71,7 +71,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   public final int memory[];
 
-  public final Memory memorySegments[];
+  private final Memory memorySegments[];
   Memory currentSegment;
 
   public long cycles = 0;
