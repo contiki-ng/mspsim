@@ -37,15 +37,18 @@
 
 package se.sics.mspsim.util;
 
-public abstract class ProxySupport<T> {
+public abstract class ProxySupport<T> implements Cloneable {
 
+    private final Class<T> type;
     protected T[] listeners;
 
+    @SuppressWarnings("unchecked")
     protected ProxySupport() {
-    }
-
-    protected ProxySupport(T[] listeners) {
-        this.listeners = listeners;
+        Class<?>[] interfaces = getClass().getInterfaces();
+        if (interfaces.length != 1) {
+            throw new IllegalStateException("proxy does not implement one interface");
+        }
+        type = (Class<T>) interfaces[0];
     }
 
     @SuppressWarnings("unchecked")
@@ -55,10 +58,22 @@ public abstract class ProxySupport<T> {
         }
         if (oldListener instanceof ProxySupport<?>) {
             ProxySupport<T> proxy = (ProxySupport<T>) oldListener;
-            proxy.listeners = ArrayUtils.add((Class<T>) newListener.getClass(), proxy.listeners, newListener);
+            proxy.listeners = ArrayUtils.add(type, proxy.listeners, newListener);
             return oldListener;
         }
-        return create(oldListener, newListener);
+
+        // A new proxy is needed
+        ProxySupport<T> newProxy;
+        try {
+            newProxy = (ProxySupport<T>) clone();
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+        T[] tmp = (T[]) java.lang.reflect.Array.newInstance(type, 2);
+        tmp[0] = oldListener;
+        tmp[1] = newListener;
+        newProxy.listeners = tmp;
+        return (T) newProxy;
     }
 
     public T remove(T oldListener, T listener) {
@@ -79,7 +94,5 @@ public abstract class ProxySupport<T> {
         }
         return oldListener;
     }
-
-    protected abstract T create(T oldListener, T newListener);
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,6 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * PacketListener
@@ -37,8 +35,32 @@
  * 
  */
 package se.sics.mspsim.chip;
+import se.sics.mspsim.util.ProxySupport;
 
 public interface PacketListener {
-  public void transmissionStarted();
-  public void transmissionEnded(byte[] receivedData);
+
+    public void transmissionStarted();
+    public void transmissionEnded(byte[] receivedData);
+
+    public static class Proxy extends ProxySupport<PacketListener> implements PacketListener {
+        public static final Proxy INSTANCE = new Proxy();
+
+        @Override
+        public void transmissionStarted() {
+            PacketListener[] listeners = this.listeners;
+            for(PacketListener listener : listeners) {
+                listener.transmissionStarted();
+            }
+        }
+
+        @Override
+        public void transmissionEnded(byte[] receivedData) {
+            PacketListener[] listeners = this.listeners;
+            for(PacketListener listener : listeners) {
+                listener.transmissionEnded(receivedData);
+            }
+        }
+
+    }
+
 }

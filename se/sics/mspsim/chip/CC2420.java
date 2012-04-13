@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007-2011 Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012 Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -309,8 +309,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   private int sfdPin;
 
   private int txCursor;
-  private RFListener listener;
   private boolean on;
+  private RFListener rfListener;
+  private ChannelListener channelListener;
 
   private TimeEvent oscillatorEvent = new TimeEvent(0, "CC2420 OSC") {
     public void execute(long t) {
@@ -739,12 +740,17 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
           autoCRC = (data & ADR_AUTOCRC) != 0;
           autoAck = (data & AUTOACK) != 0;
           break;
-      case REG_FSCTRL:
-          if (cl != null) {
+      case REG_FSCTRL: {
+          ChannelListener listener = this.channelListener;
+          if (listener != null) {
+              int oldChannel = activeChannel;
               updateActiveFrequency();
-              cl.changedChannel(activeChannel);
+              if (oldChannel != activeChannel) {
+                  listener.channelChanged(activeChannel);
+              }
           }
-        break;
+          break;
+      }
       }
       configurationChanged(address, oldValue, data);
   }
@@ -1051,9 +1057,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
                   stateMachine);
       }
     } else {
-      if (listener != null) {
+      if (rfListener != null) {
         if (DEBUG) log("transmitting byte: " + Utils.hex8(SHR[shrPos]));
-        listener.receivedByte(SHR[shrPos]);
+        rfListener.receivedByte(SHR[shrPos]);
       }
       shrPos++;
       cpu.scheduleTimeEventMillis(shrEvent, SYMBOL_PERIOD * 2);
@@ -1074,9 +1080,9 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       if (txfifoPos > 0x7f) {
         logw("**** Warning - packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
       }
-      if (listener != null) {
+      if (rfListener != null) {
         if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
-        listener.receivedByte((byte)(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
+        rfListener.receivedByte((byte)(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
       }
       txfifoPos++;
       // Two symbol periods to send a byte...
@@ -1115,10 +1121,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
               ackBuf[4] = txCrc.getCRCHi();
               ackBuf[5] = txCrc.getCRCLow();
           }
-          if (listener != null) {
+          if (rfListener != null) {
               if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
 
-              listener.receivedByte((byte)(ackBuf[ackPos] & 0xFF));
+              rfListener.receivedByte((byte)(ackBuf[ackPos] & 0xFF));
           }
           ackPos++;
           // Two symbol periods to send a byte...
@@ -1326,17 +1332,22 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
     return -100;
   }
 
-
-  public void setRFListener(RFListener rf) {
-    listener = rf;
+  @Override
+  public synchronized void addRFListener(RFListener rf) {
+      rfListener = RFListener.Proxy.INSTANCE.add(rfListener, rf);
   }
 
-  public interface ChannelListener {
-    public void changedChannel(int channel);
+  @Override
+  public synchronized void removeRFListener(RFListener rf) {
+      rfListener = RFListener.Proxy.INSTANCE.remove(rfListener, rf);
   }
-  private ChannelListener cl = null;
-  public void setChannelListener(ChannelListener cl) {
-    this.cl = cl;
+
+  public synchronized void addChannelListener(ChannelListener listener) {
+      channelListener = ChannelListener.Proxy.INSTANCE.add(channelListener, listener);
+  }
+
+  public synchronized void removeChannelListener(ChannelListener listener) {
+      channelListener = ChannelListener.Proxy.INSTANCE.remove(channelListener, listener);
   }
 
   public void notifyReset() {

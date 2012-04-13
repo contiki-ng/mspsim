@@ -33,16 +33,6 @@ public interface RegisterMonitor {
     public static class Proxy extends ProxySupport<RegisterMonitor> implements RegisterMonitor {
         public static final Proxy INSTANCE = new Proxy();
 
-        private Proxy() {
-        }
-
-        @Override
-        protected RegisterMonitor create(RegisterMonitor oldListener, RegisterMonitor newListener) {
-            Proxy proxy = new Proxy();
-            proxy.listeners = new RegisterMonitor[] { oldListener, newListener };
-            return proxy;
-        }
-
         @Override
         public void notifyReadBefore(int reg, int mode) {
             RegisterMonitor[] listeners = this.listeners;

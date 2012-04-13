@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007,2008,2009, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,19 +27,33 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: RFListener.java 281 2008-05-13 15:18:14Z joxe$
- *
  * -----------------------------------------------------------------
  *
- * CC2420
+ * RFListener
  *
  * Author  : Joakim Eriksson
  * Created : Sep 06 22:00:00 2008
  *
  */
 package se.sics.mspsim.chip;
+import se.sics.mspsim.util.ProxySupport;
 
 public interface RFListener {
-  // A byte has been received via the "air"
-  public void receivedByte(byte data);
+
+    // A byte has been received via the "air"
+    public void receivedByte(byte data);
+
+    public static class Proxy extends ProxySupport<RFListener> implements RFListener {
+        public static final Proxy INSTANCE = new Proxy();
+
+        @Override
+        public void receivedByte(byte data) {
+            RFListener[] listeners = this.listeners;
+            for(RFListener listener : listeners) {
+                listener.receivedByte(data);
+            }
+        }
+
+    }
+
 }

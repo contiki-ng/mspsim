@@ -1,9 +1,10 @@
-/**
- * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
+/*
+ * Copyright (c) 2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are permitted provided that the following conditions
+ * are met:
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -27,19 +28,26 @@
  *
  * This file is part of MSPSim.
  *
- * -----------------------------------------------------------------
- *
- * RFSource
- *
- * Author  : Joakim Eriksson
- * Created : Feb 2009
- *
  */
+
 package se.sics.mspsim.chip;
+import se.sics.mspsim.util.ProxySupport;
 
-public interface RFSource {
+public interface ChannelListener {
 
-    void addRFListener(RFListener listener);
-    void removeRFListener(RFListener listener);
+    public void channelChanged(int channel);
+
+    public static class Proxy extends ProxySupport<ChannelListener> implements ChannelListener {
+        public static final Proxy INSTANCE = new Proxy();
+
+        @Override
+        public void channelChanged(int channel) {
+            ChannelListener[] listeners = this.listeners;
+            for(ChannelListener listener : listeners) {
+                listener.channelChanged(channel);
+            }
+        }
+
+    }
 
 }

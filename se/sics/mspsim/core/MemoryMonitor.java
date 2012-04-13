@@ -69,16 +69,6 @@ public interface MemoryMonitor {
   public static class Proxy extends ProxySupport<MemoryMonitor> implements MemoryMonitor {
       public static final Proxy INSTANCE = new Proxy();
 
-      private Proxy() {
-      }
-
-      @Override
-      protected MemoryMonitor create(MemoryMonitor oldListener, MemoryMonitor newListener) {
-          Proxy proxy = new Proxy();
-          proxy.listeners = new MemoryMonitor[] { oldListener, newListener };
-          return proxy;
-      }
-
       @Override
       public void notifyReadBefore(int address, Memory.AccessMode mode, Memory.AccessType type) {
           MemoryMonitor[] listeners = this.listeners;

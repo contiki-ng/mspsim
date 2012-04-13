@@ -160,7 +160,7 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
         if (config.getPropertyAsBoolean("enableNetwork", false)) {
             final NetworkConnection network = new NetworkConnection();
             final RadioWrapper radioWrapper = new RadioWrapper(radio);
-            radioWrapper.setPacketListener(new PacketListener() {
+            radioWrapper.addPacketListener(new PacketListener() {
                 public void transmissionStarted() {
                 }
                 public void transmissionEnded(byte[] receivedData) {

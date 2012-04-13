@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: $
- *
  * -----------------------------------------------------------------
  *
  * NetworkConnection
  *
  * Author  : Joakim Eriksson
  * Created : 31 mar 2008
- * Updated : $Date:$
- *           $Revision:$
  */
 package se.sics.mspsim.util;
 
@@ -62,7 +58,7 @@ public class NetworkConnection implements Runnable {
   private ServerSocket serverSocket = null;
   private SendThread sendThread = null;
   private ConnectionThread[] connections = null;
-  private PacketListener listener;
+  private PacketListener packetListener;
 
   public NetworkConnection() {
     if (connect(DEFAULT_PORT)) {
@@ -74,9 +70,12 @@ public class NetworkConnection implements Runnable {
     sendThread = new SendThread();
   }
   
-  // TODO: this should handle several listeners!!!
-  public void addPacketListener(PacketListener pl) {
-    listener = pl;
+  public synchronized void addPacketListener(PacketListener listener) {
+      packetListener = PacketListener.Proxy.INSTANCE.add(packetListener, listener);
+  }
+
+  public synchronized void removePacketListener(PacketListener listener) {
+      packetListener = PacketListener.Proxy.INSTANCE.remove(packetListener, listener);
   }
 
   private void setupServer(int port) {
@@ -95,7 +94,7 @@ public class NetworkConnection implements Runnable {
       try {
         Socket s = serverSocket.accept();
         if (DEBUG) System.out.println("NetworkConnection: New connection from " + s.getRemoteSocketAddress());
-        connections = (ConnectionThread[]) ArrayUtils.add(ConnectionThread.class, connections, new ConnectionThread(s));
+        connections = ArrayUtils.add(ConnectionThread.class, connections, new ConnectionThread(s));
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -105,6 +104,7 @@ public class NetworkConnection implements Runnable {
   // Data incoming from the network!!! - forward to radio and if server, to
   // all other nodes
   private void dataReceived(byte[] data, ConnectionThread source) {
+    PacketListener listener = this.packetListener;
     if (listener != null) {
       // Send this data to the transmitter in this node!
       listener.transmissionStarted();      
@@ -142,7 +142,7 @@ public class NetworkConnection implements Runnable {
   private boolean connect(int port) {
     try {
       Socket socket = new Socket("127.0.0.1", port);
-      connections = (ConnectionThread[]) ArrayUtils.add(ConnectionThread.class, connections, new ConnectionThread(socket));
+      connections = ArrayUtils.add(ConnectionThread.class, connections, new ConnectionThread(socket));
     } catch (UnknownHostException e) {
       return false;
     } catch (IOException e) {
@@ -185,7 +185,7 @@ public class NetworkConnection implements Runnable {
       if (cthr != null) {
         for (int i = 0; i < cthr.length; i++) {
           if (cthr[i].isClosed()) {
-            connections = (ConnectionThread[]) ArrayUtils.remove(connections, cthr[i]);
+            connections = ArrayUtils.remove(connections, cthr[i]);
             // Do not write back to the source
           } else if (cthr[i] != event.source){
             try {

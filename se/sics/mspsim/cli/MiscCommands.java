@@ -103,7 +103,7 @@ public class MiscCommands implements CommandBundle {
       long startTime;
 
       public int executeCommand(CommandContext context) {
-        cpu = (MSP430) registry.getComponent(MSP430.class);
+        cpu = registry.getComponent(MSP430.class);
         if (cpu == null) {
           context.err.println("could not access the CPU.");
           return 1;
@@ -119,7 +119,7 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("speed", new BasicCommand("set the speed factor for the CPU", "[factor]") {
       public int executeCommand(CommandContext context) {
-        MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+        MSP430 cpu = registry.getComponent(MSP430.class);
         if (cpu == null) {
           context.err.println("could not access the CPU.");
           return 1;
@@ -221,7 +221,7 @@ public class MiscCommands implements CommandBundle {
         }
         commandLine = context.getArgument(index);
 
-        cpu = (MSP430) registry.getComponent(MSP430.class);
+        cpu = registry.getComponent(MSP430.class);
         if (cpu == null) {
           context.err.println("could not access the CPU.");
           return 1;
@@ -316,7 +316,7 @@ public class MiscCommands implements CommandBundle {
           verbose = false;
         }
         if (context.getArgumentCount() == index) {
-          ServiceComponent[] sc = (ServiceComponent[]) registry.getAllComponents(ServiceComponent.class);
+          ServiceComponent[] sc = registry.getAllComponents(ServiceComponent.class);
           if (sc.length == 0) {
             context.out.println("No services found.");
           } else {
@@ -365,8 +365,9 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("rflistener", new BasicLineCommand("an rflistener", "<input|output> <rf-chip>") {
       CommandContext context;
+      RFSource source;
       RFListener listener;
-      final MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+      final MSP430 cpu = registry.getComponent(MSP430.class);
       public int executeCommand(CommandContext ctx) {
         this.context = ctx;
         String inout = context.getArgument(0);
@@ -377,11 +378,13 @@ public class MiscCommands implements CommandBundle {
         }
         if ("output".equals(inout)) {
           if (chip instanceof RFSource) {
-            ((RFSource)chip).setRFListener(new RFListener() {
-              public void receivedByte(byte data) {
-                context.out.println(Utils.hex8(data));
-              }
-            });
+            source = (RFSource) chip;
+            listener = new RFListener() {
+                public void receivedByte(byte data) {
+                    context.out.println(Utils.hex8(data));
+                }
+            };
+            source.addRFListener(listener);
           } else {
             context.err.println("Error: chip is not an RF source");
             return 1;
@@ -395,6 +398,7 @@ public class MiscCommands implements CommandBundle {
         return 0;
       }
 
+      @Override
       public void lineRead(String line) {
         if (listener != null) {
           byte[] data = Utils.hexconv(line);
@@ -408,8 +412,17 @@ public class MiscCommands implements CommandBundle {
           }
         }
       }
+
+      @Override
+      public void stopCommand(CommandContext context) {
+          if (source != null) {
+              source.removeRFListener(listener);
+          }
+          super.stopCommand(context);
+      }
+
     });
-    
+
     handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "[-registry] [-config]") {
         public int executeCommand(CommandContext context) {
             ConfigManager config = (ConfigManager) registry.getComponent("config");
