@@ -99,22 +99,11 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
 
   // write
   // write a value to the IO unit
-  public abstract void write(int address, int value, boolean word,
-			     long cycles);
+  public abstract void write(int address, int value, boolean word, long cycles);
 
   // read
   // read a value from the IO unit
   public abstract int read(int address, boolean word, long cycles);
-
-  // Utility function for converting 16 bits data to correct return
-  // value depending on address alignment and word/byte mode
-  public static int return16(int address, int data, boolean word) {
-    if (word) return data;
-    // First byte => low byte
-    if ((address & 1) == 0) return data & 0xff;
-    // Second byte => hi byte
-    return (data >> 8) & 0xff;
-  }
 
   public String getID() {
       return id;
