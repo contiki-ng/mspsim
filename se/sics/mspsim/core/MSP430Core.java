@@ -367,13 +367,27 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return null;
   }
 
-  public Chip getChip(Class<? extends Chip> type) {
+  public <T extends Chip> T getChip(Class<T> type) {
     for(Chip chip : chips) {
       if (type.isInstance(chip)) {
-        return chip;
+        return type.cast(chip);
       }
     }
     return null;
+  }
+
+  public <T extends Chip> T getChip(Class<T> type, String name) {
+      for(Chip chip : chips) {
+        if (type.isInstance(chip) &&
+                (name.equalsIgnoreCase(chip.getID()) || name.equalsIgnoreCase(chip.getName()))) {
+          return type.cast(chip);
+        }
+      }
+      return null;
+  }
+
+  public Chip[] getChips() {
+      return chips.toArray(new Chip[chips.size()]);
   }
 
   public Loggable[] getLoggables() {
@@ -393,10 +407,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
           l = getIOUnit(name);
       }
       return l;
-  }
-  
-  public Chip[] getChips() {
-    return chips.toArray(new Chip[chips.size()]);
   }
 
   public boolean hasWatchPoint(int address) {
@@ -722,12 +732,32 @@ public class MSP430Core extends Chip implements MSP430Constants {
     return null;
   }
 
-  private void resetIOUnits() {
-    for (int i = 0, n = ioUnits.size(); i < n; i++) {
-      ioUnits.get(i).reset(RESET_POR);
-    }
+  public <T> T getIOUnit(Class<T> type) {
+      for (IOUnit ioUnit : ioUnits) {
+          if (type.isInstance(ioUnit)) {
+              return type.cast(ioUnit);
+          }
+      }
+      return null;
   }
-  
+
+  public <T> T getIOUnit(Class<T> type, String name) {
+      for (IOUnit ioUnit : ioUnits) {
+          if (type.isInstance(ioUnit)
+                  && (name.equalsIgnoreCase(ioUnit.getID())
+                          || name.equalsIgnoreCase(ioUnit.getName()))) {
+              return type.cast(ioUnit);
+          }
+      }
+      return null;
+  }
+
+  private void resetIOUnits() {
+      for (IOUnit ioUnit : ioUnits) {
+          ioUnit.reset(RESET_POR);
+      }
+  }
+
   private void internalReset() {
     for (int i = 0, n = interruptSource.length; i < n; i++) {
       interruptSource[i] = null;
@@ -1987,9 +2017,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
               writeRegister(SR, sr);
               break;
           default:
-              logw("DoubleOperand not implemented: op = " + op + " at " + pc);
+              String address = getAddressAsString(pc);
+              logw("DoubleOperand not implemented: op = " + Integer.toHexString(op) + " at " + address);
               if (EXCEPTION_ON_BAD_OPERATION) {
-                  EmulationException ex = new EmulationException("Bad operation: " + op + " at " + pc);
+                  EmulationException ex = new EmulationException("Bad operation: $" + Integer.toHexString(op) + " at $" + address);
                   ex.initCause(new Throwable("" + pc));
                   throw ex;
               }
