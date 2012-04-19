@@ -134,7 +134,8 @@ public class DMA extends IOUnit {
                 if (DEBUG) log("DMA Triggered reading from: " +
                         currentSourceAddress + " => " + data + " " + (char) data +
                         " size:" + size + " index:" + index);
-                trigger.clearDMATrigger(index);
+                // flag already cleared by the memory read above
+//                trigger.clearDMATrigger(index);
                 DMA.this.cpu.currentSegment.write(currentDestinationAddress, data, Memory.AccessMode.BYTE);
                 
                 currentSourceAddress += srcIncr;
@@ -159,6 +160,16 @@ public class DMA extends IOUnit {
 
         public String getName() {
             return "DMA Channel " + channelNo;
+        }
+
+        public String info() {
+            return getName() + (enable ? " Enabled " : " Disabled")
+                    + "  Index: " + triggerIndex + "  Trigger: " + trigger
+                    + "\n    current source: 0x"
+                    + cpu.getAddressAsString(currentSourceAddress)
+                    + " destination: 0x"
+                    + cpu.getAddressAsString(currentDestinationAddress)
+                    + "  size: " + (storedSize - size) + "/" + storedSize;
         }
     }
 
@@ -240,4 +251,14 @@ public class DMA extends IOUnit {
             return c.read(address & 7);
         }
     }
+
+    public String info() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("  DMACTL0: 0x" + Utils.hex16(dmactl0) + "  DMACTL1: 0x" + Utils.hex16(dmactl1));
+        for (Channel c : channels) {
+            sb.append("\n  ").append(c.info());
+        }
+        return sb.toString();
+    }
+
 }
