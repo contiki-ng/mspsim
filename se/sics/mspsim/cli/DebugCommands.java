@@ -77,10 +77,14 @@ public class DebugCommands implements CommandBundle {
             return 1;
           }
           monitor = new MemoryMonitor.Adapter() {
+              private long lastCycles = -1;
               @Override
               public void notifyReadBefore(int address, AccessMode mode, AccessType type) {
-                  context.out.println("*** Break at $" + cpu.getAddressAsString(address));
-                  cpu.stop();
+                  if (type == AccessType.EXECUTE && cpu.cycles != lastCycles) {
+                      context.out.println("*** Break at $" + cpu.getAddressAsString(address));
+                      cpu.triggBreakpoint();
+                      lastCycles = cpu.cycles;
+                  }
               }
           };
           cpu.addWatchPoint(address, monitor);
@@ -137,7 +141,7 @@ public class DebugCommands implements CommandBundle {
                       context.out.println("*** " + op + " from " + pcStr +
                               ": " + adrStr + " = " + data);
                       if (mode == 10) {
-                          cpu.stop();
+                          cpu.triggBreakpoint();
                       }
                   } else {
                       if (length > 1) {
@@ -290,6 +294,10 @@ public class DebugCommands implements CommandBundle {
         });
         ch.registerCommand("start", new BasicCommand("start the CPU", "") {
           public int executeCommand(CommandContext context) {
+            if (cpu.isRunning()) {
+                context.err.println("cpu already running");
+                return 1;
+            }
             node.start();
             return 0;
           }

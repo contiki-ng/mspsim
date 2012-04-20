@@ -134,6 +134,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   private Flash flash;
 
   boolean isFlashBusy;
+  boolean isStopping = false;
 
   ClockSystem bcs;
 
@@ -998,25 +999,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
       return -1;
     }
 
-    // This is quite costly... should probably be made more
-    // efficiently
-//    CPUMonitor wp = watchPoints[pc];
-//    if (wp != null) {
-//      if (breakpointActive) {
-//        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
-//	breakpointActive = false;
-//	return -1;
-//      }
-//      // Execute this instruction - this is second call...
-//      breakpointActive = true;
-//    }
-//    wp = globalMonitor;
-//    if (wp != null) {
-//        wp.cpuAction(CPUMonitor.EXECUTE, pc, 0);
-//    }
-    
     int pcBefore = pc;
     instruction = currentSegment.read(pc, AccessMode.WORD, AccessType.EXECUTE);
+    if (isStopping) {
+        // Signaled to stop the execution before performing the instruction
+        return -2;
+    }
     int ext3_0 = 0;
     boolean repeatsInDstReg = false;
     boolean wordx20 = false;

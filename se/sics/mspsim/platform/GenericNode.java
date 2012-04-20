@@ -279,12 +279,19 @@ public abstract class GenericNode extends Chip implements Runnable {
   }
   
   public void stop() {
-    cpu.setRunning(false);
+    cpu.stop();
   }
   
   public void step() throws EmulationException {
     if (!cpu.isRunning()) {
       cpu.step();
+    }
+  }
+
+  // A step that will break out of breakpoints!
+  public void step(int nr) throws EmulationException {
+    if (!cpu.isRunning()) {
+      cpu.stepInstructions(nr);
     }
   }
 
@@ -307,7 +314,9 @@ public abstract class GenericNode extends Chip implements Runnable {
   }
 
   public ELF loadFirmware(ELF elf, int[] memory) {
-    stop();
+    if (cpu.isRunning()) {
+        stop();
+    }
     this.elf = elf;
     elf.loadPrograms(memory);
     MapTable map = elf.getMap();
@@ -316,13 +325,6 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("elf", elf);
     registry.registerComponent("mapTable", map);
     return elf;
-  }
-  
-  // A step that will break out of breakpoints!
-  public void step(int nr) throws EmulationException {
-    if (!cpu.isRunning()) {
-      cpu.stepInstructions(nr);
-    }
   }
 
   public int getConfiguration(int param) {
