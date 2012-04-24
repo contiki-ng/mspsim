@@ -727,7 +727,7 @@ public class Timer extends IOUnit {
       if (!oldCapture && reg.captureOn && (src & SRC_PORT) != 0) {
         int port = (src & 0xff) >> 4;
         int pin = src & 0x0f;
-        IOPort ioPort = (IOPort) core.getIOUnit("P" + port);
+        IOPort ioPort = core.getIOUnit(IOPort.class, "P" + port);
         if (DEBUG) log("Assigning Port: " + port + " pin: " + pin +
             " for capture");
         ioPort.setTimerCapture(this, pin);

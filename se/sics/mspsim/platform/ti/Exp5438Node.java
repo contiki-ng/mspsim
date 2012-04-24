@@ -66,40 +66,18 @@ public class Exp5438Node extends GenericNode implements PortListener, USARTListe
     }
 
     private void setupNodePorts() {
-        IOUnit unit = cpu.getIOUnit("P1");
-        if (unit instanceof IOPort) {
-            port1 = (IOPort) unit;
-            port1.addPortListener(this);
-        }
-        unit = cpu.getIOUnit("P3");
-        if (unit instanceof IOPort) {
-            port3 = (IOPort) unit;
-            port3.addPortListener(this);
-        }
-        
-        unit = cpu.getIOUnit("P4");
-        if (unit instanceof IOPort) {
-            port4 = (IOPort) unit;
-            port4.addPortListener(this);
-        }
-        
-        unit = cpu.getIOUnit("P5");
-        if (unit instanceof IOPort) {
-            port5 = (IOPort) unit;
-            port5.addPortListener(this);
-        }
-
-        unit = cpu.getIOUnit("P7");
-        if (unit instanceof IOPort) {
-            port7 = (IOPort) unit;
-            port7.addPortListener(this);
-        }
-
-        unit = cpu.getIOUnit("P8");
-        if (unit instanceof IOPort) {
-            port8 = (IOPort) unit;
-            port8.addPortListener(this);
-        }
+        port1 = cpu.getIOUnit(IOPort.class, "P1");
+        port1.addPortListener(this);
+        port3 = cpu.getIOUnit(IOPort.class, "P3");
+        port3.addPortListener(this);
+        port4 = cpu.getIOUnit(IOPort.class, "P4");
+        port4.addPortListener(this);
+        port5 = cpu.getIOUnit(IOPort.class, "P5");
+        port5.addPortListener(this);
+        port7 = cpu.getIOUnit(IOPort.class, "P7");
+        port7.addPortListener(this);
+        port8 = cpu.getIOUnit(IOPort.class, "P8");
+        port8.addPortListener(this);
 
         IOUnit usart0 = cpu.getIOUnit("USCI B0"); 
         if (usart0 instanceof USARTSource) {
@@ -109,9 +87,7 @@ public class Exp5438Node extends GenericNode implements PortListener, USARTListe
             radio.setFIFOPort(port1, CC2420_FIFO);
 
             ((USARTSource) usart0).addUSARTListener(this);
-            if (port1 != null) {
-                radio.setSFDPort(port1, CC2420_SFD);
-            }
+            radio.setSFDPort(port1, CC2420_SFD);
         } else {
             throw new EmulationException("Could not setup exp5438 mote - missing USCI B0");
         }

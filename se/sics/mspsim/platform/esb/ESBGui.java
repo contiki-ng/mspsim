@@ -54,7 +54,6 @@ import javax.sound.sampled.TargetDataLine;
 
 import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADCInput;
-import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.platform.AbstractNodeGUI;
 
@@ -159,9 +158,9 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
 
     node.getLeds().addStateChangeListener(ledsListener);
 
-    IOUnit adc = node.getCPU().getIOUnit("ADC12");
-    if (adc instanceof ADC12) {
-      ((ADC12) adc).setADCInput(0, this);
+    ADC12 adc = node.getCPU().getIOUnit(ADC12.class, "ADC12");
+    if (adc != null) {
+      adc.setADCInput(0, this);
     }
 
     // Just a test... TODO: remove!!!

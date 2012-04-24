@@ -6,6 +6,7 @@ import se.sics.mspsim.chip.CC2420;
 import se.sics.mspsim.chip.FileM25P80;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.config.MSP430f2617Config;
+import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.PortListener;
@@ -92,26 +93,14 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
             setFlash(new FileM25P80(cpu, flashFile));
         }
 
-        IOUnit unit = cpu.getIOUnit("P1");
-        if (unit instanceof IOPort) {
-            port1 = (IOPort) unit;
-            port1.addPortListener(this);
-        }
-        unit = cpu.getIOUnit("P3");
-        if (unit instanceof IOPort) {
-            port3 = (IOPort) unit;
-            port3.addPortListener(this);
-        }
-        unit = cpu.getIOUnit("P4");
-        if (unit instanceof IOPort) {
-            port4 = (IOPort) unit;
-            port4.addPortListener(this);
-        }
-        unit = cpu.getIOUnit("P5");
-        if (unit instanceof IOPort) {
-            port5 = (IOPort) unit;
-            port5.addPortListener(this);
-        }
+        port1 = cpu.getIOUnit(IOPort.class, "P1");
+        port1.addPortListener(this);
+        port3 = cpu.getIOUnit(IOPort.class, "P3");
+        port3.addPortListener(this);
+        port4 = cpu.getIOUnit(IOPort.class, "P4");
+        port4.addPortListener(this);
+        port5 = cpu.getIOUnit(IOPort.class, "P5");
+        port5.addPortListener(this);
 
         IOUnit usart0 = cpu.getIOUnit("USCI B0");
         if (usart0 instanceof USCI) {
@@ -121,9 +110,9 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
             radio.setFIFOPort(port1, CC2420_FIFO);
 
             ((USARTSource) usart0).addUSARTListener(this);
-            if (port4 != null) {
-                radio.setSFDPort(port4, CC2420_SFD);
-            }
+            radio.setSFDPort(port4, CC2420_SFD);
+        } else {
+            throw new EmulationException("Could not setup mote - missing USCI B0");
         }
     }
 

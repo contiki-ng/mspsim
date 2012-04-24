@@ -72,43 +72,27 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
     public void setupNodePorts() {
         ds2411 = new DS2411(cpu);
 
-        IOUnit unit = cpu.getIOUnit("P1");
-        if (unit instanceof IOPort) {
-            port1 = (IOPort) unit;
-            port1.addPortListener(this);
-        }
+        port1 = cpu.getIOUnit(IOPort.class, "P1");
+        port1.addPortListener(this);
 
-        unit = cpu.getIOUnit("P2");
-        if (unit instanceof IOPort) {
-            port2 = (IOPort) unit;
-            ds2411.setDataPort(port2, DS2411_DATA_PIN);
-            port2.addPortListener(this);
-        }
+        port2 = cpu.getIOUnit(IOPort.class, "P2");
+        ds2411.setDataPort(port2, DS2411_DATA_PIN);
+        port2.addPortListener(this);
 
-        unit = cpu.getIOUnit("P4");
-        if (unit instanceof IOPort) {
-            port4 = (IOPort) unit;
-            port4.addPortListener(this);
-        }
+        port4 = cpu.getIOUnit(IOPort.class, "P4");
+        port4.addPortListener(this);
 
-        unit = cpu.getIOUnit("P5");
-        if (unit instanceof IOPort) {
-            port5 = (IOPort) unit;
-            port5.addPortListener(this);
-        }
+        port5 = cpu.getIOUnit(IOPort.class, "P5");
+        port5.addPortListener(this);
 
-        IOUnit usart0 = cpu.getIOUnit("USART0");
-        if (usart0 instanceof USART) {
-            radio = new CC2420(cpu);
-            radio.setCCAPort(port1, CC2420_CCA);
-            radio.setFIFOPPort(port1, CC2420_FIFOP);
-            radio.setFIFOPort(port1, CC2420_FIFO);
+        USART usart0 = cpu.getIOUnit(USART.class, "USART0");
+        radio = new CC2420(cpu);
+        radio.setCCAPort(port1, CC2420_CCA);
+        radio.setFIFOPPort(port1, CC2420_FIFOP);
+        radio.setFIFOPort(port1, CC2420_FIFO);
 
-            ((USART) usart0).addUSARTListener(this);
-            if (port4 != null) {
-                radio.setSFDPort(port4, CC2420_SFD);
-            }
-        }
+        usart0.addUSARTListener(this);
+        radio.setSFDPort(port4, CC2420_SFD);
     }
 
     public void setupNode() {
@@ -140,9 +124,9 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
             setupGUI();
 
             // Add some windows for listening to serial output
-            IOUnit usart = cpu.getIOUnit("USART1");
-            if (usart instanceof USART) {
-                SerialMon serial = new SerialMon((USART)usart, "USART1 Port Output");
+            USART usart = cpu.getIOUnit(USART.class, "USART1");
+            if (usart != null) {
+                SerialMon serial = new SerialMon(usart, "USART1 Port Output");
                 registry.registerComponent("serialgui", serial);
             }
             if (stats != null) {

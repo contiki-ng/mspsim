@@ -117,25 +117,22 @@ public class JCreateNode extends CC2420Node {
         super.setupNodePorts();
         leds = new Leds(cpu, LEDS);
         accelerometer = new MMA7260QT(cpu);
-        IOUnit io = cpu.getIOUnit("ADC12");
-        if (io instanceof ADC12) {
-            ADC12 adc = (ADC12) io;
-            adc.setADCInput(4, new ADCInput() {
-                public int nextData() {
-                    return accelerometer.getADCX();
-                }
-            });
-            adc.setADCInput(5, new ADCInput() {
-                public int nextData() {
-                    return accelerometer.getADCY();
-                }
-            });
-            adc.setADCInput(6, new ADCInput() {
-                public int nextData() {
-                    return accelerometer.getADCZ();
-                }
-            });
-        }
+        ADC12 adc = cpu.getIOUnit(ADC12.class, "ADC12");
+        adc.setADCInput(4, new ADCInput() {
+            public int nextData() {
+                return accelerometer.getADCX();
+            }
+        });
+        adc.setADCInput(5, new ADCInput() {
+            public int nextData() {
+                return accelerometer.getADCY();
+            }
+        });
+        adc.setADCInput(6, new ADCInput() {
+            public int nextData() {
+                return accelerometer.getADCZ();
+            }
+        });
 
         if (flashFile != null) {
             setFlash(new FileM25P80(cpu, flashFile));

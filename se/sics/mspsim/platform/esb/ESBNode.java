@@ -46,8 +46,8 @@ import se.sics.mspsim.chip.Beeper;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.TR1001;
 import se.sics.mspsim.config.MSP430f149Config;
+import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
@@ -141,27 +141,19 @@ public class ESBNode extends GenericNode implements PortListener {
   }
 
   public void setupNodePorts() {
-    IOUnit unit = cpu.getIOUnit("Port 2");
-    if (unit instanceof IOPort) {
-      port2 = (IOPort) unit;
-      port2.addPortListener(this);
-    }
+    port1 = cpu.getIOUnit(IOPort.class, "P1");
 
-    unit = cpu.getIOUnit("Port 1");
-    if (unit instanceof IOPort) {
-      port1 = (IOPort) unit;
-    }
+    port2 = cpu.getIOUnit(IOPort.class, "P2");
+    port2.addPortListener(this);
+    port5 = cpu.getIOUnit(IOPort.class, "P5");
+    port5.addPortListener(this);
 
-    unit = cpu.getIOUnit("Port 5");
-    if (unit instanceof IOPort) {
-      port5 = (IOPort) unit;
-      port5.addPortListener(this);
+    USART usart0 = cpu.getIOUnit(USART.class, "USART0");
+    if (usart0 == null) {
+        throw new EmulationException("Could not setup mote - missing USART0");
     }
+    radio = new TR1001(cpu, usart0);
 
-    IOUnit usart0 = cpu.getIOUnit("USART 0");
-    if (usart0 instanceof USART) {
-      radio = new TR1001(cpu, (USART) usart0);
-    }
     leds = new Leds(cpu, LEDS);
     beeper = new Beeper(cpu);
   }
@@ -181,10 +173,10 @@ public class ESBNode extends GenericNode implements PortListener {
       beeper.setSoundEnabled(true);
 
       // Add some windows for listening to serial output
-      IOUnit usart = cpu.getIOUnit("USART 1");
-      if (usart instanceof USART) {
-        SerialMon serial = new SerialMon((USART)usart, "USART1 Port Output");
-        registry.registerComponent("serialgui", serial);
+      USART usart = cpu.getIOUnit(USART.class, "USART1");
+      if (usart != null) {
+          SerialMon serial = new SerialMon(usart, "USART1 Port Output");
+          registry.registerComponent("serialgui", serial);
       }
 
       if (stats != null) {
