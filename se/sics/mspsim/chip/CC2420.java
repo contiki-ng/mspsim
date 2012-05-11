@@ -1286,6 +1286,10 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
       corrval = lqi;
   }
 
+  public int getLQI() {
+      return corrval;
+  }
+
   public void setRSSI(int power) {
     final int minp = -128 + RSSI_OFFSET;
     final int maxp = 128 + RSSI_OFFSET;
