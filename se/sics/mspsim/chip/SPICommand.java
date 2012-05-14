@@ -58,13 +58,17 @@ public class SPICommand {
         for (int i = 1; i < subs.length; i++) {
             /* not more than first byte */
             if (subs[i].equals("1")) {
-                value = (value << 1) + 1;
-                mask = (mask << 1) | 1;
-                bitCount++;
+                if (c < 8) {
+                    value = (value << 1) + 1;
+                    mask = (mask << 1) | 1;
+                    bitCount++;
+                }
             } else if (subs[i].equals("0")) {                
-                value = (value << 1);
-                mask = (mask << 1) | 1;
-                bitCount++;
+                if (c < 8) {
+                    value = (value << 1);
+                    mask = (mask << 1) | 1;
+                    bitCount++;
+                }
             } else if (subs[i].equals(currentName)) {
                 /* do nothing */
             } else {
@@ -75,7 +79,7 @@ public class SPICommand {
                         bitFields = new ArrayList<SPICommand.BitField>();
                     bitFields.add(new BitField(currentName, start, c - 1));
                 } else {
-                    System.out.println("C: " + c);
+                    System.out.printf("C: %d value: %x  mask: %x \n", c, value, mask);
                     if (c < 8) {
                         value = value << (8 - c);
                         mask = mask << (8 - c);
@@ -91,8 +95,8 @@ public class SPICommand {
                     start + " - " + (c - 1) + "]");
         }
 
-        System.out.printf("Value %x\n",value);
-        System.out.printf("Mask  %x\n",value);        
+        System.out.printf("Value %x\n", value);
+        System.out.printf("Mask  %x\n", mask);
     }
 
     /* return -1 if no match */
