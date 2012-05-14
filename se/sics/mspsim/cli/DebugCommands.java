@@ -64,7 +64,7 @@ public class DebugCommands implements CommandBundle {
   public void setupCommands(ComponentRegistry registry, CommandHandler ch) {
     this.registry = registry;
     final MSP430 cpu = registry.getComponent(MSP430.class);
-    final GenericNode node = (GenericNode) registry.getComponent("node");
+    final GenericNode node = registry.getComponent(GenericNode.class, "node");
     if (cpu != null) {
       ch.registerCommand("break", new BasicAsyncCommand("add a breakpoint to a given address or symbol",
           "<address or symbol>") {
@@ -245,11 +245,15 @@ public class DebugCommands implements CommandBundle {
           } else {
               for (MapEntry mapEntry : entries) {
                   int address = mapEntry.getAddress();
+                  String file = mapEntry.getFile();
+                  if (file == null) {
+                      file = "(unspecified)";
+                  }
                   context.out.println(" " + mapEntry.getName() + " at $"
                           + cpu.getAddressAsString(address) + " ($"
                           + Utils.hex8(cpu.getMemory().get(address, AccessMode.BYTE))
                           + ' ' + Utils.hex8(cpu.getMemory().get(address + 1, AccessMode.BYTE)) + ") "
-                          + mapEntry.getType() + " in file " + mapEntry.getFile());
+                          + mapEntry.getType() + " in file " + file);
               }
           }
           return 0;
@@ -374,7 +378,7 @@ public class DebugCommands implements CommandBundle {
           public int executeCommand(CommandContext context) {
             int register = context.getArgumentAsRegister(0);
             if (register >= 0) {
-              context.out.println(context.getArgument(0) + " = $" + Utils.hex16(cpu.getRegister(register)));
+              context.out.println(context.getArgument(0) + " = $" + Utils.hex(cpu.getRegister(register), 4));
               return 0;
             }
             return -1;

@@ -388,7 +388,7 @@ public class ELF {
     int len = symTable.size;
     int count = len / symTable.getEntrySize();
     int addr = symTable.getOffset();
-    String currentFile = "";
+    String currentFile = null;
     if (DEBUG) {
       System.out.println("Number of symbols:" + count);
     }
