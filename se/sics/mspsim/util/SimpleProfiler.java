@@ -98,6 +98,10 @@ public class SimpleProfiler implements Profiler, EventListener {
     this.cpu = cpu;
   }
 
+  public void setStackMonitor(StackMonitor stackMonitor) {
+      this.stackMonitor = stackMonitor;
+  }
+
   public void setHideIRQ(boolean hide) {
     hideIRQ = hide;
   }
@@ -126,7 +130,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       if ((!hideIRQ || servicedInterrupt == -1) && hide == 0) {
         if (servicedInterrupt >= 0) logger.printf("[%2d] ", servicedInterrupt);
         printSpace(logger, (cSP - interruptLevel) * 2);
-        logger.println("Call to $" + Utils.hex16(entry.getAddress()) +
+        logger.println("Call to $" + Utils.hex(entry.getAddress(), 4) +
                        ": " + entry.getInfo());
         if (ignoreFunctions.get(entry.getName()) != null) {
           hide = 1;
@@ -377,14 +381,14 @@ public class SimpleProfiler implements Profiler, EventListener {
   public void printStackTrace(PrintStream out) {
     int stackCount = cSP;
     out.println("Stack Trace: number of calls: " + stackCount
-        + " PC: $" + Utils.hex16(cpu.getPC()));
+        + " PC: $" + Utils.hex(cpu.getPC(), 4));
     for (int i = 0; i < stackCount; i++) {
       CallEntry call = callStack[stackCount - i - 1];
       out.println("  " + call.function.getInfo()
-          + " called from PC: $" + Utils.hex16(call.fromPC)
+          + " called from PC: $" + Utils.hex(call.fromPC, 4)
           + " (elapsed: " + (cpu.cpuCycles - call.cycles) + ')');
       if (stackCount - i - 1 == interruptLevel && servicedInterrupt != -1) {
-        out.println(" *** Interrupt " + servicedInterrupt + " from PC: $" + Utils.hex16(interruptFrom));
+        out.println(" *** Interrupt " + servicedInterrupt + " from PC: $" + Utils.hex(interruptFrom, 4));
       }
     }
   }
@@ -456,10 +460,14 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
 
   private static class TagEntry implements Comparable<TagEntry> {
-    String tag;
+    public final String tag;
     long cycles;
     long lastCycles;
     int calls;
+
+    public TagEntry(String tag) {
+        this.tag = tag;
+    }
 
     public int compareTo(TagEntry o) {
       long diff = o.cycles - cycles;
@@ -481,8 +489,7 @@ public class SimpleProfiler implements Profiler, EventListener {
   public void measureStart(String tag) {
     TagEntry tagEntry = tagProfiles.get(tag);
     if (tagEntry == null) {
-      tagEntry = new TagEntry();
-      tagEntry.tag = tag;
+      tagEntry = new TagEntry(tag);
       tagProfiles.put(tag, tagEntry);
     }
     /* only the first occurrence of event will set the lastCycles */
@@ -505,9 +512,8 @@ public class SimpleProfiler implements Profiler, EventListener {
   public void printTagProfile(PrintStream out) {
     TagEntry[] entries = tagProfiles.values().toArray(new TagEntry[tagProfiles.size()]);
     Arrays.sort(entries);
-    for (int i = 0; i < entries.length; i++) {
-      TagEntry entry = entries[i];
-      System.out.println(entry.tag + "\t" + entry.calls + "\t" + entry.cycles);
+    for (TagEntry entry : entries) {
+      out.println(entry.tag + "\t" + entry.calls + "\t" + entry.cycles);
     }
   }
 
@@ -515,8 +521,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       Chip chip2, String end) {
     System.out.println("Add profile: " + tag +
         " start: " + start + " end: " + end);
-    TagEntry tagEntry = new TagEntry();
-    tagEntry.tag = tag;
+    TagEntry tagEntry = new TagEntry(tag);
     startTags.put(start, tagEntry);
     endTags.put(end, tagEntry);
     tagProfiles.put(tag, tagEntry);
@@ -541,13 +546,11 @@ public class SimpleProfiler implements Profiler, EventListener {
   }
 
   public synchronized void addCallListener(CallListener listener) {
-    callListeners = (CallListener[])
-      ArrayUtils.add(CallListener.class, callListeners, listener);
+    callListeners = ArrayUtils.add(CallListener.class, callListeners, listener);
   }
 
   public synchronized void removeCallListener(CallListener listener) {
-    callListeners = (CallListener[])
-      ArrayUtils.remove(callListeners, listener);
+    callListeners = ArrayUtils.remove(callListeners, listener);
   }
 
   public String getCall(int i) {
@@ -558,8 +561,4 @@ public class SimpleProfiler implements Profiler, EventListener {
     return callStack[cSP - i - 1].function;
   }
 
-  public void setStackMonitor(StackMonitor stackMonitor) {
-      System.out.println("Setting Stack monitor to: " + stackMonitor);
-      this.stackMonitor = stackMonitor;
-  }
 }

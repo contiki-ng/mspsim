@@ -271,9 +271,9 @@ public class Flash extends IOUnit {
       int area_end = a_area_end[0];
       
       if (DEBUG) {
-	log("Segment erase @" + Utils.hex16(address) + 
-	    ": erasing area " + Utils.hex16(area_start) + "-" +
-	    Utils.hex16(area_end));
+	log("Segment erase @" + Utils.hex(address, 4) + 
+	    ": erasing area " + Utils.hex(area_start, 4) + "-" +
+	    Utils.hex(area_end, 4));
       }
       for (int i = area_start; i < area_end; i++) {
 	memory[i] = 0xff;
@@ -309,7 +309,7 @@ public class Flash extends IOUnit {
         if (blockwriteCount == 0) {
           wait_time = BLOCKWRITE_FIRST_TIME;
           if (DEBUG) {
-            log("Flash write in block mode started @" + Utils.hex16(address));
+            log("Flash write in block mode started @" + Utils.hex(address, 4));
           }
           if (addressInFlash(cpu.getPC())) {
             logw("Oops. Block write access only allowed when executing from RAM.");
@@ -331,7 +331,7 @@ public class Flash extends IOUnit {
           }
       }
       if (DEBUG) {
-        log("Writing $" + Utils.hex20(data) + " to $" + Utils.hex16(address) + " (" + dataMode.bytes + " bytes)");
+        log("Writing $" + Utils.hex20(data) + " to $" + Utils.hex(address, 4) + " (" + dataMode.bytes + " bytes)");
       }
       waitFlashProcess(wait_time);
       break;
@@ -346,8 +346,8 @@ public class Flash extends IOUnit {
     if (DEBUG) {
       if (wait == false && currentWriteMode == WriteMode.WRITE_BLOCK) {
 	log("Reading flash prohibited. Would read 0x3fff!!!"); 
-	log("CPU PC=$" + Utils.hex16(cpu.getPC()) 
-	    + " read address $" + Utils.hex16(address));
+	log("CPU PC=$" + Utils.hex(cpu.getPC(), 4) 
+	    + " read address $" + Utils.hex(address, 4));
       }
     }
   }
@@ -461,7 +461,7 @@ public class Flash extends IOUnit {
   }
   
   private void triggerAccessViolation(String reason) {
-    logw("Access violation: " + reason + ". PC=$" + Utils.hex16(cpu.getPC()));
+    logw("Access violation: " + reason + ". PC=$" + Utils.hex(cpu.getPC(), 4));
 
     statusreg |= ACCVIFG;
     if (cpu.getSFR().isIEBitsSet(SFR.IE1, ACCVIE)) {

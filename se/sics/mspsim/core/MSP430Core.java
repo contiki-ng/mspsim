@@ -204,10 +204,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
         public void interruptServiced(int vector) {
         }
         public void write(int address, int value, boolean word, long cycles) {
-            logw("*** IOUnit write to non-existent IO at $" + Utils.hex16(address));
+            logw("*** IOUnit write to non-existent IO at $" + Utils.hex(address, 4));
         }
         public int read(int address, boolean word, long cycles) {
-            logw("*** IOUnit read from non-existent IO at $" + Utils.hex16(address));
+            logw("*** IOUnit read from non-existent IO at $" + Utils.hex(address, 4));
             return 0;
         }
     };

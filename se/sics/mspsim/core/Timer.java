@@ -483,7 +483,7 @@ public class Timer extends IOUnit {
   // Should handle read of byte also (currently ignores that...)
   public int read(int address, boolean word, long cycles) {
 
-      if (DEBUG) System.out.println(getName() + " read from: " + Utils.hex16(address));
+      if (DEBUG) System.out.println(getName() + " read from: $" + Utils.hex(address, 4));
 
       if (address == tiv) {
       // should clear registers for cause of interrupt (highest value)?
@@ -542,11 +542,11 @@ public class Timer extends IOUnit {
       val = ccr[i].tccr;
       break;
     default:
-      logw("Not supported read, returning zero!!! addr: " + index + " addr: " + Utils.hex16(address));
+      logw("Not supported read, returning zero!!! addr: " + index + " addr: $" + Utils.hex(address, 4));
     }
     
     if (DEBUG) {
-      log("Read " + getName(address) + "(" + Utils.hex16(address) + ") => " +
+      log("Read " + getName(address) + "($" + Utils.hex(address, 4) + ") => $" +
           Utils.hex16(val) + " (" + val + ")");
     }
 
@@ -973,7 +973,7 @@ public class Timer extends IOUnit {
     if (reg < 0x10) return "TCTL" + (reg - 2) / 2;
     if (reg == 0x10) return "TR";
     if (reg < 0x20) return "TCCR" + (reg - 0x12) / 2;
-    return " UNDEF(" + Utils.hex16(address) + ")";
+    return " UNDEF(" + Utils.hex(address, 4) + ")";
   }
   
   public String info() {

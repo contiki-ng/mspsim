@@ -217,7 +217,7 @@ public class DMA extends IOUnit {
     }
 
     public void write(int address, int value, boolean word, long cycles) {
-        if (DEBUG) log("DMA write to: " + Utils.hex16(address) + ": " + value);
+        if (DEBUG) log("DMA write to: " + Utils.hex(address, 4) + ": " + value);
         switch (address) {
         case DMACTL0:
             /* DMA Control 0 */

@@ -121,7 +121,7 @@ public class Watchdog extends IOUnit implements SFRModule {
     if (address == WDTCTL) {
       if ((value >> 8) == 0x5a) {
         wdtctl = value & 0xff;
-        if (DEBUG) log("Wrote to WDTCTL: " + Utils.hex8(wdtctl) + " from " + cpu.getPC());
+        if (DEBUG) log("Wrote to WDTCTL: " + Utils.hex8(wdtctl) + " from $" + Utils.hex(cpu.getPC(), 4));
         
         // Is it on?
         wdtOn = (value & 0x80) == 0;
@@ -142,7 +142,7 @@ public class Watchdog extends IOUnit implements SFRModule {
         }
       } else {
         // Trigger reset!!
-        logw("illegal write to WDTCTL (" + value + ") from $" + Utils.hex16(cpu.getPC())
+        logw("illegal write to WDTCTL (" + value + ") from $" + Utils.hex(cpu.getPC(), 4)
             + " - reset!!!!");
         cpu.flagInterrupt(RESET_VECTOR, this, true);
       }

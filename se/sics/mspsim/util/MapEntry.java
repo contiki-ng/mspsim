@@ -126,7 +126,7 @@ public class MapEntry {
   
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append('$').append(Utils.hex16(address)).append(' ').append(type).append(' ').append(name);
+    sb.append('$').append(Utils.hex(address, 4)).append(' ').append(type).append(' ').append(name);
     if (file != null) {
       sb.append(" (");
       if (isLocal) sb.append("local in ");

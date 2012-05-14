@@ -117,7 +117,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
       switch(state) {
       case READ_STATUS:
           if (DEBUG) {
-            log("Read status => " + getStatus() + " from $" + Utils.hex16(cpu.getPC()));
+            log("Read status => " + getStatus() + " from $" + Utils.hex(cpu.getPC(), 4));
           }
           source.byteReceived(getStatus());
           return;
@@ -338,7 +338,7 @@ public abstract class M25P80 extends Chip implements USARTListener, PortListener
   }
 
   private void programPage() {
-      if (writing) logw("Can not set program page while already writing... from $" + Utils.hex16(cpu.getPC()));
+      if (writing) logw("Can not set program page while already writing... from $" + Utils.hex(cpu.getPC(), 4));
     writeStatus(PROGRAM_PAGE_MILLIS);
     ensureLoaded(blockWriteAddress);
     for (int i = 0; i < readMemory.length; i++) {
