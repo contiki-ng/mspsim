@@ -1,6 +1,7 @@
 package se.sics.mspsim.chip;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 
 public class SPICommand {
 /*    
@@ -93,6 +94,9 @@ public class SPICommand {
         if (start != 0) {
             System.out.println("Bitfield: " + currentName + ": [" +
                     start + " - " + (c - 1) + "]");
+            if (bitFields == null)
+                bitFields = new ArrayList<SPICommand.BitField>();
+            bitFields.add(new BitField(currentName, start, c - 1));
         }
 
         System.out.printf("Value %x\n", value);
@@ -113,9 +117,18 @@ public class SPICommand {
         return true;
     }
     
+    /* for any command that is executable (finite commands) */
     public boolean executeSPICommand(int[] spiData) {
         System.out.println("Command " + name + " not implemented...");
         return true;
+    }
+    
+    public BitField getBitField(String arg) {
+        for (BitField b : bitFields) {
+            if (b.name.equals(arg)) return b;
+        }
+        /* not existing ... */
+        return null;
     }
     
     public static void main(String[] args) {

@@ -54,7 +54,7 @@ public class CC2520SPI {
     SPICommand[] commands = new SPICommand[256];
     
     CC2520SPI() {
-
+        /* set up the commands */
         for (int i = 0; i < spiCommands.length; i++) {
             SPICommand c = spiCommands[i];
             int maxv = 1 << (8 - c.bitCount);
@@ -70,8 +70,18 @@ public class CC2520SPI {
         }    
     }
     
+    SPICommand getCommand(int cmd) {
+        if (cmd < 256 && commands[cmd] != null)
+            return commands[cmd];
+        return null;
+    }
+    
+    
     public static void main(String[] args) {
-        new CC2520SPI();
+        CC2520SPI spi = new CC2520SPI();
+        SPICommand cmd = spi.getCommand(0xff);
+        /* commands that take infinite number of bytes have the bitfield ... */
+        System.out.println("Has ... => " + cmd.getBitField("..."));
     }
     
 }
