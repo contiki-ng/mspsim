@@ -39,21 +39,21 @@
   </target>
 
   <target name="runesb" depends="jar" description="run MSPSim with platform ESB">
-    <property name="FIRMWAREFILE" value="firmware/esb/sensor-demo.firmware"/>
+    <property name="FIRMWAREFILE" value="firmware/esb/sensor-demo.esb"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.esb.ESBNode">
       <arg value="${FIRMWAREFILE}"/>
     </java>
   </target>
 
   <target name="runsky" depends="jar" description="run MSPSim with platform Sky">
-    <property name="FIRMWAREFILE" value="firmware/sky/blink.firmware"/>
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.SkyNode">
       <arg value="${FIRMWAREFILE}"/>
     </java>
   </target>
 
   <target name="runskyprof" depends="jar" description="run MSPSim with platform Sky for profiling">
-    <property name="FIRMWAREFILE" value="firmware/sky/blink.firmware"/>
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.SkyNode">
       <jvmarg value="-agentlib:yjpagent" />
       <arg value="${FIRMWAREFILE}"/>
@@ -61,21 +61,21 @@
   </target>
 
   <target name="runtelos" depends="jar" description="run MSPSim with platform Telos">
-    <property name="FIRMWAREFILE" value="firmware/sky/blink.firmware"/>
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.TelosNode">
       <arg value="${FIRMWAREFILE}"/>
     </java>
   </target>
 
   <target name="runjcreate" depends="jar" description="run MSPSim with platform Sentilla JCreate">
-    <property name="FIRMWAREFILE" value="firmware/sky/blink.firmware"/>
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.jcreate.JCreateNode">
       <arg value="${FIRMWAREFILE}"/>
     </java>
   </target>
 
   <target name="runsentillausb" depends="jar" description="run MSPSim with platform Sentilla Gateway USB">
-    <property name="FIRMWAREFILE" value="firmware/sky/blink.firmware"/>
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sentillausb.SentillaUSBNode">
       <arg value="${FIRMWAREFILE}"/>
     </java>
