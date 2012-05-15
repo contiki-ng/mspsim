@@ -138,13 +138,14 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
 
         IOUnit usart0 = cpu.getIOUnit("USCI B0");
         if (usart0 instanceof USARTSource) {
-            radio = new CC2520(cpu);
-            radio.setCCAPort(port1, CC2520_CCA);
-            radio.setFIFOPPort(port1, CC2520_FIFOP);
-            radio.setFIFOPort(port1, CC2520_FIFO);
 
+            radio = new CC2520(cpu);
+            radio.setGPIO(1, port1, CC2520_FIFO);
+            radio.setGPIO(3, port1, CC2520_CCA);
+            radio.setGPIO(2, port1, CC2520_FIFOP);
+            radio.setGPIO(4, port2, CC2520_SFD);
+            
             ((USARTSource) usart0).addUSARTListener(this);
-            radio.setSFDPort(port2, CC2520_SFD);
         } else {
             throw new EmulationException("Could not setup wismote mote - missing USCI B0");
         }
