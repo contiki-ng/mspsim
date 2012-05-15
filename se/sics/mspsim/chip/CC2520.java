@@ -389,7 +389,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     private int status = 0;
 
     private final int[] registers = new int[128];
-    private final int[] memory = new int[384 + 128];
+    private final int[] memory = new int[0x400]; /* total memory */
 
     private CC2520SPI cc2520SPI = new CC2520SPI(this);
     private SPICommand command;
@@ -909,7 +909,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
         /* command handling */
         spiData[spiLen] = data;
-        if (spiLen < spiData.length) spiLen++;
+        /* ensure that we do not store too many spiDatas */
+        if (spiLen < (spiData.length - 1)) spiLen++;
 
         if (command != null) {
             command.dataReceived(data);
@@ -1062,6 +1063,29 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
     }
     
+    void stxoncca() {
+        // Only valid from all RX states,
+        // since CCA requires ??(look this up) receive symbol periods to be valid
+        if( (stateMachine == RadioState.RX_CALIBRATE) ||
+                (stateMachine == RadioState.RX_SFD_SEARCH) ||
+                (stateMachine == RadioState.RX_FRAME) ||
+                (stateMachine == RadioState.RX_OVERFLOW) ||
+                (stateMachine == RadioState.RX_WAIT)) {
+
+            if (sendEvents) {
+                sendEvent("STXON_CCA", null);
+            }
+
+            if(cca) {
+                status |= STATUS_TX_ACTIVE;
+                setState(RadioState.TX_CALIBRATE);
+                if (DEBUG) log("Strobe STXONCCA - transmit on! at " + cpu.cycles);
+            }else{
+                if (DEBUG) log("STXONCCA Ignored, CCA false");
+            }
+        }
+    }
+    
     // Needs to get information about when it is possible to write
     // next data...
     private void strobe(int data) {
@@ -1106,26 +1130,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             stxon();
             break;
         case INS_STXONCCA:
-            // Only valid from all RX states,
-            // since CCA requires ??(look this up) receive symbol periods to be valid
-            if( (stateMachine == RadioState.RX_CALIBRATE) ||
-                    (stateMachine == RadioState.RX_SFD_SEARCH) ||
-                    (stateMachine == RadioState.RX_FRAME) ||
-                    (stateMachine == RadioState.RX_OVERFLOW) ||
-                    (stateMachine == RadioState.RX_WAIT)) {
-
-                if (sendEvents) {
-                    sendEvent("STXON_CCA", null);
-                }
-
-                if(cca) {
-                    status |= STATUS_TX_ACTIVE;
-                    setState(RadioState.TX_CALIBRATE);
-                    if (DEBUG) log("Strobe STXONCCA - transmit on! at " + cpu.cycles);
-                }else{
-                    if (DEBUG) log("STXONCCA Ignored, CCA false");
-                }
-            }
+            stxoncca();
             break;
         case INS_SFLUSHRX:
             flushRX();

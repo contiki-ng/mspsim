@@ -8,6 +8,7 @@ public class CC2520SPI {
     
     public CC2520SPI(CC2520 cc) {
     /* the SPI commands for CC2520 */
+        cc2520 = cc;
         SPICommand[] spiCommands = {
             new SPICommand("SNOP 0 0 0 0 0 0 0 0",cc2520) {
                 public void executeSPICommand() {}
@@ -44,7 +45,11 @@ public class CC2520SPI {
                     cc2520.stxon();
                 }
             },
-            new SPICommand("STXONCCA 0 1 0 0 0 1 0 0",cc2520),
+            new SPICommand("STXONCCA 0 1 0 0 0 1 0 0",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.stxoncca();
+                }
+            },
             new SPICommand("SRFOFF 0 1 0 0 0 1 0 1",cc2520),
             new SPICommand("SXOSCOFF 0 1 0 0 0 1 1 0",cc2520),
             new SPICommand("SFLUSHRX 0 1 0 0 0 1 1 1",cc2520) {
