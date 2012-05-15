@@ -92,8 +92,16 @@ public class CC2520SPI {
                     cc2520.stxoncca();
                 }
             },
-            new SPICommand("SRFOFF 0 1 0 0 0 1 0 1",cc2520),
-            new SPICommand("SXOSCOFF 0 1 0 0 0 1 1 0",cc2520),
+            new SPICommand("SRFOFF 0 1 0 0 0 1 0 1",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.rxtxoff();
+                }
+            },
+            new SPICommand("SXOSCOFF 0 1 0 0 0 1 1 0",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.stopOscillator();
+                }
+            },
             new SPICommand("SFLUSHRX 0 1 0 0 0 1 1 1",cc2520) {
                 public void executeSPICommand() {
                     cc2520.flushRX();
@@ -102,10 +110,18 @@ public class CC2520SPI {
             new SPICommand("SFLUSHTX 0 1 0 0 1 0 0 0",cc2520) {
                 public void executeSPICommand() {
                     cc2520.flushTX();
-                }                
+                }
             },
-            new SPICommand("SACK 0 1 0 0 1 0 0 1",cc2520),
-            new SPICommand("SACKPEND 0 1 0 0 1 0 1 0",cc2520),
+            new SPICommand("SACK 0 1 0 0 1 0 0 1",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.sack(false);
+                }
+            },
+            new SPICommand("SACKPEND 0 1 0 0 1 0 1 0",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.sack(true);
+                }
+            },
             new SPICommand("SNACK 0 1 0 0 1 0 1 1",cc2520),
             new SPICommand("SRXMASKBITSET 0 1 0 0 1 1 0 0",cc2520),
             new SPICommand("SRXMASKBITCLR 0 1 0 0 1 1 0 1",cc2520),

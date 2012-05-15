@@ -413,11 +413,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             status |= STATUS_XOSC16M_STABLE;
             if(DEBUG) log("Oscillator Stable Event.");
             setState(RadioState.IDLE);
-//            if( (memory[REG_IOCFG1] & CCAMUX) == CCAMUX_XOSC16M_STABLE) {
-//                updateCCA();
-//            } else {
-//                if(DEBUG) log("CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
-//            }
+            updateCCA();
         }
     };
 
@@ -500,8 +496,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
         
         
-//        memory[REG_SNOP] = 0;
-//        memory[REG_TXCTRL] = 0xa0ff;
         setModeNames(MODE_NAMES);
         setMode(MODE_POWER_OFF);
         currentFIFOP = false;
@@ -519,7 +513,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     }
     
     private void reset() {
-//        setReg(REG_MDMCTRL0, 0x0ae2);
         memory[REG_RSSISTAT] = 0;
 
         /* back to default configuration of GPIOs */
@@ -942,6 +935,18 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
     }
 
+    void rxtxoff() {
+        if (DEBUG) {
+            log("Strobe RXTX-OFF!!! at " + cpu.cycles);
+            if (stateMachine == RadioState.TX_ACK ||
+                    stateMachine == RadioState.TX_FRAME ||
+                    stateMachine == RadioState.RX_FRAME) {
+                log("WARNING: turning off RXTX during " + stateMachine);
+            }
+        }
+        setState(RadioState.IDLE);
+    }
+    
     void stxon() {
         // State transition valid from IDLE state or all RX states
         if( (stateMachine == RadioState.IDLE) ||
@@ -982,71 +987,14 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             }
         }
     }
-    
-    // Needs to get information about when it is possible to write
-    // next data...
-    private void strobe(int data) {
-        // Resets, on/off of different things...
-        if (DEBUG) {
-            log("Strobe on: " + Utils.hex8(data)); // + " => " + Reg.values()[data]);
-        }
 
-        if( (stateMachine == RadioState.POWER_DOWN) && (data != INS_SXOSCON) ) {
-            if (DEBUG) log("Got command strobe: " + data + " in POWER_DOWN.  Ignoring.");
-            return;
-        }
-
-        switch (data) {
-        case INS_SNOP:
-            if (DEBUG) log("SNOP => " + Utils.hex8(status) + " at " + cpu.cycles);
-            break;
-        case INS_SRFOFF:
-            if (DEBUG) {
-                log("Strobe RXTX-OFF!!! at " + cpu.cycles);
-                if (stateMachine == RadioState.TX_ACK ||
-                        stateMachine == RadioState.TX_FRAME ||
-                        stateMachine == RadioState.RX_FRAME) {
-                    log("WARNING: turning off RXTX during " + stateMachine);
-                }
-            }
-            setState(RadioState.IDLE);
-            break;
-        case INS_STXON:
-            stxon();
-            break;
-        case INS_STXONCCA:
-            stxoncca();
-            break;
-        case INS_SFLUSHRX:
-            flushRX();
-            break;
-        case INS_SFLUSHTX:
-            if (DEBUG) log("Flushing TXFIFO");
-            flushTX();
-            break;
-        case INS_SXOSCON:
-            //log("Strobe Oscillator On");
-            startOscillator();
-            break;
-        case INS_SXOSCOFF:
-            //log("Strobe Oscillator Off");
-            stopOscillator();
-            break;
-        case INS_SACK:
-        case INS_SACKPEND:
-            // Set the frame pending flag for all future autoack based on SACK/SACKPEND
-            ackFramePending = data == INS_SACKPEND;
-            if (stateMachine == RadioState.RX_FRAME) {
-                shouldAck = true;
-            } else if (crcOk) {
-                setState(RadioState.TX_ACK_CALIBRATE);
-            }
-            break;
-        default:
-            if (DEBUG) {
-                log("Unknown strobe command: " + data);
-            }
-            break;
+    void sack(boolean pend) {
+        // Set the frame pending flag for all future autoack based on SACK/SACKPEND
+        ackFramePending = pend;
+        if (stateMachine == RadioState.RX_FRAME) {
+            shouldAck = true;
+        } else if (crcOk) {
+            setState(RadioState.TX_ACK_CALIBRATE);
         }
     }
 
@@ -1158,7 +1106,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         cpu.scheduleTimeEventMillis(oscillatorEvent, 1);
     }
 
-    private void stopOscillator() {
+    void stopOscillator() {
         status &= ~STATUS_XOSC16M_STABLE;
         setState(RadioState.POWER_DOWN);
         if (DEBUG) log("Oscillator Off.");
@@ -1213,7 +1161,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     }
 
     private void updateCCA() {
-        // boolean oldCCA = cca;
+         boolean oldCCA = cca;
         // int ccaMux = (memory[REG_IOCFG1] & CCAMUX);
 
         // if (ccaMux == CCAMUX_CCA) {
@@ -1222,10 +1170,12 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         // } else if (ccaMux == CCAMUX_XOSC16M_STABLE) {
         //     cca = (status & STATUS_XOSC16M_STABLE) > 0;
         // }
+         
+         cca = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
 
-        // if (cca != oldCCA) {
-        //     setInternalCCA(cca);
-        // }
+         if (cca != oldCCA) {
+             setInternalCCA(cca);
+         }
     }
 
     private void setInternalCCA(boolean clear) {
