@@ -340,11 +340,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     private static final int[] BC_ADDRESS = new int[] {0xff, 0xff};
 
-    private int instruction = -1;
-
-    private int usartDataPos;
-    private int usartDataAddress;
-    private int usartDataValue;
     private int shrPos;
     private int txfifoPos;
     private boolean txfifoFlush;  // TXFIFO is automatically flushed on next write
@@ -352,7 +347,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     private int rxlen;
     private int rxread;
     private int zeroSymbols;
-    private boolean ramRead = false;
 
     /* RSSI is an externally set value of the RSSI for this CC2520 */
     /* low RSSI => CCA = true in normal mode */
@@ -516,11 +510,22 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         reset();
     }
 
+    private void updateGPIOConfig() {
+        int bit = 1;
+        for (int i = 0; i < gpio.length; i++) {
+            gpio[i].setPolarity((memory[REG_GPIOPOLARITY] & bit) > 0);
+            bit = bit << 1;
+        }
+    }
+    
     private void reset() {
 //        setReg(REG_MDMCTRL0, 0x0ae2);
         memory[REG_RSSISTAT] = 0;
 
         /* back to default configuration of GPIOs */
+        memory[REG_GPIOPOLARITY] = 0x3f;
+        updateGPIOConfig();
+        
         fifoGPIO = gpio[1];
         fifopGPIO = gpio[2];
         ccaGPIO = gpio[3];
@@ -832,6 +837,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         case REG_GPIOPOLARITY:
             if (DEBUG) log("GIOPOLARITY: 0x" + Utils.hex16(oldValue) + " => 0x" + Utils.hex16(data));
             if (oldValue != data) {
+                updateGPIOConfig();
                 // Polarity has changed - must update pins
                 setFIFOP(currentFIFOP);
                 setFIFO(currentFIFO);
@@ -921,128 +927,18 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
                 spiLen = 0;
             }
         }
-        
-        if (instruction == -1) {
-            // New instruction
-            if ((data & 0xc0) == INS_REGRD) {
-                // Register read
-//                source.byteReceived(oldStatus);
-                source.byteReceived(memory[data & 0x3f]);
-                return;
+        source.byteReceived(outputSPI);
+    }
+    
+    void rxon() {
+        if(stateMachine == RadioState.IDLE) {
+            setState(RadioState.RX_CALIBRATE);
+            //updateActiveFrequency();
+            if (DEBUG) {
+                log("Strobe RX-ON!!!");
             }
-            if ((data & 0xc0) == INS_REGWR) {
-                // Register write
-                instruction = data;
-                source.byteReceived(outputSPI);
-                return;
-            }
-            if ((data & 0xf0) == INS_MEMRD || (data & 0xf0) == INS_MEMWR) {
-                // Memory read or write
-                instruction = data;
-                source.byteReceived(outputSPI);
-                return;
-            }
-
-            switch (data & 0xff) {
-            case INS_SNOP:
-                // Do nothing
-                break;
-            case INS_IBUFLD:
-                instruction = data & 0xff;
-                break;
-            case INS_SIBUFEX:
-//                strobe(ibufld);
-//                ibufld = INS_SNOP;
-                break;
-            case INS_SSAMPLECCA:
-                break;
-            case INS_SRES:
-                break;
-            case INS_RXBUF:
-                break;
-            case INS_RXBUFCP:
-                break;
-            case INS_RXBUFMOV:
-                break;
-            case INS_TXBUF:
-                break;
-            case INS_TXBUFCP:
-                break;
-            case INS_RANDOM:
-                break;
-            case INS_SXOSCON:
-                break;
-            case INS_STXCAL:
-                break;
-            case INS_SRXON:
-                break;
-            case INS_STXON:
-                break;
-            case INS_STXONCCA:
-                break;
-            case INS_SRFOFF:
-                break;
-            case INS_SXOSCOFF:
-                break;
-            case INS_SFLUSHRX:
-                break;
-            case INS_SFLUSHTX:
-                break;
-            case INS_SACK:
-                break;
-            case INS_SACKPEND:
-                break;
-            case INS_SNACK:
-                break;
-            case INS_SRXMASKBITSET:
-                break;
-            case INS_SRXMASKBITCLR:
-                break;
-            case INS_RXMASKAND:
-                break;
-            case INS_RXMASKOR:
-                break;
-            case INS_MEMCP:
-                break;
-            case INS_MEMCPR:
-                break;
-            case INS_MEMXCP:
-                break;
-            case INS_MEMXWR:
-                break;
-            case INS_BCLR:
-                break;
-            case INS_BSET:
-                break;
-            case INS_CTR:
-                break;
-            case INS_CBCMAC:
-                break;
-            case INS_UCBCMAC:
-                break;
-            case INS_CCM:
-                break;
-            case INS_UCCM:
-                break;
-            case INS_ECB:
-                break;
-            case INS_ECBO:
-                break;
-            case INS_ECBX:
-                break;
-            case INS_ECBXO:
-                break;
-            case INS_INC:
-                break;
-            case INS_ABORT:
-                break;
-            default:
-                // Unknown instruction
-                logw("**** Warning - unknown instruction sent to CC2520: " + data);
-                break;
-            }
-            source.byteReceived(outputSPI);
-            return;
+        } else {
+            if (DEBUG) log("WARNING: SRXON when not IDLE");
         }
     }
 
@@ -1103,18 +999,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         switch (data) {
         case INS_SNOP:
             if (DEBUG) log("SNOP => " + Utils.hex8(status) + " at " + cpu.cycles);
-            break;
-        case INS_SRXON:
-            if(stateMachine == RadioState.IDLE) {
-                setState(RadioState.RX_CALIBRATE);
-                //updateActiveFrequency();
-                if (DEBUG) {
-                    log("Strobe RX-ON!!!");
-                }
-            } else {
-                if (DEBUG) log("WARNING: SRXON when not IDLE");
-            }
-
             break;
         case INS_SRFOFF:
             if (DEBUG) {
@@ -1269,7 +1153,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         //log("Set Symbol event: " + period);
     }
 
-    private void startOscillator() {
+    void startOscillator() {
         // 1ms crystal startup from datasheet pg12
         cpu.scheduleTimeEventMillis(oscillatorEvent, 1);
     }
@@ -1549,20 +1433,10 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     public void setChipSelect(boolean select) {
         chipSelect = select;
         if (!chipSelect) {
-//            if (state == SpiState.WRITE_REGISTER && usartDataPos == 1) {
-//                // Register write incomplete. Do a 8 bit register write.
-//                usartDataValue = (memory[usartDataAddress] & 0xff) | (usartDataValue & 0xff00);
-//                if (DEBUG) {
-//                    log("wrote 8 MSB to 0x" + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
-//                }
-//                setReg(usartDataAddress, usartDataValue);
-//            }
-            instruction = -1;
             spiLen = 0;
             if (command != null)
                 command.executeSPICommand();
             command = null;
-//            state = SpiState.WAITING;
         }
 
         if (DEBUG) {
@@ -1615,13 +1489,14 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     @Override
     public String info() {
         updateActiveFrequency();
+        String commandStr = command == null ? "<waiting>" : command.name;
         return " VREG_ON: " + isRadioOn + "  Chip Select: " + chipSelect +
                 "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) +
                 "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
-                "\n FIFOP Polarity: " + ((memory[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) +
+                "\n GPIO Polarity: " + Utils.hex8(memory[REG_GPIOPOLARITY]) +
                 "  FIFOP: " + currentFIFOP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD +
                 "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
-                "\n Radio State: " + stateMachine + "  SPI State: " + command +
+                "\n Radio State: " + stateMachine + "  SPI State: " + commandStr +
                 "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
                 "\n PanID: 0x" + Utils.hex8(memory[RAM_PANID + 1]) + Utils.hex8(memory[RAM_PANID]) +
                 "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
