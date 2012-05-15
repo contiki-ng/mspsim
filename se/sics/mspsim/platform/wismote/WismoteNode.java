@@ -175,7 +175,7 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             setupGUI();
 
             // Add some windows for listening to serial output
-            IOUnit usart = cpu.getIOUnit("USCI A0");
+            IOUnit usart = cpu.getIOUnit("USCI A1");
             if (usart instanceof USARTSource) {
                 SerialMon serial = new SerialMon((USARTSource)usart, "USCI A0 Port Output");
                 registry.registerComponent("serialgui", serial);
