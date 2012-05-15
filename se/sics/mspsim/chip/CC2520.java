@@ -255,11 +255,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     /* one single byte instruction can be stored in the IBUF */
     int instructionBuffer = 0;
     
-    public enum SpiState {
-        WAITING, WRITE_REGISTER, READ_REGISTER, RAM_ACCESS,
-        READ_RXFIFO, WRITE_TXFIFO
-    };
-
     // IOCFG0 Register Bit masks
     public static final int BCN_ACCEPT = (1<<11);
     public static final int FIFOP_THR = 0x7F;
@@ -345,9 +340,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     private static final int[] BC_ADDRESS = new int[] {0xff, 0xff};
 
-    private SpiState state = SpiState.WAITING;
     private int instruction = -1;
-    private int ibufld = INS_SNOP;
 
     private int usartDataPos;
     private int usartDataAddress;
@@ -827,6 +820,15 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
     }
 
+    /* API used in CC2520 SPI for both registers and memory */
+    void writeMemory(int address, int data) {
+        
+    }
+    
+    int readMemory(int address) {
+        return memory[address];
+    }
+    
     private void setReg(int address, int data) {
         int oldValue = registers[address];
         registers[address] = data;
@@ -883,7 +885,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         if (DEBUG) {
             log("byte received: " + Utils.hex8(data) +
                     " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
-                    " CS: " + chipSelect + " SPI state: " + state + " StateMachine: " + stateMachine);
+                    " CS: " + chipSelect + " SPI state: " + 0 + " StateMachine: " + stateMachine);
         }
 
         if (!chipSelect) {
@@ -905,8 +907,10 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             }
         }
 
+        /* command handling */
         spiData[spiLen] = data;
         if (spiLen < spiData.length) spiLen++;
+
         if (command != null) {
             command.dataReceived(data);
             if (spiLen == command.commandLen) {
@@ -945,8 +949,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
                 instruction = data & 0xff;
                 break;
             case INS_SIBUFEX:
-                strobe(ibufld);
-                ibufld = INS_SNOP;
+//                strobe(ibufld);
+//                ibufld = INS_SNOP;
                 break;
             case INS_SSAMPLECCA:
                 break;
@@ -1038,164 +1042,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             source.byteReceived(outputSPI);
             return;
         }
-
-//        switch (instruction) {
-//            case WAITING:
-//                if ((data & FLAG_READ) != 0) {
-//                    state = SpiState.READ_REGISTER;
-//                } else {
-//                    state = SpiState.WRITE_REGISTER;
-//                }
-//                if ((data & FLAG_RAM) != 0) {
-//                    state = SpiState.RAM_ACCESS;
-//                    usartDataAddress = data & 0x7f;
-//                } else {
-//                    // The register address
-//                    usartDataAddress = data & 0x3f;
-//
-//                    if (usartDataAddress == REG_RXFIFO) {
-//                        // check read/write???
-//                        //          log("Reading RXFIFO!!!");
-//                        state = SpiState.READ_RXFIFO;
-//                    } else if (usartDataAddress == REG_TXFIFO) {
-//                        state = SpiState.WRITE_TXFIFO;
-//                    }
-//                }
-//                if (data < 0x0f) {
-//                    strobe(data);
-//                    state = SpiState.WAITING;
-//                }
-//                usartDataPos = 0;
-//                // Assuming that the status always is sent back???
-//                //source.byteReceived(status);
-//                break;
-//
-//            case WRITE_REGISTER:
-//                if (usartDataPos == 0) {
-//                    source.byteReceived(registers[usartDataAddress] >> 8);
-//                    // set the high bits
-//                    usartDataValue = data << 8;
-//                    // registers[usartDataAddress] = (registers[usartDataAddress] & 0xff) | (data << 8);
-//                    usartDataPos = 1;
-//                } else {
-//                    source.byteReceived(registers[usartDataAddress] & 0xff);
-//                    // set the low bits
-//                    usartDataValue |= data;
-//                    // registers[usartDataAddress] = (registers[usartDataAddress] & 0xff00) | data;
-//
-//                    if (DEBUG) {
-//                        log("wrote to " + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
-//                    }
-//                    setReg(usartDataAddress, usartDataValue);
-//                    /* register written - go back to waiting... */
-//                    state = SpiState.WAITING;
-//                }
-//                break;
-//            case READ_REGISTER:
-//                if (usartDataPos == 0) {
-//                    source.byteReceived(registers[usartDataAddress] >> 8);
-//                    usartDataPos = 1;
-//                } else {
-//                    source.byteReceived(registers[usartDataAddress] & 0xff);
-//                    if (DEBUG) {
-//                        log("read from " + Utils.hex8(usartDataAddress) + " = "
-//                                + registers[usartDataAddress]);
-//                    }
-//                    state = SpiState.WAITING;
-//                }
-//                return;
-//                //break;
-//            case READ_RXFIFO: {
-//                int fifoData = rxFIFO.read();
-//                if (DEBUG) log("RXFIFO READ: " + rxFIFO.stateToString());
-//                source.byteReceived(fifoData);
-//
-//                /* first check and clear FIFOP - since we now have read a byte! */
-//                if (currentFIFOP && !overflow) {
-//                    /* FIFOP is lowered when rxFIFO is lower than or equal to fifopThr */
-//                    if(rxFIFO.length() <= fifopThr) {
-//                        if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
-//                        setFIFOP(false);
-//                    }
-//                }
-//
-//                /* initiate read of another packet - update some variables to keep track of packet reading... */
-//                if (rxfifoReadLeft == 0) {
-//                    rxfifoReadLeft = fifoData;
-//                    if (DEBUG) log("Init read of packet - len: " + rxfifoReadLeft +
-//                            " fifo: " + rxFIFO.stateToString());
-//                } else if (--rxfifoReadLeft == 0) {
-//                    /* check if we have another packet in buffer */
-//                    if (rxFIFO.length() > 0) {
-//                        /* check if the packet is complete or longer than fifopThr */
-//                        if (rxFIFO.length() > rxFIFO.peek(0) ||
-//                                (rxFIFO.length() > fifopThr && !decodeAddress && !frameRejected)) {
-//                            if (DEBUG) log("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
-//                            if (!overflow) setFIFOP(true);
-//                        }
-//                    }
-//                }
-//                // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
-//                if (rxFIFO.length() == 0) {
-//                    if (DEBUG) log("Setting FIFO to low (buffer empty)");
-//                    setFIFO(false);
-//                }
-//            }
-//            return; /* avoid returning the status byte */
-//            case WRITE_TXFIFO:
-//                if(txfifoFlush) {
-//                    txCursor = 0;
-//                    txfifoFlush = false;
-//                }
-//                if (DEBUG) log("Writing data: " + data + " to tx: " + txCursor);
-//
-//                if(txCursor == 0) {
-//                    if ((data & 0xff) > 127) {
-//                        logger.warning(this, "CC2520: Warning - packet size too large: " + (data & 0xff));
-//                    }
-//                } else if (txCursor > 127) {
-//                    logger.warning(this, "CC2520: Warning - TX Cursor wrapped");
-//                    txCursor = 0;
-//                }
-//                memory[RAM_TXFIFO + txCursor] = data & 0xff;
-//                txCursor++;
-//                if (sendEvents) {
-//                    sendEvent("WRITE_TXFIFO", null);
-//                }
-//                break;
-//            case RAM_ACCESS:
-//                if (usartDataPos == 0) {
-//                    usartDataAddress |= (data << 1) & 0x180;
-//                    ramRead = (data & FLAG_RAM_READ) != 0;
-//                    if (DEBUG) {
-//                        log("Address: " + Utils.hex16(usartDataAddress) + " read: " + ramRead);
-//                    }
-//                    usartDataPos++;
-//                } else {
-//                    if (!ramRead) {
-//                        memory[usartDataAddress++] = data;
-//                        if (usartDataAddress >= 0x180) {
-//                            logger.warning(this, "CC2520: Warning - RAM position too big - wrapping!");
-//                            usartDataAddress = 0;
-//                        }
-//                        if (DEBUG && usartDataAddress == RAM_PANID + 2) {
-//                            log("Pan ID set to: 0x" +
-//                                    Utils.hex8(memory[RAM_PANID]) +
-//                                    Utils.hex8(memory[RAM_PANID + 1]));
-//                        }
-//                    } else {
-//                        //log("Read RAM Addr: " + address + " Data: " + memory[address]);
-//                        source.byteReceived(memory[usartDataAddress++]);
-//                        if (usartDataAddress >= 0x180) {
-//                            logger.warning(this, "CC2520: Warning - RAM position too big - wrapping!");
-//                            usartDataAddress = 0;
-//                        }
-//                        return;
-//                    }
-//                }
-//                break;
-//            }
-//            source.byteReceived(oldStatus);
     }
 
     void stxon() {
@@ -1430,7 +1276,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         setFIFOP(false);
     }
 
-    private void flushRX() {
+    void flushRX() {
         if (DEBUG) {
             log("Flushing RX len = " + rxFIFO.length());
         }
@@ -1449,8 +1295,30 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
     }
 
+    void writeTXFIFO(int data) {
+        if(txfifoFlush) {
+            txCursor = 0;
+            txfifoFlush = false;
+        }
+        if (DEBUG) log("Writing data: " + data + " to tx: " + txCursor);
+
+        if(txCursor == 0) {
+            if ((data & 0xff) > 127) {
+                logger.warning(this, "CC2420: Warning - packet size too large: " + (data & 0xff));
+            }
+        } else if (txCursor > 127) {
+            logger.warning(this, "CC2420: Warning - TX Cursor wrapped");
+            txCursor = 0;
+        }
+        memory[RAM_TXFIFO + txCursor] = data & 0xff;
+        txCursor++;
+        if (sendEvents) {
+            sendEvent("WRITE_TXFIFO", null);
+        }
+    }
+
     // TODO: update any pins here?
-    private void flushTX() {
+    void flushTX() {
         txCursor = 0;
     }
 
@@ -1765,7 +1633,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
                 "\n FIFOP Polarity: " + ((registers[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) +
                 "  FIFOP: " + currentFIFOP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD +
                 "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
-                "\n Radio State: " + stateMachine + "  SPI State: " + state +
+                "\n Radio State: " + stateMachine + "  SPI State: " + command +
                 "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
                 "\n PanID: 0x" + Utils.hex8(memory[RAM_PANID + 1]) + Utils.hex8(memory[RAM_PANID]) +
                 "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +

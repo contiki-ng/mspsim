@@ -26,7 +26,14 @@ public class CC2520SPI {
             new SPICommand("RXBUF 0 0 1 1 0 0 0 0 - - - - - - - - ...",cc2520),
             new SPICommand("RXBUFCP 0 0 1 1 1 0 0 0 0 0 0 0 a a a a a a a a a a a a - - - - - - - - ...",cc2520),
             new SPICommand("RXBUFMOV 0 0 1 1 0 0 1 p c c c c c c c c 0 0 0 0 a a a a a a a a a a a a",cc2520),
-            new SPICommand("TXBUF 0 0 1 1 1 0 1 0 d d d d d d d d d d d d d d d d ...",cc2520),
+            new SPICommand("TXBUF 0 0 1 1 1 0 1 0 d d d d d d d d d d d d d d d d ...",cc2520) {
+                public boolean dataReceived(int data) {
+                    if (spiData.getSPIlen() > 1) {
+                        cc2520.writeTXFIFO(data);
+                    }
+                    return true;
+                }
+            },
             new SPICommand("TXBUFCP 0 0 1 1 1 1 1 p c c c c c c c c 0 0 0 0 a a a a a a a a a a a a",cc2520),
             new SPICommand("RANDOM 0 0 1 1 1 1 0 0 - - - - - - - - - - - - - - - - ...",cc2520),
             new SPICommand("SXOSCON 0 1 0 0 0 0 0 0",cc2520),
@@ -40,8 +47,16 @@ public class CC2520SPI {
             new SPICommand("STXONCCA 0 1 0 0 0 1 0 0",cc2520),
             new SPICommand("SRFOFF 0 1 0 0 0 1 0 1",cc2520),
             new SPICommand("SXOSCOFF 0 1 0 0 0 1 1 0",cc2520),
-            new SPICommand("SFLUSHRX 0 1 0 0 0 1 1 1",cc2520),
-            new SPICommand("SFLUSHTX 0 1 0 0 1 0 0 0",cc2520),
+            new SPICommand("SFLUSHRX 0 1 0 0 0 1 1 1",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.flushRX();
+                }                
+            },
+            new SPICommand("SFLUSHTX 0 1 0 0 1 0 0 0",cc2520) {
+                public void executeSPICommand() {
+                    cc2520.flushTX();
+                }                
+            },
             new SPICommand("SACK 0 1 0 0 1 0 0 1",cc2520),
             new SPICommand("SACKPEND 0 1 0 0 1 0 1 0",cc2520),
             new SPICommand("SNACK 0 1 0 0 1 0 1 1",cc2520),
@@ -70,16 +85,31 @@ public class CC2520SPI {
                 int cAdr = 0;
                 public boolean dataReceived(int data) {
                     /* check if this is first byte*/
-                    if (spiData.getSPIlen() == 0) { 
+                    if (spiData.getSPIlen() == 1) { 
                         cAdr = adr.getValue();
                     } else {
-                        spiData.outputSPI(memory[cAdr++]);
+                        spiData.outputSPI(cc2520.readMemory(cAdr));
+                        cAdr = (cAdr + 1) & 0x7f;
                     }
                     return true;
                 }
                 public void executeSPICommand() {}
             },
-            new SPICommand("REGWR 1 1 a a a a a a d d d d d d d d ...",cc2520)};
+            new SPICommand("REGWR 1 1 a a a a a a d d d d d d d d ...",cc2520) {
+                BitField adr = getBitField("a");
+                int cAdr = 0;
+                public boolean dataReceived(int data) {
+                    /* check if this is first byte*/
+                    if (spiData.getSPIlen() == 1) { 
+                        cAdr = adr.getValue();
+                    } else {
+                        cc2520.writeMemory(cAdr, data);
+                        cAdr = (cAdr + 1) & 0x7f;
+                    }
+                    return true;
+                }
+                public void executeSPICommand() {}
+            }};
         
         /* set up the commands */
         for (int i = 0; i < spiCommands.length; i++) {
