@@ -22,8 +22,41 @@ public class CC2520SPI {
             new SPICommand("SIBUFEX 0 0 0 0 0 0 1 1",cc2520),
             new SPICommand("SSAMPLECCA 0 0 0 0 0 1 0 0",cc2520),
             new SPICommand("SRES 0 0 0 0 1 1 1 1 - - - - - - - -",cc2520),
-            new SPICommand("MEMRD 0 0 0 1 a a a a a a a a a a a a - - - - - - - - ...",cc2520),
-            new SPICommand("MEMWR 0 0 1 0 a a a a a a a a a a a a d d d d d d d d ...",cc2520),
+            new SPICommand("MEMRD 0 0 0 1 a a a a a a a a a a a a - - - - - - - - ...",cc2520) {
+                BitField adr = getBitField("a");
+                int cAdr = 0;
+                public boolean dataReceived(int data) {
+                    /* check if this is first two bytes*/
+                    if (spiData.getSPIlen() == 2) { 
+                        cAdr = adr.getValue();
+                    } else if (spiData.getSPIlen() > 2){
+                        spiData.outputSPI(cc2520.readMemory(cAdr));
+                        cAdr = (cAdr + 1) & 0x3ff;
+                    }
+                    return true;
+                }
+                public void executeSPICommand() {}
+            },
+            new SPICommand("MEMWR 0 0 1 0 a a a a a a a a a a a a d d d d d d d d ...",cc2520) {
+                BitField adr = getBitField("a");
+                int cAdr = -1;
+                public boolean dataReceived(int data) {
+                    /* check if this is first two bytes*/
+                    int len = spiData.getSPIlen();
+                    int sdata[] = spiData.getSPIData();
+                    if (len == 2) {
+                        cAdr = adr.getValue();
+//                        System.out.println("SPI BitValue: [" + adr.startBit + " - " + 
+//                                adr.endBit + "] mask:" + adr.firstMask);
+//                        System.out.printf("SPI Data: %02x %02x  => adr:%x\n", sdata[0], sdata[1], cAdr);
+                    } else if (len > 2){
+                        cc2520.writeMemory(cAdr, data);
+                        cAdr = (cAdr + 1) & 0x3ff;
+                    }
+                    return true;
+                }
+                public void executeSPICommand() {}
+            },
             new SPICommand("RXBUF 0 0 1 1 0 0 0 0 - - - - - - - - ...",cc2520),
             new SPICommand("RXBUFCP 0 0 1 1 1 0 0 0 0 0 0 0 a a a a a a a a a a a a - - - - - - - - ...",cc2520),
             new SPICommand("RXBUFMOV 0 0 1 1 0 0 1 p c c c c c c c c 0 0 0 0 a a a a a a a a a a a a",cc2520),

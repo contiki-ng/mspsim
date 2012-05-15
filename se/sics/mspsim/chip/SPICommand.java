@@ -36,10 +36,11 @@ public class SPICommand {
             int firstByte = startBit / 8;
             int lastByte = endBit / 8;
             int nrBitsRoll = 7 - endBit & 7;
-                
-            value = spiData.getSPIData()[firstByte] & firstMask;
-            for (int i = firstByte + 1; i < lastByte; i++) {
-                value = value << 8 + spiData.getSPIData()[firstByte];
+            int data[] = spiData.getSPIData();
+            value = data[firstByte] & firstMask;
+            
+            for (int i = firstByte + 1; i < lastByte + 1; i++) {
+                value = (value << 8) + data[i];
             }
             value = value >> nrBitsRoll;
 

@@ -233,7 +233,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     public static final int STATUS_TX_ACTIVE        = 1 << 1;
     public static final int STATUS_RX_ACTIVE        = 1 << 0;
 
-    // Exceptions (bits in the EXCFLAGx registers)
+    // Exceptions (bits in the EXCFLAGx memory)
     public final static int EXC_RF_IDLE             = 1 << 0;
     public final static int EXC_TX_FRM_DONE         = 1 << 1;
     public final static int EXC_RX_FRM_ABORTED      = 0x20;
@@ -255,11 +255,11 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     /* one single byte instruction can be stored in the IBUF */
     int instructionBuffer = 0;
     
-    // IOCFG0 Register Bit masks
+    // IOCFG0 memory Bit masks
     public static final int BCN_ACCEPT = (1<<11);
     public static final int FIFOP_THR = 0x7F;
 
-    // IOCFG1 Register Bit Masks
+    // IOCFG1 memory Bit Masks
 //    public static final int SFDMUX = 0x3E0;
 //    public static final int CCAMUX = 0x1F;
 
@@ -388,7 +388,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     //private int status = STATUS_XOSC16M_STABLE | STATUS_RSSI_VALID;
     private int status = 0;
 
-    private final int[] registers = new int[128];
     private final int[] memory = new int[0x400]; /* total memory */
 
     private CC2520SPI cc2520SPI = new CC2520SPI(this);
@@ -420,7 +419,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             status |= STATUS_XOSC16M_STABLE;
             if(DEBUG) log("Oscillator Stable Event.");
             setState(RadioState.IDLE);
-//            if( (registers[REG_IOCFG1] & CCAMUX) == CCAMUX_XOSC16M_STABLE) {
+//            if( (memory[REG_IOCFG1] & CCAMUX) == CCAMUX_XOSC16M_STABLE) {
 //                updateCCA();
 //            } else {
 //                if(DEBUG) log("CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
@@ -465,7 +464,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
                 /* this will be called 8 symbols after first SFD_SEARCH */
             case RX_SFD_SEARCH:
                 status |= STATUS_RSSI_VALID;
-                registers[REG_RSSISTAT] = 1;
+                memory[REG_RSSISTAT] = 1;
                 updateCCA();
                 break;
 
@@ -507,8 +506,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
         
         
-//        registers[REG_SNOP] = 0;
-//        registers[REG_TXCTRL] = 0xa0ff;
+//        memory[REG_SNOP] = 0;
+//        memory[REG_TXCTRL] = 0xa0ff;
         setModeNames(MODE_NAMES);
         setMode(MODE_POWER_OFF);
         currentFIFOP = false;
@@ -519,7 +518,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     private void reset() {
 //        setReg(REG_MDMCTRL0, 0x0ae2);
-        registers[REG_RSSISTAT] = 0;
+        memory[REG_RSSISTAT] = 0;
 
         /* back to default configuration of GPIOs */
         fifoGPIO = gpio[1];
@@ -538,7 +537,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         if(DEBUG) log("State transition from " + stateMachine + " to " + state);
         stateMachine = state;
         /* write to FSM state register */
-        registers[REG_FSMSTAT0] = (registers[REG_FSMSTAT0] & 0x3f);//state.getFSMState();
+        memory[REG_FSMSTAT0] = (memory[REG_FSMSTAT0] & 0x3f);//state.getFSMState();
 
         switch(stateMachine) {
 
@@ -547,7 +546,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             flushRX();
             flushTX();
             status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
-            registers[REG_RSSISTAT] = 0;
+            memory[REG_RSSISTAT] = 0;
             crcOk = false;
             reset();
             setMode(MODE_POWER_OFF);
@@ -557,7 +556,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         case POWER_DOWN:
             rxFIFO.reset();
             status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
-            registers[REG_RSSISTAT] = 0;
+            memory[REG_RSSISTAT] = 0;
             crcOk = false;
             reset();
             setMode(MODE_POWER_OFF);
@@ -612,7 +611,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
         case IDLE:
             status &= ~STATUS_RSSI_VALID;
-            registers[REG_RSSISTAT] = 0;
+            memory[REG_RSSISTAT] = 0;
             setMode(MODE_TXRX_OFF);
             updateCCA();
             break;
@@ -791,7 +790,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
                         log("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
                     }
                     // Should take a RSSI value as input or use a set-RSSI value...
-                    rxFIFO.set(-2, registers[REG_RSSI] & 0xff);
+                    rxFIFO.set(-2, memory[REG_RSSI] & 0xff);
                     rxFIFO.set(-1, (corrval & 0x7F) | (crcOk ? 0x80 : 0));
                     //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = ;
                     //          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
@@ -820,18 +819,11 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
     }
 
-    /* API used in CC2520 SPI for both registers and memory */
+    /* API used in CC2520 SPI for both memory and memory */
     void writeMemory(int address, int data) {
-        
-    }
-    
-    int readMemory(int address) {
-        return memory[address];
-    }
-    
-    private void setReg(int address, int data) {
-        int oldValue = registers[address];
-        registers[address] = data;
+        System.out.printf("CC2520: writing to %x => %x\n", address, data);
+        int oldValue = memory[address];
+        memory[address] = data;
         switch(address) {
         case REG_FIFOPCTRL:
             fifopThr = data & FIFOP_THR;
@@ -847,13 +839,13 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
                 setCCA(currentCCA);
             }
             break;
-//        case REG_IOCFG1:
-//            if (DEBUG)
-//                log("IOCFG1: SFDMUX "
-//                        + ((registers[address] & SFDMUX) >> SFDMUX)
-//                        + " CCAMUX: " + (registers[address] & CCAMUX));
-//            updateCCA();
-//            break;
+            //        case REG_IOCFG1:
+            //            if (DEBUG)
+            //                log("IOCFG1: SFDMUX "
+            //                        + ((memory[address] & SFDMUX) >> SFDMUX)
+            //                        + " CCAMUX: " + (memory[address] & CCAMUX));
+            //            updateCCA();
+            //            break;
         case REG_MDMCTRL0:
             addressDecode = (data & ADR_DECODE) != 0;
             autoCRC = (data & ADR_AUTOCRC) != 0;
@@ -873,7 +865,11 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         }
         configurationChanged(address, oldValue, data);
     }
-
+    
+    int readMemory(int address) {
+        return memory[address];
+    }
+    
     /* the data that should be SPI response */
     int outputSPI;
     public void outputSPI(int data) {
@@ -904,6 +900,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             command = cc2520SPI.getCommand(data);
             if (command == null) {
                 logw("**** Warning - not implemented command on SPI: " + data);
+            } else {
+                logw("CC2520: found command " + command.name);
             }
         }
 
@@ -915,9 +913,10 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         if (command != null) {
             command.dataReceived(data);
             if (spiLen == command.commandLen) {
-                System.out.println("CC2520 Executing command: " + command.name);
+//                System.out.println("CC2520 Executing command: " + command.name);
                 command.executeSPICommand();
                 command = null;
+                spiLen = 0;
             }
         }
         
@@ -926,7 +925,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             if ((data & 0xc0) == INS_REGRD) {
                 // Register read
 //                source.byteReceived(oldStatus);
-                source.byteReceived(registers[data & 0x3f]);
+                source.byteReceived(memory[data & 0x3f]);
                 return;
             }
             if ((data & 0xc0) == INS_REGWR) {
@@ -1329,7 +1328,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     private void updateCCA() {
         // boolean oldCCA = cca;
-        // int ccaMux = (registers[REG_IOCFG1] & CCAMUX);
+        // int ccaMux = (memory[REG_IOCFG1] & CCAMUX);
 
         // if (ccaMux == CCAMUX_CCA) {
         //     /* If RSSI is less than -95 then we have CCA / clear channel! */
@@ -1351,7 +1350,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     private void setSFD(boolean sfd) {
         currentSFD = sfd;
         sfdGPIO.setActive(sfd);
-//        if( (registers[REG_GPIOPOLARITY] & SFD_POLARITY) == SFD_POLARITY)
+//        if( (memory[REG_GPIOPOLARITY] & SFD_POLARITY) == SFD_POLARITY)
 //            sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
 //        else
 //            sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
@@ -1362,7 +1361,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         currentCCA = cca;
         ccaGPIO.setActive(cca);
         if (DEBUG) log("Setting CCA to: " + cca);
-//        if( (registers[REG_GPIOPOLARITY] & CCA_POLARITY) == CCA_POLARITY)
+//        if( (memory[REG_GPIOPOLARITY] & CCA_POLARITY) == CCA_POLARITY)
 //            ccaPort.setPinState(ccaPin, cca ? 0 : 1);
 //        else
 //            ccaPort.setPinState(ccaPin, cca ? 1 : 0);
@@ -1372,7 +1371,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         currentFIFOP = fifop;
         fifopGPIO.setActive(fifop);
 //        if (DEBUG) log("Setting FIFOP to " + fifop);
-//        if( (registers[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) {
+//        if( (memory[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) {
 //            fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
 //        } else {
 //            fifopPort.setPinState(fifopPin, fifop ? 1 : 0);
@@ -1383,7 +1382,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         currentFIFO = fifo;
         fifoGPIO.setActive(fifo);
         if (DEBUG) log("Setting FIFO to " + fifo);
-//        if((registers[REG_GPIOPOLARITY] & FIFO_POLARITY) == FIFO_POLARITY) {
+//        if((memory[REG_GPIOPOLARITY] & FIFO_POLARITY) == FIFO_POLARITY) {
 //            fifoPort.setPinState(fifoPin, fifo ? 0 : 1);
 //        } else {
 //            fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
@@ -1407,8 +1406,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
      *****************************************************************************/
     public void updateActiveFrequency() {
         /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
-        activeFrequency = registers[REG_FSCTRL] - 357 + 2405 - 0x4000;
-        activeChannel = (registers[REG_FSCTRL] - 357 - 0x4000)/5 + 11;
+        activeFrequency = memory[REG_FSCTRL] - 357 + 2405 - 0x4000;
+        activeChannel = (memory[REG_FSCTRL] - 357 - 0x4000)/5 + 11;
     }
 
     public int getActiveFrequency() {
@@ -1420,7 +1419,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     }
 
     public int getOutputPowerIndicator() {
-        return (registers[REG_TXPOWER] & 0x1f);
+        return (memory[REG_TXPOWER] & 0x1f);
     }
 
     /**
@@ -1447,7 +1446,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         if (DEBUG) log("external setRSSI to: " + power);
 
         rssi = power;
-        registers[REG_RSSI] = power - RSSI_OFFSET;
+        memory[REG_RSSI] = power - RSSI_OFFSET;
         updateCCA();
     }
 
@@ -1550,7 +1549,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         if (!chipSelect) {
 //            if (state == SpiState.WRITE_REGISTER && usartDataPos == 1) {
 //                // Register write incomplete. Do a 8 bit register write.
-//                usartDataValue = (registers[usartDataAddress] & 0xff) | (usartDataValue & 0xff00);
+//                usartDataValue = (memory[usartDataAddress] & 0xff) | (usartDataValue & 0xff00);
 //                if (DEBUG) {
 //                    log("wrote 8 MSB to 0x" + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
 //                }
@@ -1558,6 +1557,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 //            }
             instruction = -1;
             spiLen = 0;
+            if (command != null)
+                command.executeSPICommand();
             command = null;
 //            state = SpiState.WAITING;
         }
@@ -1575,38 +1576,18 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
       public void setGPIO(int index, IOPort port, int pin) {
           gpio[index].setConfig(port, pin);
       }
-//    public void setCCAPort(IOPort port, int pin) {
-//        ccaPort = port;
-//        ccaPin = pin;
-//    }
-//
-//    public void setFIFOPPort(IOPort port, int pin) {
-//        fifopPort = port;
-//        fifopPin = pin;
-//    }
-//
-//    public void setFIFOPort(IOPort port, int pin) {
-//        fifoPort = port;
-//        fifoPin = pin;
-//    }
-//
-//    public void setSFDPort(IOPort port, int pin) {
-//        sfdPort = port;
-//        sfdPin = pin;
-//    }
-
 
     // -------------------------------------------------------------------
-    // Methods for accessing and writing to registers, etc from outside
+    // Methods for accessing and writing to memory, etc from outside
     // And for receiving data
     // -------------------------------------------------------------------
 
     public int getRegister(int register) {
-        return registers[register];
+        return memory[register];
     }
 
     public void setRegister(int register, int data) {
-        registers[register] = data;
+        memory[register] = data;
     }
 
     /*****************************************************************************
@@ -1635,7 +1616,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         return " VREG_ON: " + isRadioOn + "  Chip Select: " + chipSelect +
                 "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) +
                 "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
-                "\n FIFOP Polarity: " + ((registers[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) +
+                "\n FIFOP Polarity: " + ((memory[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) +
                 "  FIFOP: " + currentFIFOP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD +
                 "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
                 "\n Radio State: " + stateMachine + "  SPI State: " + command +
@@ -1655,7 +1636,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     /* return data in register at the correct position */
     @Override
     public int getConfiguration(int parameter) {
-        return registers[parameter];
+        return memory[parameter];
     }
 
     
@@ -1667,7 +1648,7 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     @Override
     public int getSPIlen() {
-        return 0;
+        return spiLen;
     }
 
 } // CC2520
