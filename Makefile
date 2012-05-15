@@ -119,6 +119,8 @@ $(JARFILE):	$(OBJECTS)
 %.tyndall:	jar
 	java -jar $(JARFILE) -platform=tyndall $(ARGS) $@
 
+%.wismote:      jar
+        java -jar $(JARFILE) -platform=wismote $(ARGS) $@
 help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
 
