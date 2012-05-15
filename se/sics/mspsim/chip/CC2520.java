@@ -398,6 +398,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     private final int[] registers = new int[128];
     private final int[] memory = new int[384 + 128];
 
+    private CC2520SPI cc2520SPI = new CC2520SPI(this);
+    private SPICommand command;
     private int[] spiData = new int[20]; /* SPI data buffer */
     private int spiLen;
     
@@ -896,6 +898,24 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             return;
         }
 
+        if (command == null) {
+            command = cc2520SPI.getCommand(data);
+            if (command == null) {
+                logw("**** Warning - not implemented command on SPI: " + data);
+            }
+        }
+
+        spiData[spiLen] = data;
+        if (spiLen < spiData.length) spiLen++;
+        if (command != null) {
+            command.dataReceived(data);
+            if (spiLen == command.commandLen) {
+                System.out.println("CC2520 Executing command: " + command.name);
+                command.executeSPICommand();
+                command = null;
+            }
+        }
+        
         if (instruction == -1) {
             // New instruction
             if ((data & 0xc0) == INS_REGRD) {
@@ -1664,6 +1684,8 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 //                setReg(usartDataAddress, usartDataValue);
 //            }
             instruction = -1;
+            spiLen = 0;
+            command = null;
 //            state = SpiState.WAITING;
         }
 

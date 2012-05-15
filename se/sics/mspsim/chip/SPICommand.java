@@ -1,19 +1,22 @@
 package se.sics.mspsim.chip;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 
 public class SPICommand {
 /*    
  * MEMXCP 0 1 0 1 0 1 0 p c c c c c c c c a a a a e e e e a a a a a a a a e e e e e e e e
  */
+    public final static int DYNAMIC_LENGTH = 0xffff;
+    
     String name;
     int mask;
     int value;
     int bitCount;
     int commandLen = 0;
+        
+    SPIData spiData;
     
-    private class BitField {
+    class BitField {
         String name;
         int startBit;
         int endBit;
@@ -28,15 +31,15 @@ public class SPICommand {
             System.out.printf("First mask %x\n", firstMask);
         }
         
-        public int getValue(int[] spiData) {
+        public int getValue() {
             int value;
             int firstByte = startBit / 8;
             int lastByte = endBit / 8;
             int nrBitsRoll = 7 - endBit & 7;
                 
-            value = spiData[firstByte] & firstMask;
+            value = spiData.getSPIData()[firstByte] & firstMask;
             for (int i = firstByte + 1; i < lastByte; i++) {
-                value = value << 8 + spiData[firstByte];
+                value = value << 8 + spiData.getSPIData()[firstByte];
             }
             value = value >> nrBitsRoll;
 
@@ -46,7 +49,8 @@ public class SPICommand {
     
     ArrayList<BitField> bitFields;
     
-    SPICommand(String pattern) {
+    SPICommand(String pattern, SPIData data) {
+        spiData = data;
         String[] subs = pattern.split(" ");
         name = subs[0];
         System.out.println("Name:" + subs[0]);
@@ -98,9 +102,12 @@ public class SPICommand {
                 bitFields = new ArrayList<SPICommand.BitField>();
             bitFields.add(new BitField(currentName, start, c - 1));
         }
-
+        commandLen = c / 8;
+        if ("...".equals(currentName))
+            commandLen = DYNAMIC_LENGTH;
         System.out.printf("Value %x\n", value);
         System.out.printf("Mask  %x\n", mask);
+        System.out.println("Command len: " + commandLen);
     }
 
     /* return -1 if no match */
@@ -112,15 +119,15 @@ public class SPICommand {
         return -1;
     }
     
+    
     /* do nothing here...  - override if needed */
-    public boolean dataReceived(int spiData) {
+    public boolean dataReceived(int data) {
         return true;
     }
     
     /* for any command that is executable (finite commands) */
-    public boolean executeSPICommand(int[] spiData) {
+    public void executeSPICommand() {
         System.out.println("Command " + name + " not implemented...");
-        return true;
     }
     
     public BitField getBitField(String arg) {
@@ -128,29 +135,6 @@ public class SPICommand {
             if (b.name.equals(arg)) return b;
         }
         /* not existing ... */
-        return null;
-    }
-    
-    public static void main(String[] args) {
-        SPICommand c = new SPICommand("MEMXCP 0 1 0 1 0 1 0 p c c c c c c c c a a a a e e e e a a a a a a a a e e e e e e e e") {
-            public boolean executeSPICommand(int[] spiData) {
-                System.out.println("Yes!");
-                return true;
-            }
-        };
-        int[] data = new int[]{1,0x13,0xab,0xaa,0xbb};
-        for (int i = 0; i < c.bitFields.size(); i++) {
-            System.out.printf("Data %s: %x\n", c.bitFields.get(i).name, c.bitFields.get(i).getValue(data));
-        }
-        c.executeSPICommand(data);
-
-        System.out.println("Bitcount:" + c.bitCount);
-        int maxv = 1 << (8 - c.bitCount);
-        int v = c.value;
-
-        /* populate an array with the values for quick decoding */
-        for (int i = 0; i < maxv; i++) {
-            System.out.printf("Value: %x\n", (v + i));
-        }
+        throw new IllegalArgumentException("No bitfield with name " + arg + " exists for " + name);
     }
 }
