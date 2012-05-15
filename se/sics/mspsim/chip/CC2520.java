@@ -1234,8 +1234,9 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
      *****************************************************************************/
     public void updateActiveFrequency() {
         /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
-        activeFrequency = memory[REG_FSCTRL] - 357 + 2405 - 0x4000;
-        activeChannel = (memory[REG_FSCTRL] - 357 - 0x4000)/5 + 11;
+        int freg = memory[REG_FREQCTRL] & 0x7f;
+        activeFrequency =  freg + 2394;
+        activeChannel = 11 + (freg - 11) / 5;
     }
 
     public int getActiveFrequency() {
