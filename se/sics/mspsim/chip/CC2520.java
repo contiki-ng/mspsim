@@ -901,7 +901,9 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
             if (command == null) {
                 logw("**** Warning - not implemented command on SPI: " + data);
             } else {
-                logw("CC2520: found command " + command.name);
+                if (!"SNOP".equals(command.name)) {
+                    logw("Found command " + command.name);
+                }
             }
         }
 

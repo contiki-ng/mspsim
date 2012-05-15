@@ -63,10 +63,12 @@ public class CC2520SPI {
             new SPICommand("TXBUF 0 0 1 1 1 0 1 0 d d d d d d d d d d d d d d d d ...",cc2520) {
                 public boolean dataReceived(int data) {
                     if (spiData.getSPIlen() > 1) {
+                        System.out.printf("Writing %x to TXFIFO\n", data);
                         cc2520.writeTXFIFO(data);
                     }
                     return true;
                 }
+                public void executeSPICommand() {}
             },
             new SPICommand("TXBUFCP 0 0 1 1 1 1 1 p c c c c c c c c 0 0 0 0 a a a a a a a a a a a a",cc2520),
             new SPICommand("RANDOM 0 0 1 1 1 1 0 0 - - - - - - - - - - - - - - - - ...",cc2520),
