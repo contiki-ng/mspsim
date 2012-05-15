@@ -1162,14 +1162,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     private void updateCCA() {
          boolean oldCCA = cca;
-        // int ccaMux = (memory[REG_IOCFG1] & CCAMUX);
-
-        // if (ccaMux == CCAMUX_CCA) {
-        //     /* If RSSI is less than -95 then we have CCA / clear channel! */
-        //     cca = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
-        // } else if (ccaMux == CCAMUX_XOSC16M_STABLE) {
-        //     cca = (status & STATUS_XOSC16M_STABLE) > 0;
-        // }
          
          cca = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
 
@@ -1476,6 +1468,44 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
     @Override
     public int getSPIlen() {
         return spiLen;
+    }
+
+    /* reads one byte from RX fifo */
+    public void readRXFifo() {
+        int fifoData = rxFIFO.read(); 
+        if (DEBUG) log("RXFIFO READ: " + rxFIFO.stateToString());
+        outputSPI = fifoData;
+
+        /* first check and clear FIFOP - since we now have read a byte! */
+        if (currentFIFOP && !overflow) {
+            /* FIFOP is lowered when rxFIFO is lower than or equal to fifopThr */
+            if(rxFIFO.length() <= fifopThr) {
+                if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
+                setFIFOP(false);
+            }
+        }
+
+        /* initiate read of another packet - update some variables to keep track of packet reading... */
+        if (rxfifoReadLeft == 0) {
+            rxfifoReadLeft = fifoData;
+            if (DEBUG) log("Init read of packet - len: " + rxfifoReadLeft +
+                    " fifo: " + rxFIFO.stateToString());
+        } else if (--rxfifoReadLeft == 0) {
+            /* check if we have another packet in buffer */
+            if (rxFIFO.length() > 0) {
+                /* check if the packet is complete or longer than fifopThr */
+                if (rxFIFO.length() > rxFIFO.peek(0) ||
+                        (rxFIFO.length() > fifopThr && !decodeAddress && !frameRejected)) {
+                    if (DEBUG) log("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
+                    if (!overflow) setFIFOP(true);
+                }
+            }
+        }
+        // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
+        if (rxFIFO.length() == 0) {
+            if (DEBUG) log("Setting FIFO to low (buffer empty)");
+            setFIFO(false);
+        }
     }
 
 } // CC2520

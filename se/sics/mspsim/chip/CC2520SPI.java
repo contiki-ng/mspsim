@@ -57,7 +57,15 @@ public class CC2520SPI {
                 }
                 public void executeSPICommand() {}
             },
-            new SPICommand("RXBUF 0 0 1 1 0 0 0 0 - - - - - - - - ...",cc2520),
+            new SPICommand("RXBUF 0 0 1 1 0 0 0 0 - - - - - - - - ...",cc2520) {
+                public boolean dataReceived(int data) {
+                    /* second byte is fifo data instead of status... */
+                    if (spiData.getSPIlen() > 1) {
+                        cc2520.readRXFifo();
+                    }
+                    return true;
+                }
+            },
             new SPICommand("RXBUFCP 0 0 1 1 1 0 0 0 0 0 0 0 a a a a a a a a a a a a - - - - - - - - ...",cc2520),
             new SPICommand("RXBUFMOV 0 0 1 1 0 0 1 p c c c c c c c c 0 0 0 0 a a a a a a a a a a a a",cc2520),
             new SPICommand("TXBUF 0 0 1 1 1 0 1 0 d d d d d d d d d d d d d d d d ...",cc2520) {
