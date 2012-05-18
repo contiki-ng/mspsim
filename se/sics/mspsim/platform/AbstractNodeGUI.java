@@ -123,9 +123,10 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
         setPreferredSize(new Dimension(nodeImage.getIconWidth(),
                                        nodeImage.getIconHeight()));
 
-        WindowManager wm = (WindowManager) registry.getComponent("windowManager");
+        WindowManager wm = registry.getComponent(WindowManager.class);
         window = wm.createWindow(windowName);
         window.add(this);
+        window.pack();
 
         startGUI();
 
