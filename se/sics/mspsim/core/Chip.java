@@ -81,11 +81,11 @@ public abstract class Chip implements Loggable, EventSource {
   public void notifyReset() {
   }
 
-  public void addOperatingModeListener(OperatingModeListener listener) {
+  public synchronized void addOperatingModeListener(OperatingModeListener listener) {
     omListeners = ArrayUtils.add(OperatingModeListener.class, omListeners, listener);
   }
   
-  public void removeOperatingModeListener(OperatingModeListener listener) {
+  public synchronized void removeOperatingModeListener(OperatingModeListener listener) {
     omListeners = ArrayUtils.remove(omListeners, listener);
   }
 
@@ -97,15 +97,14 @@ public abstract class Chip implements Loggable, EventSource {
       stateListener = StateChangeListener.Proxy.INSTANCE.remove(stateListener, listener);
   }
 
-  public void addConfigurationChangeListener(ConfigurationChangeListener listener) {
+  public synchronized void addConfigurationChangeListener(ConfigurationChangeListener listener) {
       ccListeners = ArrayUtils.add(ConfigurationChangeListener.class, ccListeners, listener);
   }
 
-  public void removeConfigurationChangeListener(ConfigurationChangeListener listener) {
+  public synchronized void removeConfigurationChangeListener(ConfigurationChangeListener listener) {
       ccListeners = ArrayUtils.remove(ccListeners, listener);
   }
 
-  
   public int getMode() {
     return mode;
   }
