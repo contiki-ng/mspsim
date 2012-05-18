@@ -11,8 +11,16 @@ public class JFrameWindowManager implements WindowManager {
             private JFrame window = new JFrame(name);
             private boolean restored = false;
 
+            public void setSize(int width, int height) {
+                window.setSize(width, height);
+            }
+
             public void setBounds(int x, int y, int width, int height) {
                 window.setBounds(x, y, width, height);
+            }
+
+            public void pack() {
+                window.pack();
             }
 
             public void add(Component component) {
