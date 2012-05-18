@@ -93,7 +93,7 @@ public class SkyGui extends AbstractNodeGUI {
 	  if (x > 122 && x < 135) {
 	    if (y > 41 && y < 55) {
 	      buttonDown = true;
-	      SkyGui.this.node.setButton(true);
+	      SkyGui.this.node.getButton().setPressed(true);
 	    } else if (y > 72 && y < 85) {
 	      resetDown = true;
 	    }
@@ -103,7 +103,7 @@ public class SkyGui extends AbstractNodeGUI {
 	public void mouseReleased(MouseEvent e) {
 	  if (buttonDown) {
 	    buttonDown = false;
-	    SkyGui.this.node.setButton(false);
+	    SkyGui.this.node.getButton().setPressed(false);
 
 	  } else if (resetDown) {
 	    int x = e.getX();

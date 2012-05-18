@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * ESBGui
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.platform.esb;
@@ -124,7 +120,7 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
           if (y > 152 && y < 168) {
             if (x > 0 && x < 19) {
               buttonDown = true;
-              node.setButton(true);
+              node.getButton().setPressed(true);
             } else {
               int w = getNodeImage().getIconWidth();
               if (x > w - 20 && x < w) {
@@ -139,7 +135,7 @@ public class ESBGui extends AbstractNodeGUI implements ADCInput {
         if (e.getButton() == MouseEvent.BUTTON1) {
           if (buttonDown) {
             buttonDown = false;
-            node.setButton(false);
+            node.getButton().setPressed(false);
           } else if (resetDown) {
             int x = e.getX();
             int y = e.getY();

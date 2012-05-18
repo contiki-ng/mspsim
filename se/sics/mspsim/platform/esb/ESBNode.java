@@ -27,22 +27,19 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * ESBNode
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.platform.esb;
 import java.io.IOException;
 
 import se.sics.mspsim.chip.Beeper;
+import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.TR1001;
 import se.sics.mspsim.config.MSP430f149Config;
@@ -80,6 +77,8 @@ public class ESBNode extends GenericNode implements PortListener {
   public boolean greenLed;
   public boolean yellowLed;
 
+  private Button button;
+
   private TR1001 radio;
   private Beeper beeper;
   private ESBGui gui;
@@ -96,6 +95,10 @@ public class ESBNode extends GenericNode implements PortListener {
       return leds;
   }
 
+  public Button getButton() {
+      return button;
+  }
+
   public Beeper getBeeper() {
       return beeper;
   }
@@ -108,8 +111,9 @@ public class ESBNode extends GenericNode implements PortListener {
     port1.setPinState(VIB_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
   }
 
-  public void setButton(boolean hi) {
-    port2.setPinState(BUTTON_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
+  @Deprecated
+  public void setButton(boolean buttonPressed) {
+      button.setPressed(buttonPressed);
   }
 
   public boolean getDebug() {
@@ -155,6 +159,7 @@ public class ESBNode extends GenericNode implements PortListener {
     radio = new TR1001(cpu, usart0);
 
     leds = new Leds(cpu, LEDS);
+    button = new Button("Button", cpu, port2, BUTTON_PIN, true);
     beeper = new Beeper(cpu);
   }
 

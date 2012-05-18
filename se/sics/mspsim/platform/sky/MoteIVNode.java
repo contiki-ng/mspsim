@@ -1,4 +1,5 @@
 package se.sics.mspsim.platform.sky;
+import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.SHT11;
 import se.sics.mspsim.core.IOPort;
@@ -29,6 +30,7 @@ public abstract class MoteIVNode extends CC2420Node {
   public boolean greenLed;
 
   private Leds leds;
+  private Button button;
   public SHT11 sht11;
 
   public SkyGui gui;
@@ -42,18 +44,22 @@ public abstract class MoteIVNode extends CC2420Node {
       return leds;
   }
 
-  public void setButton(boolean hi) {
-    port2.setPinState(BUTTON_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
+  public Button getButton() {
+      return button;
+  } 
+
+  @Deprecated
+  public void setButton(boolean buttonPressed) {
+      button.setPressed(buttonPressed);
   }
 
   public void setupNodePorts() {
     super.setupNodePorts();
 
     leds = new Leds(cpu, LEDS);
+    button = new Button("Button", cpu, port2, BUTTON_PIN, true);
     sht11 = new SHT11(cpu);
-    if (port1 != null) {
-      sht11.setDataPort(port1, SHT11_DATA_PIN);
-    }
+    sht11.setDataPort(port1, SHT11_DATA_PIN);
   }
 
   public void setupGUI() {
