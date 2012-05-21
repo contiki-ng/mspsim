@@ -36,8 +36,9 @@
 
 package se.sics.mspsim.platform.wismote;
 import java.io.IOException;
-
+import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.CC2520;
+import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.config.MSP430f5437Config;
 import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.IOPort;
@@ -66,19 +67,38 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     /* P4.4 - Output: RESET_N to CC2520 */
     public static final int CC2520_RESET = 1 << 4;
 
-    /* P8.6 - Red led */
-    public static final int LEDS_CONF_RED    = 1 << 6;
-    /* P2.4 - Green led */
-    public static final int LEDS_CONF_GREEN  = 1 << 4;
-    /* P5.2 - Yellow led */
-    public static final int LEDS_CONF_YELLOW = 1 << 2;
+    /* P2.7 - Button */
+    public static final int BUTTON_PIN = 7;
+
+    /* P8.6 - Red (left) led */
+    private static final int LEDS_CONF_RED2   = 1 << 6;
+    private static final int LEDS_RED2        = 1 << 2;
+    /* P5.2 - Green (middle) led */
+    private static final int LEDS_CONF_GREEN  = 1 << 2;
+    private static final int LEDS_GREEN       = 1 << 1;
+    /* P2.4 - Red (right) led */
+    private static final int LEDS_CONF_RED1   = 1 << 4;
+    private static final int LEDS_RED1        = 1 << 0;
+
+    private static final int[] LEDS = { 0xff2020, 0x20ff20, 0xff2020 };
 
     //private M25P80 flash;
     //private String flashFile;
     private CC2520 radio;
+    private Leds leds;
+    private Button button;
+    private WismoteGui gui;
 
     public WismoteNode() {
         super("Wismote", new MSP430f5437Config());
+    }
+
+    public Leds getLeds() {
+        return leds;
+    }
+
+    public Button getButton() {
+        return button;
     }
 
 //    public M25P80 getFlash() {
@@ -102,7 +122,8 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     public void portWrite(IOPort source, int data) {
         switch (source.getPort()) {
         case 2:
-            //System.out.println("LEDS GREEN = " + ((data & LEDS_CONF_GREEN) > 0));
+            //System.out.println("LEDS RED1 = " + ((data & LEDS_CONF_RED1) > 0));
+            leds.setLeds(LEDS_RED1, (data & LEDS_CONF_RED1) == 0 && (source.getDirection() & LEDS_CONF_RED1) != 0);
             break;
         case 3:
             // Chip select = active low...
@@ -114,10 +135,12 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             radio.setVRegOn((data & CC2520_VREG) != 0);
             break;
         case 5:
-            //System.out.println("LEDS YELLOW = " + ((data & LEDS_CONF_YELLOW) > 0));
+            //System.out.println("LEDS GREEN = " + ((data & LEDS_CONF_GREEN) > 0));
+            leds.setLeds(LEDS_GREEN, (data & LEDS_CONF_GREEN) == 0 && (source.getDirection() & LEDS_CONF_GREEN) != 0);
             break;
         case 8:
-            //System.out.println("LEDS RED = " + ((data & LEDS_CONF_RED) > 0));
+            //System.out.println("LEDS RED2 = " + ((data & LEDS_CONF_RED2) > 0));
+            leds.setLeds(LEDS_RED2, (data & LEDS_CONF_RED2) == 0 && (source.getDirection() & LEDS_CONF_RED2) != 0);
             break;
         }
     }
@@ -144,11 +167,13 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             radio.setGPIO(3, port1, CC2520_CCA);
             radio.setGPIO(2, port1, CC2520_FIFOP);
             radio.setGPIO(4, port2, CC2520_SFD);
-            
+
             ((USARTSource) usart0).addUSARTListener(this);
         } else {
             throw new EmulationException("Could not setup wismote mote - missing USCI B0");
         }
+        leds = new Leds(cpu, LEDS);
+        button = new Button("Button", cpu, port2, BUTTON_PIN, true);
     }
 
     public void setupNode() {
@@ -184,7 +209,10 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     }
 
     public void setupGUI() {
-        System.out.println("No gui for Wismote yet...");
+        if (gui == null) {
+            gui = new WismoteGui(this);
+            registry.registerComponent("nodegui", gui);
+        }
     }
 
     public int getModeMax() {
