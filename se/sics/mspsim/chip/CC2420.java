@@ -37,13 +37,16 @@
  */
 
 package se.sics.mspsim.chip;
-
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.core.MSP430Core;
+import se.sics.mspsim.core.TimeEvent;
+import se.sics.mspsim.core.USARTListener;
+import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.util.ArrayFIFO;
 import se.sics.mspsim.util.CCITT_CRC;
 import se.sics.mspsim.util.Utils;
 
-public class CC2420 extends Chip implements USARTListener, RFListener, RFSource {
+public class CC2420 extends Radio802154 implements USARTListener {
 
   public enum Reg {
     SNOP, SXOSCON, STXCAL, SRXON, /* 0x00 */
@@ -310,8 +313,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
   private int txCursor;
   private boolean on;
-  private RFListener rfListener;
-  private ChannelListener channelListener;
 
   private TimeEvent oscillatorEvent = new TimeEvent(0, "CC2420 OSC") {
     public void execute(long t) {
@@ -1257,6 +1258,11 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
    *  External APIs for simulators simulating Radio medium, etc.
    * 
    *****************************************************************************/
+  @Override
+  public boolean isReadyToReceive() {
+      return getState() == RadioState.RX_SFD_SEARCH;
+  }
+
   public void updateActiveFrequency() {
     /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
     activeFrequency = registers[REG_FSCTRL] - 357 + 2405 - 0x4000;
@@ -1264,10 +1270,12 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
   }
 
   public int getActiveFrequency() {
+    updateActiveFrequency();
     return activeFrequency;
   }
 
   public int getActiveChannel() {
+    updateActiveFrequency();
     return activeChannel;
   }
 
@@ -1334,24 +1342,6 @@ public class CC2420 extends Chip implements USARTListener, RFListener, RFSource 
 
     /* Unknown */
     return -100;
-  }
-
-  @Override
-  public synchronized void addRFListener(RFListener rf) {
-      rfListener = RFListener.Proxy.INSTANCE.add(rfListener, rf);
-  }
-
-  @Override
-  public synchronized void removeRFListener(RFListener rf) {
-      rfListener = RFListener.Proxy.INSTANCE.remove(rfListener, rf);
-  }
-
-  public synchronized void addChannelListener(ChannelListener listener) {
-      channelListener = ChannelListener.Proxy.INSTANCE.add(channelListener, listener);
-  }
-
-  public synchronized void removeChannelListener(ChannelListener listener) {
-      channelListener = ChannelListener.Proxy.INSTANCE.remove(channelListener, listener);
   }
 
   public void notifyReset() {

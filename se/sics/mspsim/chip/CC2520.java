@@ -40,7 +40,7 @@ import se.sics.mspsim.util.ArrayFIFO;
 import se.sics.mspsim.util.CCITT_CRC;
 import se.sics.mspsim.util.Utils;
 
-public class CC2520 extends Chip implements USARTListener, RFListener, RFSource, SPIData {
+public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     public static final int FIFO_POLARITY = (1<<10);
     public static final int FIFOP_POLARITY = (1<<9);
     public static final int SFD_POLARITY = (1<<8);
@@ -405,8 +405,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
     private int txCursor;
     private boolean isRadioOn;
-    private RFListener rfListener;
-    private ChannelListener channelListener;
 
     private TimeEvent oscillatorEvent = new TimeEvent(0, "CC2520 OSC") {
         public void execute(long t) {
@@ -1232,21 +1230,32 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
      *  External APIs for simulators simulating Radio medium, etc.
      *
      *****************************************************************************/
-    public void updateActiveFrequency() {
+
+    @Override
+    public boolean isReadyToReceive() {
+        return getState() == RadioState.RX_SFD_SEARCH;
+    }
+
+    private void updateActiveFrequency() {
         /* INVERTED: f = 5 * (c - 11) + 357 + 0x4000 */
         int freg = memory[REG_FREQCTRL] & 0x7f;
         activeFrequency =  freg + 2394;
         activeChannel = 11 + (freg - 11) / 5;
     }
 
+    @Override
     public int getActiveFrequency() {
+        updateActiveFrequency();
         return activeFrequency;
     }
 
+    @Override
     public int getActiveChannel() {
+        updateActiveFrequency();
         return activeChannel;
     }
 
+    @Override
     public int getOutputPowerIndicator() {
         return (memory[REG_TXPOWER] & 0x1f);
     }
@@ -1256,12 +1265,22 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
      * @param lqi The Corr-val
      * @sa CC2520 Datasheet
      */
+    @Override
     public void setLQI(int lqi){
-        if(lqi < 0) lqi = 0;
-        else if(lqi > 0x7f ) lqi = 0x7f;
+        if(lqi < 0) {
+            lqi = 0;
+        } else if(lqi > 0x7f ) {
+            lqi = 0x7f;
+        }
         corrval = lqi;
     }
 
+    @Override
+    public int getLQI() {
+        return corrval;
+    }
+
+    @Override
     public void setRSSI(int power) {
         final int minp = -128 + RSSI_OFFSET;
         final int maxp = 128 + RSSI_OFFSET;
@@ -1279,10 +1298,12 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
         updateCCA();
     }
 
+    @Override
     public int getRSSI() {
         return rssi;
     }
 
+    @Override
     public int getOutputPower() {
         /* From CC2520 datasheet, table 17 */
         int indicator = getOutputPowerIndicator();
@@ -1329,24 +1350,6 @@ public class CC2520 extends Chip implements USARTListener, RFListener, RFSource,
 
         /* Unknown */
         return -100;
-    }
-
-    @Override
-    public synchronized void addRFListener(RFListener rf) {
-        rfListener = RFListener.Proxy.INSTANCE.add(rfListener, rf);
-    }
-
-    @Override
-    public synchronized void removeRFListener(RFListener rf) {
-        rfListener = RFListener.Proxy.INSTANCE.remove(rfListener, rf);
-    }
-
-    public synchronized void addChannelListener(ChannelListener listener) {
-        channelListener = ChannelListener.Proxy.INSTANCE.add(channelListener, listener);
-    }
-
-    public synchronized void removeChannelListener(ChannelListener listener) {
-        channelListener = ChannelListener.Proxy.INSTANCE.remove(channelListener, listener);
     }
 
     @Override
