@@ -34,7 +34,7 @@
       	<attribute name="Sealed" value="true"/>
       	<attribute name="Class-Path" value="${jar.classpath}" />
       </manifest>
-      <fileset dir="." includes="images/*.jpg"/>
+      <fileset dir="." includes="images/*.jpg,images/*.png"/>
     </jar>
   </target>
 
