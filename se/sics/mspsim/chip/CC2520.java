@@ -41,15 +41,10 @@ import se.sics.mspsim.util.CCITT_CRC;
 import se.sics.mspsim.util.Utils;
 
 public class CC2520 extends Radio802154 implements USARTListener, SPIData {
-    public static final int FIFO_POLARITY = (1<<10);
-    public static final int FIFOP_POLARITY = (1<<9);
-    public static final int SFD_POLARITY = (1<<8);
-    public static final int CCA_POLARITY = (1<<7);
-    public static final int POLARITY_MASK = FIFO_POLARITY | FIFOP_POLARITY | SFD_POLARITY | CCA_POLARITY;
 
     public static class GPIO {
-        public IOPort port;
-        public int pin;
+        private IOPort port;
+        private int pin;
 
         boolean polarity = true;
         boolean isActive;
@@ -57,6 +52,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         public void setConfig(IOPort port, int pin) {
             this.port = port;
             this.pin = pin;
+            port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
         }
 
         public boolean isActive() {
@@ -66,23 +62,19 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         public void setActive(boolean isActive) {
             if (this.isActive != isActive) {
                 this.isActive = isActive;
-                port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+                if (port != null) {
+                    port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+                }
             }
         }
 
         public void setPolarity(boolean polarity) {
             if (this.polarity != polarity) {
                 this.polarity = polarity;
-                port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+                if (port != null) {
+                    port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+                }
             }
-        }
-    }
-
-    static class VoidGPIO extends GPIO {
-
-        @Override
-        public void setActive(boolean isActive) {
-            // Ignore
         }
     }
 
@@ -492,8 +484,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         for (int i = 0; i < gpio.length; i++) {
             gpio[i] = new GPIO();
         }
-        
-        
+
         setModeNames(MODE_NAMES);
         setMode(MODE_POWER_OFF);
         currentFIFOP = false;
@@ -509,24 +500,18 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             bit = bit << 1;
         }
     }
-    
+
     private void reset() {
         memory[REG_RSSISTAT] = 0;
 
         /* back to default configuration of GPIOs */
         memory[REG_GPIOPOLARITY] = 0x3f;
         updateGPIOConfig();
-        
+
         fifoGPIO = gpio[1];
         fifopGPIO = gpio[2];
         ccaGPIO = gpio[3];
         sfdGPIO = gpio[4];
-        
-        for (int i = 0; i < gpio.length; i++) {
-            gpio[i].setPolarity(true); /* reset to positive polarity */
-        }
-        
-        
     }
 
     private boolean setState(RadioState state) {
@@ -815,7 +800,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         }
     }
 
-    /* API used in CC2520 SPI for both memory and memory */
+    /* API used in CC2520 SPI for both memory and registers */
     void writeMemory(int address, int data) {
         System.out.printf("CC2520: writing to %x => %x\n", address, data);
         int oldValue = memory[address];
@@ -1394,10 +1379,9 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         return chipSelect;
     }
 
-
-      public void setGPIO(int index, IOPort port, int pin) {
-          gpio[index].setConfig(port, pin);
-      }
+    public void setGPIO(int index, IOPort port, int pin) {
+        gpio[index].setConfig(port, pin);
+    }
 
     // -------------------------------------------------------------------
     // Methods for accessing and writing to memory, etc from outside
