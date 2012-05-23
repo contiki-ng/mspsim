@@ -1283,6 +1283,10 @@ public class CC2420 extends Radio802154 implements USARTListener {
     return (registers[REG_TXCTRL] & 0x1f);
   }
 
+  public int getOutputPowerIndicatorMax() {
+      return 31;
+  }
+
   /**
    * This is actually the "CORR" value.
    * @param lqi The Corr-val

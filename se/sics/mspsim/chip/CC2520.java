@@ -246,7 +246,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
     /* one single byte instruction can be stored in the IBUF */
     int instructionBuffer = 0;
-    
+
     // IOCFG0 memory Bit masks
     public static final int BCN_ACCEPT = (1<<11);
     public static final int FIFOP_THR = 0x7F;
@@ -345,8 +345,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
     private int rssi = -100;
     private static int RSSI_OFFSET = -45; /* cc2520 datasheet */
-    /* current CCA value */
-    private boolean cca = false;
 
     /* This is the magical LQI */
     private int corrval = 37;
@@ -380,9 +378,12 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     private SPICommand command;
     private int[] spiData = new int[20]; /* SPI data buffer */
     private int spiLen;
-    
+
     // Buffer to hold 5 byte Synchronization header, as it is not written to the TXFIFO
     private final byte[] SHR = new byte[5];
+
+    /* the data that should be SPI response */
+    private int outputSPI;
 
     private boolean chipSelect;
     private final GPIO[] gpio = new GPIO[6];
@@ -390,10 +391,11 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     private GPIO fifopGPIO;
     private GPIO fifoGPIO;
     private GPIO sfdGPIO;
-    private boolean currentCCA;
-    private boolean currentSFD;
     private boolean currentFIFO;
     private boolean currentFIFOP;
+
+    /* current CCA value */
+    private boolean currentCCA = false;
 
     private int txCursor;
     private boolean isRadioOn;
@@ -487,7 +489,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
         setModeNames(MODE_NAMES);
         setMode(MODE_POWER_OFF);
-        currentFIFOP = false;
         rxFIFO.reset();
         overflow = false;
         reset();
@@ -502,7 +503,11 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     }
 
     private void reset() {
+        memory[REG_FSMSTAT1] = 0;
         memory[REG_RSSISTAT] = 0;
+        memory[REG_TXPOWER] = 0x06;
+        memory[REG_FIFOPCTRL] = fifopThr = 0x40;
+        memory[REG_FREQCTRL] = 0x0b;
 
         /* back to default configuration of GPIOs */
         memory[REG_GPIOPOLARITY] = 0x3f;
@@ -512,6 +517,11 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         fifopGPIO = gpio[2];
         ccaGPIO = gpio[3];
         sfdGPIO = gpio[4];
+
+        setFIFO(false);
+        setFIFOP(false);
+        setSFD(false);
+        updateCCA();
     }
 
     private boolean setState(RadioState state) {
@@ -601,6 +611,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             /* TX active during ACK + NOTE: we ignore the SFD when receiving full packets so
              * we need to add another extra 2 symbols here to get a correct timing */
             status |= STATUS_TX_ACTIVE;
+            memory[REG_FSMSTAT1] |= (1 << 1);
             setSymbolEvent(12 + 2 + 2);
             setMode(MODE_TXRX_ON);
             break;
@@ -802,10 +813,16 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
     /* API used in CC2520 SPI for both memory and registers */
     void writeMemory(int address, int data) {
-        System.out.printf("CC2520: writing to %x => %x\n", address, data);
+//        System.out.printf("CC2520: writing to %x => %x\n", address, data);
         int oldValue = memory[address];
         memory[address] = data;
         switch(address) {
+        case REG_TXPOWER:
+            if (!isDefinedTxPower(data)) {
+                logw("*** Warning - writing an undefined TXPOWER value (0x"
+                        + Utils.hex8(data) + ") to CC2520!!!");
+            }
+            break;
         case REG_FIFOPCTRL:
             fifopThr = data & FIFOP_THR;
             if (DEBUG) log("FIFOPCTRL: 0x" + Utils.hex16(oldValue) + " => 0x" + Utils.hex16(data));
@@ -814,11 +831,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             if (DEBUG) log("GIOPOLARITY: 0x" + Utils.hex16(oldValue) + " => 0x" + Utils.hex16(data));
             if (oldValue != data) {
                 updateGPIOConfig();
-                // Polarity has changed - must update pins
-                setFIFOP(currentFIFOP);
-                setFIFO(currentFIFO);
-                setSFD(currentSFD);
-                setCCA(currentCCA);
             }
             break;
             //        case REG_IOCFG1:
@@ -847,23 +859,19 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         }
         configurationChanged(address, oldValue, data);
     }
-    
+
     int readMemory(int address) {
         return memory[address];
     }
-    
-    /* the data that should be SPI response */
-    int outputSPI;
-    public void outputSPI(int data) {
-        outputSPI = data;
-    }
-    
+
+    @Override
     public void dataReceived(USARTSource source, int data) {
         outputSPI = status; /* if nothing replace the outputSPI it will be output */
         if (DEBUG) {
             log("byte received: " + Utils.hex8(data) +
                     " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
-                    " CS: " + chipSelect + " SPI state: " + 0 + " StateMachine: " + stateMachine);
+                    " CS: " + chipSelect + " SPI(" + spiLen + "): " + (command == null ? "<waiting>" : command.name)
+                    + " State: " + stateMachine);
         }
 
         if (!chipSelect) {
@@ -882,17 +890,19 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             command = cc2520SPI.getCommand(data);
             if (command == null) {
                 logw("**** Warning - not implemented command on SPI: " + data);
-            } else {
+            } else if (DEBUG) {
                 if (!"SNOP".equals(command.name)) {
-                    logw("Found command " + command.name);
+                    log("SPI command: " + command.name);
                 }
             }
         }
 
         /* command handling */
         spiData[spiLen] = data;
-        /* ensure that we do not store too many spiDatas */
-        if (spiLen < (spiData.length - 1)) spiLen++;
+        /* ensure that we do not store too many SPI data items */
+        if (spiLen < (spiData.length - 1)) {
+            spiLen++;
+        }
 
         if (command != null) {
             command.dataReceived(data);
@@ -905,7 +915,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         }
         source.byteReceived(outputSPI);
     }
-    
+
     void rxon() {
         if(stateMachine == RadioState.IDLE) {
             setState(RadioState.RX_CALIBRATE);
@@ -929,7 +939,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         }
         setState(RadioState.IDLE);
     }
-    
+
     void stxon() {
         // State transition valid from IDLE state or all RX states
         if( (stateMachine == RadioState.IDLE) ||
@@ -939,6 +949,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                 (stateMachine == RadioState.RX_OVERFLOW) ||
                 (stateMachine == RadioState.RX_WAIT)) {
             status |= STATUS_TX_ACTIVE;
+            memory[REG_FSMSTAT1] |= (1 << 1);
             setState(RadioState.TX_CALIBRATE);
             if (sendEvents) {
                 sendEvent("STXON", null);
@@ -947,7 +958,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             if (DEBUG) log("Strobe STXON - transmit on! at " + cpu.cycles);
         }
     }
-    
+
     void stxoncca() {
         // Only valid from all RX states,
         // since CCA requires ??(look this up) receive symbol periods to be valid
@@ -961,8 +972,9 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                 sendEvent("STXON_CCA", null);
             }
 
-            if(cca) {
+            if(currentCCA) {
                 status |= STATUS_TX_ACTIVE;
+                memory[REG_FSMSTAT1] |= (1 << 1);
                 setState(RadioState.TX_CALIBRATE);
                 if (DEBUG) log("Strobe STXONCCA - transmit on! at " + cpu.cycles);
             }else{
@@ -1028,6 +1040,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         } else {
             if (DEBUG) log("Completed Transmission.");
             status &= ~STATUS_TX_ACTIVE;
+            memory[REG_FSMSTAT1] &= ~(1 << 1);
             setSFD(false);
             if (overflow) {
                 /* TODO: is it going back to overflow here ?=? */
@@ -1070,6 +1083,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         } else {
             if (DEBUG) log("Completed Transmission of ACK.");
             status &= ~STATUS_TX_ACTIVE;
+            memory[REG_FSMSTAT1] &= ~(1 << 1);
             setSFD(false);
             setState(RadioState.RX_CALIBRATE);
             /* Back to RX ON */
@@ -1144,60 +1158,51 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     }
 
     private void updateCCA() {
-         boolean oldCCA = cca;
-         
-         cca = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
+         boolean oldCCA = currentCCA;
 
-         if (cca != oldCCA) {
-             setInternalCCA(cca);
+         currentCCA = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
+
+         if (currentCCA != oldCCA) {
+             ccaGPIO.setActive(currentCCA);
+             if (currentCCA) {
+                 memory[REG_FSMSTAT1] |= 1 << 4;
+             } else {
+                 memory[REG_FSMSTAT1] &= ~(1 << 4);
+             }
+             if (DEBUG) log("Setting CCA to: " + currentCCA);
          }
     }
 
-    private void setInternalCCA(boolean clear) {
-        setCCA(clear);
-        if (DEBUG) log("Internal CCA: " + clear);
-    }
-
     private void setSFD(boolean sfd) {
-        currentSFD = sfd;
         sfdGPIO.setActive(sfd);
-//        if( (memory[REG_GPIOPOLARITY] & SFD_POLARITY) == SFD_POLARITY)
-//            sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
-//        else
-//            sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
+        if (sfd) {
+            memory[REG_FSMSTAT1] |= 1 << 5;
+        } else {
+            memory[REG_FSMSTAT1] &= ~(1 << 5);
+        }
         if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
-    }
-
-    private void setCCA(boolean cca) {
-        currentCCA = cca;
-        ccaGPIO.setActive(cca);
-        if (DEBUG) log("Setting CCA to: " + cca);
-//        if( (memory[REG_GPIOPOLARITY] & CCA_POLARITY) == CCA_POLARITY)
-//            ccaPort.setPinState(ccaPin, cca ? 0 : 1);
-//        else
-//            ccaPort.setPinState(ccaPin, cca ? 1 : 0);
     }
 
     private void setFIFOP(boolean fifop) {
         currentFIFOP = fifop;
         fifopGPIO.setActive(fifop);
-//        if (DEBUG) log("Setting FIFOP to " + fifop);
-//        if( (memory[REG_GPIOPOLARITY] & FIFOP_POLARITY) == FIFOP_POLARITY) {
-//            fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
-//        } else {
-//            fifopPort.setPinState(fifopPin, fifop ? 1 : 0);
-//        }
+        if (fifop) {
+            memory[REG_FSMSTAT1] |= 1 << 6;
+        } else {
+            memory[REG_FSMSTAT1] &= ~(1 << 6);
+        }
+        if (DEBUG) log("Setting FIFOP to " + fifop);
     }
 
     private void setFIFO(boolean fifo) {
         currentFIFO = fifo;
         fifoGPIO.setActive(fifo);
+        if (fifo) {
+            memory[REG_FSMSTAT1] |= 1 << 7;
+        } else {
+            memory[REG_FSMSTAT1] &= ~(1 << 7);
+        }
         if (DEBUG) log("Setting FIFO to " + fifo);
-//        if((memory[REG_GPIOPOLARITY] & FIFO_POLARITY) == FIFO_POLARITY) {
-//            fifoPort.setPinState(fifoPin, fifo ? 0 : 1);
-//        } else {
-//            fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
-//        }
     }
 
     private void setRxOverflow() {
@@ -1238,11 +1243,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     public int getActiveChannel() {
         updateActiveFrequency();
         return activeChannel;
-    }
-
-    @Override
-    public int getOutputPowerIndicator() {
-        return (memory[REG_TXPOWER] & 0x1f);
     }
 
     /**
@@ -1288,51 +1288,97 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         return rssi;
     }
 
+    private boolean isDefinedTxPower(int txpower) {
+        switch (txpower) {
+        case 0xf7:
+        case 0xf2:
+        case 0xab:
+        case 0x88:
+        case 0x81:
+        case 0x32:
+        case 0x2c:
+        case 0x13:
+        case 0x03:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    @Override
+    public int getOutputPowerIndicator() {
+        // Higher TXPOWER value does not always mean higher transmission power.
+        // Instead of using the TXPOWER value, the output power is mapped into 9 classes.
+        int txpower = memory[REG_TXPOWER];
+        if (txpower >= 0xf7) {
+            return 9;
+        }
+        if (txpower >= 0xf2) {
+            return 8;
+        }
+        if (txpower >= 0xab) {
+            return 7;
+        }
+        if (txpower >= 0x88) {
+            return 3;
+        }
+        if (txpower >= 0x81) {
+            return 4;
+        }
+        if (txpower >= 0x32) {
+            return 5;
+        }
+        if (txpower >= 0x2c) {
+            return 2;
+        }
+        if (txpower >= 0x13) {
+            return 6;
+        }
+        if (txpower >= 0x03) {
+            return 1;
+        }
+        /* Unknown */
+        return 0;
+//        return memory[REG_TXPOWER];
+    }
+
+    @Override
+    public int getOutputPowerIndicatorMax() {
+        return 9;
+//        return 255;
+    }
+
     @Override
     public int getOutputPower() {
         /* From CC2520 datasheet, table 17 */
-        int indicator = getOutputPowerIndicator();
-        switch (indicator) {
-        case 0xf7:
+        int txpower = memory[REG_TXPOWER];
+        if (txpower >= 0xf7) {
             return 5;
-        case 0xf2:
+        }
+        if (txpower >= 0xf2) {
             return 3;
-        case 0xab:
+        }
+        if (txpower >= 0xab) {
             return 2;
-        case 0x13:
-            return 1;
-        case 0x32:
-            return 0;
-        case 0x81:
-            return -2;
-        case 0x88:
+        }
+        if (txpower >= 0x88) {
             return -4;
-        case 0x2c:
+        }
+        if (txpower >= 0x81) {
+            return -2;
+        }
+        if (txpower >= 0x32) {
+            return 0;
+        }
+        if (txpower >= 0x2c) {
             return -7;
-        case 0x03:
+        }
+        if (txpower >= 0x13) {
+            return 1;
+        }
+        if (txpower >= 0x03) {
             return -18;
         }
-        // TODO Not one of the recommended values. Should warn for such
-        // values because they can cause much higher energy consumption
-        // and bad performance.
-        if (indicator >= 31) {
-            return 0;
-        } else if (indicator >= 27) {
-            return -1;
-        } else if (indicator >= 23) {
-            return -3;
-        } else if (indicator >= 19) {
-            return -5;
-        } else if (indicator >= 15) {
-            return -7;
-        } else if (indicator >= 11) {
-            return -10;
-        } else if (indicator >= 7) {
-            return -15;
-        } else if (indicator >= 3) {
-            return -25;
-        }
-
         /* Unknown */
         return -100;
     }
@@ -1342,6 +1388,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         super.notifyReset();
         setChipSelect(false);
         status &= ~STATUS_TX_ACTIVE;
+        memory[REG_FSMSTAT1] &= ~(1 << 1);
         setVRegOn(false);
         reset();
     }
@@ -1365,13 +1412,14 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         chipSelect = select;
         if (!chipSelect) {
             spiLen = 0;
-            if (command != null)
+            if (command != null) {
                 command.executeSPICommand();
+            }
             command = null;
         }
 
         if (DEBUG) {
-            log("setting chipSelect: " + chipSelect);
+            log("ChipSelect: " + chipSelect);
         }
     }
 
@@ -1383,18 +1431,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         gpio[index].setConfig(port, pin);
     }
 
-    // -------------------------------------------------------------------
-    // Methods for accessing and writing to memory, etc from outside
-    // And for receiving data
-    // -------------------------------------------------------------------
-
-    public int getRegister(int register) {
-        return memory[register];
-    }
-
-    public void setRegister(int register, int data) {
-        memory[register] = data;
-    }
 
     /*****************************************************************************
      * Chip APIs
@@ -1422,9 +1458,8 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         String commandStr = command == null ? "<waiting>" : command.name;
         return " VREG_ON: " + isRadioOn + "  Chip Select: " + chipSelect +
                 "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) +
-                "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
-                "\n GPIO Polarity: " + Utils.hex8(memory[REG_GPIOPOLARITY]) +
-                "  FIFOP: " + currentFIFOP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD +
+                "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + currentCCA +
+                "\n FIFOP: " + currentFIFOP + " (threshold " + fifopThr + ")  FIFO: " + currentFIFO + "  SFD: " + sfdGPIO.isActive() +
                 "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
                 "\n Radio State: " + stateMachine + "  SPI State: " + commandStr +
                 "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
@@ -1432,7 +1467,9 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                 "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
                 "  LongAddr: 0x" + getLongAddress() +
                 "\n Channel: " + activeChannel +
-                "\n FIFOP Threshold: " + fifopThr +
+                "  GPIO Polarity: 0x" + Utils.hex8(memory[REG_GPIOPOLARITY]) +
+                "  Output Power: " + getOutputPower() + "dB (" + getOutputPowerIndicator() + '/' + getOutputPowerIndicatorMax() +
+                ") txpower: 0x" + Utils.hex8(memory[REG_TXPOWER]) +
                 "\n";
     }
 
@@ -1446,21 +1483,26 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         return memory[parameter];
     }
 
-    
+
     /* For SPI Commands */
     @Override
-    public int[] getSPIData() {
-        return spiData;
+    public int getSPIData(int offset) {
+        return spiData[offset];
     }
 
     @Override
-    public int getSPIlen() {
+    public int getSPIDataLen() {
         return spiLen;
+    }
+
+    @Override
+    public void outputSPI(int data) {
+        outputSPI = data;
     }
 
     /* reads one byte from RX fifo */
     public void readRXFifo() {
-        int fifoData = rxFIFO.read(); 
+        int fifoData = rxFIFO.read();
         if (DEBUG) log("RXFIFO READ: " + rxFIFO.stateToString());
         outputSPI = fifoData;
 
