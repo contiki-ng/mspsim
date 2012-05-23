@@ -391,6 +391,18 @@ public class MSP430Core extends Chip implements MSP430Constants {
       return chips.toArray(new Chip[chips.size()]);
   }
 
+  public <T extends Chip> T[] getChips(Class<T> type) {
+      ArrayList<T> list = new ArrayList<T>();
+      for(Chip chip : chips) {
+          if (type.isInstance(chip)) {
+              list.add(type.cast(chip));
+          }
+      }
+      @SuppressWarnings("unchecked")
+      T[] tmp = (T[]) java.lang.reflect.Array.newInstance(type, list.size());
+      return list.toArray(tmp);
+  }
+
   public Loggable[] getLoggables() {
       Loggable[] ls = new Loggable[ioUnits.size() + chips.size()];
       for (int i = 0; i < ioUnits.size(); i++) {
