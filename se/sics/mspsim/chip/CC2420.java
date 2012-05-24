@@ -1451,8 +1451,9 @@ public class CC2420 extends Radio802154 implements USARTListener {
     return " VREG_ON: " + on + "  Chip Select: " + chipSelect +
     "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) + 
     "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + cca +
-    "\n FIFOP Polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
-    "  FIFOP: " + currentFIFOP + "  FIFO: " + currentFIFO + "  SFD: " + currentSFD + 
+    "\n FIFOP: " + currentFIFOP + " threshold: " + fifopThr +
+    " polarity: " + ((registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) +
+    "  FIFO: " + currentFIFO + "  SFD: " + currentSFD + 
     "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
     "\n Radio State: " + stateMachine + "  SPI State: " + state + 
     "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
@@ -1460,8 +1461,8 @@ public class CC2420 extends Radio802154 implements USARTListener {
     "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
     "  LongAddr: 0x" + getLongAddress() +
     "\n Channel: " + activeChannel +
-    "\n FIFOP Threshold: " + fifopThr +
-    "\n";
+    "  Output Power: " + getOutputPower() + "dB (" + getOutputPowerIndicator() + '/' + getOutputPowerIndicatorMax() +
+    ")\n";
   }
 
   public void stateChanged(int state) {

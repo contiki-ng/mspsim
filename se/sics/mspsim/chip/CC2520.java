@@ -1458,8 +1458,9 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         String commandStr = command == null ? "<waiting>" : command.name;
         return " VREG_ON: " + isRadioOn + "  Chip Select: " + chipSelect +
                 "  OSC Stable: " + ((status & STATUS_XOSC16M_STABLE) > 0) +
+                "  GPIO Polarity: 0x" + Utils.hex8(memory[REG_GPIOPOLARITY]) +
                 "\n RSSI Valid: " + ((status & STATUS_RSSI_VALID) > 0) + "  CCA: " + currentCCA +
-                "\n FIFOP: " + currentFIFOP + " (threshold " + fifopThr + ")  FIFO: " + currentFIFO + "  SFD: " + sfdGPIO.isActive() +
+                "\n FIFOP: " + currentFIFOP + " threshold: " + fifopThr + "  FIFO: " + currentFIFO + "  SFD: " + sfdGPIO.isActive() +
                 "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
                 "\n Radio State: " + stateMachine + "  SPI State: " + commandStr +
                 "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
@@ -1467,7 +1468,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                 "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
                 "  LongAddr: 0x" + getLongAddress() +
                 "\n Channel: " + activeChannel +
-                "  GPIO Polarity: 0x" + Utils.hex8(memory[REG_GPIOPOLARITY]) +
                 "  Output Power: " + getOutputPower() + "dB (" + getOutputPowerIndicator() + '/' + getOutputPowerIndicatorMax() +
                 ") txpower: 0x" + Utils.hex8(memory[REG_TXPOWER]) +
                 "\n";
@@ -1501,7 +1501,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     }
 
     /* reads one byte from RX fifo */
-    public void readRXFifo() {
+    void readRXFifo() {
         int fifoData = rxFIFO.read();
         if (DEBUG) log("RXFIFO READ: " + rxFIFO.stateToString());
         outputSPI = fifoData;
