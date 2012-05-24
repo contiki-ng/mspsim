@@ -139,7 +139,7 @@ public class DebugCommands implements CommandBundle {
                           op = "Write";
                       }
                       context.out.println("*** " + op + " from " + pcStr +
-                              ": " + adrStr + " = " + data);
+                              ": " + adrStr + " = 0x" + Utils.hex(data, 4));
                       if (mode == 10) {
                           cpu.triggBreakpoint();
                       }
