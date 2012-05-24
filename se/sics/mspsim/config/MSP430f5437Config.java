@@ -106,7 +106,7 @@ public class MSP430f5437Config extends MSP430Config {
     public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {
     
         Multiplier32 mp = new Multiplier32(cpu, cpu.memory, 0x4c0);
-        for (int i = 0x4c0, n = 0x4c0 + 30; i < n; i++) {
+        for (int i = 0x4c0, n = 0x4c0 + 0x30; i < n; i++) {
             cpu.memOut[i] = mp;
             cpu.memIn[i] = mp;
         }
