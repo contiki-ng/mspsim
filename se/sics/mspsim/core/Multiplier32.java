@@ -64,8 +64,6 @@ public class Multiplier32 extends IOUnit {
   private int sumext;
   
   private int op1;
-  
-  MSP430Core core;
 
   private boolean signed = false;  
   private boolean accumulating = false;
@@ -75,7 +73,6 @@ public class Multiplier32 extends IOUnit {
    */
   public Multiplier32(MSP430Core core, int memory[], int offset) {
     super("Multiplier32", "Hardware Multiplier 32", memory, offset);
-    this.core = core;
   }
 
   public int read(int address, boolean word, long cycles) {
@@ -181,8 +178,8 @@ public class Multiplier32 extends IOUnit {
           if (DEBUG) log(" ===> result = " + res);
           break;
           default:
-              System.out.println("**** Not yet implemented multiplier 32 register: " +
-                      Utils.hex16(address));
+              logw("**** Not yet implemented multiplier 32 register: 0x" + Utils.hex(address, 4));
+              break;
       }
   }
 
