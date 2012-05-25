@@ -6,14 +6,14 @@ import se.sics.mspsim.util.Utils;
 
 public abstract class MSP430Config {
     
-    public class TimerConfig {
-        int ccr0Vector;
-        int ccrXVector;
-        int ccrCount;
-        int offset;
-        String name;
-        public int[] srcMap;
-        public int timerIVAddr;
+    public static class TimerConfig {
+        public final int ccr0Vector;
+        public final int ccrXVector;
+        public final int ccrCount;
+        public final int offset;
+        public final String name;
+        public final int[] srcMap;
+        public final int timerIVAddr;
         
         public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
                 int[] srcMap, String name, int tiv) {
@@ -27,29 +27,33 @@ public abstract class MSP430Config {
         }
     }
 
-    public class UARTConfig {
+    public static class UARTConfig {
         private static final int USCI_2 = 1;
         private static final int USCI_5 = 2;
         
-        public int txVector;
-        public int rxVector;
-        public int offset;
-        public String name;
-        public int txBit;
-        public int rxBit;
-        public int sfrAddr;
-        public boolean usciA;
-        public int type = USCI_2;
+        public final int txVector;
+        public final int rxVector;
+        public final int offset;
+        public final String name;
+        public final int txBit;
+        public final int rxBit;
+        public final int sfrAddr;
+        public final boolean usciA;
+        public final int type;
         
         public UARTConfig(String name, int vector, int offset) {
             type = USCI_5;
             txVector = rxVector = vector;
+            this.txBit = this.rxBit = 0;
             this.offset = offset;
             this.name = name;
+            this.usciA = false;
+            this.sfrAddr = 0;
         }
-        
+
         public UARTConfig(int txVector, int rxVector, int txBit, int rxBit, int sftAddr, int offset,
                     String name, boolean usciA) {
+            this.type = USCI_2;
             this.txVector = txVector;
             this.rxVector = rxVector;
             this.txBit = txBit;
