@@ -72,36 +72,23 @@ public class MSP430f1611Config extends MSP430Config {
 
         USART usart0 = new USART(cpu, 0, cpu.memory, 0x70);
         USART usart1 = new USART(cpu, 1, cpu.memory, 0x78);
-        
-        for (int i = 0, n = 8; i < n; i++) {
-          cpu.memOut[0x70 + i] = usart0;
-          cpu.memIn[0x70 + i] = usart0;
+        cpu.setIORange(0x70, 8, usart0);
+        cpu.setIORange(0x78, 8, usart1);
 
-          cpu.memOut[0x78 + i] = usart1;
-          cpu.memIn[0x78 + i] = usart1;
-        }
-        
         Multiplier mp = new Multiplier(cpu, cpu.memory, 0);
-        // Only cares of writes!
-        for (int i = 0x130, n = 0x13f; i < n; i++) {
-          cpu.memOut[i] = mp;
-          cpu.memIn[i] = mp;
-        }
-        
+        cpu.setIORange(0x130, 0x0f, mp);
+
         // Usarts
         ioUnits.add(usart0);
         ioUnits.add(usart1);
 
         DMA dma = new DMA("dma", cpu, cpu.memory, 0);
-        for (int i = 0, n = 24; i < n; i++) {    
-            cpu.memOut[0x1E0 + i] = dma;
-            cpu.memIn[0x1E0 + i] = dma;
-        }
+        cpu.setIORange(0x1e0, 24, dma);
 
         /* DMA Ctl */
-        cpu.memOut[0x122] = dma;
-        cpu.memIn[0x124] = dma;
-        
+        cpu.setIORange(0x122, 1, dma);
+        cpu.setIORange(0x124, 1, dma);
+
         /* configure the DMA */
         dma.setDMATrigger(DMA.URXIFG0, usart0, 0);
         dma.setDMATrigger(DMA.UTXIFG0, usart0, 1);
@@ -112,60 +99,23 @@ public class MSP430f1611Config extends MSP430Config {
         ioUnits.add(dma);
         
         // Add port 1,2 with interrupt capability!
-        IOPort io1;
-        IOPort io2;
-        ioUnits.add(io1 = new IOPort(cpu, 1, 4, cpu.memory, 0x20));
-        ioUnits.add(io2 = new IOPort(cpu, 2, 1, cpu.memory, 0x28));
-        for (int i = 0, n = 8; i < n; i++) {
-          cpu.memOut[0x20 + i] = io1;
-          cpu.memOut[0x28 + i] = io2;
-          cpu.memIn[0x20 + i] = io1;
-          cpu.memIn[0x28 + i] = io2;
-        }
+        // IOPorts will add themselves to the CPU
+        ioUnits.add(new IOPort(cpu, 1, 4, cpu.memory, 0x20));
+        ioUnits.add(new IOPort(cpu, 2, 1, cpu.memory, 0x28));
 
         // Add port 3,4 & 5,6
         for (int i = 0, n = 2; i < n; i++) {
-          IOPort p = new IOPort(cpu, (3 + i), 0, cpu.memory, 0x18 + i * 4);
-          ioUnits.add(p);
-          cpu.memOut[0x18 + i * 4] = p;
-          cpu.memOut[0x19 + i * 4] = p;
-          cpu.memOut[0x1a + i * 4] = p;
-          cpu.memOut[0x1b + i * 4] = p;
-          cpu.memIn[0x18 + i * 4] = p;
-          cpu.memIn[0x19 + i * 4] = p;
-          cpu.memIn[0x1a + i * 4] = p;
-          cpu.memIn[0x1b + i * 4] = p;
+            ioUnits.add(new IOPort(cpu, (3 + i), 0, cpu.memory, 0x18 + i * 4));
+            ioUnits.add(new IOPort(cpu, (5 + i), 0, cpu.memory, 0x30 + i * 4));
         }
 
-        for (int i = 0, n = 2; i < n; i++) {
-          IOPort p = new IOPort(cpu, (5 + i), 0, cpu.memory, 0x30 + i * 4);
-          ioUnits.add(p);
-          cpu.memOut[0x30 + i * 4] = p;
-          cpu.memOut[0x31 + i * 4] = p;
-          cpu.memOut[0x32 + i * 4] = p;
-          cpu.memOut[0x33 + i * 4] = p;
-          cpu.memIn[0x30 + i * 4] = p;
-          cpu.memIn[0x31 + i * 4] = p;
-          cpu.memIn[0x32 + i * 4] = p;
-          cpu.memIn[0x33 + i * 4] = p;
-        }
-        
         ADC12 adc12 = new ADC12(cpu);
         ioUnits.add(adc12);
+        cpu.setIORange(0x080, 16, adc12);
+        cpu.setIORange(0x140, 16, adc12);
+        cpu.setIORange(0x150, 16, adc12);
+        cpu.setIORange(0x1a0,  8, adc12);
 
-        for (int i = 0, n = 16; i < n; i++) {
-            cpu.memOut[0x80 + i] = adc12;
-            cpu.memIn[0x80 + i] = adc12;
-            cpu.memOut[0x140 + i] = adc12;
-            cpu.memIn[0x140 + i] = adc12;
-            cpu.memOut[0x150 + i] = adc12;
-            cpu.memIn[0x150 + i] = adc12;
-        }
-        for (int i = 0, n = 8; i < n; i++) {    
-            cpu.memOut[0x1A0 + i] = adc12;
-            cpu.memIn[0x1A0 + i] = adc12;
-        }
-        
         return 3 + 6;
     }
 }

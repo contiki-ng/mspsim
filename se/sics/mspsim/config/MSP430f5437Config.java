@@ -103,18 +103,13 @@ public class MSP430f5437Config extends MSP430Config {
     public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {
     
         Multiplier32 mp = new Multiplier32(cpu, cpu.memory, 0x4c0);
-        for (int i = 0x4c0, n = 0x4c0 + 0x2e; i < n; i++) {
-            cpu.memOut[i] = mp;
-            cpu.memIn[i] = mp;
-        }
-        
+        cpu.setIORange(0x4c0, 0x2e, mp);
+
         /* this code should be slightly more generic... and be somewhere else... */
         for (int i = 0, n = uartConfig.length; i < n; i++) {
             GenericUSCI usci = new GenericUSCI(cpu, i, cpu.memory, this);
             /* setup 0 - 1f as IO addresses */
-            for (int a = 0; a < 0x20; a++) {
-                cpu.setIO(a + uartConfig[i].offset, usci, false);
-            }
+            cpu.setIORange(uartConfig[i].offset, 0x20, usci);
 //            System.out.println("Adding IOUnit USCI: " + usci.getName());
             ioUnits.add(usci);
         }

@@ -84,7 +84,7 @@ public class IOPort extends IOUnit {
     private static final PortReg[] PORTMAP_NO_INTERRUPT = 
         {PortReg.IN, PortReg.OUT, PortReg.DIR, PortReg.SEL};
 
-    private PortReg[] portMap;
+    private final PortReg[] portMap;
 
     private PortListener portListener = null;
     // represents the direction register
@@ -111,33 +111,27 @@ public class IOPort extends IOUnit {
      * Creates a new <code>IOPort</code> instance.
      *
      */
-    public IOPort(MSP430Core cpu, int port,
-            int interrupt, int[] memory, int offset) {
-        super("P" + port, "Port " + port, cpu, memory, offset);
-        this.port = port;
-        this.interrupt = interrupt;
-        this.ie = 0;
-        this.ifg = 0;
-
-        if (interrupt == 0) {
-            portMap = PORTMAP_NO_INTERRUPT;
-        } else {
-            portMap = PORTMAP_INTERRUPT;
-        }
+    public IOPort(MSP430Core cpu, int port, int interrupt, int[] memory, int offset) {
+        this(cpu, port, interrupt, memory, offset,
+                interrupt == 0 ? PORTMAP_NO_INTERRUPT : PORTMAP_INTERRUPT);
     }
 
     /* Create an IOPort with a special PortMap */
     public IOPort(MSP430Core cpu, int port,
             int interrupt, int[] memory, int offset, PortReg[] portMap) {
-        this(cpu, port, interrupt, memory, offset);
+        super("P" + port, "Port " + port, cpu, memory, offset);
+        this.port = port;
+        this.interrupt = interrupt;
+        this.ie = 0;
+        this.ifg = 0;
         this.portMap = portMap;
-        
+
 //        System.out.println("Port " + port + " interrupt vector: " + interrupt);
         /* register all the registers from the port-map */
         for (int i = 0; i < portMap.length; i++) {
             if (portMap[i] != null) {
 //                System.out.println("  P" + port + portMap[i] + " at " + Utils.hex16(offset + i));
-                cpu.setIO(offset + i, this, false);
+                cpu.setIORange(offset + i, 1, this);
             }
         }
     }

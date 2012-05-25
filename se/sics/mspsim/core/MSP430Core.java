@@ -70,6 +70,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
   boolean breakpointActive = true;
 
   public final int memory[];
+  private final Flash flash;
+  boolean isFlashBusy;
+  boolean isStopping = false;
 
   private final Memory memorySegments[];
   Memory currentSegment;
@@ -80,15 +83,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
   public final boolean MSP430XArch;
   public final MSP430Config config;
 
-  // Most HW needs only notify write and clocking, others need also read...
-  // For notify write...
-  public final IOUnit[] memOut;
-  // For notify read... -> which will happen before actual read!
-  public final IOUnit[] memIn;
-
-  private ArrayList<IOUnit> ioUnits;
-  private SFR sfr;
-  private Watchdog watchdog;
+  private final ArrayList<IOUnit> ioUnits;
+  private final SFR sfr;
+  private final Watchdog watchdog;
+  private final ClockSystem bcs;
 
   // From the possible interrupt sources - to be able to indicate is serviced.
   // NOTE: 64 since more modern MSP430's have more than 16 vectors (5xxx has 64).
@@ -129,43 +127,24 @@ public class MSP430Core extends Chip implements MSP430Constants {
   
   private ArrayList<Chip> chips = new ArrayList<Chip>();
 
-  ComponentRegistry registry;
+  final ComponentRegistry registry;
   Profiler profiler;
-  private Flash flash;
 
-  boolean isFlashBusy;
-  boolean isStopping = false;
-
-  ClockSystem bcs;
-
-  public void setIO(int adr, IOUnit io, boolean word) {
-      memOut[adr] = io;
-      memIn[adr] = io;
-      if (word) {
-          memOut[adr + 1] = io;
-          memIn[adr + 1] = io;
-      }
-  }
-
-  public void setIORange(int adr, int size, IOUnit io) {
-      for (int i = 0; i < size; i++) {
-          memOut[adr + i] = io;
-          memIn[adr + i] = io;        
-      }
-  }
-  
   public MSP430Core(int type, ComponentRegistry registry, MSP430Config config) {
     super("MSP430", "MSP430 Core", null);
     MAX_INTERRUPT = config.maxInterruptVector;
     MAX_MEM_IO = config.maxMemIO;
     MAX_MEM = config.maxMem;
-    memOut = new IOUnit[MAX_MEM_IO];
-    memIn = new IOUnit[MAX_MEM_IO];
     MSP430XArch = config.MSP430XArch;
 
     memory = new int[MAX_MEM];
     memorySegments = new Memory[MAX_MEM >> 8];
-        
+
+    flash = new Flash(this, memory,
+            new FlashRange(config.mainFlashStart, config.mainFlashStart + config.mainFlashSize, 512, 64),
+            new FlashRange(config.infoMemStart, config.infoMemStart + config.infoMemSize, 128, 64),
+            config.flashControllerOffset);
+
     currentSegment = new Memory() {
         @Override
         public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
@@ -197,10 +176,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
         }
     };
 
-    System.out.println("Set up MSP430 Core with " + MAX_MEM + " bytes memory");
-    
+//    System.out.println("Set up MSP430 Core with " + MAX_MEM + " bytes memory");
+
     /* this is for detecting writes/read to/from non-existing IO */
-    IOUnit voidIO = new IOUnit(id, cpu, memory, 0) {
+    IOUnit voidIO = new IOUnit("void", cpu, memory, 0) {
         public void interruptServiced(int vector) {
         }
         public void write(int address, int value, boolean word, long cycles) {
@@ -212,89 +191,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
         }
     };
 
-    /* fill with void IO */
-    for (int i = 0; i < MAX_MEM_IO; i++) {
-        memOut[i] = voidIO;
-        memIn[i] = voidIO;
-    }
-    
-    this.registry = registry;
-    this.config = config;
-    // The CPU need to register itself as chip
-    addChip(this);
-
-    // Ignore type for now...
-    setModeNames(MODE_NAMES);
-    // IOUnits should likely be placed in a hashtable?
-    // Maybe for debugging purposes...
-    ioUnits = new ArrayList<IOUnit>();
-
-    flash = new Flash(this, memory,
-        new FlashRange(config.mainFlashStart, config.mainFlashStart + config.mainFlashSize, 512, 64),
-        new FlashRange(config.infoMemStart, config.infoMemStart + config.infoMemSize, 128, 64),
-        config.flashControllerOffset);
-    for (int i = 0; i < 8; i++) {
-      memOut[i + config.flashControllerOffset] = flash;
-      memIn[i + config.flashControllerOffset] = flash;
-    }
- 
-    /* Setup special function registers */
-    sfr = new SFR(this, memory);
-    for (int i = 0, n = 0x10; i < n; i++) {
-      memOut[i + config.sfrOffset] = sfr;
-      memIn[i + config.sfrOffset] = sfr;
-    }
-
-    // first step towards making core configurable
-    Timer[] timers = new Timer[config.timerConfig.length];
-    
-    for (int i = 0; i < config.timerConfig.length; i++) {
-        Timer t = new Timer(this, memory, config.timerConfig[i]);
-        for (int a = 0, n = 0x20; a < n; a++) {
-            memOut[config.timerConfig[i].offset + a] = t;
-            memIn[config.timerConfig[i].offset + a] = t;
-        }
-        memIn[config.timerConfig[i].timerIVAddr] = t;
-        memOut[config.timerConfig[i].timerIVAddr] = t;
-        
-        timers[i] = t;
-    }
-
-    // XXX this should be handled by the config, but we do it here to
-    // avoid changing too much of the mspsim architecture for now
-    if (MSP430XArch) {
-      bcs = new UnifiedClockSystem(this, memory, 0, timers);
-    } else {
-      bcs = new BasicClockModule(this, memory, 0, timers);
-    }
-    for (int i = bcs.getAddressRangeMin(), n = bcs.getAddressRangeMax();
-	 i <= n; i++) {
-      memOut[i] = bcs;
-      memIn[i] = bcs;
-    }
-
-    // SFR and Basic clock system.
-    ioUnits.add(sfr);
-    ioUnits.add(bcs);
-
-    config.setup(this, ioUnits);
-
-    /* timers after ports ? */
-    for (int i = 0; i < timers.length; i++) {
-        ioUnits.add(timers[i]);
-    }
-
-    watchdog = new Watchdog(this);
-    memOut[config.watchdogOffset] = watchdog;
-    memIn[config.watchdogOffset] = watchdog;
-
-    ioUnits.add(watchdog);
-
     /* setup memory segments */
     int maxSeg = MAX_MEM >> 8;
     Memory ramSegment = new RAMSegment(this);
     Memory flashSegment = new FlashSegment(this, flash);
-    Memory ioSegment = new IOSegment(this);
+    IOSegment ioSegment = new IOSegment(this, MAX_MEM_IO, voidIO);
     Memory noMemorySegment = new NoMemSegment(this);
     for (int i = 0; i < maxSeg; i++) {
         if (config.isRAM(i << 8)) {
@@ -312,7 +213,66 @@ public class MSP430Core extends Chip implements MSP430Constants {
         }
     }
 
+    this.registry = registry;
+    this.config = config;
+    // The CPU need to register itself as chip
+    addChip(this);
+
+    // Ignore type for now...
+    setModeNames(MODE_NAMES);
+    // IOUnits should likely be placed in a hashtable?
+    // Maybe for debugging purposes...
+    ioUnits = new ArrayList<IOUnit>();
+
+    ioSegment.setIORange(config.flashControllerOffset, 6, flash);
+ 
+    /* Setup special function registers */
+    sfr = new SFR(this, memory);
+    ioSegment.setIORange(config.sfrOffset, 0x10, sfr);
+
+    // first step towards making core configurable
+    Timer[] timers = new Timer[config.timerConfig.length];
+    for (int i = 0; i < config.timerConfig.length; i++) {
+        Timer t = new Timer(this, memory, config.timerConfig[i]);
+        ioSegment.setIORange(config.timerConfig[i].offset, 0x20, t);
+        ioSegment.setIORange(config.timerConfig[i].timerIVAddr, 1, t);
+        timers[i] = t;
+    }
+
+    // XXX this should be handled by the config, but we do it here to
+    // avoid changing too much of the mspsim architecture for now
+    if (MSP430XArch) {
+      bcs = new UnifiedClockSystem(this, memory, 0, timers);
+    } else {
+      bcs = new BasicClockModule(this, memory, 0, timers);
+    }
+    ioSegment.setIORange(bcs.getAddressRangeMin(), bcs.getAddressRangeMax() - bcs.getAddressRangeMin() + 1, bcs);
+
+    // SFR and Basic clock system.
+    ioUnits.add(sfr);
+    ioUnits.add(bcs);
+
+    config.setup(this, ioUnits);
+
+    /* timers after ports ? */
+    for (int i = 0; i < timers.length; i++) {
+        ioUnits.add(timers[i]);
+    }
+
+    watchdog = new Watchdog(this);
+    ioSegment.setIORange(config.watchdogOffset, 1, watchdog);
+
+    ioUnits.add(watchdog);
+
     bcs.reset(0);
+  }
+
+  public void setIORange(int address, int range, IOUnit io) {
+      if (address + range > MAX_MEM_IO) {
+          throw new IllegalStateException("Outside IO memory: 0x" + Utils.hex(address, 4));
+      }
+      IOSegment ioSegment = (IOSegment) memorySegments[address >> 8];
+      ioSegment.setIORange(address, range, io);
   }
 
   public Profiler getProfiler() {
