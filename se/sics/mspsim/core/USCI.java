@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * USCI Module for the MSP430xf2xxx series.
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -100,10 +96,9 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
   private int nextTXByte = -1;
   private int txShiftReg = -1;
   private boolean transmitting = false;
-  
-  private MSP430Core cpu;
-  private SFR sfr;
-  private int sfrAddress;
+
+  private final SFR sfr;
+  private final int sfrAddress;
 
   /* ifg and ie if not in sfr... - assume IE in sfraddr and IFG in addr + 1*/
   private int ifgAddress = 0;
@@ -141,9 +136,7 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
    *
    */
   public USCI(MSP430Core cpu, int uartID, int[] memory, MSP430Config config) {
-    super(config.uartConfig[uartID].name, config.uartConfig[uartID].name, memory, config.uartConfig[uartID].offset);
-    System.out.println("NAME: " + config.uartConfig[uartID].name);
-    this.cpu = cpu;
+    super(config.uartConfig[uartID].name, cpu, memory, config.uartConfig[uartID].offset);
     this.uartID = uartID;
     MSP430Config.UARTConfig uartConfig = config.uartConfig[uartID];
 
@@ -155,6 +148,8 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
         sfr.registerSFDModule(uartConfig.sfrAddr, uartConfig.rxBit, this, uartConfig.rxVector);
         sfr.registerSFDModule(uartConfig.sfrAddr, uartConfig.txBit, this, uartConfig.txVector);
     } else {
+        sfr = null;
+        sfrAddress = 0;
         ieAddress = uartConfig.sfrAddr;
         ifgAddress = uartConfig.sfrAddr + 1;
     }

@@ -100,10 +100,8 @@ public class Flash extends IOUnit {
 
   private static final int FN_MASK = 0x3f;
 
-  private final MSP430Core cpu;
   private FlashRange main_range;
   private FlashRange info_range;
-  private int[] memory;
   
   private int mode;      /* FCTL1 */
   private int clockcfg;  /* FCTL2 */
@@ -167,9 +165,7 @@ public class Flash extends IOUnit {
   
   public Flash(MSP430Core cpu, int[] memory, FlashRange main_range,
       FlashRange info_range, int offset) {
-    super("Flash", "Internal Flash", memory, offset);
-    this.cpu = cpu;
-    this.memory = memory;
+    super("Flash", "Internal Flash", cpu, memory, offset);
     this.main_range = main_range;
     this.info_range = info_range;
     locked = true;

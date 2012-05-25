@@ -45,7 +45,6 @@ public class IOPort extends IOUnit {
 
     private final int port;
     private final int interrupt;
-    private final MSP430Core cpu;
 
     // External pin state!
     private int pinState[] = new int[8];
@@ -115,12 +114,11 @@ public class IOPort extends IOUnit {
      */
     public IOPort(MSP430Core cpu, int port,
             int interrupt, int[] memory, int offset) {
-        super("P" + port, "Port " + port, memory, offset);
+        super("P" + port, "Port " + port, cpu, memory, offset);
         this.port = port;
         this.interrupt = interrupt;
         this.ie = 0;
         this.ifg = 0;
-        this.cpu = cpu;
 
         if (interrupt == 0) {
             portMap = PORTMAP_NO_INTERRUPT;

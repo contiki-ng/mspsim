@@ -47,8 +47,8 @@ public abstract class ClockSystem extends IOUnit {
   public abstract int getAddressRangeMin();
   public abstract int getAddressRangeMax();
 
-  public ClockSystem(String type, int[] memory, int offset) {
-    super(type, memory, offset);
+  public ClockSystem(String type, MSP430Core cpu, int[] memory, int offset) {
+    super(type, cpu, memory, offset);
   }
 
 }

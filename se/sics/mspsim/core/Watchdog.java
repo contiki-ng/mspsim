@@ -68,7 +68,6 @@ public class Watchdog extends IOUnit implements SFRModule {
   private int wdtctl;
   public boolean wdtOn = true;
   private boolean hold = false;
-  private MSP430Core cpu;
 
   // The current "delay" when started/clered (or hold)
   private int delay;
@@ -88,8 +87,7 @@ public class Watchdog extends IOUnit implements SFRModule {
   };
 
   public Watchdog(MSP430Core cpu) {
-    super("Watchdog", cpu.memory, 0x120);
-    this.cpu = cpu;
+    super("Watchdog", cpu, cpu.memory, 0x120);
     cpu.getSFR().registerSFDModule(0, WATCHDOG_INTERRUPT_BIT, this, WATCHDOG_VECTOR);
   }
    

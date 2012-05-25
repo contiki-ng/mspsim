@@ -64,8 +64,6 @@ public class Multiplier extends IOUnit {
   private int sumext;
   
   private int op1;
-  
-  MSP430Core core;
 
   private boolean signed = false;  
   private boolean accumulating = false;
@@ -73,9 +71,8 @@ public class Multiplier extends IOUnit {
    * Creates a new <code>Multiplier</code> instance.
    *
    */
-  public Multiplier(MSP430Core core, int memory[], int offset) {
-    super("Multiplier", "Hardware Multiplier", memory, offset);
-    this.core = core;
+  public Multiplier(MSP430Core cpu, int memory[], int offset) {
+    super("Multiplier", "Hardware Multiplier", cpu, memory, offset);
   }
 
   public int read(int address, boolean word, long cycles) {
@@ -99,19 +96,15 @@ public class Multiplier extends IOUnit {
     case SUMEXT:
       if (DEBUG) log("read sumext: " + sumext);
       return sumext;
+    default:
+        logw("read unhandled address: 0x" + Utils.hex(address, 4));
+        return 0;
     }
-    logw("read other address:" + address);
-    return 0;
   }
 
   public void write(int address, int data, boolean word, long cycles) {
     if (DEBUG) {
-      log("write to: " + Utils.hex16(address) + " data = " + data + " word = " + word);
-    }
-    if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-      System.out.println("Write to HW Multiplier: " +
-			 Integer.toString(address, 16) +
-			 " = " + data);
+      log("write to: $" + Utils.hex(address, 4) + " data = " + data + " word = " + word);
     }
     switch(address) {
     case MPY:
@@ -181,6 +174,7 @@ public class Multiplier extends IOUnit {
     }
   }
 
+  @Override
   public void interruptServiced(int vector) {
   }
 }

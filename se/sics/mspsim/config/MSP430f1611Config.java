@@ -92,7 +92,7 @@ public class MSP430f1611Config extends MSP430Config {
         ioUnits.add(usart0);
         ioUnits.add(usart1);
 
-        DMA dma = new DMA("dma", cpu.memory, 0, cpu);
+        DMA dma = new DMA("dma", cpu, cpu.memory, 0);
         for (int i = 0, n = 24; i < n; i++) {    
             cpu.memOut[0x1E0 + i] = dma;
             cpu.memIn[0x1E0 + i] = dma;

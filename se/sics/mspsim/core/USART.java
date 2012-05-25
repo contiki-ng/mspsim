@@ -94,8 +94,7 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
   private int nextRXByte = -1;
   private boolean receiving = false;
 
-  private MSP430Core cpu;
-  private SFR sfr;
+  private final SFR sfr;
 
   private int uctl;
   private int utctl;
@@ -132,8 +131,7 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
    *
    */
   public USART(MSP430Core cpu, int uartID, int[] memory, int offset) {
-    super("USART" + uartID, "USART " + uartID, memory, offset);
-    this.cpu = cpu;
+    super("USART" + uartID, "USART " + uartID, cpu, memory, offset);
     this.uartID = uartID;
     sfr = cpu.getSFR();
 

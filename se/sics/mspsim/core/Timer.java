@@ -198,8 +198,7 @@ public class Timer extends IOUnit {
 
   private final int ccr1Vector;
   private final int ccr0Vector;
-  private final MSP430Core core;
-  
+
   // Support variables Max 7 compare regs for now (timer b)
   private final int noCompare;
 
@@ -238,7 +237,7 @@ public class Timer extends IOUnit {
               //System.out.println("**** IGNORING EXECUTION OF CCR - timer stopped!!!");
               return;
           }
-          long cycles = core.cycles;
+          long cycles = cpu.cycles;
           updateCounter(cycles);
 
           if (expCaptureTime != -1 && cycles >= expCaptureTime) {
@@ -290,11 +289,11 @@ public class Timer extends IOUnit {
           if ((tcctl & CC_TRIGGER_INT) == CC_TRIGGER_INT) {
               if (index == 0) {
                   log("triggering interrupt");
-                  core.flagInterrupt(interruptVector, Timer.this, true);                  
+                  cpu.flagInterrupt(interruptVector, Timer.this, true);
               } else if (lastTIV == 0) {
                   lastTIV = index * 2;
                   log("triggering interrupt TIV: " + lastTIV);
-                  core.flagInterrupt(interruptVector, Timer.this, true);
+                  cpu.flagInterrupt(interruptVector, Timer.this, true);
               } else if (lastTIV > index * 2) {
                   /* interrupt already triggered, but set to this lower IRQ */
                   lastTIV = index * 2;
@@ -311,21 +310,21 @@ public class Timer extends IOUnit {
           boolean clkSource = false;
 
           if (clockSource == SRC_SMCLK) {
-              frqClk = core.smclkFrq / inputDivider;
+              frqClk = cpu.smclkFrq / inputDivider;
           } else if (clockSource == SRC_ACLK) {
-              frqClk = core.aclkFrq / inputDivider;
+              frqClk = cpu.aclkFrq / inputDivider;
           }
 
           // Handle the captures...
           if (captureOn) {
               if (inputSrc == SRC_ACLK) {
-                  divisor = core.aclkFrq;
+                  divisor = cpu.aclkFrq;
                   clkSource = true;
               }
 
               if (DEBUG) {
                   log("expCapInterval[" + index + "] frq = " +
-                          frqClk + " div = " + divisor + " SMCLK_FRQ: " + core.smclkFrq);
+                          frqClk + " div = " + divisor + " SMCLK_FRQ: " + cpu.smclkFrq);
               }
 
               // This is used to calculate expected time before next capture of
@@ -355,9 +354,9 @@ public class Timer extends IOUnit {
       public void update() {
           /* schedule this capture register for update*/
           if (expCaptureTime != -1 && expCaptureTime != time) {
-              if (DEBUG) log(core.cycles + ":" + ">> SCHEDULING " + getName() + " = " + tccr +
+              if (DEBUG) log(cpu.cycles + ":" + ">> SCHEDULING " + getName() + " = " + tccr +
                       " TR: " + counter + " at: " + expCaptureTime);
-              core.scheduleCycleEvent(this, expCaptureTime);
+              cpu.scheduleCycleEvent(this, expCaptureTime);
           }
       }
       
@@ -397,12 +396,12 @@ public class Timer extends IOUnit {
           // This should be updated whenever clockspeed changes...
           nextTimerTrigger = (long) (nextTimerTrigger + 0x10000 * cyclesMultiplicator);
 //          System.out.println("*** scheduling counter trigger..." + nextTimerTrigger + " now = " + t);
-          core.scheduleCycleEvent(this, nextTimerTrigger);
+          cpu.scheduleCycleEvent(this, nextTimerTrigger);
           
           
           if (lastTIV == 0 && interruptEnable) {
               lastTIV = memory[tiv] = timerOverflow;
-              core.flagInterrupt(ccr1Vector, Timer.this, true);
+              cpu.flagInterrupt(ccr1Vector, Timer.this, true);
           } else {
 //              System.out.println("*** Did not trigger interrupt: " + interruptEnable);
           }
@@ -420,10 +419,9 @@ public class Timer extends IOUnit {
    *
    */
 
-  public Timer(MSP430Core core, int[] memory, MSP430Config.TimerConfig config) {
-    super(config.name, config.name, memory, config.offset);
+  public Timer(MSP430Core cpu, int[] memory, MSP430Config.TimerConfig config) {
+    super(config.name, config.name, cpu, memory, config.offset);
     this.srcMap = config.srcMap;
-    this.core = core;
     // noCompare = (srcMap.length / 4) - 1;
     noCompare = config.ccrCount;
     if (srcMap == TIMER_Ax149) {
@@ -566,7 +564,7 @@ public class Timer extends IOUnit {
     /* if ACLK we can calculate edge... */
     if (ccr[cctl].inputSrc == SRC_ACLK) {
       /* needs the TimerA clock speed here... */
-      int aTicks = clockSpeed / core.aclkFrq;
+      int aTicks = clockSpeed / cpu.aclkFrq;
       updateCounter(cycles);
       
       /* only calculate this if clock runs faster then ACLK - otherwise it
@@ -587,14 +585,14 @@ public class Timer extends IOUnit {
       }
     } else if (lastTIV / 2 < noCompare) {
       if (DEBUG) {
-	log(core.cycles + ": Clearing IFG for CCR" + (lastTIV/2));
+	log(cpu.cycles + ": Clearing IFG for CCR" + (lastTIV/2));
       }
       // Clear interrupt flags!
       ccr[lastTIV / 2].tcctl &= ~CC_IFG;
     }
 
     /* flag this interrupt off */
-    core.flagInterrupt(ccr1Vector, this, false);
+    cpu.flagInterrupt(ccr1Vector, this, false);
     lastTIV = 0;
 
     /* reevaluate interrupts for the ccr1 vector - possibly flag on again... */
@@ -603,7 +601,7 @@ public class Timer extends IOUnit {
     }
     /* if the timer overflow interrupt is triggering - lowest priority => signal! */
     if (lastTIV == 0 && interruptEnable & interruptPending) {
-        core.flagInterrupt(ccr1Vector, this, true);
+        cpu.flagInterrupt(ccr1Vector, this, true);
     }
   }
 
@@ -664,7 +662,7 @@ public class Timer extends IOUnit {
             ccr[i].timerStarted(cycles);
         }
         
-        if (DEBUG) log(core.cycles + ": Timer started: " + counter + "  CCR1:" + ccr[1].expCaptureTime);
+        if (DEBUG) log(cpu.cycles + ": Timer started: " + counter + "  CCR1:" + ccr[1].expCaptureTime);
         
       }
       if (mode != STOP && newMode == STOP) {
@@ -673,7 +671,7 @@ public class Timer extends IOUnit {
           for (int i = 0; i < noCompare; i++) {
               ccr[i].timerStopped(cycles);
           }
-          if (DEBUG) log(core.cycles + ": Timer stopped: " + counter + "  CCR1:" + ccr[1].expCaptureTime);
+          if (DEBUG) log(cpu.cycles + ": Timer stopped: " + counter + "  CCR1:" + ccr[1].expCaptureTime);
       }
       
       mode = newMode;
@@ -727,7 +725,7 @@ public class Timer extends IOUnit {
       if (!oldCapture && reg.captureOn && (src & SRC_PORT) != 0) {
         int port = (src & 0xff) >> 4;
         int pin = src & 0x0f;
-        IOPort ioPort = core.getIOUnit(IOPort.class, "P" + port);
+        IOPort ioPort = cpu.getIOUnit(IOPort.class, "P" + port);
         if (DEBUG) log("Assigning Port: " + port + " pin: " + pin +
             " for capture");
         ioPort.setTimerCapture(this, pin);
@@ -801,20 +799,20 @@ public class Timer extends IOUnit {
   void updateCyclesMultiplicator() {
     cyclesMultiplicator = inputDivider;
     if (clockSource == SRC_ACLK) {
-      cyclesMultiplicator = (cyclesMultiplicator * core.smclkFrq) /
-      core.aclkFrq;
+      cyclesMultiplicator = (cyclesMultiplicator * cpu.smclkFrq) /
+      cpu.aclkFrq;
       if (DEBUG) {
         log("setting multiplicator to: " + cyclesMultiplicator);
       }
     }
-    clockSpeed = (int) (core.smclkFrq / cyclesMultiplicator);
+    clockSpeed = (int) (cpu.smclkFrq / cyclesMultiplicator);
   }
   
   void resetCounter(long cycles) {
       double divider = 1.0;
       if (clockSource == SRC_ACLK) {
           // Should later be divided with DCO clock?
-          divider = 1.0 * core.smclkFrq / core.aclkFrq;
+          divider = 1.0 * cpu.smclkFrq / cpu.aclkFrq;
       }
       divider = divider * inputDivider;
         
@@ -835,7 +833,7 @@ public class Timer extends IOUnit {
       log("Counter reset at " + cycles +  " cycMul: " + cyclesMultiplicator);
     }
 
-    core.scheduleCycleEvent(counterTrigger, cycles + (long)((0x10000 - counter) * cyclesMultiplicator));
+    cpu.scheduleCycleEvent(counterTrigger, cycles + (long)((0x10000 - counter) * cyclesMultiplicator));
 //    System.out.println("(re)Scheduling counter trigger..." + counterTrigger.time + " now = " + cycles + " ctr: " + counter);
 
   }
@@ -854,7 +852,7 @@ public class Timer extends IOUnit {
     double divider = 1;
     if (clockSource == SRC_ACLK) {
       // Should later be divided with DCO clock?
-      divider = 1.0 * core.smclkFrq / core.aclkFrq;
+      divider = 1.0 * cpu.smclkFrq / cpu.aclkFrq;
     }
     divider = divider * inputDivider;
     
@@ -935,13 +933,13 @@ public class Timer extends IOUnit {
               //      System.out.println("*** Capture on CCR_" + ccrIndex + " " + " value: " +
               //            value);
               // update counter values and compare register
-              updateCounter(core.cycles);
+              updateCounter(cpu.cycles);
               reg.tccr = counter;
               
               // Set the interrupt flag...
               reg.tcctl |= CC_IFG;
-              reg.triggerInterrupt(core.cycles);
-              /* triggerInterrupts(core.cycles); */
+              reg.triggerInterrupt(cpu.cycles);
+              /* triggerInterrupts(cpu.cycles); */
           }
     }
   }
@@ -951,16 +949,16 @@ public class Timer extends IOUnit {
   public void interruptServiced(int vector) {
     if (vector == ccr0Vector) {
       // Reset the interrupt trigger in "core".
-      core.flagInterrupt(ccr0Vector, this, false);
+      cpu.flagInterrupt(ccr0Vector, this, false);
       // Remove the flag also - but only for the dedicated vector (CCR0)
       ccr[0].tcctl &= ~CC_IFG;
     }
     if (MSP430Core.debugInterrupts) {
       System.out.println(getName() + " >>>> interrupt Serviced " + lastTIV + 
-          " at cycles: " + core.cycles + " servicing delay: " + (core.cycles - triggerTime));
+          " at cycles: " + cpu.cycles + " servicing delay: " + (cpu.cycles - triggerTime));
     }
     /* old method is replaced */
-    /* triggerInterrupts(core.cycles); */
+    /* triggerInterrupts(cpu.cycles); */
   }
 
   public int getModeMax() {
@@ -981,7 +979,7 @@ public class Timer extends IOUnit {
       sb.append("  Source: " + getSourceName(clockSource) + "  Speed: " + clockSpeed
               + " Hz  inDiv: " + inputDivider + "  Multiplyer: " + cyclesMultiplicator + '\n'
               + "  Mode: " + modeNames[mode] + "  IEn: " + interruptEnable
-              + "  IFG: " + interruptPending + "  TR: " + updateCounter(core.cycles) + '\n');
+              + "  IFG: " + interruptPending + "  TR: " + updateCounter(cpu.cycles) + '\n');
       for (CCR reg : ccr) {
           if (reg != null) sb.append("  ").append(reg.info()).append('\n');
       }

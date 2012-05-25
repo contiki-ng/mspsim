@@ -200,7 +200,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     System.out.println("Set up MSP430 Core with " + MAX_MEM + " bytes memory");
     
     /* this is for detecting writes/read to/from non-existing IO */
-    IOUnit voidIO = new IOUnit(id, memory, 0) {
+    IOUnit voidIO = new IOUnit(id, cpu, memory, 0) {
         public void interruptServiced(int vector) {
         }
         public void write(int address, int value, boolean word, long cycles) {

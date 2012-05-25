@@ -61,9 +61,8 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     /* always on for now - but SWRST controls it */
     private boolean moduleEnabled = true;
 
-    protected MSP430Core cpu;
-    private int uartIndex;
-    private int vector;
+    private final int uartIndex;
+    private final int vector;
 
     private TimeEvent txTrigger = new TimeEvent(0) {
         public void execute(long t) {
@@ -74,11 +73,9 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 
 
     public GenericUSCI(MSP430Core cpu, int uartIndex, int[] memory, MSP430Config config) {
-        super(config.uartConfig[uartIndex].name, config.uartConfig[uartIndex].name, memory,
-                config.uartConfig[uartIndex].offset);
+        super(config.uartConfig[uartIndex].name, cpu, memory, config.uartConfig[uartIndex].offset);
         /* do some stuff ? */
         
-        this.cpu = cpu;
         this.uartIndex = uartIndex;
         MSP430Config.UARTConfig uartConfig = config.uartConfig[uartIndex];
 

@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * IOUnit
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -45,26 +41,28 @@ import java.io.PrintStream;
 
 public abstract class IOUnit implements InterruptHandler, Loggable {
 
-  int[] memory;
-  int offset;
+  protected final MSP430Core cpu;
+  protected final int[] memory;
+  protected final int offset;
 
   protected final String id;
   protected final String name;
 
   private StateChangeListener stateListener;
   private int ioState;
-  
+
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
 
-  public IOUnit(String id, int[] memory, int offset) {
-    this(id, id, memory, offset);
+  public IOUnit(String id, MSP430Core cpu, int[] memory, int offset) {
+    this(id, id, cpu, memory, offset);
   }
 
-  public IOUnit(String id, String name, int[] memory, int offset) {
+  public IOUnit(String id, String name, MSP430Core cpu, int[] memory, int offset) {
     this.id = id;
     this.name = name;
+    this.cpu = cpu;
     this.memory = memory;
     this.offset = offset;
   }

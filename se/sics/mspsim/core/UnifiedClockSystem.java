@@ -291,9 +291,7 @@ public class UnifiedClockSystem extends ClockSystem {
   private static final int ACLK_FRQ = 32768;
   private static final int MAX_DCO_FRQ = 16000000;
 
-
-  private MSP430Core core;
-  private Timer[] timers;
+  private final Timer[] timers;
 
   private int currentDcoFrequency;
 
@@ -301,9 +299,8 @@ public class UnifiedClockSystem extends ClockSystem {
    * Creates a new <code>UnifiedClockSystem</code> instance.
    *
    */
-  public UnifiedClockSystem(MSP430Core core, int[] memory, int offset, Timer[] timers) {
-    super("UnifiedClockSystem", memory, offset);
-    this.core = core;
+  public UnifiedClockSystem(MSP430Core cpu, int[] memory, int offset, Timer[] timers) {
+    super("UnifiedClockSystem", cpu, memory, offset);
     this.timers = timers;
   }
 
@@ -321,15 +318,15 @@ public class UnifiedClockSystem extends ClockSystem {
 
   public void reset(int type) {
     // Set the reset states, according to the SLAU208h data sheet.
-    write(UCSCTL0, 0x0000, true, core.cycles);
-    write(UCSCTL1, 0x0020, true, core.cycles);
-    write(UCSCTL2, 0x101f, true, core.cycles);
-    write(UCSCTL3, 0x0000, true, core.cycles);
-    write(UCSCTL4, 0x0044, true, core.cycles);
-    write(UCSCTL5, 0x0000, true, core.cycles);
-    write(UCSCTL6, 0xc1cd, true, core.cycles);
-    write(UCSCTL7, 0x0703, true, core.cycles);
-    write(UCSCTL8, 0x0707, true, core.cycles);
+    write(UCSCTL0, 0x0000, true, cpu.cycles);
+    write(UCSCTL1, 0x0020, true, cpu.cycles);
+    write(UCSCTL2, 0x101f, true, cpu.cycles);
+    write(UCSCTL3, 0x0000, true, cpu.cycles);
+    write(UCSCTL4, 0x0044, true, cpu.cycles);
+    write(UCSCTL5, 0x0000, true, cpu.cycles);
+    write(UCSCTL6, 0xc1cd, true, cpu.cycles);
+    write(UCSCTL7, 0x0703, true, cpu.cycles);
+    write(UCSCTL8, 0x0707, true, cpu.cycles);
   }
 
   // do nothing?
@@ -384,7 +381,7 @@ public class UnifiedClockSystem extends ClockSystem {
 
     if (newDcoFrequency != currentDcoFrequency) {
       currentDcoFrequency = newDcoFrequency;
-      core.setDCOFrq(currentDcoFrequency, currentDcoFrequency / (1 << divSMclk));
+      cpu.setDCOFrq(currentDcoFrequency, currentDcoFrequency / (1 << divSMclk));
 
       if (timers != null) {
 	  for(int i = 0; i < timers.length; i++) {

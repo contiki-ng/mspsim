@@ -2,11 +2,11 @@ package se.sics.mspsim.core;
 
 public class InterruptMultiplexer implements InterruptHandler {
 
+    private final MSP430Core cpu;
+    private final int vector;
+
     int interruptBits;
-    
-    MSP430Core cpu;
-    int vector;
-    
+
     public InterruptMultiplexer(MSP430Core cpu, int vector) {
         this.cpu = cpu;
         this.vector = vector;

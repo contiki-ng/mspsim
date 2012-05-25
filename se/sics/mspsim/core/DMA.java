@@ -176,19 +176,16 @@ public class DMA extends IOUnit {
     private Channel channels[] = new Channel[3];
     private int dmactl0;
     private int dmactl1;
-    
-    MSP430Core cpu;
-    
+
     /* MAX 16 triggers ? */
     private DMATrigger[] dmaTrigger = new DMATrigger[16];
     private int[] dmaTriggerIndex = new int[16];
     
-    public DMA(String id, int[] memory, int offset, MSP430Core msp430Core) {
-        super(id, memory, offset);
+    public DMA(String id, MSP430Core cpu, int[] memory, int offset) {
+        super(id, cpu, memory, offset);
         channels[0] = new Channel(0);
         channels[1] = new Channel(1);
         channels[2] = new Channel(2);
-        this.cpu = msp430Core;
     }
 
     public void setInterruptMultiplexer(InterruptMultiplexer interruptMultiplexer) {

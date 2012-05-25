@@ -61,8 +61,6 @@ public class BasicClockModule extends ClockSystem {
   private static final int MIN_DCO_FRQ = 1000;
   private static final int DCO_FACTOR = (MAX_DCO_FRQ - MIN_DCO_FRQ) / 2048;
 
-
-  private MSP430Core core;
   private Timer[] timers;
 
   private int dcoFrequency;
@@ -84,8 +82,7 @@ public class BasicClockModule extends ClockSystem {
    *
    */
   public BasicClockModule(MSP430Core core, int[] memory, int offset, Timer[] timers) {
-    super("BasicClockModule", memory, offset);
-    this.core = core;
+    super("BasicClockModule", core, memory, offset);
     this.timers = timers;
     //    reset(0);
   }
@@ -103,9 +100,9 @@ public class BasicClockModule extends ClockSystem {
   }
 
   public void reset(int type) {
-    write(DCOCTL, 0x60, false, core.cycles);
-    write(BCSCTL1, 0x84, false, core.cycles);
-    write(BCSCTL2, 0, false, core.cycles);
+    write(DCOCTL, 0x60, false, cpu.cycles);
+    write(BCSCTL1, 0x84, false, cpu.cycles);
+    write(BCSCTL2, 0, false, cpu.cycles);
   }
 
   // do nothing?
@@ -141,7 +138,7 @@ public class BasicClockModule extends ClockSystem {
       if (DEBUG) log("Write: BCM BCSCTL1: RSel:" + resistorSel +
 			 " DivACLK:" + divAclk + " ACLKFrq: " +
 			 ACLK_FRQ / divAclk);
-      core.setACLKFrq(ACLK_FRQ / divAclk);
+      cpu.setACLKFrq(ACLK_FRQ / divAclk);
       updateTimers(cycles);
       break;
     case BCSCTL2:
@@ -164,7 +161,7 @@ public class BasicClockModule extends ClockSystem {
     if (newcalcDCOFrq != calcDCOFrq) {
       calcDCOFrq = newcalcDCOFrq;
       if (DEBUG) log("BCM  DCO_Speed: " + calcDCOFrq);
-      core.setDCOFrq(calcDCOFrq, calcDCOFrq / divSMclk);
+      cpu.setDCOFrq(calcDCOFrq, calcDCOFrq / divSMclk);
       updateTimers(cycles);
     }
   }
