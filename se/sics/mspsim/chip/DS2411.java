@@ -84,7 +84,7 @@ public class DS2411 extends Chip {
         break;
       case SIGNAL_READY:
         /* ready! release bus */
-        sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
+        sdataPort.setPinState(sdataPin, IOPort.PinState.HI);
         state = STATE.READY;
         stateChanged(state.ordinal());
         if (DEBUG) log("Ready!");
@@ -170,7 +170,7 @@ public class DS2411 extends Chip {
     lastPin = high;
     switch(state) {
     case IDLE:
-      sdataPort.setPinState(sdataPin, IOPort.PIN_HI);      
+      sdataPort.setPinState(sdataPin, IOPort.PinState.HI);
       if (!high) {
         state = STATE.WAIT_FOR_RESET;
         stateChanged(state.ordinal());
@@ -186,7 +186,7 @@ public class DS2411 extends Chip {
         stateChanged(state.ordinal());
         if (DEBUG) log("Signal ready");
         /* reset done - signal with LOW for a while! */
-        sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
+        sdataPort.setPinState(sdataPin, IOPort.PinState.LOW);
         cpu.scheduleTimeEventMillis(stateEvent, 0.480);
         pos = 0;
       }
@@ -210,7 +210,7 @@ public class DS2411 extends Chip {
 
         /* went high => we should send another bit */
         sdataPort.setPinState(sdataPin,
-            ((writeByte & (1 << pos)) > 0) ? IOPort.PIN_HI : IOPort.PIN_LOW);
+            ((writeByte & (1 << pos)) > 0) ? IOPort.PinState.HI : IOPort.PinState.LOW);
         if (DEBUG) log("wrote bit: " + (((writeByte & (1 << pos)) > 0) ? 1 : 0));
         pos++;
         if (pos == 8) {

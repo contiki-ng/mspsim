@@ -52,7 +52,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         public void setConfig(IOPort port, int pin) {
             this.port = port;
             this.pin = pin;
-            port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+            port.setPinState(pin, isActive == polarity ? IOPort.PinState.HI : IOPort.PinState.LOW);
         }
 
         public boolean isActive() {
@@ -63,7 +63,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             if (this.isActive != isActive) {
                 this.isActive = isActive;
                 if (port != null) {
-                    port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+                    port.setPinState(pin, isActive == polarity ? IOPort.PinState.HI : IOPort.PinState.LOW);
                 }
             }
         }
@@ -72,7 +72,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             if (this.polarity != polarity) {
                 this.polarity = polarity;
                 if (port != null) {
-                    port.setPinState(pin, isActive == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+                    port.setPinState(pin, isActive == polarity ? IOPort.PinState.HI : IOPort.PinState.LOW);
                 }
             }
         }

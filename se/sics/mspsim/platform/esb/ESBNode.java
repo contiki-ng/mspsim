@@ -104,11 +104,11 @@ public class ESBNode extends GenericNode implements PortListener {
   }
 
   public void setPIR(boolean hi) {
-    port1.setPinState(PIR_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
+    port1.setPinState(PIR_PIN, hi ? IOPort.PinState.HI : IOPort.PinState.LOW);
   }
 
   public void setVIB(boolean hi) {
-    port1.setPinState(VIB_PIN, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
+    port1.setPinState(VIB_PIN, hi ? IOPort.PinState.HI : IOPort.PinState.LOW);
   }
 
   @Deprecated

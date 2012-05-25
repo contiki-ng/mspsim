@@ -60,7 +60,7 @@ public class Button extends Chip {
             this.isPressed = isPressed;
             stateChanged(isPressed ? 1 : 0);
             if (DEBUG) log(isPressed ? "pressed" : "released");
-            port.setPinState(pin, isPressed == polarity ? IOPort.PIN_HI : IOPort.PIN_LOW);
+            port.setPinState(pin, isPressed == polarity ? IOPort.PinState.HI : IOPort.PinState.LOW);
         }
     }
 

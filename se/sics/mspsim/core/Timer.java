@@ -922,14 +922,14 @@ public class Timer extends IOUnit {
    * @param ccrIndex - the capture register
    * @param source - the capture source (0/1)
    */
-  public void capture(int ccrIndex, int source, int value) {
+  public void capture(int ccrIndex, int source, IOPort.PinState value) {
       CCR reg = ccr[ccrIndex];
       if (ccrIndex < noCompare && reg.captureOn && reg.inputSel == source) {
           /* This is obviously a capture! */
           boolean rise = (reg.capMode & CM_RISING) != 0;
           boolean fall = (reg.capMode & CM_FALLING) != 0;
-          if ((value == IOPort.PIN_HI && rise) ||
-                  (value == IOPort.PIN_LOW && fall)) {
+          if ((value == IOPort.PinState.HI && rise) ||
+                  (value == IOPort.PinState.LOW && fall)) {
               //      System.out.println("*** Capture on CCR_" + ccrIndex + " " + " value: " +
               //            value);
               // update counter values and compare register

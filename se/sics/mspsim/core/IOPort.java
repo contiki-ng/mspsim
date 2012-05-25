@@ -40,14 +40,13 @@ import se.sics.mspsim.util.Utils;
 
 public class IOPort extends IOUnit {
 
-    public static final int PIN_LOW = 0;
-    public static final int PIN_HI = 1;
+    public enum PinState { LOW, HI };
 
     private final int port;
     private final int interrupt;
 
     // External pin state!
-    private int pinState[] = new int[8];
+    private PinState pinState[] = new PinState[8];
 
     /* NOTE: The offset needs to be configurable since the new IOPorts on 
      * the 5xxx series are located at other addresses.
@@ -341,11 +340,11 @@ public class IOPort extends IOUnit {
     }
 
     // for HW to set hi/low on the pins...
-    public void setPinState(int pin, int state) {
+    public void setPinState(int pin, PinState state) {
         if (pinState[pin] != state) {
             pinState[pin] = state;
             int bit = 1 << pin;
-            if (state == PIN_HI) {
+            if (state == PinState.HI) {
                 in |= bit;
             } else {
                 in &= ~bit;
@@ -353,7 +352,7 @@ public class IOPort extends IOUnit {
             if (interrupt > 0) {
                 if ((ies & bit) == 0) {
                     // LO/HI transition
-                    if (state == PIN_HI) {
+                    if (state == PinState.HI) {
                         ifg |= bit;
                         updateIV();
                         if (DEBUG) {
@@ -362,7 +361,7 @@ public class IOPort extends IOUnit {
                     }
                 } else {
                     // HI/LO transition
-                    if (state == PIN_LOW) {
+                    if (state == PinState.LOW) {
                         ifg |= bit;
                         updateIV();
                         if (DEBUG) {
@@ -389,7 +388,7 @@ public class IOPort extends IOUnit {
         int oldValue = out | (~dir) & 0xff;
 
         for (int i = 0, n = 8; i < n; i++) {
-            pinState[i] = PIN_LOW;
+            pinState[i] = PinState.LOW;
         }
         in = 0;
         dir = 0;

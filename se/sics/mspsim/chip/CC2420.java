@@ -1208,9 +1208,9 @@ public class CC2420 extends Radio802154 implements USARTListener {
   private void setSFD(boolean sfd) {
     currentSFD = sfd;
     if( (registers[REG_IOCFG0] & SFD_POLARITY) == SFD_POLARITY)
-      sfdPort.setPinState(sfdPin, sfd ? 0 : 1);
+      sfdPort.setPinState(sfdPin, sfd ? IOPort.PinState.LOW : IOPort.PinState.HI);
     else 
-      sfdPort.setPinState(sfdPin, sfd ? 1 : 0);
+      sfdPort.setPinState(sfdPin, sfd ? IOPort.PinState.HI : IOPort.PinState.LOW);
     if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
   }
 
@@ -1218,18 +1218,18 @@ public class CC2420 extends Radio802154 implements USARTListener {
     currentCCA = cca;
     if (DEBUG) log("Setting CCA to: " + cca);
     if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
-      ccaPort.setPinState(ccaPin, cca ? 0 : 1);
+      ccaPort.setPinState(ccaPin, cca ? IOPort.PinState.LOW : IOPort.PinState.HI);
     else
-      ccaPort.setPinState(ccaPin, cca ? 1 : 0);
+      ccaPort.setPinState(ccaPin, cca ? IOPort.PinState.HI : IOPort.PinState.LOW);
   }
 
   private void setFIFOP(boolean fifop) {
     currentFIFOP = fifop;
     if (DEBUG) log("Setting FIFOP to " + fifop);
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
-      fifopPort.setPinState(fifopPin, fifop ? 0 : 1);
+      fifopPort.setPinState(fifopPin, fifop ? IOPort.PinState.LOW : IOPort.PinState.HI);
     } else {
-      fifopPort.setPinState(fifopPin, fifop ? 1 : 0);
+      fifopPort.setPinState(fifopPin, fifop ? IOPort.PinState.HI : IOPort.PinState.LOW);
     }
   }
 
@@ -1237,9 +1237,9 @@ public class CC2420 extends Radio802154 implements USARTListener {
     currentFIFO = fifo;
     if (DEBUG) log("Setting FIFO to " + fifo);
     if((registers[REG_IOCFG0] & FIFO_POLARITY) == FIFO_POLARITY) {
-      fifoPort.setPinState(fifoPin, fifo ? 0 : 1);
+      fifoPort.setPinState(fifoPin, fifo ? IOPort.PinState.LOW : IOPort.PinState.HI);
     } else {
-      fifoPort.setPinState(fifoPin, fifo ? 1 : 0);
+      fifoPort.setPinState(fifoPin, fifo ? IOPort.PinState.HI : IOPort.PinState.LOW);
     }
   }
 

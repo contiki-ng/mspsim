@@ -131,7 +131,7 @@ public class SHT11 extends Chip {
       output[2] = rev8bits(crc);
       
       /* finished measuring - signal with LOW! */
-      sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
+      sdataPort.setPinState(sdataPin, IOPort.PinState.LOW);
       state = WRITE_BYTE;
       writeData = output[0];
       writePos = 0;
@@ -166,7 +166,7 @@ public class SHT11 extends Chip {
     writeData = 0;
     state = IDLE;
     // Always set pin to high when not doing anything...
-    sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
+    sdataPort.setPinState(sdataPin, IOPort.PinState.HI);
   }
   
   public void clockPin(boolean high) {
@@ -188,13 +188,13 @@ public class SHT11 extends Chip {
           if (DEBUG) log("read: " + Utils.hex8(readData));
           bitCnt = 0;
           state = ACK_CMD;
-          sdataPort.setPinState(sdataPin, IOPort.PIN_LOW);
+          sdataPort.setPinState(sdataPin, IOPort.PinState.LOW);
         }
       }
       break;
     case ACK_CMD:
       if (c == 'c') {
-        sdataPort.setPinState(sdataPin, IOPort.PIN_HI);
+        sdataPort.setPinState(sdataPin, IOPort.PinState.HI);
         if (readData == CMD_MEASURE_HUM || readData == CMD_MEASURE_TEMP) {
           state = MEASURE;
           /* schedule measurement for 20 millis */
@@ -207,7 +207,7 @@ public class SHT11 extends Chip {
     case WRITE_BYTE:
       if (c == 'C') {
         boolean hi = (writeData & 0x80) != 0;
-        sdataPort.setPinState(sdataPin, hi ? IOPort.PIN_HI : IOPort.PIN_LOW);
+        sdataPort.setPinState(sdataPin, hi ? IOPort.PinState.HI : IOPort.PinState.LOW);
         bitCnt++;
         writeData = writeData << 1;
         if (bitCnt == 8) {
