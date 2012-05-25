@@ -303,11 +303,7 @@ public class IOPort extends IOUnit {
 
 
     public int read(int address, boolean word, long cycles) {
-        if (DEBUG) {
-            log("Notify read: " + address);
-        }
         PortReg reg = portMap[address - offset];
-        
         /* only byte read allowed if not having an ioPair */
         if (word && reg == PortReg.IV_L) {
             /* Always read low first then high => update on high!!! */
@@ -323,21 +319,18 @@ public class IOPort extends IOUnit {
 
     public void write(int address, int data, boolean word, long cycles) {
         int iAddress = address - offset;
-
+        if (iAddress < 0 || iAddress >= portMap.length) {
+            throw new EmulationException("Writing to illegal IO port address at " + getID() + ": $" + Utils.hex(address, 4));
+        }
+        PortReg fun = portMap[iAddress];
         if (DEBUG) {
-            try {
-                log("Writing to " + getID() +
-                        portMap[iAddress] +
-                        "  $" + Utils.hex8(address) +
-                        " => $" + Utils.hex8(data) + "=#" +
-                        Utils.binary8(data) + " word: " + word);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            log("Writing to " + getID() + fun +
+                    " ($" + Utils.hex(address, 2) +
+                    ") => $" + Utils.hex(data, 2) + "=#" +
+                    Utils.binary8(data) + (word ? " (word)" : ""));
         }
 
         /* only byte write - need to convert any word write here... */
-        PortReg fun = portMap[iAddress];
         if (word && ioPair != null) {
             write_port(fun, data & 0xff, cycles);
             ioPair.write_port(fun, data >> 8, cycles);
@@ -395,13 +388,24 @@ public class IOPort extends IOUnit {
     }
 
     public void reset(int type) {
+        int oldValue = out | (~dir) & 0xff;
+
         for (int i = 0, n = 8; i < n; i++) {
             pinState[i] = PIN_LOW;
         }
+        in = 0;
+        dir = 0;
+        ren = 0;
         ifg = 0;
         ie = 0;
         iv = 0;
         cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
+
+        PortListener listener = portListener;
+        int newValue = out | (~dir) & 0xff;
+        if (oldValue != newValue && listener != null) {
+            listener.portWrite(this, newValue);
+        }
     }
 
     public String info() {
