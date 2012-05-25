@@ -132,11 +132,11 @@ public class IOPort extends IOUnit {
         this(cpu, port, interrupt, memory, offset);
         this.portMap = portMap;
         
-        System.out.println("Port " + port + " interrupt vector: " + interrupt);
+//        System.out.println("Port " + port + " interrupt vector: " + interrupt);
         /* register all the registers from the port-map */
         for (int i = 0; i < portMap.length; i++) {
             if (portMap[i] != null) {
-                System.out.println("  P" + port + portMap[i] + " at " + Utils.hex16(offset + i));
+//                System.out.println("  P" + port + portMap[i] + " at " + Utils.hex16(offset + i));
                 cpu.setIO(offset + i, this, false);
             }
         }

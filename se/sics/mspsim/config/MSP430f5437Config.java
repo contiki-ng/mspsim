@@ -36,16 +36,13 @@
 package se.sics.mspsim.config;
 
 import java.util.ArrayList;
-
 import se.sics.mspsim.core.GenericUSCI;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
-import se.sics.mspsim.core.Multiplier;
 import se.sics.mspsim.core.Multiplier32;
 import se.sics.mspsim.core.Timer;
-import se.sics.mspsim.core.USCI;
 import se.sics.mspsim.util.Utils;
 
 public class MSP430f5437Config extends MSP430Config {
@@ -54,7 +51,7 @@ public class MSP430f5437Config extends MSP430Config {
     // - positions of all timers (A0, A1, B)
     // - memory configuration
     // - 
-    String portConfig[] = {
+    private static final String portConfig[] = {
             "P1=200,IN 00,OUT 02,DIR 04,REN 06,DS 08,SEL 0A,IV_L 0E,IV_H 0F,IES 18,IE 1A,IFG 1C",
             "P2=200,IN 01,OUT 03,DIR 05,REN 07,DS 09,SEL 0B,IV_L 1E,IV_H 1F,IES 19,IE 1B,IFG 1D",
             "P3=220,IN 00,OUT 02,DIR 04,REN 06,DS 08,SEL 0A",
@@ -118,7 +115,7 @@ public class MSP430f5437Config extends MSP430Config {
             for (int a = 0; a < 0x20; a++) {
                 cpu.setIO(a + uartConfig[i].offset, usci, false);
             }
-            System.out.println("Adding IOUnit USCI: " + usci.getName());
+//            System.out.println("Adding IOUnit USCI: " + usci.getName());
             ioUnits.add(usci);
         }
         
