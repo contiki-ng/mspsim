@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * Multiplier
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -162,21 +158,17 @@ public class Multiplier32 extends IOUnit {
             return res3;
         case MPY32CTL0:
             return mpy32ctl0;
+        default:
+            logw("read unhandled address: 0x" + Utils.hex(address, 4));
+            return 0;
         }
-        logw("read other address:" + address);
-        return 0;
     }
 
     @Override
     public void write(int address, int data, boolean word, long cycles) {
         address = address - offset;
         if (DEBUG) {
-            log("write to: " + Utils.hex16(address) + " data = " + data + " word = " + word);
-        }
-        if (MSP430Constants.DEBUGGING_LEVEL > 0) {
-            System.out.println("Write to HW Multiplier: " +
-                    Integer.toString(address, 16) +
-                    " = " + data);
+            log("write to: " + Utils.hex(address, 4) + " data = " + data + " word = " + word);
         }
         switch(address) {
         case MPY:
@@ -253,15 +245,17 @@ public class Multiplier32 extends IOUnit {
             op1 = (op1 & 0xffff) | (data << 16);
             break;
         case MPYS32L:
-            if (!word && data >= 0x80)
+            if (!word && data >= 0x80) {
                 data -= 0x100;
+            }
             op1 = mpy32L = data;
             signed = true;
             accumulating = false;
             break;
         case MPYS32H:
-            if (!word & data > 0x80)
+            if (!word & data > 0x80) {
                 data -= 0x100;
+            }
             mpys32H = data;
             op1 = (op1 & 0xffff) | (data << 16);
             break;
@@ -275,48 +269,55 @@ public class Multiplier32 extends IOUnit {
             op1 = (op1 & 0xffff) | (data << 16);
             break;
         case MACS32L:
-            if (!word & data > 0x80)
+            if (!word & data > 0x80) {
                 data -= 0x100;
+            }
             op1 = macs32L = data;
             signed = true;
             accumulating = true;
             break;
         case MACS32H:
-            if (!word & data > 0x80)
+            if (!word & data > 0x80) {
                 data -= 0x100;
+            }
             macs32H = data;
             op1 = (op1 & 0xffff) | (data << 16);
             break;
         case OP2L:
-            if (signed && !word && data >= 0x80)
+            if (signed && !word && data >= 0x80) {
                 data -= 0x80;
+            }
             op2L = op2 = data;
             break;
         case OP2H: {
             long p;
-            if (signed && !word && data >= 0x80)
+            if (signed && !word && data >= 0x80) {
                 data -= 0x80;
+            }
             op2 = (op2 & 0xffff) | (data << 16);
 
-            /* FIXME: Doesn't set SUMEXT amd MPYC properly. */
+            /* FIXME: Doesn't set SUMEXT and MPYC properly. */
             if (signed) {
                 p = (long) op1 * (long) op2;
             }
             else {
                 long uop1, uop2;
                 uop1 = op1;
-                if (uop1 < 0)
+                if (uop1 < 0) {
                     uop1 += 0x100000000L;
+                }
                 uop2 = op2;
-                if (uop2 < 0)
+                if (uop2 < 0) {
                     uop2 += 0x100000000L;
+                }
 
                 p = uop1 * uop2;
             }
-            if (accumulating)
+            if (accumulating) {
                 res64 += p;
-            else
+            } else {
                 res64 = p;
+            }
 
             /* FIXME: Ignore accumulate. */
             res0 = (int) res64 & 0xffff;
@@ -332,6 +333,7 @@ public class Multiplier32 extends IOUnit {
         }
     }
 
+    @Override
     public void interruptServiced(int vector) {
     }
 }
