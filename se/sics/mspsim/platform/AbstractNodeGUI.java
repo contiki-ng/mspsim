@@ -157,18 +157,12 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
 
     protected void paintComponent(Graphics g) {
         Color old = g.getColor();
-        ImageIcon nodeImage = getNodeImage();
-        int w = getWidth(), h = getHeight();
-        int iw = nodeImage.getIconWidth(), ih = nodeImage.getIconHeight();
-        nodeImage.paintIcon(this, g, 0, 0);
-        // Clear all areas not covered by the image
         g.setColor(getBackground());
-        if (w > iw) {
-            g.fillRect(iw, 0, w, h);
-        }
-        if (h > ih) {
-            g.fillRect(0, ih, w, h);
-        }
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        ImageIcon nodeImage = getNodeImage();
+        nodeImage.paintIcon(this, g, 0, 0);
+
         g.setColor(old);
     }
 }
