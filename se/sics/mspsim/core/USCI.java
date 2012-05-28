@@ -188,13 +188,13 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
   }
   
   private void setBitIFG(int bits) {
-    if ((bits) > 0) {
-        System.out.println(getName() + " Set utxifg = " + utxifg +
-                " sfrA: " + sfrAddress + " bits: " + bits);
-    }
+//    if ((bits) > 0) {
+//        System.out.println(getName() + " Set utxifg = " + utxifg +
+//                " sfrA: " + sfrAddress + " bits: " + bits);
+//    }
     if (sfr != null) {
         sfr.setBitIFG(sfrAddress, bits);
-        System.out.println("SFR =>" + sfr.getIFG(sfrAddress));
+//        System.out.println("SFR =>" + sfr.getIFG(sfrAddress));
     } else {
         memory[ifgAddress] |= bits;
     }
@@ -410,7 +410,7 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
 
   private void handleTransmit(long cycles) {
     if (cpu.getMode() >= MSP430Core.MODE_LPM3) {
-      System.out.println(getName() + " Warning: USART transmission during LPM!!! " + nextTXByte);
+      logw("Warning: USART transmission during LPM!!! " + nextTXByte);
     }
 
     if (transmitting) {
@@ -488,10 +488,10 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
   }
   
   public void clearDMATrigger(int index) {
-      System.out.println("UART clearing DMA " + index);
+//      System.out.println("UART clearing DMA " + index);
       if (index == 0) {
           /* clear RX - might be different in different modes... */
-          System.out.println("UART clearing read bit!");
+//          System.out.println("UART clearing read bit!");
           clrBitIFG(urxifg);
           stateChanged(USARTListener.RXFLAG_CLEARED, true);
       } else {
