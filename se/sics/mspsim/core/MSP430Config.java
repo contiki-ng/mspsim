@@ -143,5 +143,8 @@ public abstract class MSP430Config {
         maxMemIO = size;
     }
 
+    public ClockSystem createClockSystem(MSP430Core cpu, int[] memory, Timer[] timers) {
+        return new BasicClockModule(cpu, memory, 0, timers);
+    }
 
 }

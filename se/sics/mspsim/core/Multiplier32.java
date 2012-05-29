@@ -168,12 +168,12 @@ public class Multiplier32 extends IOUnit {
     public void write(int address, int data, boolean word, long cycles) {
         address = address - offset;
         if (DEBUG) {
-            log("write to: " + Utils.hex(address, 4) + " data = " + data + " word = " + word);
+            log("write to: $" + Utils.hex(address, 4) + " data=" + data + " word=" + word);
         }
         switch(address) {
         case MPY:
-            op1 = mpy = data;
             if (DEBUG) log("Write to MPY: " + data);
+            op1 = mpy = data;
             signed = false;
             accumulating = false;
             break;

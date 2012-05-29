@@ -36,6 +36,7 @@
 package se.sics.mspsim.config;
 
 import java.util.ArrayList;
+import se.sics.mspsim.core.ClockSystem;
 import se.sics.mspsim.core.GenericUSCI;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
@@ -43,6 +44,7 @@ import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Multiplier32;
 import se.sics.mspsim.core.Timer;
+import se.sics.mspsim.core.UnifiedClockSystem;
 import se.sics.mspsim.util.Utils;
 
 public class MSP430f5437Config extends MSP430Config {
@@ -113,12 +115,12 @@ public class MSP430f5437Config extends MSP430Config {
 //            System.out.println("Adding IOUnit USCI: " + usci.getName());
             ioUnits.add(usci);
         }
-        
-        ioUnits.add(IOPort.parseIOPort(cpu, 47, portConfig[0]));
-        ioUnits.add(IOPort.parseIOPort(cpu, 42, portConfig[1]));
+        IOPort last = null;
+        ioUnits.add(last = IOPort.parseIOPort(cpu, 47, portConfig[0], last));
+        ioUnits.add(last = IOPort.parseIOPort(cpu, 42, portConfig[1], last));
         
         for (int i = 2; i < portConfig.length; i++) {
-            ioUnits.add(IOPort.parseIOPort(cpu, 0, portConfig[i]));
+            ioUnits.add(last = IOPort.parseIOPort(cpu, 0, portConfig[i], last));
         }
         
         return portConfig.length + uartConfig.length;
@@ -127,6 +129,11 @@ public class MSP430f5437Config extends MSP430Config {
     @Override
     public String getAddressAsString(int addr) {
         return Utils.hex20(addr);
+    }
+
+    @Override
+    public ClockSystem createClockSystem(MSP430Core cpu, int[] memory, Timer[] timers) {
+        return new UnifiedClockSystem(cpu, memory, 0, timers);
     }
 
 }

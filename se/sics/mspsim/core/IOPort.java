@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,47 +36,14 @@
  */
 
 package  se.sics.mspsim.core;
+import java.util.Arrays;
 import se.sics.mspsim.util.Utils;
 
 public class IOPort extends IOUnit {
 
     public enum PinState { LOW, HI };
 
-    private final int port;
-    private final int interrupt;
-
-    // External pin state!
-    private PinState pinState[] = new PinState[8];
-
-    /* NOTE: The offset needs to be configurable since the new IOPorts on 
-     * the 5xxx series are located at other addresses.
-     * Maybe create another IOPort that just convert IOAddress to this 'old' mode?
-     * - will be slightly slower on IOWrite/read but very easy to implement.
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     */
-    
-    enum PortReg {IN, OUT, DIR, SEL, IFG, IES, IE, REN, DS, IV_L, IV_H};
-    
-    public static final int IN = 0;
-    public static final int OUT = 1;
-    public static final int DIR = 2;
-    public static final int SEL = 4; /* what about SEL2? */
-    public static final int IFG = 5;
-    public static final int IES = 6;
-    public static final int IE = 7;
-    public static final int REN = 8;
-    public static final int DS = 9;
-    public static final int IV_L = 10;
-    public static final int IV_H = 11;
-
-    private static final String[] names = {
-        "IN", "OUT", "DIR", "SEL", "IFG", "IES", "IE", "REN", "DS" };
-
+    public enum PortReg {IN, OUT, DIR, SEL, SEL2, IFG, IES, IE, REN, DS, IV_L, IV_H};
 
     /* portmaps for 1611 */
     private static final PortReg[] PORTMAP_INTERRUPT = 
@@ -84,10 +51,15 @@ public class IOPort extends IOUnit {
     private static final PortReg[] PORTMAP_NO_INTERRUPT = 
         {PortReg.IN, PortReg.OUT, PortReg.DIR, PortReg.SEL};
 
+    private final int port;
+    private final int interrupt;
+
+    // External pin state!
+    private final PinState pinState[] = new PinState[8];
+
     private final PortReg[] portMap;
 
     private PortListener portListener = null;
-    // represents the direction register
 
     /* Registers for Digital I/O */
 
@@ -95,11 +67,12 @@ public class IOPort extends IOUnit {
     private int out;
     private int dir;
     private int sel;
+    private int sel2;
     private int ie;
     private int ifg;
     private int ies; /* edge select */
     private int ren;
-//    private int ds;
+    private int ds;
 
     private int iv; /* low / high */
 
@@ -136,7 +109,7 @@ public class IOPort extends IOUnit {
         }
     }
     
-    public static IOPort parseIOPort(MSP430Core cpu, int interrupt, String specification) {
+    public static IOPort parseIOPort(MSP430Core cpu, int interrupt, String specification, IOPort last) {
         /* Specification = Px=Offset,REG Off, ... */
         String[] specs = specification.split(",");
         int port = specs[0].charAt(1) - '0';
@@ -148,10 +121,17 @@ public class IOPort extends IOUnit {
             String[] preg = specs[i].split(" ");
             PortReg pr = PortReg.valueOf(preg[0]);
             int offs = Integer.parseInt(preg[1], 16);
+            if (offs >= portMap.length) {
+                portMap = Arrays.copyOf(portMap, offs + 1);
+            }
             portMap[offs] = pr;
         }
-        
-        return new IOPort(cpu, port, interrupt, cpu.memory, offset, portMap);
+        IOPort newPort = new IOPort(cpu, port, interrupt, cpu.memory, offset, portMap);
+        if (last != null && offset == last.offset && offset > 0) {
+            // This port is a pair with previous port to allow 16 bits writes
+            last.ioPair = newPort;
+        }
+        return newPort;
     }
 
     public int getPort() {
@@ -202,7 +182,37 @@ public class IOPort extends IOUnit {
         }
         //System.out.println("*** Setting IV to: " + iv + " ifg: " + ifg);
     }
-    
+
+    public int getRegister(PortReg register) {
+        switch(register) {
+        case DIR:
+            return dir;
+        case IE:
+            return ie;
+        case IES:
+            return ies;
+        case IFG:
+            return ifg;
+        case IN:
+            return in;
+        case IV_H:
+            return (iv >> 8) & 0xff;
+        case IV_L:
+            return iv & 0xff;
+        case OUT:
+            return out;
+        case REN:
+            return ren;
+        case DS:
+            return ds;
+        case SEL:
+            return sel;
+        case SEL2:
+            return sel2;
+        }
+        return 0;
+    }
+
     /* only byte access!!! */
     int read_port(PortReg function, long cycles) {
         switch(function) {
@@ -222,6 +232,10 @@ public class IOPort extends IOUnit {
             return ies;
         case SEL:
             return sel;
+        case SEL2:
+            return sel2;
+        case DS:
+            return ds;
         case IV_L:
             return iv & 0xff;
         case IV_H:
@@ -282,7 +296,13 @@ public class IOPort extends IOUnit {
         case SEL:
             sel = data;
             break;
+        case SEL2:
+            sel2 = data;
+            break;
             /* Can IV be written ? */
+        case DS:
+            ds = data;
+            break;
         case IV_L:
             iv = (iv & 0xff00) | data;
             break;
@@ -381,9 +401,7 @@ public class IOPort extends IOUnit {
     public void reset(int type) {
         int oldValue = out | (~dir) & 0xff;
 
-        for (int i = 0, n = 8; i < n; i++) {
-            pinState[i] = PinState.LOW;
-        }
+        Arrays.fill(pinState, PinState.LOW);
         in = 0;
         dir = 0;
         ren = 0;
@@ -401,12 +419,13 @@ public class IOPort extends IOUnit {
 
     public String info() {
         StringBuilder sb = new StringBuilder();
-        /* TODO: USE PORTMAP FOR THIS!!! */
-        String[] regs = names;
-        sb.append('$').append(Utils.hex16(offset)).append(':');
-        for (int i = 0, n = regs.length; i < n; i++) {
-            sb.append(' ').append(regs[i]).append(":$")
-            .append(Utils.hex8(0));
+        sb.append(" $").append(Utils.hex(offset, 2)).append(':');
+        for (int i = 0, n = portMap.length; i < n; i++) {
+            PortReg reg = portMap[i];
+            if (reg != null) {
+                sb.append(' ').append(reg).append("($").append(Utils.hex(i, 2)).append("):$")
+                .append(Utils.hex(0, 2));
+            }
         }
         return sb.toString();
     }

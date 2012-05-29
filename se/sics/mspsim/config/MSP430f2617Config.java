@@ -49,7 +49,17 @@ import se.sics.mspsim.util.Utils;
 
 public class MSP430f2617Config extends MSP430Config {
 
-    
+    private static final String portConfig[] = {
+        "P1=0,IN 20,OUT 21,DIR 22,IFG 23,IES 24,IE 25,SEL 26,SEL2 41,REN 27",
+        "P2=0,IN 28,OUT 29,DIR 2A,IFG 2B,IES 2C,IE 2D,SEL 2E,SEL2 42,REN 2F",
+        "P3=0,IN 18,OUT 19,DIR 1A,SEL 1B,SEL2 43,REN 10",
+        "P4=0,IN 1C,OUT 1D,DIR 1E,SEL 1F,SEL2 44,REN 11",
+        "P5=0,IN 30,OUT 31,DIR 32,SEL 33,SEL2 45,REN 12",
+        "P6=0,IN 34,OUT 35,DIR 36,SEL 37,SEL2 46,REN 13",
+        "P7=0,IN 38,OUT 3A,DIR 3C,SEL 3E,SEL2 47,REN 14",
+        "P8=0,IN 39,OUT 3B,DIR 3D,SEL 3F,SEL2 48,REN 15"
+    };
+
     public MSP430f2617Config() {
         /* 32 vectors for the MSP430X series */
         maxInterruptVector = 31;
@@ -62,9 +72,9 @@ public class MSP430f2617Config extends MSP430Config {
 
         /* TX Vec, RX Vec, TX Bit, RX Bit, SFR-reg, Offset, Name, A?*/
         UARTConfig uA0 = new UARTConfig(22, 23, 1, 0, 1, 0x60, "USCI A0", true);
-        UARTConfig uB0 = new UARTConfig(22, 23, 3, 2, 1, 0x60, "USCI B0", false);
+        UARTConfig uB0 = new UARTConfig(22, 23, 3, 2, 1, 0x68, "USCI B0", false);
         UARTConfig uA1 = new UARTConfig(16, 17, 1, 0, 6, 0xD0, "USCI A1", true);
-        UARTConfig uB1 = new UARTConfig(16, 17, 3, 2, 6, 0xD0, "USCI B1", false);
+        UARTConfig uB1 = new UARTConfig(16, 17, 3, 2, 6, 0xD8, "USCI B1", false);
         uartConfig = new UARTConfig[] {uA0, uB0, uA1, uB1};
 
         /* configure memory */
@@ -103,13 +113,12 @@ public class MSP430f2617Config extends MSP430Config {
 
         // Add port 1,2 with interrupt capability!
         // IOPorts will add themselves to the CPU
-        ioUnits.add(new IOPort(cpu, 1, 4, cpu.memory, 0x20));
-        ioUnits.add(new IOPort(cpu, 2, 1, cpu.memory, 0x28));
+        IOPort last = null;
+        ioUnits.add(last = IOPort.parseIOPort(cpu, 18, portConfig[0], last));
+        ioUnits.add(last = IOPort.parseIOPort(cpu, 19, portConfig[1], last));
 
-        // Add port 3,4 & 5,6
-        for (int i = 0, n = 2; i < n; i++) {
-            ioUnits.add(new IOPort(cpu, (3 + i), 0, cpu.memory, 0x18 + i * 4));
-            ioUnits.add(new IOPort(cpu, (5 + i), 0, cpu.memory, 0x30 + i * 4));
+        for (int i = 2; i < portConfig.length; i++) {
+            ioUnits.add(last = IOPort.parseIOPort(cpu, 0, portConfig[i], last));
         }
 
         ADC12 adc12 = new ADC12(cpu);

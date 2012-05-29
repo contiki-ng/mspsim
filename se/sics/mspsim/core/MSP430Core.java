@@ -239,13 +239,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         timers[i] = t;
     }
 
-    // XXX this should be handled by the config, but we do it here to
-    // avoid changing too much of the mspsim architecture for now
-    if (MSP430XArch) {
-      bcs = new UnifiedClockSystem(this, memory, 0, timers);
-    } else {
-      bcs = new BasicClockModule(this, memory, 0, timers);
-    }
+    bcs = config.createClockSystem(this, memory, timers);
     ioSegment.setIORange(bcs.getAddressRangeMin(), bcs.getAddressRangeMax() - bcs.getAddressRangeMin() + 1, bcs);
 
     // SFR and Basic clock system.
