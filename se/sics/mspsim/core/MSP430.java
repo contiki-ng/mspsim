@@ -52,7 +52,7 @@ public class MSP430 extends MSP430Core {
   private boolean debug = false;
   private boolean running = false;
   private boolean isBreaking = false;
-  private long sleepRate = 50000;
+  private double rate = 2.0;
 
   // Debug time - measure cycles
   private long lastCycles = 0;
@@ -131,12 +131,12 @@ public class MSP430 extends MSP430Core {
       /* Just a test to see if it gets down to a reasonable speed */
       if (cycles > nextSleep) {
 	try {
-	  Thread.sleep(10);
+	  Thread.sleep(100);
 	} catch (Exception e) {
 	}
 	// Frequency = 100 * cycles ratio
 	// Ratio = Frq / 100
-	nextSleep = cycles + sleepRate;
+	nextSleep = cycles + (long)(rate * dcoFrq / 10);
       }
 
 //       if ((instruction & 0xff80) == CALL) {
@@ -428,12 +428,12 @@ public class MSP430 extends MSP430Core {
     return running;
   }
 
-  public long getSleepRate() {
-    return sleepRate;
+  public double getExecutionRate() {
+    return rate;
   }
 
-  public void setSleepRate(long rate) {
-    sleepRate = rate;
+  public void setExecutionRate(double rate) {
+    this.rate = rate;
   }
 
   public synchronized void addSimEventListener(SimEventListener l) {

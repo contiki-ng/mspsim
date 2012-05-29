@@ -126,18 +126,16 @@ public class MiscCommands implements CommandBundle {
         } else if (context.getArgumentCount() == 0) {
           /* No speed specified. Simply show current speed. */
         } else {
-          double d = context.getArgumentAsDouble(0);
-          if (d > 0.0) {
-            long rate = (long) (25000 * d);
-            cpu.setSleepRate(rate);
+          double rate = context.getArgumentAsDouble(0);
+          if (rate > 0.0) {
+            cpu.setExecutionRate(rate);
           } else {
             context.err.println("Speed factor must be larger than zero.");
             return 1;
           }
         }
-        long rate = cpu.getSleepRate();
-        double d = rate / 25000.0;
-        context.out.println("Speed factor is set to " + (((int)(d * 100 + 0.5)) / 100.0));
+        double rate = cpu.getExecutionRate();
+        context.out.printf("Speed factor is set to %.2f\n", rate);
         return 0;
       }
     });
