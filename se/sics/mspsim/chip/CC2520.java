@@ -1384,6 +1384,11 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     }
 
     @Override
+    public int getOutputPowerMax() {
+        return 5;
+    }
+
+    @Override
     public void notifyReset() {
         super.notifyReset();
         setChipSelect(false);

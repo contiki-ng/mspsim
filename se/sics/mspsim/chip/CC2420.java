@@ -1348,6 +1348,11 @@ public class CC2420 extends Radio802154 implements USARTListener {
     return -100;
   }
 
+  @Override
+  public int getOutputPowerMax() {
+      return 0;
+  }
+
   public void notifyReset() {
     super.notifyReset();
     setChipSelect(false);
