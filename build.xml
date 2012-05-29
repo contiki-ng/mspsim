@@ -81,6 +81,13 @@
     </java>
   </target>
 
+  <target name="runz1" depends="jar" description="run MSPSim with platform Zolertia Z1">
+    <property name="FIRMWAREFILE" value="firmware/z1/blink.z1"/>
+    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.z1.Z1Node">
+      <arg value="${FIRMWAREFILE}"/>
+    </java>
+  </target>
+
   <target name="run" depends="runsky"/>
 
   <target name="cputest" depends="jar" description="run MSPSim CPU test">
