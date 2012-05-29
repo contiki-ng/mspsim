@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007-2010, Swedish Institute of Computer Science.
+ * Copyright (c) 2007-2012, Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * Timer
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.core;
@@ -71,7 +67,6 @@ import se.sics.mspsim.util.Utils;
  */
 public class Timer extends IOUnit {
 
-    public static final boolean DEBUG = false;
   public static final int TBIV = 0x011e;
   public static final int TAIV = 0x012e;
 
@@ -201,6 +196,7 @@ public class Timer extends IOUnit {
 
   // Support variables Max 7 compare regs for now (timer b)
   private final int noCompare;
+  private final CCR ccr[];
 
   /* this is class represents a capture and compare register */
   private class CCR extends TimeEvent {
@@ -219,8 +215,8 @@ public class Timer extends IOUnit {
       boolean sync;
       int outMode;
 
-      int interruptVector;
-      int index;
+      final int interruptVector;
+      final int index;
 
       public CCR(long time, String name, int vector, int index) {
           super(time, name);
@@ -386,8 +382,6 @@ public class Timer extends IOUnit {
       }
 
   }
-  
-  private CCR ccr[];
 
   private TimeEvent counterTrigger = new TimeEvent(0, "Timer Counter Trigger") {
       public void execute(long t) {
@@ -441,9 +435,6 @@ public class Timer extends IOUnit {
     }
     
     reset(0);
-    
-    if (DEBUG) setLogStream(System.out);
-    
   }
 
   public void reset(int type) {
@@ -481,7 +472,7 @@ public class Timer extends IOUnit {
   // Should handle read of byte also (currently ignores that...)
   public int read(int address, boolean word, long cycles) {
 
-      if (DEBUG) System.out.println(getName() + " read from: $" + Utils.hex(address, 4));
+//      if (DEBUG) log("read from: $" + Utils.hex(address, 4));
 
       if (address == tiv) {
       // should clear registers for cause of interrupt (highest value)?
@@ -620,7 +611,7 @@ public class Timer extends IOUnit {
 
     int iAddress = address - offset;
 
-    if (DEBUG) System.out.println(getName() + " write to: " + Utils.hex16(address) +
+    if (DEBUG) log("write to: $" + Utils.hex(address, 4) +
             " => " + iAddress + " = " + data);
 
 
@@ -964,8 +955,8 @@ public class Timer extends IOUnit {
   public int getModeMax() {
     return 0;
   }
-  
-  public String getName(int address) {
+
+  private String getName(int address) {
     int reg = address - offset;
     if (reg == 0) return "TCTL";
     if (reg < 0x10) return "TCTL" + (reg - 2) / 2;
@@ -973,15 +964,16 @@ public class Timer extends IOUnit {
     if (reg < 0x20) return "TCCR" + (reg - 0x12) / 2;
     return " UNDEF(" + Utils.hex(address, 4) + ")";
   }
-  
+
+  @Override
   public String info() {
       StringBuilder sb = new StringBuilder();
       sb.append("  Source: " + getSourceName(clockSource) + "  Speed: " + clockSpeed
-              + " Hz  inDiv: " + inputDivider + "  Multiplyer: " + cyclesMultiplicator + '\n'
+              + " Hz  inDiv: " + inputDivider + "  Multiplier: " + cyclesMultiplicator + '\n'
               + "  Mode: " + modeNames[mode] + "  IEn: " + interruptEnable
               + "  IFG: " + interruptPending + "  TR: " + updateCounter(cpu.cycles) + '\n');
       for (CCR reg : ccr) {
-          if (reg != null) sb.append("  ").append(reg.info()).append('\n');
+          sb.append("  ").append(reg.info()).append('\n');
       }
       return sb.toString();
   }
