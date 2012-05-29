@@ -97,9 +97,10 @@ public class MiscCommands implements CommandBundle {
       }
     });
 
-    handler.registerCommand("timestamp", new BasicLineCommand("print lines with timestamp prefixed", "") {
+    handler.registerCommand("timestamp", new BasicLineCommand("print lines prefixed with timestamp as milliseconds or CPU cycles", "[-c]") {
       private PrintStream out;
       private MSP430 cpu;
+      boolean useCycles;
       long startTime;
 
       public int executeCommand(CommandContext context) {
@@ -109,11 +110,23 @@ public class MiscCommands implements CommandBundle {
           return 1;
         }
         out = context.out;
+        if (context.getArgumentCount() > 0) {
+            if ("-c".equals(context.getArgument(0))) {
+                useCycles = true;
+            } else {
+                context.err.println("unknown argument: " + context.getArgument(0));
+                return 1;
+            }
+        }
         startTime = System.currentTimeMillis() - (long)cpu.getTimeMillis();
         return 0;
       }
       public void lineRead(String line) {
-        out.println(Long.toString(startTime + (long)cpu.getTimeMillis()) + ' ' + line);
+          if (useCycles) {
+              out.println(Long.toString(cpu.cycles) + ' ' + line);
+          } else {
+              out.println(Long.toString(startTime + (long)cpu.getTimeMillis()) + ' ' + line);
+          }
       }
     });
 
