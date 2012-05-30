@@ -73,7 +73,7 @@ public class WismoteGui extends AbstractNodeGUI {
     private boolean resetDown = false;
 
     public WismoteGui(WismoteNode node) {
-        super("WismoteGui", "images/wismote.png");
+        super("WismoteGui", "images/wismote.jpg");
         this.node = node;
     }
 
