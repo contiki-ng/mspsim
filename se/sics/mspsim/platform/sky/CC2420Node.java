@@ -4,7 +4,6 @@ import se.sics.mspsim.chip.DS2411;
 import se.sics.mspsim.chip.PacketListener;
 import se.sics.mspsim.config.MSP430f1611Config;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;

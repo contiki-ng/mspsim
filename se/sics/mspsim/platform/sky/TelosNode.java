@@ -42,7 +42,7 @@
 package se.sics.mspsim.platform.sky;
 import java.io.IOException;
 import se.sics.mspsim.chip.AT45DB;
-import se.sics.mspsim.chip.FileAT45DB;
+import se.sics.mspsim.chip.FileStorage;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.util.ArgumentManager;
@@ -90,8 +90,11 @@ public class TelosNode extends MoteIVNode {
 
   public void setupNodePorts() {
     super.setupNodePorts();
+    if (getFlash() == null) {
+        setFlash(new AT45DB(cpu));
+    }
     if (flashFile != null) {
-      flash = new FileAT45DB(cpu, flashFile);
+      getFlash().setStorage(new FileStorage(flashFile));
     }
   }
 

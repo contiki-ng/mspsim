@@ -41,16 +41,13 @@
 
 package se.sics.mspsim.platform.jcreate;
 import java.io.IOException;
-
-import se.sics.mspsim.chip.FileM25P80;
+import se.sics.mspsim.chip.FileStorage;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.chip.MMA7260QT;
 import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADCInput;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOUnit;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.platform.sky.CC2420Node;
 import se.sics.mspsim.util.ArgumentManager;
@@ -134,8 +131,11 @@ public class JCreateNode extends CC2420Node {
             }
         });
 
+        if (getFlash() == null) {
+            setFlash(new M25P80(cpu));
+        }
         if (flashFile != null) {
-            setFlash(new FileM25P80(cpu, flashFile));
+            getFlash().setStorage(new FileStorage(flashFile));
         }
     }
 

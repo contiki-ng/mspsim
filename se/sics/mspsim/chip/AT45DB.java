@@ -43,7 +43,7 @@ package se.sics.mspsim.chip;
 import java.io.IOException;
 import se.sics.mspsim.core.*;
 
-public abstract class AT45DB extends Chip implements USARTListener {
+public class AT45DB extends ExternalFlash implements USARTListener {
 
   public static final int PAGE_SIZE = 264;
   public static final int NUM_PAGES = 2048;
@@ -337,11 +337,10 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
     private void bufferToPage(int buf) {
       try {
-        seek(pageAddress * PAGE_SIZE);
         if(buf == 1)
-          write(buffer1);
+          getStorage().write(pageAddress * PAGE_SIZE, buffer1);
         else
-          write(buffer2);
+          getStorage().write(pageAddress * PAGE_SIZE, buffer2);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -349,11 +348,10 @@ public abstract class AT45DB extends Chip implements USARTListener {
 
     private void pageToBuffer(int buf) {
       try {
-        seek(pageAddress * PAGE_SIZE);
         if(buf == 1)
-          read(buffer1);
+          getStorage().read(pageAddress * PAGE_SIZE, buffer1);
         else
-          read(buffer2);
+          getStorage().read(pageAddress * PAGE_SIZE, buffer2);
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -363,13 +361,9 @@ public abstract class AT45DB extends Chip implements USARTListener {
       return 0;
     }
 
-    public abstract void seek(long pos) throws IOException;
-    public abstract int read(byte[] b) throws IOException;
-    public abstract void write(byte[] b) throws IOException;
-
-    /* not yet any meaningful support for getting configuration */
-    public int getConfiguration(int param) {
+    @Override
+    public int getSize() {
         return 0;
     }
-    
+
 } // AT45DB

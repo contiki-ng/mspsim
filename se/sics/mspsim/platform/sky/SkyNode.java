@@ -41,7 +41,7 @@
 
 package se.sics.mspsim.platform.sky;
 import java.io.IOException;
-import se.sics.mspsim.chip.FileM25P80;
+import se.sics.mspsim.chip.FileStorage;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.USARTSource;
@@ -88,8 +88,11 @@ public class SkyNode extends MoteIVNode {
   
   public void setupNodePorts() {
     super.setupNodePorts();
+    if (getFlash() == null) {
+        setFlash(new M25P80(cpu));
+    }
     if (flashFile != null) {
-      setFlash(new FileM25P80(cpu, flashFile));
+        getFlash().setStorage(new FileStorage(flashFile));
     }
   }
 

@@ -3,7 +3,7 @@ package se.sics.mspsim.platform.z1;
 import java.io.IOException;
 import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.CC2420;
-import se.sics.mspsim.chip.FileM25P80;
+import se.sics.mspsim.chip.FileStorage;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.chip.M25P80;
 import se.sics.mspsim.config.MSP430f2617Config;
@@ -89,6 +89,9 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
     }
 
     public M25P80 getFlash() {
+        // TODO Replace with M25P16.
+        // The Z1 platform has a M25P16 chip with 2MB compared to the M25P80
+        // with 1MB but the chips are compatible.
         return flash;
     }
 
@@ -142,10 +145,6 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
     }
 
     private void setupNodePorts() {
-        if (flashFile != null) {
-            setFlash(new FileM25P80(cpu, flashFile));
-        }
-
         port1 = cpu.getIOUnit(IOPort.class, "P1");
 //        port1.addPortListener(this);
         port2 = cpu.getIOUnit(IOPort.class, "P2");
@@ -174,6 +173,12 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
 
         leds = new Leds(cpu, LEDS);
         button = new Button("Button", cpu, port2, BUTTON_PIN, true);
+        if (getFlash() == null) {
+            setFlash(new M25P80(cpu));
+        }
+        if (flashFile != null) {
+            getFlash().setStorage(new FileStorage(flashFile));
+        }
     }
 
     public void setupNode() {
@@ -190,7 +195,7 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
                 fileName = fileName + ".flash";
             }
         }
-        if (DEBUG) System.out.println("Using flash file: " + (fileName == null ? "no file" : fileName));
+        if (DEBUG) log("Using flash file: " + (fileName == null ? "no file" : fileName));
 
         this.flashFile = fileName;
 
