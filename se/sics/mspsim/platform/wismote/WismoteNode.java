@@ -174,6 +174,11 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
         }
         leds = new Leds(cpu, LEDS);
         button = new Button("Button", cpu, port2, BUTTON_PIN, true);
+
+        IOUnit usart = cpu.getIOUnit("USCI A1");
+        if (usart instanceof USARTSource) {
+            registry.registerComponent("serialio", usart);
+        }
     }
 
     public void setupNode() {
@@ -202,7 +207,7 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             // Add some windows for listening to serial output
             IOUnit usart = cpu.getIOUnit("USCI A1");
             if (usart instanceof USARTSource) {
-                SerialMon serial = new SerialMon((USARTSource)usart, "USCI A0 Port Output");
+                SerialMon serial = new SerialMon((USARTSource)usart, "USCI A1 Port Output");
                 registry.registerComponent("serialgui", serial);
             }
         }

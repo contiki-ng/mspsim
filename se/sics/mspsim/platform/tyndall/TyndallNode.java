@@ -117,6 +117,11 @@ public class TyndallNode extends GenericNode implements PortListener, USARTListe
         } else {
             throw new EmulationException("Could not setup tyndall mote - missing USCI B0");
         }
+
+        IOUnit usart = cpu.getIOUnit("USCI A0");
+        if (usart instanceof USARTSource) {
+            registry.registerComponent("serialio", usart);
+        }
     }
 
     public void setupNode() {

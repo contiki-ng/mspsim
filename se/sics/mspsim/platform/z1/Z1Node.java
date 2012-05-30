@@ -173,6 +173,12 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
 
         leds = new Leds(cpu, LEDS);
         button = new Button("Button", cpu, port2, BUTTON_PIN, true);
+
+        IOUnit usart = cpu.getIOUnit("USCI A0");
+        if (usart instanceof USARTSource) {
+            registry.registerComponent("serialio", usart);
+        }
+
         if (getFlash() == null) {
             setFlash(new M25P80(cpu));
         }
@@ -207,7 +213,7 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
             // Add some windows for listening to serial output
             IOUnit usart = cpu.getIOUnit("USCI A0");
             if (usart instanceof USARTSource) {
-                SerialMon serial = new SerialMon((USARTSource)usart, "USART1 Port Output");
+                SerialMon serial = new SerialMon((USARTSource)usart, "USCI A0 Port Output");
                 registry.registerComponent("serialgui", serial);
             }
         }

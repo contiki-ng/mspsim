@@ -8,6 +8,7 @@ import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.PortListener;
+import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.platform.GenericNode;
@@ -90,6 +91,11 @@ public class Exp5438Node extends GenericNode implements PortListener, USARTListe
             radio.setSFDPort(port1, CC2420_SFD);
         } else {
             throw new EmulationException("Could not setup exp5438 mote - missing USCI B0");
+        }
+
+        IOUnit usart = cpu.getIOUnit("USCI A1");
+        if (usart instanceof USARTSource) {
+            registry.registerComponent("serialio", usart);
         }
     }
 

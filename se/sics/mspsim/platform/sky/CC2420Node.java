@@ -92,6 +92,11 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
 
         usart0.addUSARTListener(this);
         radio.setSFDPort(port4, CC2420_SFD);
+
+        USART usart = cpu.getIOUnit(USART.class, "USART1");
+        if (usart != null) {
+            registry.registerComponent("serialio", usart);
+        }
     }
 
     public void setupNode() {

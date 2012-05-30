@@ -161,6 +161,11 @@ public class ESBNode extends GenericNode implements PortListener {
     leds = new Leds(cpu, LEDS);
     button = new Button("Button", cpu, port2, BUTTON_PIN, true);
     beeper = new Beeper(cpu);
+
+    USART usart = cpu.getIOUnit(USART.class, "USART1");
+    if (usart != null) {
+        registry.registerComponent("serialio", usart);
+    }
   }
 
   public void setupNode() {
