@@ -39,13 +39,12 @@
  */
 
 package se.sics.mspsim.chip;
-import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.MSP430Core;
 
 /**
  * MMA7260QT - 1.5g-6g Three Axis Low-g Micromachined Accelerometer
  */
-public class MMA7260QT extends Chip {
+public class MMA7260QT extends Accelerometer {
 
     public static final int MODE_SLEEP = 0x00;
     public static final int MODE_ACTIVE = 0x01;
@@ -56,52 +55,36 @@ public class MMA7260QT extends Chip {
         1.5f, 2, 4, 6
     };
 
-    private int x = 4095, y = 2715, z = 2715;
     private int gSelect = 0;
 
     public MMA7260QT(MSP430Core cpu) {
-        super("MMA7260QT", "Accelerometer", cpu);
+        super("MMA7260QT", cpu);
         setModeNames(MODE_NAMES);
         setMode(MODE_SLEEP);
+
+        // Set initial state: x=4094, y=2715, z=2715
+        setPosition(1.0, -0.0156, -0.0156);
+    }
+
+    private int convertToADC(double x) {
+        if (x > 1.0) {
+            x = 1.0;
+        } else if (x < -1.0) {
+            x = -1.0;
+        }
+        return 2047 + (int) (x * 2047);
     }
 
     public int getADCX() {
-        int v = getX();
-        return v > 4095 ? 4095 : v;
+        return convertToADC(getX());
     }
 
     public int getADCY() {
-        int v = getY();
-        return v > 4095 ? 4095 : v;
+        return convertToADC(getY());
     }
 
     public int getADCZ() {
-        int v = getZ();
-        return v > 4095 ? 4095 : v;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public void setZ(int z) {
-        this.z = z;
-    }
-
-    public int getZ() {
-        return z;
+        return convertToADC(getZ());
     }
 
     public int getSensitivity() {
@@ -116,21 +99,26 @@ public class MMA7260QT extends Chip {
         this.gSelect = gSelect & 0x03;
     }
 
+    @Override
     public void setMode(int mode) {
         super.setMode(mode);
     }
 
+    @Override
     public int getModeMax() {
         return MODE_NAMES.length;
     }
 
+    @Override
     public String info() {
         return "Mode: " + getModeName(getMode())
         + " Sensitivity: " + getSensitivityAsString()
-        + " [x=" + getADCX() + ",y=" + getADCY() + ",z=" + getADCZ() + ']';
+        + String.format(" [x=%.2f (%d),y=%.2f (%d),z=%.2f (%d)]",
+                getX(), getADCX(), getY(), getADCY(), getZ(), getADCZ());
     }
 
     /* currently just return the gSelect as configuration */
+    @Override
     public int getConfiguration(int parameter) {
         return gSelect;
     }
