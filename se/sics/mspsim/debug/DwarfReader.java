@@ -241,7 +241,7 @@ public class DwarfReader implements ELFDebug {
                         /* extended opcodes */
                         int len = (int) sec.readLEB128();
                         int extIns = sec.readElf8();
-                        if (DEBUG) System.out.println("EXT: " + Utils.hex8(extIns));
+                        if (DEBUG) System.out.println("EXT: " + Utils.hex8(extIns) + " LEN: " + len);
                         switch(extIns) {
                         case DW_LNE_end_sequence:
                             endSequence = true;
@@ -261,16 +261,24 @@ public class DwarfReader implements ELFDebug {
                             if (DEBUG) System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
                                     " (len: " + len + ")");
                             break;
-                        case DW_LNE_define_file:
+                        case DW_LNE_define_file: {
                           /* XXX TODO Implement me */
-                          if (DEBUG) System.out.println("Line: Should define a file!!!!");
+                          String filename = sec.readString();
+                          long directoryIndex = sec.readLEB128();
+                          long lastModified = sec.readLEB128();
+                          long fileSize = sec.readLEB128();
+                          if (DEBUG) System.out.println("Line: Should define the file '" + filename + "' dir "
+                                  + directoryIndex + " modified " + lastModified + " size " + fileSize);
                           break;
+                        }
                         case DW_LNE_set_discriminator: // DWARF 4.0?
                             /* currently just read it but ignore it - TODO: use this info */
                           /*reg_discriminator = */sec.readElf8();
+                          if (DEBUG) System.out.println("Line: Should support DW_LNE_set_discriminator");
                           break;
                         default:
                           /* XXX TODO Implement me */
+                          if (DEBUG) System.out.println("Line: unhandled EXT instr: " + Utils.hex8(extIns));
                         }
                         break;
                     case DW_LNS_copy:
@@ -332,7 +340,8 @@ public class DwarfReader implements ELFDebug {
                       break;
                     default:
                         if (DEBUG) {
-                            System.out.println("INS: " + Utils.hex8(opCode));
+                            System.out.println("INS: " + Utils.hex8(opCode) + " AINS: " + Utils.hex8(opCode - opcodeBase)
+                                    + " lineRange: " + lineRange);
                         }
 
                         int adjustedOpcode = opCode - opcodeBase;
