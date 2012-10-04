@@ -114,13 +114,22 @@ public class ELFSection {
   
   public String getName(int i) {
     int pos = getOffset() + i;
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     char c;
     int elfSize = elf.elfData.length;
     while (pos < elfSize && (c = (char) elf.elfData[pos++]) != 0) {
       sb.append(c);
     }
     return sb.toString();
+  }
+
+  public String readString() {
+      StringBuilder sb = new StringBuilder();
+      int c;
+      while ((c = readElf8()) != 0) {
+          sb.append((char)c);
+      }
+      return sb.toString();
   }
 
   public int readElf8() {
