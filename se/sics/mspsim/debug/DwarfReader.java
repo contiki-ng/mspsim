@@ -240,6 +240,7 @@ public class DwarfReader implements ELFDebug {
                     case DW_LNS_EXT:
                         /* extended opcodes */
                         int len = (int) sec.readLEB128();
+                        int extPos = sec.getPosition();
                         int extIns = sec.readElf8();
                         if (DEBUG) System.out.println("EXT: " + Utils.hex8(extIns) + " LEN: " + len);
                         switch(extIns) {
@@ -257,7 +258,13 @@ public class DwarfReader implements ELFDebug {
                             if (DEBUG) System.out.println("Line: End sequence executed!!!");
                             break;
                         case DW_LNE_set_address:
-                          lineAddress = sec.readElf16();
+                            if (len == 3) {
+                                lineAddress = sec.readElf16();
+                            } else if (len == 5) {
+                                lineAddress = sec.readElf32();
+                            } else {
+                                throw new IllegalStateException("No support for " + (len - 1) + " bytes addresses");
+                            }
                             if (DEBUG) System.out.println("Line: Set address to: " + Utils.hex16(lineAddress) +
                                     " (len: " + len + ")");
                             break;
@@ -279,6 +286,10 @@ public class DwarfReader implements ELFDebug {
                         default:
                           /* XXX TODO Implement me */
                           if (DEBUG) System.out.println("Line: unhandled EXT instr: " + Utils.hex8(extIns));
+                        }
+                        if (sec.getPosition() != extPos + len) {
+                            throw new IllegalStateException("*** ERROR posistion is not as exepected!!!!" + (extPos + len) + " is " +
+                                    sec.getPosition());
                         }
                         break;
                     case DW_LNS_copy:
