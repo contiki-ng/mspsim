@@ -54,12 +54,14 @@ public interface Memory {
 
         public final int bytes;
         public final int bitSize;
-        public final int mask; 
+        public final int mask;
+        public final int msb;
 
         AccessMode(int bytes, int bitSize, int mask) {
             this.bytes = bytes;
             this.bitSize = bitSize;
             this.mask = mask;
+            this.msb = 1 << (bitSize - 1);
         }
     };
 

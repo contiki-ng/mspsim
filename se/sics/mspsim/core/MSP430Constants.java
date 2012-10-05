@@ -148,6 +148,7 @@ public interface MSP430Constants {
   
   public static final int CALLA_MASK = 0xfff0;
   public static final int CALLA_REG = 0x1340;
+  public static final int CALLA_INDEX = 0x1350;
   public static final int CALLA_IND = 0x1360;
   public static final int CALLA_IND_AUTOINC = 0x1370;
   public static final int CALLA_ABS = 0x1380;

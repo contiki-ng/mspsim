@@ -50,9 +50,16 @@ public class DbgInstruction {
   private int size;
   private int pos;
 
+  private boolean extWord = false;
+  
   public DbgInstruction() {
   }
+  
 
+  public boolean isExtensionWord() {
+      return extWord;
+  }
+  
   public void setPos(int p) {
     pos = p;
   }
@@ -101,6 +108,11 @@ public class DbgInstruction {
 
   public String toString() {
     return getASMLine();
+  }
+
+
+  public void setExtWord(boolean b) {
+      extWord = b;
   }
 
 }
