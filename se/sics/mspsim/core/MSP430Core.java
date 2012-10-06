@@ -1244,7 +1244,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
             int nxtCarry = 0;
 	    int carry = (sr & CARRY) > 0? 1: 0;
             if (rrword) {
+                mode = AccessMode.WORD;
                 dst = dst & 0xffff;
+            } else {
+                mode = AccessMode.WORD20; /* address */
             }
 	    cycles += 1 + count;
             switch(instruction & RRMASK) {
@@ -1342,6 +1345,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
                       currentSegment.read(pc, AccessMode.WORD, AccessType.READ));
               dst += currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
               System.out.println("CALLA INDX => " + Utils.hex20(dst));
+              dst = currentSegment.read(dst, AccessMode.WORD20, AccessType.READ);
+              System.out.println("CALLA Read from INDX => " + Utils.hex20(dst));
               cycles += 5;
               pc += 2;
 //              System.exit(0);
