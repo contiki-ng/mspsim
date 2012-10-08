@@ -1043,7 +1043,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
         int srcData = (instruction & 0x0f00) >> 8;
         int dstData = (instruction & 0x000f);
         boolean rrword = true;
-
+        mode = AccessMode.WORD20;
+        
         switch(op) {
         // 20 bit register write
         case MOVA_IND:
@@ -1127,6 +1128,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
             writeRegister(PC, pc += 2);
             dst = src + (srcData << 16);
 //            System.out.println("*** Writing $" + getAddressAsString(dst) + " to reg: " + dstData);
+            dst &= 0xfffff;
             writeRegister(dstData, dst);
             updateStatus = false;
 	    cycles += 2;
@@ -1141,6 +1143,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
             int immData = currentSegment.read(pc, AccessMode.WORD, AccessType.READ) + (srcData << 16);
             writeRegister(PC, pc += 2);
 	    dst = readRegister(dstData) + immData;
+	    System.out.println("ADDA #" + Utils.hex20(immData) + " => " + Utils.hex20(dst));
+
+	    dst &= 0xfffff;
 	    writeRegister(dstData, dst);
 	    cycles += 3;
 	    break;
@@ -1246,8 +1251,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
             if (rrword) {
                 mode = AccessMode.WORD;
                 dst = dst & 0xffff;
-            } else {
-                mode = AccessMode.WORD20; /* address */
             }
 	    cycles += 1 + count;
             switch(instruction & RRMASK) {
@@ -1332,14 +1335,24 @@ public class MSP430Core extends Chip implements MSP430Constants {
           updateStatus = false;
           switch(op) {
           case CALLA_REG:
+              // The CALLA operations increase the SP before 
+              // address resolution!
+              // store on stack - always move 2 steps before resolution
+              sp = readRegister(SP) - 2;
+              writeRegister(SP, sp);
+
               dst = readRegister(dstRegister);
               System.out.println("CALLA REG => " + Utils.hex20(dst));
               cycles += 5;
               break;
           case CALLA_INDEX:
               /* CALLA X(REG) => REG + X is the address*/
+              sp = readRegister(SP) - 2;
+              writeRegister(SP, sp);
+
               System.out.println("CALLA INDX: R" + dstRegister);
               dst = readRegister(dstRegister);
+
               /* what happens if wrapping here??? */
               System.out.println("CALLA INDX: Reg = " + Utils.hex20(dst) + " Mem: " + 
                       currentSegment.read(pc, AccessMode.WORD, AccessType.READ));
@@ -1352,11 +1365,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //              System.exit(0);
               break;
           case CALLA_IMM:
+              sp = readRegister(SP) - 2;
+              writeRegister(SP, sp);
+
               dst = (dstRegister << 16) | currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
               pc += 2;
               cycles += 5;
               break;
           case CALLA_ABS:
+              sp = readRegister(SP) - 2;
+              writeRegister(SP, sp);
+
               /* read the address of where the address to call is */
               dst = (dstRegister << 16) | currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
               dst = currentSegment.read(dst, AccessMode.WORD20, AccessType.READ);
@@ -1422,7 +1441,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
           // store current PC on stack. (current PC points to next instr.)
           /* store 20 bits on stack (costs two words) */
           if (dst != -1) {
-              sp = readRegister(SP) - 2;
               currentSegment.write(sp, (pc >> 16) & 0xf, AccessMode.WORD);
               sp = sp - 2;
               currentSegment.write(sp, pc & 0xffff, AccessMode.WORD);
