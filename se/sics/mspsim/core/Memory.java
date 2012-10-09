@@ -50,7 +50,7 @@ public interface Memory {
     public enum AccessMode {
         BYTE(1, 8, 0xff),
         WORD(2, 16, 0xffff),
-        WORD20(3, 20, 0xfffff);
+        WORD20(4, 20, 0xfffff);
 
         public final int bytes;
         public final int bitSize;
