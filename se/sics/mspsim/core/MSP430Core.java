@@ -149,28 +149,28 @@ public class MSP430Core extends Chip implements MSP430Constants {
         @Override
         public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
             if (address >= MAX_MEM) {
-                throw new EmulationException("Reading outside memory: 0x" + MSP430Core.this.config.getAddressAsString(address));
+                throw new EmulationException("Reading outside memory: 0x" + Utils.hex(address, 4));
             }
             return memorySegments[address >> 8].read(address, mode, type);
         }
         @Override
-        public void write(int dstAddress, int data, AccessMode mode) throws EmulationException {
-            if (dstAddress >= MAX_MEM) {
-                throw new EmulationException("Writing outside memory: 0x" + MSP430Core.this.config.getAddressAsString(dstAddress));
+        public void write(int address, int data, AccessMode mode) throws EmulationException {
+            if (address >= MAX_MEM) {
+                throw new EmulationException("Writing outside memory: 0x" + Utils.hex(address, 4));
             }
-            memorySegments[dstAddress >> 8].write(dstAddress, data, mode);
+            memorySegments[address >> 8].write(address, data, mode);
         }
         @Override
         public int get(int address, AccessMode mode) {
             if (address >= MAX_MEM) {
-                throw new EmulationException("Reading outside memory: 0x" + MSP430Core.this.config.getAddressAsString(address));
+                throw new EmulationException("Reading outside memory: 0x" + Utils.hex(address, 4));
             }
             return memorySegments[address >> 8].get(address, mode);
         }
         @Override
         public void set(int address, int data, AccessMode mode) {
             if (address >= MAX_MEM) {
-                throw new EmulationException("Writing outside memory: 0x" + MSP430Core.this.config.getAddressAsString(address));
+                throw new EmulationException("Writing outside memory: 0x" + Utils.hex(address, 4));
             }
             memorySegments[address >> 8].set(address, data, mode);
         }
@@ -1603,7 +1603,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   writeRegister(SR, sr);
                   break;
               case PUSH:
-                  if (word) {
+                  if (mode == AccessMode.WORD) {
                       // Put lo & hi on stack!
                       //	  memory[sp] = dst & 0xff;
                       //	  memory[sp + 1] = dst >> 8;
