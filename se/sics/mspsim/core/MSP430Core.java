@@ -1143,7 +1143,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
             int immData = currentSegment.read(pc, AccessMode.WORD, AccessType.READ) + (srcData << 16);
             writeRegister(PC, pc += 2);
 	    dst = readRegister(dstData) + immData;
-	    System.out.println("ADDA #" + Utils.hex20(immData) + " => " + Utils.hex20(dst));
+//	    System.out.println("ADDA #" + Utils.hex20(immData) + " => " + Utils.hex20(dst));
 
 	    dst &= 0xfffff;
 	    writeRegister(dstData, dst);
@@ -1197,14 +1197,15 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
         case MOVA_REG:
 	    cycles += 1;
-	    writeRegister(dstData, readRegister(srcData));
+	    /* as = 0 since register mode */
+	    writeRegister(dstData, readRegisterCG(srcData, 0));
 	    break;
 
         case CMPA_REG: {
 	    sr = readRegister(SR);
 	    sr &= ~(NEGATIVE | ZERO | CARRY | OVERFLOW);
 	    int destRegValue = readRegister(dstData);
-	    int srcRegValue = readRegister(srcData);
+	    int srcRegValue = readRegisterCG(srcData, 0);
 	    if (destRegValue >= srcRegValue) {
 		sr |= CARRY;
 	    }
@@ -1230,12 +1231,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
         }
 
 	case ADDA_REG:
-	    dst = readRegister(dstData) + readRegister(srcData);
+	    // Assume AS = 2
+	    dst = readRegister(dstData) + readRegisterCG(srcData, 2);
 	    writeRegister(dstData, dst);
 	    cycles += 1;
 	    break;
         case SUBA_REG:
-	    dst = readRegister(dstData) - readRegister(srcData);
+            // Assume AS = 2
+	    dst = readRegister(dstData) - readRegisterCG(srcData, 2);
 	    writeRegister(dstData, dst);
 	    cycles += 1;
 	    break;
@@ -1542,7 +1545,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //                  System.out.println("*** Repeat " + repeats + " ZeroCarry: " + zeroCarry);
 //              }
           } else {
-              dst = currentSegment.read(dstAddress, word ? AccessMode.WORD : AccessMode.BYTE, AccessType.READ);
+              dst = currentSegment.read(dstAddress, mode != AccessMode.BYTE ? AccessMode.WORD : AccessMode.BYTE, AccessType.READ);
           }
           
           /* TODO: test add the loop here! */
@@ -1603,17 +1606,12 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   writeRegister(SR, sr);
                   break;
               case PUSH:
-                  if (mode == AccessMode.WORD) {
-                      // Put lo & hi on stack!
-                      //	  memory[sp] = dst & 0xff;
-                      //	  memory[sp + 1] = dst >> 8;
-                      currentSegment.write(sp, dst, AccessMode.WORD);
-                  } else {
-                      // Byte => only lo byte
-                      //	  memory[sp] = dst & 0xff;
-                      //	  memory[sp + 1] = 0;
-                      currentSegment.write(sp, dst & 0xff, AccessMode.WORD);
+                  if (mode == AccessMode.WORD20) {
+                      sp = readRegister(SP) - 2;
+                      writeRegister(SP, sp);
                   }
+                  currentSegment.write(sp, dst, mode);
+
                   /* if REG or INDIRECT AUTOINC then add 2 cycles, otherwise 1 */
                   cycles += (ad == AM_REG || ad == AM_IND_AUTOINC) ? 2 : 1;
                   write = false;
