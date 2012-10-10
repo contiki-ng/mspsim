@@ -1379,6 +1379,16 @@ public class MSP430Core extends Chip implements MSP430Constants {
               pc += 2;
               cycles += 5;
               break;
+          case CALLA_IND:
+              sp = readRegister(SP) - 2;
+              writeRegister(SP, sp);
+
+              dstAddress = readRegister(dstRegister);
+              
+              dst = currentSegment.read(dstAddress, AccessMode.WORD20, AccessType.READ);
+              pc += 2;
+              cycles += 5;
+              break;
           case CALLA_ABS:
               sp = readRegister(SP) - 2;
               writeRegister(SP, sp);
