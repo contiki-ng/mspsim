@@ -249,16 +249,16 @@ public class DisAsm implements MSP430Constants {
         default:
             switch (instruction & 0xff00) {
             case PUSHM_A:
-                opstr = "PUSHM.A #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                opstr = "PUSHM.A #" + (1 + ((instruction >> 4) & 0x0f)) + ", R" + (instruction & 0x0f);
                 break;
             case PUSHM_W:
-                opstr = "PUSHM.W #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                opstr = "PUSHM.W #" + (1 + ((instruction >> 4) & 0x0f)) + ", R" + (instruction & 0x0f);
                 break;
             case POPM_A:
-                opstr = "POPM.A #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                opstr = "POPM.A #" + (1 + ((instruction >> 4) & 0x0f)) + ", R" + (instruction & 0x0f);
                 break;
             case POPM_W:
-                opstr = "POPM.W #" + ((instruction >> 4) & 0x0f) + ", R" + (instruction & 0x0f);
+                opstr = "POPM.W #" + (1 + ((instruction >> 4) & 0x0f)) + ", R" + (instruction & 0x0f);
                 break;                
             }
         }
