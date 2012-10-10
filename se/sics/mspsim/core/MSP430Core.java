@@ -1025,7 +1025,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int dstRegister = 0;
     int dstAddress = -1;
     boolean dstRegMode = false;
-    int dst = 0;
+    int dst = -1;
 
     boolean write = false;
     boolean updateStatus = true;
@@ -1515,7 +1515,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
                   // Bugfix suggested by Matt Thompson
               case AM_IND_AUTOINC:
                   if (dstRegister == PC) {
-                      dstAddress = readRegister(PC);
+                      dstAddress = pc;
+                      dst = currentSegment.read(dstAddress, mode != AccessMode.BYTE ? AccessMode.WORD : AccessMode.BYTE, AccessType.READ);
+                      dst += extDst;
                       pc += 2;
                       writeRegister(PC, pc);
                   } else {
@@ -1531,14 +1533,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
           if (dstRegMode) {
               dst = readRegisterCG(dstRegister, ad);
 
-//XXX	      if (word) {
-//		  dst &= 0xffff;
-//	      } else if (wordx20) {
-//		  dst &= 0xfffff;
-//	      } else {
-//                  dst &= 0xff;
-//              }
-	      
 	      dst &= mode.mask;
 	      
               /* set the repeat here! */
@@ -1552,8 +1546,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
 //              if (repeats > 1) {
 //                  System.out.println("*** Repeat " + repeats + " ZeroCarry: " + zeroCarry);
 //              }
-          } else {
-              dst = currentSegment.read(dstAddress, mode != AccessMode.BYTE ? AccessMode.WORD : AccessMode.BYTE, AccessType.READ);
+          } else if (dst == -1) {
+              dst = currentSegment.read(dstAddress, mode, AccessType.READ);
           }
           
           /* TODO: test add the loop here! */
