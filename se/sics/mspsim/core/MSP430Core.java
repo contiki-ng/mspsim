@@ -973,6 +973,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
     }
     int ext3_0 = 0;
     int ext10_7 = 0;
+    int extSrc = 0;
+    int extDst = 0;
     boolean repeatsInDstReg = false;
     boolean wordx20 = false;
 
@@ -981,6 +983,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
         extWord = instruction;
         ext3_0 = instruction & 0xf; /* bit 3 - 0 - either repeat count or dest 19-16 */
         ext10_7 = (instruction >> 7) & 0xf; /* bit 10 - 7 - src 19-16 */
+        extSrc = ext10_7 << 16;
+        extDst = ext3_0 << 16;
         pc += 2;
 	// Bit 7 in the extension word indicates that the number of
 	// repeats is found in the register pointed to by ext3_0. If
@@ -1483,7 +1487,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
                   /* Support for MSP430X and below / above 64 KB */
                   /* if register is pointing to <64KB then it needs to be truncated to below 64 */
-                  if (rval <= 0xffff) {
+                  if (extWord != 0) {
+                      dstAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ) + extDst;
+                      dstAddress += rval;
+                      dstAddress &= 0xfffff;
+                  } else if (rval <= 0xffff) {
                       dstAddress = (rval + currentSegment.read(pc, AccessMode.WORD, AccessType.READ)) & 0xffff;
                   } else {
                       dstAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
@@ -1793,7 +1801,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
           /* Support for MSP430X and below / above 64 KB */
           /* if register is pointing to <64KB then it needs to be truncated to below 64 */
-          if (sval <= 0xffff) {
+          if (extWord != 0) {
+            srcAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ) + extSrc;
+            srcAddress += sval;
+            srcAddress &= 0xfffff;
+          } else if (sval <= 0xffff) {
             srcAddress = (sval + currentSegment.read(pc, AccessMode.WORD, AccessType.READ)) & 0xffff;
           } else {
             srcAddress = currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
