@@ -1361,9 +1361,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
               dst = readRegister(dstRegister);
 
               /* what happens if wrapping here??? */
-              System.out.println("CALLA INDX: Reg = " + Utils.hex20(dst) + " Mem: " + 
-                      currentSegment.read(pc, AccessMode.WORD, AccessType.READ));
-              dst += currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
+              /* read the index which is from -15 bit - +15 bit. - so extend sign to 20-bit */
+              int v = currentSegment.read(pc, AccessMode.WORD, AccessType.READ);
+              if ((v & 0x8000) != 0) {
+                  v |= 0xf0000;
+              }
+
+              System.out.println("CALLA INDX: Reg = " + Utils.hex20(dst) + " INDX: " +  v);
+
+              dst += v;
+              dst &= 0xfffff;
+
               System.out.println("CALLA INDX => " + Utils.hex20(dst));
               dst = currentSegment.read(dst, AccessMode.WORD20, AccessType.READ);
               System.out.println("CALLA Read from INDX => " + Utils.hex20(dst));
