@@ -45,9 +45,13 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Hashtable;
+
 import se.sics.json.JSONArray;
 import se.sics.json.JSONObject;
 import se.sics.json.ParseException;
+import se.sics.mspsim.Main;
+import se.sics.mspsim.platform.GenericNode;
 
 public class EmuLink {
 
@@ -60,8 +64,48 @@ public class EmuLink {
     int json = 0;
     StringBuilder buffer = new StringBuilder();
 
+    Hashtable<String, GenericNode> nodes = new Hashtable<String, GenericNode>();
+    
     public boolean isConnected() {
         return !isConnected;
+    }
+
+    String[] getNodes(JSONObject json) {
+        JSONArray nodes;
+        String node;
+        String[] nString = null;
+        if ((nodes = json.getJSONArray("node")) != null) {
+            nString = new String[nodes.size()];
+            for(int i = 0, n = nodes.size(); i < n; i++) {
+                node = nodes.getAsString(i);
+                nString[i] = node;
+            }
+        } else if ((node = json.getAsString("node")) != null) {
+            nString = new String[1];
+            nString[0] = node;
+        }
+        return nString;
+    }
+    
+    private boolean createNode(String type, String id) {
+        String nt = Main.getNodeTypeByPlatform(type);
+        System.out.println("Creating node: " + id + " type: " + type + " => " + nt);
+        GenericNode node = Main.createNode(nt);
+        nodes.put(id, node);
+        return true;
+    }
+    
+    private boolean createNodes(JSONObject json) {
+        String type = json.getAsString("type");
+        System.out.println("Should create: " + type);
+
+        String[] nodes = getNodes(json);
+        if (nodes != null) {
+            for (int i = 0; i < nodes.length; i++) {
+                createNode(type, nodes[i]);
+            }
+        }
+        return true;
     }
 
     protected void processInput(Reader input) throws IOException, ParseException {
@@ -115,6 +159,7 @@ public class EmuLink {
             }
         } else if ("create".equals(event)) {
             // TODO setup emulated node
+            createNodes(json);
             sendToSimulator("{\"response\":\"create\",\"data\":1}");
         } else if ("serial".equals(event)) {
             int data = json.getAsInt("data", -1);
