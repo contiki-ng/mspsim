@@ -91,6 +91,10 @@ public class Utils {
     return s;
   }
 
+  public static String hex(int data) {
+      return Integer.toString(data, 16);
+  }
+
   public static String hex(int data, int len) {
       String s = Integer.toString(data, 16);
       if (s.length() < len) {
