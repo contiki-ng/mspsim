@@ -343,7 +343,7 @@ public class MSP430 extends MSP430Core {
   }
   
   public int getBackTrace(int pos) {
-      int tPos = tracePos - pos;
+      int tPos = tracePos - pos - 1;
       if (tPos < 0) {
 	  tPos += trace.length;
       }
