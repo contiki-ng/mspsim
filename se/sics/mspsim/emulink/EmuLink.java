@@ -39,6 +39,7 @@
 package se.sics.mspsim.emulink;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -51,7 +52,9 @@ import se.sics.json.JSONArray;
 import se.sics.json.JSONObject;
 import se.sics.json.ParseException;
 import se.sics.mspsim.Main;
+import se.sics.mspsim.core.MSP430Constants;
 import se.sics.mspsim.platform.GenericNode;
+import se.sics.mspsim.util.Utils;
 
 public class EmuLink {
 
@@ -59,13 +62,11 @@ public class EmuLink {
     private BufferedReader in;
     private PrintWriter out;
     private boolean isConnected = false;
+    private long globalEtime = 0L;
+    private long globalLastTime = 0L;
 
-    int mode;
-    int json = 0;
-    StringBuilder buffer = new StringBuilder();
+    private final Hashtable<String, GenericNode> nodes = new Hashtable<String, GenericNode>();
 
-    Hashtable<String, GenericNode> nodes = new Hashtable<String, GenericNode>();
-    
     public boolean isConnected() {
         return !isConnected;
     }
@@ -89,8 +90,12 @@ public class EmuLink {
     
     private boolean createNode(String type, String id) {
         String nt = Main.getNodeTypeByPlatform(type);
-        System.out.println("Creating node: " + id + " type: " + type + " => " + nt);
+        System.out.println("EmuLink: Creating node '" + id + "' of type '" + type + "' => " + nt);
         GenericNode node = Main.createNode(nt);
+        if (node == null) {
+            System.err.println("EmuLink: failed to create node '" + id + "' of type '" + type + "'");
+            return false;
+        }
         nodes.put(id, node);
         return true;
     }
@@ -150,17 +155,113 @@ public class EmuLink {
         System.out.println("EmuLink: RECV " + json.toJSONString());
         String event = json.getAsString("event");
         if ("emulation_control".equals(event)) {
-            // TODO control emulation
-            sendToSimulator("{\"response\":\"emulation_control\",\"data\":1}");
+            String command = json.getAsString("data");
+            if ("start".equals(command)) {
+                String[] nodes = getNodes(json);
+                long etime = json.getAsLong("etime", 0);
 
-            if ("close".equals(json.getAsString("data"))) {
+                if (etime == 0) {
+                    if (nodes == null) {
+                        for (GenericNode node : this.nodes.values()) {
+                            node.start();
+                        }
+                    } else {
+                        for(String id : nodes) {
+                            GenericNode node = this.nodes.get(id);
+                            if (node != null) {
+                                node.start();
+                            } else {
+                                System.err.println("EmuLink: could not find node '" + id + "'");
+                            }
+                        }
+                    }
+                } else {
+                    // Execute for specified time
+                    globalEtime += etime;
+                    if (nodes == null) {
+                        for (GenericNode node : this.nodes.values()) {
+                            long t0 = System.nanoTime(), t1;
+                            node.getCPU().stepMicros(globalLastTime, etime);
+                            t1 = System.nanoTime();
+                            System.out.println("EmuLink: node " + node.getID()
+                                    + " is now at $" + Utils.hex(node.getCPU().getRegister(MSP430Constants.PC), 4)
+                                    + " " + (long)(node.getCPU().getTimeMillis() + 0.5) + "/" + (globalEtime / 1000)
+                                    + " (elapsed " + (t1 - t0) + " ns)");
+                        }
+
+                    } else {
+                        for(String id : nodes) {
+                            GenericNode node = this.nodes.get(id);
+                            if (node != null) {
+                                long t0 = System.nanoTime(), t1;
+                                node.getCPU().stepMicros(globalLastTime, etime);
+                                t1 = System.nanoTime();
+                                System.out.println("EmuLink: node " + node.getID()
+                                        + " is now at $" + Utils.hex(node.getCPU().getRegister(MSP430Constants.PC), 4)
+                                        + " " + (long)(node.getCPU().getTimeMillis() + 0.5) + "/" + (globalEtime / 1000)
+                                        + " (elapsed " + (t1 - t0) + " ns)");
+                            } else {
+                                System.err.println("EmuLink: could not find node '" + id + "'");
+                            }
+                        }
+                    }
+                    globalLastTime = etime;
+                }
+            } else if ("stop".equals(command)) {
+                String[] nodes = getNodes(json);
+                if (nodes == null) {
+                    for (GenericNode node : this.nodes.values()) {
+                        node.stop();
+                    }
+                } else {
+                    for(String id : nodes) {
+                        GenericNode node = this.nodes.get(id);
+                        if (node != null) {
+                            node.stop();
+                        } else {
+                            System.err.println("EmuLink: could not find node '" + id + "'");
+                        }
+                    }
+                }
+            } else if ("close".equals(command)) {
+                sendToSimulator("{\"response\":\"emulation_control\",\"data\":1}");
+
                 // Time to close the connection
                 return false;
             }
+            sendToSimulator("{\"response\":\"emulation_control\",\"data\":1}");
+
         } else if ("create".equals(event)) {
-            // TODO setup emulated node
             createNodes(json);
             sendToSimulator("{\"response\":\"create\",\"data\":1}");
+        } else if ("write".equals(event)) {
+            String[] nodes = getNodes(json);
+            String file = json.getAsString("file");
+            if (nodes == null) {
+                System.err.println("EmuLink: no node specified for write");
+            } else if (file == null) {
+                System.err.println("EmuLink: no file specified for write");
+            } else if (!new File(file).isFile()) {
+                System.err.println("EmuLink: could not find file '" + file + "' for write");
+            } else {
+                for(String id : nodes) {
+                    GenericNode node = this.nodes.get(id);
+                    if (node == null) {
+                        System.err.println("EmuLink: could not find node '" + id + "'");
+                        continue;
+                    }
+                    try {
+                        node.loadFirmware(file);
+                        node.getCPU().reset();
+                    } catch (IOException e) {
+                        System.err.println("EmuLink: failed to load firmware '" + file + "'");
+                        e.printStackTrace();
+                    }
+                }
+            }
+            sendToSimulator("{\"response\":\"write\",\"data\":1}");
+        } else if ("remove".equals(event)) {
+            // TODO remove nodes
         } else if ("serial".equals(event)) {
             int data = json.getAsInt("data", -1);
             JSONArray nodes;
@@ -196,10 +297,10 @@ public class EmuLink {
     }
 
     protected void disconnect() {
-        boolean wasConnected = isConnected;
+        boolean isDisconnecting = isConnected;
         isConnected = false;
         try {
-            if (wasConnected) {
+            if (isDisconnecting) {
                 System.err.println("EmuLink: disconnecting...");
             }
             if (out != null) {
@@ -214,7 +315,7 @@ public class EmuLink {
                 socket.close();
                 socket = null;
             }
-            if (wasConnected) {
+            if (isDisconnecting) {
                 System.err.println("EmuLink: disconnected");
             }
         } catch (IOException e) {
@@ -259,4 +360,5 @@ public class EmuLink {
         EmuLink el = new EmuLink();
         el.run();
     }
+
 }
