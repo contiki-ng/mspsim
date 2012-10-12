@@ -374,14 +374,30 @@ public class DebugCommands implements CommandBundle {
             return 1;
           }
         });
-        ch.registerCommand("printreg", new BasicCommand("print value of an register", "<register>") {
+        ch.registerCommand("printreg", new BasicCommand("print value of an register", "[register]") {
           public int executeCommand(CommandContext context) {
-            int register = context.getArgumentAsRegister(0);
-            if (register >= 0) {
-              context.out.println(context.getArgument(0) + " = $" + Utils.hex(cpu.getRegister(register), 4));
+              if (context.getArgumentCount() > 0) {
+                  for (int i = 0, n = context.getArgumentCount(); i < n; i++) {
+                      int register = context.getArgumentAsRegister(i);
+                      if (i > 0) {
+                          context.out.print((i % 6) == 0 ? "\n" : " ");
+                      }
+                      if (register >= 0) {
+                          context.out.print(getRegisterName(i) + "=$" + Utils.hex(cpu.getRegister(register), 4));
+                      } else {
+                          context.out.print(context.getArgument(i) + "=<not a register>");
+                      }
+                  }
+              } else {
+                  for (int i = 0; i < 16; i++) {
+                      if (i > 0) {
+                          context.out.print((i % 6) == 0 ? "\n" : " ");
+                      }
+                      context.out.print(getRegisterName(i) + "=$" + Utils.hex(cpu.getRegister(i), 4));
+                  }
+              }
+              context.out.println();
               return 0;
-            }
-            return -1;
           }
         });
         ch.registerCommand("reset", new BasicCommand("reset the CPU", "") {
@@ -393,7 +409,7 @@ public class DebugCommands implements CommandBundle {
 
         ch.registerCommand("time", new BasicCommand("print the elapse time and cycles", "") {
           public int executeCommand(CommandContext context) {
-            long time = ((long)(cpu.getTimeMillis()));
+            long time = (long)cpu.getTimeMillis();
 	    long wallDiff = System.currentTimeMillis() - lastWall;
             context.out.println("Emulated time elapsed: " + time + "(ms)  since last: " + (time - lastCall) + " ms" + " wallTime: " +
 				wallDiff + " ms speed factor: " +
@@ -622,28 +638,34 @@ public class DebugCommands implements CommandBundle {
             }
         });
 
-        ch.registerCommand("trace", new BasicCommand("store a trace of execution positions.", "<trace size | show>") {
+        ch.registerCommand("trace", new BasicCommand("store a trace of execution positions.", "[trace size | show]") {
             @Override
             public int executeCommand(CommandContext context) {
-        	if ("show".equals(context.getArgument(0))) {
-        	    int size = cpu.getTraceSize();
-                    if (size == 0) {
-                        context.err.println("trace size is set to 0");
-                    } else {
-                        DisAsm disAsm = cpu.getDisAsm();
-                        for (int i = 0; i < size; i++) {
-                            int pc = cpu.getBackTrace(size - 1 - i);
-                            DbgInstruction inst = disAsm.getDbgInstruction(pc, cpu);
-                            inst.setPos(pc);
-                            context.out.println(inst);
+                if (context.getArgumentCount() > 0) {
+                    if ("show".equals(context.getArgument(0))) {
+                        int size = cpu.getTraceSize();
+                        if (size > 0) {
+                            DisAsm disAsm = cpu.getDisAsm();
+                            for (int i = 0; i < size; i++) {
+                                int pc = cpu.getBackTrace(size - 1 - i);
+                                DbgInstruction inst = disAsm.getDbgInstruction(pc, cpu);
+                                inst.setPos(pc);
+                                context.out.println(inst.getASMLine(false));
+                            }
+                            return 0;
                         }
+                    } else {
+                        int newSize = context.getArgumentAsInt(0, -1);
+                        if (newSize < 0) {
+                            return 1;
+                        }
+                        cpu.setTrace(newSize);
                     }
-        	} else {
-        	    cpu.setTrace(context.getArgumentAsInt(0));
-        	}
-              return 0;
+                }
+                context.out.println("Trace size is set to " + cpu.getTraceSize() + " positions.");
+                return 0;
             }
-          });        
+        });
 
         ch.registerCommand("events", new BasicCommand("print event queues", "") {
             @Override
