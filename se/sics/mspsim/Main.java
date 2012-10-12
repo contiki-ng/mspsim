@@ -66,7 +66,7 @@ public class Main {
     return null;
   }
 
-  private static String getNodeTypeByPlatform(String platform) {
+  public static String getNodeTypeByPlatform(String platform) {
       if ("jcreate".equals(platform)) {
           return "se.sics.mspsim.platform.jcreate.JCreateNode";
       }
