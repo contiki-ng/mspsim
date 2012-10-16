@@ -96,11 +96,11 @@ public class ChartPanel extends JComponent {
   }
 
   public synchronized void addChart(Chart chart) {
-    charts = (Chart[]) ArrayUtils.add(Chart.class, charts, chart);
+    charts = ArrayUtils.add(Chart.class, charts, chart);
   }
 
   public synchronized void removeChart(Chart chart) {
-    charts = (Chart[]) ArrayUtils.remove(charts, chart);
+    charts = ArrayUtils.remove(charts, chart);
   }
 
   public Chart getChart(String name) {

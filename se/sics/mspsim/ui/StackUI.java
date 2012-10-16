@@ -57,8 +57,8 @@ public class StackUI extends JPanel implements ServiceComponent {
   private int updateCyclePeriod = 2500;
 
   private final MSP430 cpu;
-  private int heapStartAddress;
-  private int stackStartAddress = 0xa00;
+  private int heapStartAddress = -1;
+  private int stackStartAddress = -1;
   private ChartPanel chartPanel;
   private LineChart minStackChart;
   private LineChart maxStackChart;
@@ -93,14 +93,6 @@ public class StackUI extends JPanel implements ServiceComponent {
     this.updateCyclePeriod = updateCyclePeriod;
     this.cpu = cpu;
 
-    if (cpu.getDisAsm() != null) {
-      MapTable mapTable = cpu.getDisAsm().getMap();
-      if (mapTable != null) {
-	this.heapStartAddress = mapTable.heapStartAddress;
-	this.stackStartAddress = mapTable.stackStartAddress;
-      }
-    }
-
 //    diagram = new DotDiagram(2);
 //    diagram.setDotColor(0, Color.green);
 //    diagram.setDotColor(1, Color.green);
@@ -112,11 +104,26 @@ public class StackUI extends JPanel implements ServiceComponent {
 
   private void setup() {
       if (chartPanel != null) return;
+
+      if (this.heapStartAddress < 0 && cpu.getDisAsm() != null) {
+          MapTable mapTable = cpu.getDisAsm().getMap();
+          if (mapTable != null) {
+              this.heapStartAddress = mapTable.heapStartAddress;
+              this.stackStartAddress = mapTable.stackStartAddress;
+          }
+      }
+      if (this.stackStartAddress < 0) {
+          // Did not find stack information in the firmware. Use CPU RAM
+          // boundary as most compilers will use this as stack.
+          this.stackStartAddress = cpu.config.ramStart + cpu.config.ramSize;
+      }
       chartPanel = new ChartPanel();
 
-      ConstantLineChart maxChart = new ConstantLineChart("Max", this.stackStartAddress - this.heapStartAddress);
-      maxChart.setConfig("color", Color.red);
-      chartPanel.addChart(maxChart);
+      if (this.stackStartAddress > 0 && this.heapStartAddress > 0) {
+          ConstantLineChart maxChart = new ConstantLineChart("Max", this.stackStartAddress - this.heapStartAddress);
+          maxChart.setConfig("color", Color.red);
+          chartPanel.addChart(maxChart);
+      }
 
       minStackChart = new LineChart("Min Stack");
       minStackChart.setConfig("color", Color.green);
@@ -141,8 +148,8 @@ public class StackUI extends JPanel implements ServiceComponent {
 
       registerMonitor = new RegisterMonitor.Adapter() {
           @Override
-          public void notifyWriteBefore(int type, int adr, int data) {
-              int size = ((stackStartAddress - data) + 0xffff) % 0xffff;
+          public void notifyWriteBefore(int register, int data, int mode) {
+              int size = stackStartAddress - data;
               if (minData[pos] > size) {
                   minData[pos] = size;
               }
