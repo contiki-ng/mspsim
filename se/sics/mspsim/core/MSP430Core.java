@@ -438,9 +438,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     RegisterMonitor rwm = regWriteMonitors[r];
     if (rwm != null) {
         // TODO Add register access mode
-        rwm.notifyWriteBefore(r, value, 0);
+        rwm.notifyWriteBefore(r, value, AccessMode.WORD);
         reg[r] = value;
-        rwm.notifyWriteAfter(r, value, 0);
+        rwm.notifyWriteAfter(r, value, AccessMode.WORD);
     } else {
         reg[r] = value;
     }
@@ -493,9 +493,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     RegisterMonitor rrm = regReadMonitors[r];
     if (rrm != null) {
         // TODO Register access mode
-        rrm.notifyReadBefore(r, 0);
+        rrm.notifyReadBefore(r, AccessMode.WORD);
         value = reg[r];
-        rrm.notifyReadAfter(r, 0);
+        rrm.notifyReadAfter(r, AccessMode.WORD);
     } else {
         value = reg[r];
     }
@@ -512,9 +512,9 @@ public class MSP430Core extends Chip implements MSP430Constants {
     RegisterMonitor rrm = regReadMonitors[r];
     if (rrm != null) {
         // TODO Register access mode
-        rrm.notifyReadBefore(r, 0);
+        rrm.notifyReadBefore(r, AccessMode.WORD);
         value = reg[r];
-        rrm.notifyReadAfter(r, 0);
+        rrm.notifyReadAfter(r, AccessMode.WORD);
     } else {
         value = reg[r];
     }
@@ -525,18 +525,18 @@ public class MSP430Core extends Chip implements MSP430Constants {
     int registerValue;
     RegisterMonitor rm = regReadMonitors[r];
     if (rm != null) {
-        rm.notifyReadBefore(r, 0);
+        rm.notifyReadBefore(r, AccessMode.WORD);
         registerValue = reg[r];
-        rm.notifyReadAfter(r, 0);
+        rm.notifyReadAfter(r, AccessMode.WORD);
     } else {
         registerValue = reg[r];
     }
     rm = regWriteMonitors[r];
     registerValue += value;
     if (rm != null) {
-      rm.notifyWriteBefore(r, registerValue, 0);
+      rm.notifyWriteBefore(r, registerValue, AccessMode.WORD);
       reg[r] = registerValue;
-      rm.notifyWriteAfter(r, registerValue, 0);
+      rm.notifyWriteAfter(r, registerValue, AccessMode.WORD);
     } else {
       reg[r] = registerValue;
     }

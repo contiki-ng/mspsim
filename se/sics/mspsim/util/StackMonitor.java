@@ -1,6 +1,7 @@
 package se.sics.mspsim.util;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.RegisterMonitor;
+import se.sics.mspsim.core.Memory.AccessMode;
 
 public class StackMonitor {
 
@@ -61,7 +62,7 @@ public class StackMonitor {
     cpu.addRegisterWriteMonitor(MSP430.SP, new RegisterMonitor.Adapter() {
 
         @Override
-        public void notifyWriteBefore(int reg, int data, int mode) {
+        public void notifyWriteBefore(int reg, int data, AccessMode mode) {
             // TODO add support for 20 bit addresses
             stack = ((stackStartAddress - data) + 0xffff) & 0xffff;
             if (stack > stackMax) {

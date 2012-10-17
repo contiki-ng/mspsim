@@ -4,28 +4,28 @@ import se.sics.mspsim.util.ProxySupport;
 
 public interface RegisterMonitor {
 
-    public void notifyReadBefore(int reg, int mode);
-    public void notifyReadAfter(int reg, int mode);
+    public void notifyReadBefore(int reg, Memory.AccessMode mode);
+    public void notifyReadAfter(int reg, Memory.AccessMode mode);
 
-    public void notifyWriteBefore(int reg, int data, int mode);
-    public void notifyWriteAfter(int reg, int data, int mode);
+    public void notifyWriteBefore(int reg, int data, Memory.AccessMode mode);
+    public void notifyWriteAfter(int reg, int data, Memory.AccessMode mode);
 
     public static class Adapter implements RegisterMonitor {
 
         @Override
-        public void notifyReadBefore(int reg, int mode) {
+        public void notifyReadBefore(int reg, Memory.AccessMode mode) {
         }
 
         @Override
-        public void notifyReadAfter(int reg, int mode) {
+        public void notifyReadAfter(int reg, Memory.AccessMode mode) {
         }
 
         @Override
-        public void notifyWriteBefore(int reg, int data, int mode) {
+        public void notifyWriteBefore(int reg, int data, Memory.AccessMode mode) {
         }
 
         @Override
-        public void notifyWriteAfter(int reg, int data, int mode) {
+        public void notifyWriteAfter(int reg, int data, Memory.AccessMode mode) {
         }
 
     }
@@ -34,7 +34,7 @@ public interface RegisterMonitor {
         public static final Proxy INSTANCE = new Proxy();
 
         @Override
-        public void notifyReadBefore(int reg, int mode) {
+        public void notifyReadBefore(int reg, Memory.AccessMode mode) {
             RegisterMonitor[] listeners = this.listeners;
             for(RegisterMonitor listener : listeners) {
                 listener.notifyReadBefore(reg, mode);
@@ -42,7 +42,7 @@ public interface RegisterMonitor {
         }
 
         @Override
-        public void notifyReadAfter(int reg, int mode) {
+        public void notifyReadAfter(int reg, Memory.AccessMode mode) {
             RegisterMonitor[] listeners = this.listeners;
             for(RegisterMonitor listener : listeners) {
                 listener.notifyReadAfter(reg, mode);
@@ -50,7 +50,7 @@ public interface RegisterMonitor {
         }
 
         @Override
-        public void notifyWriteBefore(int reg, int data, int mode) {
+        public void notifyWriteBefore(int reg, int data, Memory.AccessMode mode) {
             RegisterMonitor[] listeners = this.listeners;
             for(RegisterMonitor listener : listeners) {
                 listener.notifyWriteBefore(reg, data, mode);
@@ -58,7 +58,7 @@ public interface RegisterMonitor {
         }
 
         @Override
-        public void notifyWriteAfter(int reg, int data, int mode) {
+        public void notifyWriteAfter(int reg, int data, Memory.AccessMode mode) {
             RegisterMonitor[] listeners = this.listeners;
             for(RegisterMonitor listener : listeners) {
                 listener.notifyWriteAfter(reg, data, mode);

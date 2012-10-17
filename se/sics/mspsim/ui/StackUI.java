@@ -45,6 +45,7 @@ import javax.swing.JPanel;
 
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.RegisterMonitor;
+import se.sics.mspsim.core.Memory.AccessMode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
 import se.sics.mspsim.util.ServiceComponent;
@@ -148,7 +149,7 @@ public class StackUI extends JPanel implements ServiceComponent {
 
       registerMonitor = new RegisterMonitor.Adapter() {
           @Override
-          public void notifyWriteBefore(int register, int data, int mode) {
+          public void notifyWriteBefore(int register, int data, AccessMode mode) {
               int size = stackStartAddress - data;
               if (minData[pos] > size) {
                   minData[pos] = size;

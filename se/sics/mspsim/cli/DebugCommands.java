@@ -206,7 +206,7 @@ public class DebugCommands implements CommandBundle {
           }
           monitor = new RegisterMonitor.Adapter() {
             @Override
-            public void notifyWriteBefore(int register, int data, int mode) {
+            public void notifyWriteBefore(int register, int data, AccessMode mode) {
                 if (watchMode == 0) {
                     int pc = cpu.getPC();
                     String adrStr = getRegisterName(register);
