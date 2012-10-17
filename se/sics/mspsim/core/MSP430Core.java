@@ -1830,7 +1830,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
           }
 	  // When is PC incremented - assuming immediately after "read"?
 
-          incRegister(PC, 2);
+          pc += 2;
+          writeRegister(PC, pc);
 	  cycles += dstRegMode ? 3 : 6;
 	  break;
 	}
@@ -1842,9 +1843,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	case AM_IND_AUTOINC:
 	  if (srcRegister == PC) {
 	    /* PC is always handled as word */
-	    srcAddress = readRegister(PC);
-	    pc += 2;
-	    incRegister(PC, 2);
+            src = currentSegment.read(pc, mode != AccessMode.BYTE ? AccessMode.WORD : AccessMode.BYTE, AccessType.READ);
+            src += extSrc;
+            pc += 2;
+            writeRegister(PC, pc);
             cycles += dstRegMode ? 2 : 5;
 	  } else {
 	    srcAddress = readRegister(srcRegister);
@@ -1864,13 +1866,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
         if (op != MOV) {
           dst = readRegister(dstRegister);
           dst &= mode.mask;
-//XXX	  if (word) {
-//	    dst &= 0xffff;
-//	  } else if (wordx20) {
-//	    dst &= 0xfffff;
-//	  } else {
-//	    dst &= 0xff;
-//	  }
         }
       } else {
         // PC Could have changed above!
