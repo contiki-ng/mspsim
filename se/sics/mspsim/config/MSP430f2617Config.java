@@ -81,6 +81,7 @@ public class MSP430f2617Config extends MSP430Config {
         infoMemConfig(0x1000, 128 * 2);
         mainFlashConfig(0x3100, 92 * 1024);
         ramConfig(0x1100, 8 * 1024);
+        ramMirrorConfig(0x200, 2 * 1024, 0x1100);
     }
 
     public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {

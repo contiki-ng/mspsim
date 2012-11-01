@@ -38,9 +38,11 @@ public class MSP430f149Config extends MSP430f1611Config {
 
     public MSP430f149Config() {
         /* MSP430f149 is similar to MSP430f1611 but the memory map is different */
+        infoMemConfig(0x1000, 128 * 2);
         mainFlashConfig(0x1100, 60 * 1024);
         ramConfig(0x0200, 2 * 1024);
-        System.out.println("*** Setting up MSP430f149");
+        // No mirrored RAM
+        ramMirrorConfig(0, 0, 0);
     }
 
 }

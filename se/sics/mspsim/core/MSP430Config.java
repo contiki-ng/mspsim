@@ -87,6 +87,9 @@ public abstract class MSP430Config {
     public int ramStart = 0x2000;
     public int ramSize = 2048;
 
+    public int ramMirrorStart = 0x0;
+    public int ramMirrorSize = 0x0;
+    public int ramMirrorAddress = 0x0;
     
     public int flashControllerOffset = 0x128;
     
@@ -101,6 +104,10 @@ public abstract class MSP430Config {
     
     public boolean isRAM(int address) {
         return address >= ramStart && address < ramStart + ramSize;
+    }
+
+    public boolean isRAMMirror(int address) {
+        return ramMirrorSize > 0 && address >= ramMirrorStart && address < ramMirrorStart + ramMirrorSize;
     }
 
     public boolean isFlash(int address) {
@@ -138,7 +145,13 @@ public abstract class MSP430Config {
        ramStart = start;
        ramSize = size;
     }
-    
+
+    public void ramMirrorConfig(int start, int size, int address) {
+        ramMirrorStart = start;
+        ramMirrorSize = size;
+        ramMirrorAddress = address;
+    }
+
     public void ioMemSize(int size) {
         maxMemIO = size;
     }

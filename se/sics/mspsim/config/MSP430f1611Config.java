@@ -64,12 +64,11 @@ public class MSP430f1611Config extends MSP430Config {
         infoMemConfig(0x1000, 128 * 2);
         mainFlashConfig(0x4000, 48 * 1024);
         ramConfig(0x1100, 10 * 1024);
+        ramMirrorConfig(0x200, 2 * 1024, 0x1100);
     }
     
 
     public int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits) {
-        System.out.println("*** Setting up f1611 IO!");
-
         USART usart0 = new USART(cpu, 0, cpu.memory, 0x70);
         USART usart1 = new USART(cpu, 1, cpu.memory, 0x78);
         cpu.setIORange(0x70, 8, usart0);

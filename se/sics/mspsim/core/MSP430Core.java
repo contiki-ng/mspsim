@@ -194,6 +194,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     /* setup memory segments */
     int maxSeg = MAX_MEM >> 8;
     Memory ramSegment = new RAMSegment(this);
+    RAMOffsetSegment ramMirrorSegment = null;
     Memory flashSegment = new FlashSegment(this, flash);
     IOSegment ioSegment = new IOSegment(this, MAX_MEM_IO, voidIO);
     Memory noMemorySegment = new NoMemSegment(this);
@@ -201,6 +202,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
         if (config.isRAM(i << 8)) {
 //            System.out.println("Setting RAM segment at: " + Utils.hex16(i << 8));
             memorySegments[i] = ramSegment;
+        } else if (config.isRAMMirror(i << 8)) {
+            if (ramMirrorSegment == null) {
+                ramMirrorSegment = new RAMOffsetSegment(this, config.ramMirrorAddress - config.ramMirrorStart);
+            }
+//            System.out.println("Setting RAM mirror segment at: " + Utils.hex(i << 8, 4)
+//                    + " => " + Utils.hex((i << 8) + ramMirrorSegment.getOffset()));
+            memorySegments[i] = ramMirrorSegment;
         } else if (config.isFlash(i << 8) || config.isInfoMem(i << 8)) {
 //            System.out.println("Setting Flash segment at: " + Utils.hex16(i << 8));
             memorySegments[i] = flashSegment;
