@@ -40,6 +40,7 @@
  */
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -140,7 +141,7 @@ public class Watchdog extends IOUnit implements SFRModule {
         }
       } else {
         // Trigger reset!!
-        logw("illegal write to WDTCTL (" + value + ") from $" + Utils.hex(cpu.getPC(), 4)
+        logw(WarningType.EXECUTION, "illegal write to WDTCTL (" + value + ") from $" + Utils.hex(cpu.getPC(), 4)
             + " - reset!!!!");
         cpu.flagInterrupt(RESET_VECTOR, this, true);
       }

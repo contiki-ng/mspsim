@@ -1,5 +1,6 @@
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 public class DMA extends IOUnit {
@@ -122,7 +123,7 @@ public class DMA extends IOUnit {
             case 6:
                 return size;
             }
-            logw("Illegal read of DMA Channel register");
+            logw(WarningType.EXECUTION, "Illegal read of DMA Channel register");
             return 0;
         }
         

@@ -29,7 +29,6 @@
  *
  */
 package se.sics.mspsim.core;
-import java.io.PrintStream;
 
 /**
  * @author joakime
@@ -37,9 +36,14 @@ import java.io.PrintStream;
  */
 public interface Loggable {
 
-  public void setEmulationLogger(EmulationLogger log);
-  public void setLogStream(PrintStream out);
-  public void clearLogStream();
+  public static int SEVERE = 0;
+  public static int WARNING = 1;
+  public static int INFO = 2;
+  public static int DEBUG = 3;
+  
+  public int getLogLevel();
+  public void setLogLevel(int level);
+    
   public String getID();
   public String getName();
   public String info();

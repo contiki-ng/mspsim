@@ -37,6 +37,8 @@
 
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+
 
 public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
 
@@ -410,7 +412,7 @@ public class USCI extends IOUnit implements SFRModule, DMATrigger, USARTSource {
 
   private void handleTransmit(long cycles) {
     if (cpu.getMode() >= MSP430Core.MODE_LPM3) {
-      logw("Warning: USART transmission during LPM!!! " + nextTXByte);
+      logw(WarningType.EXECUTION, "Warning: USART transmission during LPM!!! " + nextTXByte);
     }
 
     if (transmitting) {

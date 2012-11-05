@@ -40,6 +40,7 @@
  */
 
 package se.sics.mspsim.core;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 public class Multiplier extends IOUnit {
@@ -97,7 +98,7 @@ public class Multiplier extends IOUnit {
       if (DEBUG) log("read sumext: " + sumext);
       return sumext;
     default:
-        logw("read unhandled address: 0x" + Utils.hex(address, 4));
+        logw(WarningType.EMULATION_ERROR, "read unhandled address: 0x" + Utils.hex(address, 4));
         return 0;
     }
   }

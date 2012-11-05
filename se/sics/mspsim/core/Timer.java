@@ -36,6 +36,7 @@
  */
 
 package se.sics.mspsim.core;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 /**
@@ -531,7 +532,7 @@ public class Timer extends IOUnit {
       val = ccr[i].tccr;
       break;
     default:
-      logw("Not supported read, returning zero!!! addr: " + index + " addr: $" + Utils.hex(address, 4));
+      logw(WarningType.VOID_IO_READ, "Not supported read, returning zero!!! addr: " + index + " addr: $" + Utils.hex(address, 4));
     }
     
     if (DEBUG) {
@@ -757,7 +758,7 @@ public class Timer extends IOUnit {
         }
       }
       if (ccr[index] == null)
-          logw("Timer write to " + Utils.hex16(address));
+          logw(WarningType.VOID_IO_WRITE, "Timer write to " + Utils.hex16(address));
       ccr[index].tccr = data;
 
       int diff = data - counter;

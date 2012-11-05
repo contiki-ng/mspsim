@@ -39,6 +39,8 @@ package se.sics.mspsim.core;
 
 import java.io.PrintStream;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+
 public abstract class IOUnit implements InterruptHandler, Loggable {
 
   protected final MSP430Core cpu;
@@ -50,7 +52,8 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
 
   private StateChangeListener stateListener;
   private int ioState;
-
+  private int logLevel;
+  
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
@@ -65,8 +68,19 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
     this.cpu = cpu;
     this.memory = memory;
     this.offset = offset;
+    logger = cpu.getLogger();
   }
 
+  @Override
+  public int getLogLevel() {
+      return logLevel;
+  }
+
+  @Override 
+  public void setLogLevel(int l) {
+      logLevel = l;
+  }
+  
   public void addStateChangeListener(StateChangeListener listener) {
       stateListener = StateChangeListener.Proxy.INSTANCE.add(stateListener, listener);
   }
@@ -111,39 +125,12 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
       return name;
   }
   
-  /* Loggable */
-  public void clearLogStream() {
-    log = null;
-    DEBUG = false;
-  }
-
-  public PrintStream getLogStream() {
-    return log;
-  }
-  
-  public void setLogStream(PrintStream out) {
-    log = out;
-    DEBUG = true;
-  }
-
   protected void log(String msg) {
-    PrintStream log = this.log;
-    if (log != null) {
-      log.println(getID() + ": " + msg);
-    }
+      logger.log(this, msg);
   }
 
-  protected void logw(String msg) {
-    String logMessage = getID() + ": " + msg;
-    PrintStream log = this.log;
-    if (log != null) {
-      log.println(logMessage);
-    }
-    System.err.println(logMessage);
-  }
-
-  public void setEmulationLogger(EmulationLogger logger) {
-    this.logger = logger;
+  protected void logw(WarningType type, String msg) {
+      logger.logw(this, type, msg);
   }
 
   public String info() {

@@ -1,5 +1,7 @@
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+
 public class RAMSegment implements Memory {
 
     private final MSP430Core core;
@@ -16,7 +18,7 @@ public class RAMSegment implements Memory {
         if (mode != AccessMode.BYTE) {
             val |= (memory[address + 1] << 8);
             if ((address & 1) != 0) {
-                core.printWarning(MSP430Constants.MISALIGNED_READ, address);
+                core.printWarning(WarningType.MISALIGNED_READ, address);
             }
             if (mode == AccessMode.WORD20) {
                 /* will the read really get data from the full word? CHECK THIS */
@@ -36,7 +38,7 @@ public class RAMSegment implements Memory {
         if (mode != AccessMode.BYTE) {
             memory[dstAddress + 1] = (dst >> 8) & 0xff;
             if ((dstAddress & 1) != 0) {
-                core.printWarning(MSP430Constants.MISALIGNED_WRITE, dstAddress);
+                core.printWarning(WarningType.MISALIGNED_WRITE, dstAddress);
             }
             if (mode != AccessMode.WORD) {
                 memory[dstAddress + 2] = (dst >> 16) & 0xff; /* should be 0x0f ?? */

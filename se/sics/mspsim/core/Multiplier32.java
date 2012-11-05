@@ -36,6 +36,7 @@
  */
 
 package se.sics.mspsim.core;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 public class Multiplier32 extends IOUnit {
@@ -159,7 +160,7 @@ public class Multiplier32 extends IOUnit {
         case MPY32CTL0:
             return mpy32ctl0;
         default:
-            logw("read unhandled address: 0x" + Utils.hex(address, 4));
+            logw(WarningType.EMULATION_ERROR, "read unhandled address: 0x" + Utils.hex(address, 4));
             return 0;
         }
     }
@@ -328,7 +329,7 @@ public class Multiplier32 extends IOUnit {
             break;
         }
         default:
-            logw("**** Not yet implemented multiplier 32 register: 0x" + Utils.hex(address, 4));
+            logw(WarningType.EMULATION_ERROR, "**** Not yet implemented multiplier 32 register: 0x" + Utils.hex(address, 4));
             break;
         }
     }

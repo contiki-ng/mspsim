@@ -37,6 +37,8 @@
 
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+
 public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource {
 
   // USART 0/1 register offset (0x70 / 0x78)
@@ -373,7 +375,7 @@ public class USART extends IOUnit implements SFRModule, DMATrigger, USARTSource 
 
   private void handleTransmit(long cycles) {
     if (cpu.getMode() >= MSP430Core.MODE_LPM3) {
-      logw("Warning: USART transmission during LPM!!! " + nextTXByte);
+      logw(WarningType.EXECUTION, "Warning: USART transmission during LPM!!! " + nextTXByte);
     }
 
     if (transmitting) {

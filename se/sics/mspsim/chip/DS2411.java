@@ -48,8 +48,6 @@ import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.util.Utils;
 
 public class DS2411 extends Chip {
-
-  private static final boolean DEBUG_DS2411 = false;
   
   private enum STATE {
     IDLE, WAIT_FOR_RESET, RESETTING, SIGNAL_READY, READY, WAIT_SENDING, SENDING
@@ -111,9 +109,6 @@ public class DS2411 extends Chip {
   
   public DS2411(MSP430Core cpu) {
     super("DS2411", "Silicon Serial Number", cpu);
-    if (DEBUG_DS2411) {
-      setLogStream(System.out);
-    }
   }
 
   private int crcAdd(int acc, int data) {

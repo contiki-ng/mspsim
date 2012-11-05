@@ -37,6 +37,8 @@
 
 package  se.sics.mspsim.core;
 import java.util.Arrays;
+
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 public class IOPort extends IOUnit {
@@ -258,7 +260,7 @@ public class IOPort extends IOUnit {
             break;
         }
         case IN:
-            logw("WARNING: writing to read-only " + getID() + "IN");
+            logw(WarningType.ILLEGAL_IO_WRITE, "WARNING: writing to read-only " + getID() + "IN");
             throw new EmulationException("Writing to read-only " + getID() + "IN");
             //          in = data;
         case DIR: {

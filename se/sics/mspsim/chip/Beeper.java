@@ -47,6 +47,7 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
 
 import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.TimeEvent;
 
@@ -110,13 +111,13 @@ public class Beeper extends Chip {
         try {
             dataLine = (SourceDataLine) AudioSystem.getLine(dli);
             if (dataLine == null) {
-                logw("No audio data line available");
+                logw(WarningType.EMULATION_ERROR, "No audio data line available");
             } else {
                 dataLine.open(dataLine.getFormat(), 16384);
                 volume = (FloatControl) dataLine.getControl(FloatControl.Type.MASTER_GAIN);
             }
         } catch (Exception e) {
-            logw("Could not get audio data line: " + e);
+            logw(WarningType.EMULATION_ERROR, "Could not get audio data line: " + e);
         }
         if (dataLine != null) {
             isSoundEnabled = true;

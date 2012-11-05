@@ -36,6 +36,7 @@
 
 package se.sics.mspsim.chip;
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.ArrayFIFO;
 import se.sics.mspsim.util.CCITT_CRC;
 import se.sics.mspsim.util.Utils;
@@ -819,7 +820,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         switch(address) {
         case REG_TXPOWER:
             if (!isDefinedTxPower(data)) {
-                logw("*** Warning - writing an undefined TXPOWER value (0x"
+                logw(WarningType.EXECUTION, "*** Warning - writing an undefined TXPOWER value (0x"
                         + Utils.hex8(data) + ") to CC2520!!!");
             }
             break;
@@ -882,14 +883,14 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         if (stateMachine == RadioState.VREG_OFF) {
             /* No VREG but chip select */
             source.byteReceived(0);
-            logw("**** Warning - writing to CC2520 when VREG is off!!!");
+            logw(WarningType.EXECUTION, "**** Warning - writing to CC2520 when VREG is off!!!");
             return;
         }
 
         if (command == null) {
             command = cc2520SPI.getCommand(data);
             if (command == null) {
-                logw("**** Warning - not implemented command on SPI: " + data);
+                logw(WarningType.EMULATION_ERROR, "**** Warning - not implemented command on SPI: " + data);
             } else if (DEBUG) {
                 if (!"SNOP".equals(command.name)) {
                     log("SPI command: " + command.name);
@@ -1028,7 +1029,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                 memory[RAM_TXFIFO + len] = txCrc.getCRCLow();
             }
             if (txfifoPos > 0x7f) {
-                logw("**** Warning - packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
+                logw(WarningType.EXECUTION, "**** Warning - packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
             }
             if (rfListener != null) {
                 if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
@@ -1139,10 +1140,10 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
         if(txCursor == 0) {
             if ((data & 0xff) > 127) {
-                logger.warning(this, "CC2420: Warning - packet size too large: " + (data & 0xff));
+                logger.logw(this, WarningType.EXECUTION, "CC2520: Warning - packet size too large: " + (data & 0xff));
             }
         } else if (txCursor > 127) {
-            logger.warning(this, "CC2420: Warning - TX Cursor wrapped");
+            logger.logw(this, WarningType.EXECUTION, "CC2520: Warning - TX Cursor wrapped");
             txCursor = 0;
         }
         memory[RAM_TXFIFO + txCursor] = data & 0xff;

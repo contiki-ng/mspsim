@@ -42,6 +42,7 @@
 package se.sics.mspsim.chip;
 import java.io.IOException;
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
 public class M25P80 extends ExternalFlash implements USARTListener, PortListener, Memory {
@@ -342,13 +343,13 @@ public class M25P80 extends ExternalFlash implements USARTListener, PortListener
   }
 
   private void programPage() {
-      if (writing) logw("Can not set program page while already writing... from $" + Utils.hex(cpu.getPC(), 4));
-    writeStatus(PROGRAM_PAGE_MILLIS);
-    ensureLoaded(blockWriteAddress);
-    for (int i = 0; i < readMemory.length; i++) {
-      readMemory[i] &= buffer[i];
-    }
-    writeBack(blockWriteAddress, readMemory);
+      if (writing) logw(WarningType.EXECUTION, "Can not set program page while already writing... from $" + Utils.hex(cpu.getPC(), 4));
+      writeStatus(PROGRAM_PAGE_MILLIS);
+      ensureLoaded(blockWriteAddress);
+      for (int i = 0; i < readMemory.length; i++) {
+          readMemory[i] &= buffer[i];
+      }
+      writeBack(blockWriteAddress, readMemory);
   }
 
   private void sectorErase(int address) {

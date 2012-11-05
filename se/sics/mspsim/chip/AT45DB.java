@@ -42,6 +42,7 @@
 package se.sics.mspsim.chip;
 import java.io.IOException;
 import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 
 public class AT45DB extends ExternalFlash implements USARTListener {
 
@@ -183,7 +184,7 @@ public class AT45DB extends ExternalFlash implements USARTListener {
           buf_num = (state == BUFFER1_READ ? 1 : 2);
           source.byteReceived(readBuffer(buf_num, bufferAddress++));
           if(bufferAddress >= PAGE_SIZE)
-            logw("ERROR: Buffer Read past buffer size: " + bufferAddress);
+            logw(WarningType.EXECUTION, "ERROR: Buffer Read past buffer size: " + bufferAddress);
           break;
 
         case BUFFER1_WRITE:
@@ -191,7 +192,7 @@ public class AT45DB extends ExternalFlash implements USARTListener {
           buf_num = (state == BUFFER1_WRITE ? 1 : 2);
           writeBuffer(buf_num, bufferAddress++, data);
           if(bufferAddress >= PAGE_SIZE)
-            logw("ERROR: Buffer Write past buffer size: " + bufferAddress);
+            logw(WarningType.EXECUTION, "ERROR: Buffer Write past buffer size: " + bufferAddress);
           source.byteReceived(0);
           break;
 
@@ -260,7 +261,7 @@ public class AT45DB extends ExternalFlash implements USARTListener {
             source.byteReceived(0);
             break;
           default:
-              logw("WARNING: Command not implemented: " + data);
+              logw(WarningType.EMULATION_ERROR, "WARNING: Command not implemented: " + data);
               source.byteReceived(0);
           break;
           }

@@ -37,6 +37,7 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.ArrayUtils;
 
 /**
@@ -67,6 +68,9 @@ public abstract class Chip implements Loggable, EventSource {
 
   public Chip(String id, MSP430Core cpu) {
     this(id, id, cpu);
+    if (cpu != null) {
+        logger = cpu.getLogger();
+    }
   }
 
   public Chip(String id, String name, MSP430Core cpu) {
@@ -74,6 +78,7 @@ public abstract class Chip implements Loggable, EventSource {
     this.name = name;
     this.cpu = cpu;
     if (cpu != null) {
+      logger = cpu.getLogger();
       cpu.addChip(this);
     }
   }
@@ -212,38 +217,22 @@ public abstract class Chip implements Loggable, EventSource {
     return "* no info";
   }
 
-  /* Loggable */
-  public void clearLogStream() {
-    log = null;
-    DEBUG = false;
+  int logLevel;
+  public int getLogLevel() {
+      return logLevel;
   }
 
-  public PrintStream getLogStream() {
-    return log;
+  public void setLogLevel(int l) {
+      logLevel = l;
   }
   
-  public void setLogStream(PrintStream out) {
-    log = out;
-    DEBUG = true;
-  }
-
   protected void log(String msg) {
-    if (log != null) {
-      log.println(getID() + ": " + msg);
-    }
+      logger.log(this, msg);
   }
 
-  protected void logw(String msg) {
-      String logMessage = getID() + ": " + msg;
-      PrintStream log = this.log;
-      if (log != null) {
-        log.println(logMessage);
-      }
-      System.err.println(logMessage);
+  /* warn about anything above severe - but what types are severe? */
+  protected void logw(WarningType type, String msg) {
+      logger.logw(this, type, msg);
   }
 
-  public void setEmulationLogger(EmulationLogger logger) {
-    this.logger = logger;
-  }
-  
 }

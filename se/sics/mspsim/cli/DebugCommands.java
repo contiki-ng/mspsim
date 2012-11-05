@@ -622,9 +622,10 @@ public class DebugCommands implements CommandBundle {
                         return 1;
                     }
                 }
-                for(Loggable l : logs) {
-                    l.setLogStream(context.out);
-                }
+// TODO: fix this in emulation logger - so that it can be added as listener and handle filtering
+//                for(Loggable l : logs) {
+//                    l.setLogStream(context.out);
+//                }
                 this.loggables = logs;
                 return 0;
             }
@@ -632,7 +633,7 @@ public class DebugCommands implements CommandBundle {
             public void stopCommand(CommandContext context) {
                 if (loggables != null) {
                     for(Loggable l : loggables) {
-                        l.clearLogStream();
+//                        l.clearLogStream();
                     }
                 }
             }
