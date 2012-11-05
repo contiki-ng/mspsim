@@ -318,19 +318,19 @@ public class CC2420 extends Radio802154 implements USARTListener {
   private TimeEvent oscillatorEvent = new TimeEvent(0, "CC2420 OSC") {
     public void execute(long t) {
       status |= STATUS_XOSC16M_STABLE;
-      if(DEBUG) log("Oscillator Stable Event.");
+      if (logLevel > INFO) log("Oscillator Stable Event.");
       setState(RadioState.IDLE);
       if( (registers[REG_IOCFG1] & CCAMUX) == CCAMUX_XOSC16M_STABLE) {
         updateCCA();
       } else {
-        if(DEBUG) log("CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
+        if(logLevel > INFO) log("CCAMUX != CCA_XOSC16M_STABLE! Not raising CCA");
       }
     }
   };
 
   private TimeEvent vregEvent = new TimeEvent(0, "CC2420 VREG") {
     public void execute(long t) {
-      if(DEBUG) log("VREG Started at: " + t + " cyc: " +
+      if(logLevel > INFO) log("VREG Started at: " + t + " cyc: " +
           cpu.cycles + " " + getTime());
       on = true;
       setState(RadioState.POWER_DOWN);
@@ -430,7 +430,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
   }
   
   private boolean setState(RadioState state) {
-    if(DEBUG) log("State transition from " + stateMachine + " to " + state);
+    if(logLevel > INFO) log("State transition from " + stateMachine + " to " + state);
     stateMachine = state;
     /* write to FSM state register */
     registers[REG_FSMSTATE] = state.getFSMState();
@@ -438,7 +438,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
     switch(stateMachine) {
 
     case VREG_OFF:
-      if (DEBUG) log("VREG Off.");
+      if (logLevel > INFO) log("VREG Off.");
       flushRX();
       flushTX();
       status &= ~(STATUS_RSSI_VALID | STATUS_XOSC16M_STABLE);
@@ -569,7 +569,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
   public void receivedByte(byte data) {
       // Received a byte from the "air"
 
-      if (DEBUG)
+      if (logLevel > INFO)
         log("RF Byte received: " + Utils.hex8(data) + " state: " + stateMachine + " noZeroes: " + zeroSymbols +
               ((stateMachine == RadioState.RX_SFD_SEARCH || stateMachine == RadioState.RX_FRAME) ? "" : " *** Ignored"));
 
@@ -583,7 +583,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
               // and the current received byte == 0x7A (SFD), we're in sync.
               // In RX mode, SFD goes high when the SFD is received
               setSFD(true);
-              if (DEBUG) log("RX: Preamble/SFD Synchronized.");
+              if (logLevel > INFO) log("RX: Preamble/SFD Synchronized.");
               setState(RadioState.RX_FRAME);
           } else {
               /* if not four zeros and 0x7A then no zeroes... */
@@ -603,7 +603,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
                       rxlen = data & 0xff;
                       //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
                       decodeAddress = addressDecode;
-                      if (DEBUG) log("RX: Start frame length " + rxlen);
+                      if (logLevel > INFO) log("RX: Start frame length " + rxlen);
                       // FIFO pin goes high after length byte is written to RXFIFO
                       setFIFO(true);
                   } else if (rxread < rxlen - 1) {
@@ -663,13 +663,13 @@ public class CC2420 extends Radio802154 implements USARTListener {
                           && !decodeAddress && !frameRejected
                           && rxFIFO.length() > fifopThr) {
                       setFIFOP(true);
-                      if (DEBUG) log("RX: FIFOP Threshold reached - setting FIFOP");
+                      if (logLevel > INFO) log("RX: FIFOP Threshold reached - setting FIFOP");
                   }
               }
 
               if (rxread++ == rxlen) {
                   if (frameRejected) {
-                      if (DEBUG) log("Frame rejected - setting SFD to false and RXWAIT\n");
+                      if (logLevel > INFO) log("Frame rejected - setting SFD to false and RXWAIT\n");
                       setSFD(false);
                       setState(RadioState.RX_WAIT);
                       return;
@@ -682,7 +682,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
                   crc += rxFIFO.get(-1); //memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
 
                   crcOk = crc == rxCrc.getCRCBitrev();
-                  if (DEBUG && !crcOk) {
+                  if (logLevel > INFO && !crcOk) {
                       log("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
                   }
                   // Should take a RSSI value as input or use a set-RSSI value...
@@ -698,10 +698,10 @@ public class CC2420 extends Radio802154 implements USARTListener {
                   if (rxFIFO.length() <= rxlen + 1) {
                       setFIFOP(true);
                   } else {
-                      if (DEBUG) log("Did not set FIFOP rxfifoLen: " + rxFIFO.length() + " rxlen: " + rxlen);
+                      if (logLevel > INFO) log("Did not set FIFOP rxfifoLen: " + rxFIFO.length() + " rxlen: " + rxlen);
                   }
                   setSFD(false);
-                  if (DEBUG) log("RX: Complete: packetStart: " + rxFIFO.stateToString());
+                  if (logLevel > INFO) log("RX: Complete: packetStart: " + rxFIFO.stateToString());
 
                   /* if either manual ack request (shouldAck) or autoack + ACK_REQ on package do ack! */
                   /* Autoack-mode + good CRC => autoack */
@@ -721,7 +721,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
       switch(address) {
       case REG_IOCFG0:
           fifopThr = data & FIFOP_THR;
-          if (DEBUG) log("IOCFG0: 0x" + Utils.hex16(oldValue) + " => 0x" + Utils.hex16(data));
+          if (logLevel > INFO) log("IOCFG0: 0x" + Utils.hex16(oldValue) + " => 0x" + Utils.hex16(data));
           if ((oldValue & POLARITY_MASK) != (data & POLARITY_MASK)) {
               // Polarity has changed - must update pins
               setFIFOP(currentFIFOP);
@@ -731,7 +731,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           }
           break;
       case REG_IOCFG1:
-          if (DEBUG)
+          if (logLevel > INFO)
             log("IOCFG1: SFDMUX "
                           + ((registers[address] & SFDMUX) >> SFDMUX)
                           + " CCAMUX: " + (registers[address] & CCAMUX));
@@ -759,7 +759,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
   public void dataReceived(USARTSource source, int data) {
     int oldStatus = status;
-    if (DEBUG) {
+    if (logLevel > INFO) {
       log("byte received: " + Utils.hex8(data) +
           " (" + ((data >= ' ' && data <= 'Z') ? (char) data : '.') + ')' +
           " CS: " + chipSelect + " SPI state: " + state + " StateMachine: " + stateMachine);
@@ -813,7 +813,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           usartDataValue |= data;
           // registers[usartDataAddress] = (registers[usartDataAddress] & 0xff00) | data;
 
-          if (DEBUG) {
+          if (logLevel > INFO) {
             log("wrote to " + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
           }
           setReg(usartDataAddress, usartDataValue);
@@ -827,7 +827,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           usartDataPos = 1;
         } else {
           source.byteReceived(registers[usartDataAddress] & 0xff);
-          if (DEBUG) {
+          if (logLevel > INFO) {
             log("read from " + Utils.hex8(usartDataAddress) + " = "
                 + registers[usartDataAddress]);
           }
@@ -837,14 +837,14 @@ public class CC2420 extends Radio802154 implements USARTListener {
         //break;
       case READ_RXFIFO: {
           int fifoData = rxFIFO.read(); 
-          if (DEBUG) log("RXFIFO READ: " + rxFIFO.stateToString());
+          if (logLevel > INFO) log("RXFIFO READ: " + rxFIFO.stateToString());
           source.byteReceived(fifoData);
 
           /* first check and clear FIFOP - since we now have read a byte! */
           if (currentFIFOP && !overflow) {
               /* FIFOP is lowered when rxFIFO is lower than or equal to fifopThr */
               if(rxFIFO.length() <= fifopThr) {
-                  if (DEBUG) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
+                  if (logLevel > INFO) log("*** FIFOP cleared at: " + rxFIFO.stateToString());
                   setFIFOP(false);
               }
           }
@@ -852,7 +852,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           /* initiate read of another packet - update some variables to keep track of packet reading... */
           if (rxfifoReadLeft == 0) {
               rxfifoReadLeft = fifoData;
-              if (DEBUG) log("Init read of packet - len: " + rxfifoReadLeft +
+              if (logLevel > INFO) log("Init read of packet - len: " + rxfifoReadLeft +
                       " fifo: " + rxFIFO.stateToString());
           } else if (--rxfifoReadLeft == 0) {
               /* check if we have another packet in buffer */
@@ -860,14 +860,14 @@ public class CC2420 extends Radio802154 implements USARTListener {
                   /* check if the packet is complete or longer than fifopThr */
                   if (rxFIFO.length() > rxFIFO.peek(0) ||
                           (rxFIFO.length() > fifopThr && !decodeAddress && !frameRejected)) {
-                      if (DEBUG) log("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
+                      if (logLevel > INFO) log("More in FIFO - FIFOP = 1! plen: " + rxFIFO.stateToString());
                       if (!overflow) setFIFOP(true);
                   }
               }
           }
           // Set the FIFO pin low if there are no more bytes available in the RXFIFO.
           if (rxFIFO.length() == 0) {
-              if (DEBUG) log("Setting FIFO to low (buffer empty)");
+              if (logLevel > INFO) log("Setting FIFO to low (buffer empty)");
               setFIFO(false);
           }
       }
@@ -877,7 +877,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           txCursor = 0;
           txfifoFlush = false;
         }
-        if (DEBUG) log("Writing data: " + data + " to tx: " + txCursor);
+        if (logLevel > INFO) log("Writing data: " + data + " to tx: " + txCursor);
 
         if(txCursor == 0) {
           if ((data & 0xff) > 127) {
@@ -897,7 +897,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
         if (usartDataPos == 0) {
           usartDataAddress |= (data << 1) & 0x180;
           ramRead = (data & FLAG_RAM_READ) != 0;
-          if (DEBUG) {
+          if (logLevel > INFO) {
             log("Address: " + Utils.hex16(usartDataAddress) + " read: " + ramRead);
           }
           usartDataPos++;
@@ -908,7 +908,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
               logger.logw(this, WarningType.EXECUTION, "CC2420: Warning - RAM position too big - wrapping!");
               usartDataAddress = 0;
             }
-            if (DEBUG && usartDataAddress == RAM_PANID + 2) {
+            if (logLevel > INFO && usartDataAddress == RAM_PANID + 2) {
               log("Pan ID set to: 0x" +
                   Utils.hex8(memory[RAM_PANID]) +
                   Utils.hex8(memory[RAM_PANID + 1]));
@@ -937,33 +937,33 @@ public class CC2420 extends Radio802154 implements USARTListener {
   // next data...
   private void strobe(int data) {
     // Resets, on/off of different things...
-    if (DEBUG) {
+    if (logLevel > INFO) {
       log("Strobe on: " + Utils.hex8(data) + " => " + Reg.values()[data]);
     }
 
     if( (stateMachine == RadioState.POWER_DOWN) && (data != REG_SXOSCON) ) {
-      if (DEBUG) log("Got command strobe: " + data + " in POWER_DOWN.  Ignoring.");
+      if (logLevel > INFO) log("Got command strobe: " + data + " in POWER_DOWN.  Ignoring.");
       return;
     }
 
     switch (data) {
     case REG_SNOP:
-      if (DEBUG) log("SNOP => " + Utils.hex8(status) + " at " + cpu.cycles);
+      if (logLevel > INFO) log("SNOP => " + Utils.hex8(status) + " at " + cpu.cycles);
       break;
     case REG_SRXON:
       if(stateMachine == RadioState.IDLE) {
         setState(RadioState.RX_CALIBRATE);
         //updateActiveFrequency();
-        if (DEBUG) {
+        if (logLevel > INFO) {
             log("Strobe RX-ON!!!");
         }
       } else {
-        if (DEBUG) log("WARNING: SRXON when not IDLE");
+        if (logLevel > INFO) log("WARNING: SRXON when not IDLE");
       }
 
       break;
     case REG_SRFOFF:
-      if (DEBUG) {
+      if (logLevel > INFO) {
         log("Strobe RXTX-OFF!!! at " + cpu.cycles);
         if (stateMachine == RadioState.TX_ACK ||
               stateMachine == RadioState.TX_FRAME ||
@@ -987,7 +987,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           sendEvent("STXON", null);
         }
         // Starting up TX subsystem - indicate that we are in TX mode!
-        if (DEBUG) log("Strobe STXON - transmit on! at " + cpu.cycles);
+        if (logLevel > INFO) log("Strobe STXON - transmit on! at " + cpu.cycles);
       }
       break;
     case REG_STXONCCA:
@@ -1006,9 +1006,9 @@ public class CC2420 extends Radio802154 implements USARTListener {
         if(cca) {
           status |= STATUS_TX_ACTIVE;
           setState(RadioState.TX_CALIBRATE);
-          if (DEBUG) log("Strobe STXONCCA - transmit on! at " + cpu.cycles);
+          if (logLevel > INFO) log("Strobe STXONCCA - transmit on! at " + cpu.cycles);
         }else{
-          if (DEBUG) log("STXONCCA Ignored, CCA false");
+          if (logLevel > INFO) log("STXONCCA Ignored, CCA false");
         }
       }
       break;
@@ -1016,7 +1016,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
       flushRX();
       break;
     case REG_SFLUSHTX:
-      if (DEBUG) log("Flushing TXFIFO");
+      if (logLevel > INFO) log("Flushing TXFIFO");
       flushTX();
       break;
     case REG_SXOSCON:
@@ -1038,7 +1038,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
         }
         break;
     default:
-      if (DEBUG) {
+      if (logLevel > INFO) {
         log("Unknown strobe command: " + data);
       }
     break;
@@ -1055,12 +1055,13 @@ public class CC2420 extends Radio802154 implements USARTListener {
       } else if (stateMachine == RadioState.TX_ACK_PREAMBLE) {
           setState(RadioState.TX_ACK);
       } else {
-          log("Can not move to TX_FRAME or TX_ACK after preamble since radio is in wrong mode: " +
+          logw(WarningType.EMULATION_ERROR,
+                  "Can not move to TX_FRAME or TX_ACK after preamble since radio is in wrong mode: " +
                   stateMachine);
       }
     } else {
       if (rfListener != null) {
-        if (DEBUG) log("transmitting byte: " + Utils.hex8(SHR[shrPos]));
+        if (logLevel > INFO) log("transmitting byte: " + Utils.hex8(SHR[shrPos]));
         rfListener.receivedByte(SHR[shrPos]);
       }
       shrPos++;
@@ -1083,14 +1084,14 @@ public class CC2420 extends Radio802154 implements USARTListener {
         logw(WarningType.EXECUTION, "**** Warning - packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
       }
       if (rfListener != null) {
-        if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
+        if (logLevel > INFO) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
         rfListener.receivedByte((byte)(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
       }
       txfifoPos++;
       // Two symbol periods to send a byte...
       cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
     } else {
-      if (DEBUG) log("Completed Transmission.");
+      if (logLevel > INFO) log("Completed Transmission.");
       status &= ~STATUS_TX_ACTIVE;
       setSFD(false);
       if (overflow) {
@@ -1124,7 +1125,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
               ackBuf[5] = txCrc.getCRCLow();
           }
           if (rfListener != null) {
-              if (DEBUG) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
+              if (logLevel > INFO) log("transmitting byte: " + Utils.hex8(memory[RAM_TXFIFO + (txfifoPos & 0x7f)] & 0xFF));
 
               rfListener.receivedByte((byte)(ackBuf[ackPos] & 0xFF));
           }
@@ -1132,7 +1133,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
           // Two symbol periods to send a byte...
           cpu.scheduleTimeEventMillis(ackEvent, SYMBOL_PERIOD * 2);
       } else {
-          if (DEBUG) log("Completed Transmission of ACK.");
+          if (logLevel > INFO) log("Completed Transmission of ACK.");
           status &= ~STATUS_TX_ACTIVE;
           setSFD(false);
           setState(RadioState.RX_CALIBRATE);
@@ -1156,13 +1157,13 @@ public class CC2420 extends Radio802154 implements USARTListener {
   private void stopOscillator() {
     status &= ~STATUS_XOSC16M_STABLE;
     setState(RadioState.POWER_DOWN);
-    if (DEBUG) log("Oscillator Off.");
+    if (logLevel > INFO) log("Oscillator Off.");
     // Reset state
     setFIFOP(false);
   }
 
   private void flushRX() {
-    if (DEBUG) {
+    if (logLevel > INFO) {
       log("Flushing RX len = " + rxFIFO.length());
     }
     rxFIFO.reset();
@@ -1203,7 +1204,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
   private void setInternalCCA(boolean clear) {
     setCCA(clear);
-    if (DEBUG) log("Internal CCA: " + clear);
+    if (logLevel > INFO) log("Internal CCA: " + clear);
   }
 
   private void setSFD(boolean sfd) {
@@ -1212,12 +1213,12 @@ public class CC2420 extends Radio802154 implements USARTListener {
       sfdPort.setPinState(sfdPin, sfd ? IOPort.PinState.LOW : IOPort.PinState.HI);
     else 
       sfdPort.setPinState(sfdPin, sfd ? IOPort.PinState.HI : IOPort.PinState.LOW);
-    if (DEBUG) log("SFD: " + sfd + "  " + cpu.cycles);
+    if (logLevel > INFO) log("SFD: " + sfd + "  " + cpu.cycles);
   }
 
   private void setCCA(boolean cca) {
     currentCCA = cca;
-    if (DEBUG) log("Setting CCA to: " + cca);
+    if (logLevel > INFO) log("Setting CCA to: " + cca);
     if( (registers[REG_IOCFG0] & CCA_POLARITY) == CCA_POLARITY)
       ccaPort.setPinState(ccaPin, cca ? IOPort.PinState.LOW : IOPort.PinState.HI);
     else
@@ -1226,7 +1227,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
   private void setFIFOP(boolean fifop) {
     currentFIFOP = fifop;
-    if (DEBUG) log("Setting FIFOP to " + fifop);
+    if (logLevel > INFO) log("Setting FIFOP to " + fifop);
     if( (registers[REG_IOCFG0] & FIFOP_POLARITY) == FIFOP_POLARITY) {
       fifopPort.setPinState(fifopPin, fifop ? IOPort.PinState.LOW : IOPort.PinState.HI);
     } else {
@@ -1236,7 +1237,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
   private void setFIFO(boolean fifo) {
     currentFIFO = fifo;
-    if (DEBUG) log("Setting FIFO to " + fifo);
+    if (logLevel > INFO) log("Setting FIFO to " + fifo);
     if((registers[REG_IOCFG0] & FIFO_POLARITY) == FIFO_POLARITY) {
       fifoPort.setPinState(fifoPin, fifo ? IOPort.PinState.LOW : IOPort.PinState.HI);
     } else {
@@ -1245,7 +1246,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
   }
 
   private void setRxOverflow() {
-    if (DEBUG) log("RXFIFO Overflow! Read Pos: " + rxFIFO.stateToString());
+    if (logLevel > INFO) log("RXFIFO Overflow! Read Pos: " + rxFIFO.stateToString());
     setFIFOP(true);
     setFIFO(false);
     setSFD(false);
@@ -1313,7 +1314,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
         power = maxp;
     }
 
-    if (DEBUG) log("external setRSSI to: " + power);
+    if (logLevel > INFO) log("external setRSSI to: " + power);
 
     rssi = power;
     registers[REG_RSSI] = power - RSSI_OFFSET;
@@ -1368,7 +1369,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
       // 0.6ms maximum vreg startup from datasheet pg 13
       // but Z1 platform does not work with 0.1 so trying with lower...
       cpu.scheduleTimeEventMillis(vregEvent, 0.05);
-      if (DEBUG) log("Scheduling vregEvent at: cyc = " + cpu.cycles +
+      if (logLevel > INFO) log("Scheduling vregEvent at: cyc = " + cpu.cycles +
          " target: " + vregEvent.getTime() + " current: " + cpu.getTime());
     } else {
       on = false;
@@ -1382,7 +1383,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
       if (state == SpiState.WRITE_REGISTER && usartDataPos == 1) {
           // Register write incomplete. Do a 8 bit register write.
           usartDataValue = (registers[usartDataAddress] & 0xff) | (usartDataValue & 0xff00);
-          if (DEBUG) {
+          if (logLevel > INFO) {
               log("wrote 8 MSB to 0x" + Utils.hex8(usartDataAddress) + " = " + usartDataValue);
           }
           setReg(usartDataAddress, usartDataValue);
@@ -1390,7 +1391,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
       state = SpiState.WAITING;
     }
 
-    if (DEBUG) {
+    if (logLevel > INFO) {
       log("setting chipSelect: " + chipSelect);
     }
   }

@@ -10,64 +10,87 @@ import se.sics.mspsim.core.MSP430Core;
 
 public class DefaultEmulationLogger implements EmulationLogger {
 
-  private WarningMode warningMode = WarningMode.PRINT;
-  private PrintStream out;
   private final MSP430Core cpu;
+  private final WarningMode[] warningModes = new WarningMode[WarningType.values().length];
+  private WarningMode defaultMode = WarningMode.PRINT;
+  private PrintStream out;
+  private LogListener[] logListeners;
   
   public DefaultEmulationLogger(MSP430Core cpu, PrintStream out) {
     this.cpu = cpu;
     this.out = out;
   }
-  
-  public void warning(Object source, String message) throws EmulationException {
-    if (warningMode == WarningMode.EXCEPTION) {
-      throw new EmulationException(message);
-    } else {
-      if (warningMode == WarningMode.PRINT) {
-        out.println(message);
-        cpu.generateTrace(out);
-      }
-    }
-  }
 
-  public void setWarningMode(WarningMode mode) {
-    warningMode = mode;
+  protected WarningMode getMode(WarningType type) {
+      WarningMode mode = warningModes[type.ordinal()];
+      if (mode == null) {
+          mode = defaultMode;
+      }
+      return mode;
   }
 
   @Override
   public void log(Loggable source, String message) {
-      // TODO Auto-generated method stub
-
+//      out.println(source.getID() + ": " + message);
+      LogListener[] listeners = this.logListeners;
+      if (listeners != null) {
+          for (LogListener l : listeners) {
+              l.log(source, message);
+          }
+      }
   }
 
   @Override
   public void logw(Loggable source, WarningType type, String message)
           throws EmulationException {
-      // TODO Auto-generated method stub
+      switch (getMode(type)) {
+      case SILENT:
+          break;
+      case PRINT:
+          out.println(source.getID() + ": " + message);
+          cpu.generateTrace(out);
+          break;
+      case EXCEPTION:
+          out.println(source.getID() + ": " + message);
+          cpu.generateTrace(out);
+          throw new EmulationException(message);
+      }
 
+      LogListener[] listeners = this.logListeners;
+      if (listeners != null) {
+          for (LogListener l : listeners) {
+              l.logw(source, type, message);
+          }
+      }
+  }
+
+  @Override
+  public WarningMode getDefaultWarningMode() {
+      return defaultMode;
   }
 
   @Override
   public void setDefaultWarningMode(WarningMode mode) {
-      // TODO Auto-generated method stub
+      this.defaultMode = mode;
+  }
 
+  @Override
+  public WarningMode getWarningMode(WarningType type) {
+      return warningModes[type.ordinal()];
   }
 
   @Override
   public void setWarningMode(WarningType type, WarningMode mode) {
-      // TODO Auto-generated method stub
-
+      warningModes[type.ordinal()] = mode;
   }
 
-@Override
-public void addLogListener(LogListener listener) {
-    // TODO Auto-generated method stub
-    
-}
+  @Override
+  public synchronized void addLogListener(LogListener listener) {
+      logListeners = ArrayUtils.add(LogListener.class, logListeners, listener);
+  }
 
-@Override
-public void removeLogListener(LogListener listener) {
-    // TODO Auto-generated method stub
-    
-}
+  @Override
+  public synchronized void removeLogListener(LogListener listener) {
+      logListeners = ArrayUtils.remove(logListeners, listener);
+  }
 }

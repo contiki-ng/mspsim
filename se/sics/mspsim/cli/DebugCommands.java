@@ -36,6 +36,8 @@ package se.sics.mspsim.cli;
 import se.sics.mspsim.core.DbgInstruction;
 import se.sics.mspsim.core.DisAsm;
 import se.sics.mspsim.core.EmulationException;
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+import se.sics.mspsim.core.LogListener;
 import se.sics.mspsim.core.Loggable;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Constants;
@@ -595,10 +597,12 @@ public class DebugCommands implements CommandBundle {
         });
 
         ch.registerCommand("log", new BasicAsyncCommand("log a loggable object", "[loggable...]" ) {
-            private Loggable[] loggables = null;
+            private Loggable[] logs;
+            private int[] logLevels;
+            private LogListener logListener;
 
             @Override
-            public int executeCommand(CommandContext context) {
+            public int executeCommand(final CommandContext context) {
                 if (context.getArgumentCount() == 0) {
                     Loggable[] loggable = cpu.getLoggables();
                     for (Loggable unit : loggable) {
@@ -614,7 +618,7 @@ public class DebugCommands implements CommandBundle {
                     return 0;
                 }
 
-                Loggable[] logs = new Loggable[context.getArgumentCount()];
+                final Loggable[] logs = new Loggable[context.getArgumentCount()];
                 for(int i = 0, n = context.getArgumentCount(); i < n; i++) {
                     logs[i] = cpu.getLoggable(context.getArgument(i));
                     if (logs[i] == null) {
@@ -622,18 +626,56 @@ public class DebugCommands implements CommandBundle {
                         return 1;
                     }
                 }
-// TODO: fix this in emulation logger - so that it can be added as listener and handle filtering
-//                for(Loggable l : logs) {
-//                    l.setLogStream(context.out);
-//                }
-                this.loggables = logs;
+                logListener = new LogListener() {
+
+                    boolean isLogging(Loggable source) {
+                        for(Loggable log : logs) {
+                            if (source == log) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    @Override
+                    public void log(Loggable source, String message) {
+                        if (isLogging(source)) {
+                            context.out.println(source.getID() + ": " + message);
+                        }
+                    }
+
+                    @Override
+                    public void logw(Loggable source, WarningType type,
+                            String message) throws EmulationException {
+                        if (isLogging(source)) {
+                            context.out.println("# " + source.getID() + "[" + type + "]: " + message);
+                        }
+                    }
+
+                };
+                this.logs = logs;
+                cpu.getLogger().addLogListener(logListener);
+                logLevels = new int[logs.length];
+                int i = 0;
+                for(Loggable log : logs) {
+                    logLevels[i++] = log.getLogLevel();
+                    log.setLogLevel(Loggable.DEBUG);
+                }
                 return 0;
             }
 
             public void stopCommand(CommandContext context) {
-                if (loggables != null) {
-                    for(Loggable l : loggables) {
-//                        l.clearLogStream();
+                if (logListener != null) {
+                    cpu.getLogger().removeLogListener(logListener);
+                    logListener = null;
+                }
+                if (logs != null) {
+                    int i = 0;
+                    for(Loggable log : logs) {
+                        if (log.getLogLevel() == Loggable.DEBUG) {
+                            log.setLogLevel(logLevels[i]);
+                        }
+                        i++;
                     }
                 }
             }

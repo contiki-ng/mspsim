@@ -65,6 +65,7 @@ public abstract class Chip implements Loggable, EventSource {
   protected EmulationLogger logger;
   private PrintStream log;
   protected boolean DEBUG = false;
+  protected int logLevel;
 
   public Chip(String id, MSP430Core cpu) {
     this(id, id, cpu);
@@ -217,7 +218,6 @@ public abstract class Chip implements Loggable, EventSource {
     return "* no info";
   }
 
-  int logLevel;
   public int getLogLevel() {
       return logLevel;
   }
