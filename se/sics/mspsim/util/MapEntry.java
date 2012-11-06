@@ -45,12 +45,12 @@ public class MapEntry {
 
   public static enum TYPE {function, variable, module}
 
-  private TYPE type;
-  private int address;
+  private final TYPE type;
+  private final int address;
+  private final String name;
+  private final String file;
+  private final boolean isLocal;
   private int size;
-  private String name;
-  private String file;
-  private boolean isLocal;
   private int dataAddr;
   private int dataSize;
   private int bssAddr;
@@ -83,8 +83,16 @@ public class MapEntry {
     return size;
   }
 
+  public int getDataAddress() {
+      return dataAddr;
+  }
+
   public int getDataSize() {
     return dataSize;
+  }
+
+  public int getBSSAddress() {
+      return bssAddr;
   }
 
   public int getBSSSize() {

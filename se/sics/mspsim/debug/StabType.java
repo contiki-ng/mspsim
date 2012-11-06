@@ -76,7 +76,7 @@ public class StabType {
      *   */
     private void handleTypeDef(String def) {
         if (def.startsWith("(")) {
-            StabType tDef = (StabType) types.get("t" + def);
+            StabType tDef = types.get("t" + def);
             if (tDef != null) {
                 typeDef = tDef;
             } else {

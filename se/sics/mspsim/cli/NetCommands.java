@@ -22,10 +22,8 @@ public class NetCommands implements CommandBundle {
   public void setupCommands(final ComponentRegistry registry, CommandHandler handler) {
     handler.registerCommand("ipstack", new BasicLineCommand("setup 802.15.4/IP stack", "") {
       CC2420PacketHandler listener;
-      CommandContext context;
       public int executeCommand(CommandContext context) {
-        this.context = context;
-        MSP430 cpu = (MSP430) registry.getComponent(MSP430.class);
+        MSP430 cpu = registry.getComponent(MSP430.class);
         listener = new CC2420PacketHandler(cpu);
         listener.setOutput(context.out);
         IEEE802154Handler ieeeHandler = new IEEE802154Handler();
@@ -48,8 +46,7 @@ public class NetCommands implements CommandBundle {
         if (listener != null) {
           byte[] data = Utils.hexconv(line);
           for (int i = 0; i < data.length; i++) {
-            //context.out.println("Byte " + i + " = " + ((int) data[i] & 0xff));
-            // Currently it will autoprint when packet is ready...
+            // Currently it will auto print when packet is ready...
             listener.receivedByte(data[i]);
           }
         }

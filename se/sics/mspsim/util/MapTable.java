@@ -79,7 +79,7 @@ public class MapTable {
     loadMap(file);
   }
 
-  private MapEntry getModuleEntry(HashMap<String,MapEntry> moduleTable,
+  private MapEntry addModuleEntry(HashMap<String,MapEntry> moduleTable,
                                   int addr, int size, String name) {
     MapEntry entry = moduleTable.get(name);
     if (entry == null) {
@@ -119,7 +119,7 @@ public class MapTable {
       if (parts.length > 3) {
         int addr = Integer.parseInt(parts[2].substring(2), 16);
         int size = Integer.parseInt(parts[3].substring(2), 16);
-        MapEntry entry = getModuleEntry(moduleTable, addr, size, parts[4]);
+        addModuleEntry(moduleTable, addr, size, parts[4]);
         if (DEBUG) {
           System.out.println("Module add: " + addr + " Size:" + size
                              + " file:" + parts[4]);
@@ -129,7 +129,7 @@ public class MapTable {
       if (parts.length > 3) {
         int addr = Integer.parseInt(parts[2].substring(2), 16);
         int size = Integer.parseInt(parts[3].substring(2), 16);
-        MapEntry entry = getModuleEntry(moduleTable, addr, 0, parts[4]);
+        MapEntry entry = addModuleEntry(moduleTable, addr, 0, parts[4]);
         if (DEBUG) {
           System.out.println("Module add data: " + addr + " Size:" + size
                              + " file:" + parts[4]);
@@ -140,7 +140,7 @@ public class MapTable {
       if (parts.length > 3) {
         int addr = Integer.parseInt(parts[2].substring(2), 16);
         int size = Integer.parseInt(parts[3].substring(2), 16);
-        MapEntry entry = getModuleEntry(moduleTable, addr, 0, parts[4]);
+        MapEntry entry = addModuleEntry(moduleTable, addr, 0, parts[4]);
         if (DEBUG) {
           System.out.println("Module add bss: " + addr + " Size:" + size
                              + " file: " + parts[4]);
@@ -260,7 +260,7 @@ public class MapTable {
     MapTable map = new MapTable(args[0]);
     int totsize = 0;
     int totdata = map.dataFill, totbss = map.bssFill;
-    int totmemory = totdata + totbss;
+//    int totmemory = totdata + totbss;
     System.out.printf("%7s %7s %7s  %4s %s\n",
                       "text", "data", "bss", "addr", "name");
     for (int i = 0; i < map.modules.size(); i++) {
@@ -268,14 +268,13 @@ public class MapTable {
       totsize += module.getSize();
       totdata += module.getDataSize();
       totbss += module.getBSSSize();
-      totmemory += module.getDataSize() + module.getBSSSize();
+//      totmemory += module.getDataSize() + module.getBSSSize();
       System.out.printf("%7d %7d %7d $%04x %s\n", module.getSize(),
                         module.getDataSize(), module.getBSSSize(),
                         module.getAddress(), module.getName());
     }
     System.out.printf("%7d %7d %7d       Total Size\n",
                       totsize, totdata, totbss);
-//     System.out.println("Total size: " + totsize + " (0x" + Integer.toHexString(totsize) + ')');
 //     System.out.println("Total data/bss size: " + totmemory + " (0x" + Integer.toHexString(totmemory) + ") data: " + totdata + " bss: " + totbss);
   }
 }

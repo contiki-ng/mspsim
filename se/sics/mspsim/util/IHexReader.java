@@ -40,11 +40,12 @@
  */
 
 package se.sics.mspsim.util;
-import java.io.*;
-
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import se.sics.mspsim.config.MSP430f1611Config;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.MSP430Config;
 
 public class IHexReader {
 
@@ -63,13 +64,13 @@ public class IHexReader {
       tmpMemory[i] = -1;
     }
     try {
-      FileInputStream fInput = new FileInputStream(file);
-      BufferedReader bInput = new BufferedReader(new InputStreamReader(fInput));
+      BufferedReader bInput = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
       String line;
       boolean terminate = false;
       while ((line = bInput.readLine()) != null && !terminate) {
 	if (line.charAt(0) != ':') {
 	  System.out.println("Not an IHex file?! " + line.charAt(0));
+	  bInput.close();
 	  return false;
 	}
 	int size = hexToInt(line.charAt(1)) * 0x10 + hexToInt(line.charAt(2));
@@ -91,11 +92,12 @@ public class IHexReader {
 				  hexToInt(line.charAt(index++)));
 	  }
 
-	  int checksum = (byte) hexToInt(line.charAt(index++)) * 0x10
-	    + hexToInt(line.charAt(index++));
+//	  int checksum = (byte) hexToInt(line.charAt(index++)) * 0x10
+//	    + hexToInt(line.charAt(index++));
 	  //	System.out.println("Checksum: " + checksum);
 	}
       }
+      bInput.close();
 
       // Write all data that we got in to the real memory!!!
       System.out.println("Writing to memory!");
@@ -110,11 +112,6 @@ public class IHexReader {
       ioe.printStackTrace();
     }
     return false;
-  }
-
-
-  private static String binary(int data) {
-    return Integer.toString(data, 2);
   }
 
   private static String hex(int data) {

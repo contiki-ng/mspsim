@@ -38,7 +38,6 @@
  */
 
 package se.sics.mspsim.util;
-import se.sics.mspsim.core.*;
 
 public class DebugInfo {
 

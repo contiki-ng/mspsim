@@ -68,12 +68,12 @@ public class PortListenerProxy implements PortListener {
     }
 
     public PortListener add(PortListener mon) {
-        portListeners = (PortListener[]) ArrayUtils.add(PortListener.class, portListeners, mon);
+        portListeners = ArrayUtils.add(PortListener.class, portListeners, mon);
         return this;
     }
 
     public PortListener remove(PortListener listener) {
-        PortListener[] listeners = (PortListener[]) ArrayUtils.remove(portListeners, listener);
+        PortListener[] listeners = ArrayUtils.remove(portListeners, listener);
         if (listeners == null) {
             return null;
         }

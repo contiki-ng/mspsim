@@ -53,6 +53,7 @@ public class PluginRepository implements ActiveComponent {
 
   private URLClassLoader classLoader;
 
+  @Override
   public void init(String name, ComponentRegistry registry) {
     File dir = new File("plugins");
     if (dir.isDirectory()) {
@@ -73,6 +74,7 @@ public class PluginRepository implements ActiveComponent {
 	      plugins[pluginCount++] = pluginBundle;
 	    }
 	    jarFiles[i] = jarURL;
+	    jarFile.close();
 	  }
 
 	  classLoader = URLClassLoader.newInstance(jarFiles);
@@ -101,6 +103,7 @@ public class PluginRepository implements ActiveComponent {
     return classLoader.loadClass(name);
   }
 
+  @Override
   public void start() {
   }
 

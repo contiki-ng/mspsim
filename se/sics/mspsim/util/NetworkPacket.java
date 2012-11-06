@@ -180,7 +180,7 @@ public class NetworkPacket {
     };
     NetworkPacket np = new NetworkPacket(IPv6);
     np = np.parseData(data);
-    System.out.println("Version: " + np.getIntBits(np.data, 0, 3));
+    System.out.println("Version: " + NetworkPacket.getIntBits(np.data, 0, 3));
     System.out.println("Version: " + np.getInt("version"));
   }
 
