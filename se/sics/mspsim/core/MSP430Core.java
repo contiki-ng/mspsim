@@ -1110,9 +1110,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    if(index > 0x8000) {
 		index = -(0x10000 - index);
 	    }
-	    if(indexModifier > 0x8000) {
-		indexModifier = -(0x10000 - indexModifier);
-	    }
             writeRegister(dstData, currentSegment.read(indexModifier + index, AccessMode.WORD20, AccessType.READ));
 	    writeRegister(PC, pc += 2);
             updateStatus = false;
@@ -1134,9 +1131,6 @@ public class MSP430Core extends Chip implements MSP430Constants {
 	    indexModifier = readRegister(dstData);
 	    if(index > 0x8000) {
 		index = -(0x10000 - index);
-	    }
-	    if(indexModifier > 0x8000) {
-		indexModifier = -(0x10000 - indexModifier);
 	    }
 	    currentSegment.write(indexModifier + index, readRegister(srcData), AccessMode.WORD20);
 	    writeRegister(PC, pc += 2);
