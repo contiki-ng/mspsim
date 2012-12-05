@@ -260,11 +260,17 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 //    public static final int CCAMUX_CCA = 0;
 //    public static final int CCAMUX_XOSC16M_STABLE = 24;
 
-    // MDMCTRO0 values
-    public static final int ADR_DECODE = (1 << 11);
-    public static final int ADR_AUTOCRC = (1 << 5);
-    public static final int AUTOACK = (1 << 4);
-    public static final int PREAMBLE_LENGTH = 0x0f;
+    // FRMFILT0/FRMCTRL0 values
+    public static final int FRAME_FILTER = (1 << 0);
+    public static final int AUTOCRC      = (1 << 6);
+    public static final int AUTOACK      = (1 << 5);
+
+    // FRMFILT1
+    public static final int ACCEPT_FT_4TO7_RESERVED = (1 << 7);
+    public static final int ACCEPT_FT_3_MAC_CMD     = (1 << 6);
+    public static final int ACCEPT_FT_2_ACK         = (1 << 5);
+    public static final int ACCEPT_FT_1_DATA        = (1 << 4);
+    public static final int ACCEPT_FT_0_BEACON      = (1 << 3);
 
     public static final int SHORT_ADDRESS = 2;
     public static final int LONG_ADDRESS = 3;
@@ -353,10 +359,10 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     /* FIFOP Threshold */
     private int fifopThr = 0x40;
 
-    /* if autoack is configured or if */
+    /* Configuration for frame filtering and auto acknowledgments */
+    private boolean frameFilter = false;
     private boolean autoAck = false;
     private boolean shouldAck = false;
-    private boolean addressDecode = false;
     private boolean ackRequest = false;
     private boolean autoCRC = false;
 
@@ -462,6 +468,10 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             case TX_ACK_CALIBRATE:
                 setState(RadioState.TX_ACK_PREAMBLE);
                 break;
+
+            default:
+                // Ignore other states
+                break;
             }
         }
     };
@@ -477,10 +487,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
     private final ArrayFIFO rxFIFO = new ArrayFIFO("RXFIFO", memory, 128, 128);
 
-    public RadioState getState() {
-        return stateMachine;
-    }
-
     public CC2520(MSP430Core cpu) {
         super("CC2520", "Radio", cpu);
 
@@ -495,15 +501,39 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         reset();
     }
 
+    public RadioState getState() {
+        return stateMachine;
+    }
+
+    private int getFCFReservedMask() {
+        return (memory[REG_FRMFILT0] >> 4) & 7;
+    }
+
+    private int getFCFMaxFrameVersion() {
+        return (memory[REG_FRMFILT0] >> 2) & 3;
+    }
+
     private void updateGPIOConfig() {
         int bit = 1;
-        for (int i = 0; i < gpio.length; i++) {
-            gpio[i].setPolarity((memory[REG_GPIOPOLARITY] & bit) > 0);
+        for (GPIO io : gpio) {
+            io.setPolarity((memory[REG_GPIOPOLARITY] & bit) > 0);
             bit = bit << 1;
         }
     }
 
     private void reset() {
+        // FCF max fram version = 3 and frame filtering enabled
+        memory[REG_FRMFILT0] = 0x0d;
+        frameFilter = true;
+        memory[REG_FRMFILT1] = 0x78;
+        // autocrc enabled, autoack disabled
+        memory[REG_FRMCTRL0] = 0x40;
+        autoCRC = true;
+        autoAck = false;
+
+        memory[REG_MDMCTRL0] = 0x45;
+        memory[REG_MDMCTRL1] = 0x3e;
+        memory[REG_FSMSTAT0] = 0;
         memory[REG_FSMSTAT1] = 0;
         memory[REG_RSSISTAT] = 0;
         memory[REG_TXPOWER] = 0x06;
@@ -640,6 +670,13 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             shouldAck = false;
             crcOk = false;
             break;
+
+        case RX_OVERFLOW:
+            break;
+
+        case TX_UNDERFLOW:
+            // TODO handle TX underflow
+            break;
         }
 
         /* Notify state listener */
@@ -699,7 +736,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                         rxCrc.setCRC(0);
                         rxlen = data & 0xff;
                         //System.out.println("Starting to get packet at: " + rxfifoWritePos + " len = " + rxlen);
-                        decodeAddress = addressDecode;
+                        decodeAddress = frameFilter;
                         if (DEBUG) log("RX: Start frame length " + rxlen);
                         // FIFO pin goes high after length byte is written to RXFIFO
                         setFIFO(true);
@@ -711,19 +748,44 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                             frameType = fcf0 & FRAME_TYPE;
                         } else if (rxread == 2) {
                             fcf1 = data & 0xff;
-                            if (frameType == TYPE_DATA_FRAME) {
+
+                            if (frameFilter
+                                    && (((getFCFReservedMask() & (((fcf0 & 3) << 1) | (fcf1 & 1))) != 0)
+                                            || (getFCFMaxFrameVersion() < ((fcf0 >> 2) & 3)))) {
+                                // Illegal frame version or reserved bits set
+                                rejectFrame();
+                            } else if (frameType == TYPE_DATA_FRAME) {
                                 ackRequest = (fcf0 & ACK_REQUEST) > 0;
                                 destinationAddressMode = (fcf1 >> 2) & 3;
                                 /* check this !!! */
-                                if (addressDecode && destinationAddressMode != LONG_ADDRESS &&
-                                        destinationAddressMode != SHORT_ADDRESS) {
-                                    rejectFrame();
+                                if (frameFilter) {
+                                    if ((destinationAddressMode != LONG_ADDRESS
+                                            && destinationAddressMode != SHORT_ADDRESS)
+                                            || (memory[REG_FRMFILT1] & ACCEPT_FT_1_DATA) == 0) {
+                                        rejectFrame();
+                                    }
                                 }
-                            } else if (frameType == TYPE_BEACON_FRAME ||
-                                    frameType == TYPE_ACK_FRAME){
+                            } else if (frameType == TYPE_ACK_FRAME) {
                                 decodeAddress = false;
                                 ackRequest = false;
-                            } else if (addressDecode) {
+                                if (frameFilter) {
+                                    if (rxlen != 5
+                                            || (memory[REG_FRMFILT1] & ACCEPT_FT_2_ACK) == 0) {
+                                        rejectFrame();
+                                    }
+                                }
+                            } else if (frameType == TYPE_BEACON_FRAME) {
+                                decodeAddress = false;
+                                ackRequest = false;
+                                destinationAddressMode = (fcf1 >> 2) & 3;
+                                if (frameFilter) {
+                                    if (rxlen < 9
+                                            || (memory[REG_FRMFILT1] & ACCEPT_FT_0_BEACON) == 0
+                                            || destinationAddressMode != 0) {
+                                        rejectFrame();
+                                    }
+                                }
+                            } else if (frameFilter) {
                                 /* illegal frame when decoding address... */
                                 rejectFrame();
                             }
@@ -818,6 +880,13 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         int oldValue = memory[address];
         memory[address] = data;
         switch(address) {
+        case REG_FRMFILT0:
+            frameFilter = (data & FRAME_FILTER) != 0;
+            break;
+        case REG_FRMCTRL0:
+            autoCRC = (data & AUTOCRC) != 0;
+            autoAck = (data & AUTOACK) != 0;
+            break;
         case REG_TXPOWER:
             if (!isDefinedTxPower(data)) {
                 logw(WarningType.EXECUTION, "*** Warning - writing an undefined TXPOWER value (0x"
@@ -841,11 +910,6 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             //                        + " CCAMUX: " + (memory[address] & CCAMUX));
             //            updateCCA();
             //            break;
-        case REG_MDMCTRL0:
-            addressDecode = (data & ADR_DECODE) != 0;
-            autoCRC = (data & ADR_AUTOCRC) != 0;
-            autoAck = (data & AUTOACK) != 0;
-            break;
         case REG_FSCTRL: {
             ChannelListener listener = this.channelListener;
             if (listener != null) {
@@ -1469,7 +1533,7 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
                 "\n FIFOP: " + currentFIFOP + " threshold: " + fifopThr + "  FIFO: " + currentFIFO + "  SFD: " + sfdGPIO.isActive() +
                 "\n " + rxFIFO.stateToString() + " expPacketLen: " + rxlen +
                 "\n Radio State: " + stateMachine + "  SPI State: " + commandStr +
-                "\n AutoACK: " + autoAck + "  AddrDecode: " + addressDecode + "  AutoCRC: " + autoCRC +
+                "\n AutoACK: " + autoAck + "  AddrDecode: " + frameFilter + "  AutoCRC: " + autoCRC +
                 "\n PanID: 0x" + Utils.hex8(memory[RAM_PANID + 1]) + Utils.hex8(memory[RAM_PANID]) +
                 "  ShortAddr: 0x" + Utils.hex8(memory[RAM_SHORTADDR + 1]) + Utils.hex8(memory[RAM_SHORTADDR]) +
                 "  LongAddr: 0x" + getLongAddress() +
