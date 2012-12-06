@@ -45,9 +45,9 @@ import se.sics.mspsim.platform.AbstractNodeGUI;
 public class WismoteGui extends AbstractNodeGUI {
 
     private static final long serialVersionUID = -8713047619139235630L;
-    private static final int RED1_X = 192;
+    private static final int RED1_X = 172;
     private static final int GREEN_X = 182;
-    private static final int RED2_X = 172;
+    private static final int RED2_X = 192;
     private static final int LED_Y = 40;
     private static final int LED_HEIGHT = 11;
     private static final int LED_WIDTH = 7;
@@ -60,8 +60,8 @@ public class WismoteGui extends AbstractNodeGUI {
 
     private static final Color BUTTON_C = new Color(0x60ffffff);
 
-    private static final Rectangle LEDS_BOUNDS = new Rectangle(RED2_X - 2,
-            LED_Y - 1, RED1_X - RED2_X + LED_HEIGHT, LED_WIDTH);
+    private static final Rectangle LEDS_BOUNDS = new Rectangle(RED1_X - 2,
+            LED_Y - 1, RED2_X - RED1_X + LED_HEIGHT, LED_WIDTH);
 
     private final WismoteNode node;
     private final StateChangeListener ledsListener = new StateChangeListener() {

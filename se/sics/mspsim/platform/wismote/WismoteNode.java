@@ -76,14 +76,14 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     public static final int BUTTON_PIN = 7;
 
     /* P8.6 - Red (left) led */
-    private static final int LEDS_CONF_RED2   = 1 << 6;
-    private static final int LEDS_RED2        = 1 << 2;
+    private static final int LEDS_CONF_RED1   = 1 << 6;
+    private static final int LEDS_RED1        = 1 << 0;
     /* P5.2 - Green (middle) led */
-    private static final int LEDS_CONF_GREEN  = 1 << 2;
+    private static final int LEDS_CONF_GREEN  = 1 << 4;
     private static final int LEDS_GREEN       = 1 << 1;
     /* P2.4 - Red (right) led */
-    private static final int LEDS_CONF_RED1   = 1 << 4;
-    private static final int LEDS_RED1        = 1 << 0;
+    private static final int LEDS_CONF_RED2   = 1 << 2;
+    private static final int LEDS_RED2        = 1 << 2;
 
     private static final int[] LEDS = { 0xff2020, 0x20ff20, 0xff2020 };
 
@@ -131,8 +131,7 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             ds2411.dataPin((data & DS2411_DATA) != 0);
             break;
         case 2:
-            //System.out.println("LEDS RED1 = " + ((data & LEDS_CONF_RED1) > 0));
-            leds.setLeds(LEDS_RED1, (data & LEDS_CONF_RED1) == 0 && (source.getDirection() & LEDS_CONF_RED1) != 0);
+            leds.setLeds(LEDS_GREEN, (data & LEDS_CONF_GREEN) == 0 && (source.getDirection() & LEDS_CONF_GREEN) != 0);
             break;
         case 3:
             // Chip select = active low...
@@ -144,12 +143,10 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             radio.setVRegOn((data & CC2520_VREG) != 0);
             break;
         case 5:
-            //System.out.println("LEDS GREEN = " + ((data & LEDS_CONF_GREEN) > 0));
-            leds.setLeds(LEDS_GREEN, (data & LEDS_CONF_GREEN) == 0 && (source.getDirection() & LEDS_CONF_GREEN) != 0);
+            leds.setLeds(LEDS_RED2, (data & LEDS_CONF_RED2) == 0 && (source.getDirection() & LEDS_CONF_RED2) != 0);
             break;
         case 8:
-            //System.out.println("LEDS RED2 = " + ((data & LEDS_CONF_RED2) > 0));
-            leds.setLeds(LEDS_RED2, (data & LEDS_CONF_RED2) == 0 && (source.getDirection() & LEDS_CONF_RED2) != 0);
+            leds.setLeds(LEDS_RED1, (data & LEDS_CONF_RED1) == 0 && (source.getDirection() & LEDS_CONF_RED1) != 0);
             break;
         }
     }
