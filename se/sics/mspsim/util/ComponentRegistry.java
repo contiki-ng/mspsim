@@ -71,6 +71,21 @@ public class ComponentRegistry {
         return null;
     }
 
+    public synchronized boolean removeComponent(String name) {
+      ComponentEntry rem = null;
+        for (ComponentEntry entry : components) {
+            if (name.equals(entry.name)) {
+              rem = entry;
+              break;
+            }
+        }
+        if (rem == null) {
+          return false;
+        }
+        components.remove(rem);
+        return true;
+    }
+
     public synchronized Object[] getAllComponents(String name) {
         ArrayList<Object> list = new ArrayList<Object>();
         for (ComponentEntry entry : components) {
