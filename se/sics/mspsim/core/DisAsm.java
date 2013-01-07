@@ -445,6 +445,7 @@ public class DisAsm implements MSP430Constants {
 	  srcadr = "$" + Utils.hex16(memory[pc] + (memory[pc + 1] << 8)) + "(R" + srcRegister + ")";
 	  size += 2;
 	}
+	pc += 2;
 	break;
 	// Indirect register
       case AM_IND_REG:
@@ -630,7 +631,7 @@ public class DisAsm implements MSP430Constants {
 
   private static String dumpMem(int pc, int size, int[] memory) {
     String output = "";
-    for (int i = 0, n = 4; i < n; i++) {
+    for (int i = 0, n = size; i < n; i++) {
       if (size > i) {
 	output += Utils.hex8(memory[pc + i]) + " ";
       } else {
