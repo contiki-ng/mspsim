@@ -63,12 +63,15 @@ public class StackUI extends JPanel implements ServiceComponent {
   private ChartPanel chartPanel;
   private LineChart minStackChart;
   private LineChart maxStackChart;
+  private LineChart maxUsageStackChart;
   
 //  private DotDiagram diagram;
   private int[] minData = new int[STACK_FRAME];
   private int[] maxData = new int[STACK_FRAME];
+  private int[] maxUsageData = new int[STACK_FRAME];
   private int[] minCache = new int[STACK_FRAME];
   private int[] maxCache = new int[STACK_FRAME];
+  private int[] maxUsageCache = new int[STACK_FRAME];
 //  private String[] notes = new String[STACK_FRAME];
 
   private long lastCycles = 0;
@@ -85,6 +88,8 @@ public class StackUI extends JPanel implements ServiceComponent {
 
   private String name;
 
+  private boolean increasePos = false;
+      
   public StackUI(MSP430 cpu) {
     this(cpu, 2500);
   }
@@ -103,6 +108,10 @@ public class StackUI extends JPanel implements ServiceComponent {
 //    add(diagram, BorderLayout.CENTER);
   }
 
+  public void requestIncreasePos() {
+    increasePos = true;
+  }
+  
   private void setup() {
       if (chartPanel != null) return;
 
@@ -133,8 +142,13 @@ public class StackUI extends JPanel implements ServiceComponent {
       maxStackChart = new LineChart("Max Stack");
       maxStackChart.setConfig("color", Color.green);
       chartPanel.addChart(maxStackChart);
-      chartPanel.setAxisChart(maxStackChart);
 
+      maxUsageStackChart = new LineChart("Max usage");
+      maxUsageStackChart.setConfig("color", Color.blue);
+      chartPanel.addChart(maxUsageStackChart);
+
+      chartPanel.setAxisChart(maxStackChart);
+      
       add(chartPanel, BorderLayout.CENTER);
       chartPanel.setMinimumSize(new Dimension(320, 200));
       setPreferredSize(new Dimension(320, 200));
@@ -148,20 +162,27 @@ public class StackUI extends JPanel implements ServiceComponent {
       }
 
       registerMonitor = new RegisterMonitor.Adapter() {
-          @Override
+          private int m = 0;
           public void notifyWriteBefore(int register, int data, AccessMode mode) {
               int size = stackStartAddress - data;
               if (minData[pos] > size) {
                   minData[pos] = size;
               }
+              if (m < size) {
+                m = size;
+              }
               if (maxData[pos] < size) {
                   maxData[pos] = size;
               }
-              if (cpu.cpuCycles - lastCycles > updateCyclePeriod) {
+              if ((updateCyclePeriod > 0 && cpu.cpuCycles - lastCycles > updateCyclePeriod)
+                  || increasePos) {
+                increasePos = false;
                   lastCycles = cpu.cpuCycles;
 //                    System.out.println("STACK UPDATE: " + type + "," + adr + "," + data + "," + pos);
+                  
                   pos = (pos + 1) % minData.length;
                   minData[pos] = Integer.MAX_VALUE;
+                  maxUsageData[pos] = m;
                   maxData[pos] = 0;
                   update = true;
                   repaint();
@@ -180,8 +201,10 @@ public class StackUI extends JPanel implements ServiceComponent {
       int p = pos;
       copy(this.minData, this.minCache, p);
       copy(this.maxData, this.maxCache, p);
+      copy(this.maxUsageData, this.maxUsageCache, p);
       minStackChart.setData(this.minCache);
       maxStackChart.setData(this.maxCache);
+      maxUsageStackChart.setData(this.maxUsageCache);
     }
     super.paint(g);
   }
@@ -220,7 +243,7 @@ public class StackUI extends JPanel implements ServiceComponent {
     status = Status.STOPPED;
     window.setVisible(false);
     if (registerMonitor != null) {
-        cpu.addRegisterWriteMonitor(MSP430.SP, registerMonitor);
+        cpu.removeRegisterWriteMonitor(MSP430.SP, registerMonitor);
     }
   }
 

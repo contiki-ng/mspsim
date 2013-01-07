@@ -43,6 +43,8 @@ import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Multiplier32;
+import se.sics.mspsim.core.PMM;
+import se.sics.mspsim.core.SysReg;
 import se.sics.mspsim.core.Timer;
 import se.sics.mspsim.core.UnifiedClockSystem;
 import se.sics.mspsim.util.Utils;
@@ -122,7 +124,16 @@ public class MSP430f5437Config extends MSP430Config {
         for (int i = 2; i < portConfig.length; i++) {
             ioUnits.add(last = IOPort.parseIOPort(cpu, 0, portConfig[i], last));
         }
-        
+
+		/* XXX: Stub IO units: Sysreg and PMM */
+		SysReg sysreg = new SysReg(cpu, cpu.memory);
+		cpu.setIORange(SysReg.ADDRESS, SysReg.SIZE, sysreg);
+		ioUnits.add(sysreg);
+
+		PMM pmm = new PMM(cpu, cpu.memory, 0x120);
+		cpu.setIORange(0x120, PMM.SIZE, pmm);
+		ioUnits.add(pmm);
+
         return portConfig.length + uartConfig.length;
     }
 
