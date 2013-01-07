@@ -381,14 +381,14 @@ public class SimpleProfiler implements Profiler, EventListener {
   public void printStackTrace(PrintStream out) {
     int stackCount = cSP;
     out.println("Stack Trace: number of calls: " + stackCount
-        + " PC: $" + Utils.hex(cpu.getPC(), 4));
+        + " PC: $" + Utils.hex(cpu.getPC(), 5));
     for (int i = 0; i < stackCount; i++) {
       CallEntry call = callStack[stackCount - i - 1];
       out.println("  " + call.function.getInfo()
-          + " called from PC: $" + Utils.hex(call.fromPC, 4)
+          + " called from PC: $" + Utils.hex(call.fromPC, 5)
           + " (elapsed: " + (cpu.cpuCycles - call.cycles) + ')');
       if (stackCount - i - 1 == interruptLevel && servicedInterrupt != -1) {
-        out.println(" *** Interrupt " + servicedInterrupt + " from PC: $" + Utils.hex(interruptFrom, 4));
+        out.println(" *** Interrupt " + servicedInterrupt + " from PC: $" + Utils.hex(interruptFrom, 5));
       }
     }
   }
