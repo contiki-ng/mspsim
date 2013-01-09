@@ -49,8 +49,6 @@ import se.sics.mspsim.util.Utils;
  */
 public class Watchdog extends IOUnit implements SFRModule {
   
-  private static final int WDTCTL = 0x120;
-
   private static final int WDTHOLD = 0x80;
   private static final int WDTCNTCL = 0x08;
   private static final int WDTMSEL = 0x10;
@@ -60,13 +58,16 @@ public class Watchdog extends IOUnit implements SFRModule {
   private static final int WATCHDOG_VECTOR = 10;
   private static final int WATCHDOG_INTERRUPT_BIT = 0;
   private static final int WATCHDOG_INTERRUPT_VALUE = 1 << WATCHDOG_INTERRUPT_BIT;
-  private static final int RESET_VECTOR = 15;
   
   private static final int[] DELAY = {
     32768, 8192, 512, 64
   };
+
+  private int resetVector = 15;
+
+  private int wdtctl = 0x4;
+  private int offset;
   
-  private int wdtctl;
   public boolean wdtOn = true;
   private boolean hold = false;
 
@@ -87,13 +88,22 @@ public class Watchdog extends IOUnit implements SFRModule {
     }
   };
 
-  public Watchdog(MSP430Core cpu) {
-    super("Watchdog", cpu, cpu.memory, 0x120);
+  public Watchdog(MSP430Core cpu, int address) {
+    super("Watchdog", cpu, cpu.memory, address);
+
+    resetVector = cpu.MAX_INTERRUPT;
+    
+    this.offset = address;
     cpu.getSFR().registerSFDModule(0, WATCHDOG_INTERRUPT_BIT, this, WATCHDOG_VECTOR);
   }
    
   public void interruptServiced(int vector) {
     cpu.flagInterrupt(vector, this, false);
+  }
+
+  public void reset(int type) {
+      super.reset(type);
+      wdtctl = 0x4;
   }
 
   private void triggerWDT(long time) {
@@ -107,17 +117,16 @@ public class Watchdog extends IOUnit implements SFRModule {
       } else {
           System.out.println("WDT trigger - will reset node!");
           cpu.generateTrace(System.out);
-          cpu.flagInterrupt(RESET_VECTOR, this, true);
+          cpu.flagInterrupt(resetVector, this, true);
       }
   }
   
   public int read(int address, boolean word, long cycles) {
-    if (address == WDTCTL) return wdtctl | 0x6900;
-    return 0;
+	  return wdtctl | 0x6900;
   }
 
   public void write(int address, int value, boolean word, long cycles) {
-    if (address == WDTCTL) {
+    if (address == offset) {
       if ((value >> 8) == 0x5a) {
         wdtctl = value & 0xff;
         if (DEBUG) log("Wrote to WDTCTL: " + Utils.hex8(wdtctl) + " from $" + Utils.hex(cpu.getPC(), 4));
@@ -143,7 +152,7 @@ public class Watchdog extends IOUnit implements SFRModule {
         // Trigger reset!!
         logw(WarningType.EXECUTION, "illegal write to WDTCTL (" + value + ") from $" + Utils.hex(cpu.getPC(), 4)
             + " - reset!!!!");
-        cpu.flagInterrupt(RESET_VECTOR, this, true);
+        cpu.flagInterrupt(resetVector, this, true);
       }
     }
   }

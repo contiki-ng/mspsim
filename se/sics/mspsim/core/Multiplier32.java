@@ -319,10 +319,10 @@ public class Multiplier32 extends IOUnit {
             } else {
                 res64 = p;
             }
-
+            
             /* FIXME: Ignore accumulate. */
-            res0 = (int) res64 & 0xffff;
-            res1 = (int) (res64 >> 16) & 0xffff;
+            resLo = res0 = (int) res64 & 0xffff;
+            resHi = res1 = (int) (res64 >> 16) & 0xffff;
             res2 = (int) (res64 >> 32) & 0xffff;
             res3 = (int) (res64 >> 48) & 0xffff;
 
