@@ -224,6 +224,7 @@ public abstract class Chip implements Loggable, EventSource {
 
   public void setLogLevel(int l) {
       logLevel = l;
+      DEBUG = logLevel == Loggable.DEBUG;
   }
   
   protected void log(String msg) {
