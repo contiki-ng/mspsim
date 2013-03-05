@@ -46,10 +46,10 @@ import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.Profiler;
+import se.sics.mspsim.profiler.SimpleProfiler;
 import se.sics.mspsim.ui.CPUHeatMap;
 import se.sics.mspsim.ui.WindowManager;
 import se.sics.mspsim.util.ComponentRegistry;
-import se.sics.mspsim.util.SimpleProfiler;
 import se.sics.mspsim.util.StackMonitor;
 
 /**
