@@ -38,10 +38,10 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 
+import se.sics.mspsim.profiler.SimpleProfiler;
 import se.sics.mspsim.util.ArrayUtils;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.MapTable;
-import se.sics.mspsim.util.SimpleProfiler;
 
 public class MSP430 extends MSP430Core {
 

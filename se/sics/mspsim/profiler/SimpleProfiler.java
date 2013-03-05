@@ -31,15 +31,13 @@
  *
  * -----------------------------------------------------------------
  *
- * MSP430
+ * SimpleProfiler
  *
  * Author  : Joakim Eriksson
- * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
+ * Created : March 5, 2013
  */
 
-package se.sics.mspsim.util;
+package se.sics.mspsim.profiler;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,7 +54,11 @@ import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
-import se.sics.mspsim.profiler.CallListener;
+import se.sics.mspsim.profiler.CallEntry.CallCounter;
+import se.sics.mspsim.util.ArrayUtils;
+import se.sics.mspsim.util.MapEntry;
+import se.sics.mspsim.util.StackMonitor;
+import se.sics.mspsim.util.Utils;
 
 public class SimpleProfiler implements Profiler, EventListener {
  
@@ -161,7 +163,7 @@ public class SimpleProfiler implements Profiler, EventListener {
     CallListener[] listeners = callListeners;
     if (listeners != null) {
       for (int i = 0, n = listeners.length; i < n; i++) {
-        listeners[i].functionCall(this, entry);
+        listeners[i].functionCall(this, ce);
       }
     }
   }
@@ -235,7 +237,7 @@ public class SimpleProfiler implements Profiler, EventListener {
       CallListener[] listeners = callListeners;
       if (listeners != null) {
         for (int i = 0, n = listeners.length; i < n; i++) {
-          listeners[i].functionReturn(this, fkn);
+          listeners[i].functionReturn(this, cspEntry);
         }
       }
     }
@@ -434,30 +436,6 @@ public class SimpleProfiler implements Profiler, EventListener {
     }
   }
   
-  public static class CallEntry {
-    int fromPC;
-    MapEntry function;
-    long cycles;
-    long exclusiveCycles;
-    int calls;
-    int hide;
-    int stackStart;
-    int currentStackMax;
-    
-    HashMap<MapEntry,CallCounter> callers;
-    
-    public CallEntry() {
-      callers = new HashMap<MapEntry,CallCounter>();
-    }
-  }
-
-  private static class CallCounter implements Comparable<CallCounter> {
-    public int count = 0;
-
-    public int compareTo(CallCounter o) {
-      return (count < o.count ? -1 : (count == o.count ? 0 : 1));
-    }
-  }
 
   private static class TagEntry implements Comparable<TagEntry> {
     public final String tag;

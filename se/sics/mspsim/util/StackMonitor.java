@@ -2,6 +2,7 @@ package se.sics.mspsim.util;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.RegisterMonitor;
 import se.sics.mspsim.core.Memory.AccessMode;
+import se.sics.mspsim.profiler.SimpleProfiler;
 
 public class StackMonitor {
 
