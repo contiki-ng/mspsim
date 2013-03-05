@@ -48,6 +48,7 @@ import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.Memory.AccessMode;
 import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.Profiler;
+import se.sics.mspsim.profiler.CallEntry;
 import se.sics.mspsim.profiler.CallListener;
 import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ComponentRegistry;
@@ -124,7 +125,8 @@ public class ContikiChecker implements CallListener, ActiveComponent {
         }
     }
 
-    public void functionCall(Profiler source, MapEntry entry) {
+    public void functionCall(Profiler source, CallEntry callEntry) {
+        MapEntry entry = callEntry.getFunction();
         // Check for function calls before <prefix>_init() has been called.
         String name = entry.getName();
         if (name != null && callTable.get(name) == null) {
@@ -153,7 +155,7 @@ public class ContikiChecker implements CallListener, ActiveComponent {
         }
     }
 
-    public void functionReturn(Profiler source, MapEntry entry) {
+    public void functionReturn(Profiler source, CallEntry entry) {
         // Ignore returns
     }
 
