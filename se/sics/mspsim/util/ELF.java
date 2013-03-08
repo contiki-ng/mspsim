@@ -27,16 +27,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * ELF
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim.util;
@@ -54,7 +50,7 @@ import se.sics.mspsim.debug.StabDebug;
 
 public class ELF {
 
-  private static final int EI_NIDENT = 16;
+  // private static final int EI_NIDENT = 16;
   private static final int EI_ENCODING = 5;
   private static final int[] MAGIC = new int[] {0x7f, 'E', 'L', 'F'};
   
@@ -97,28 +93,22 @@ public class ELF {
 
   /* check if the file exists and is an ELF file */
   public static boolean isELF(File file) {
-    InputStream input = null;
     try {
-      input = new BufferedInputStream(new FileInputStream(file));
+      InputStream input = new BufferedInputStream(new FileInputStream(file));
       for (int i = 0; i < MAGIC.length; i++) {
         if (MAGIC[i] != input.read()) {
+          input.close();
           return false;
         }
       }
+      input.close();
+      return true;
     } catch(IOException ioe) {
       // ignore and return false - this is not an elf.
       return false;
-    } finally {
-      if (input != null) {
-        try {
-          input.close();
-        } catch (Exception e) {
-        }
-      }
     }
-    return true;
   }
-  
+
   private void readHeader() throws ELFException {
     for (int i = 0; i < MAGIC.length; i++) {
       if (elfData[i] != (byte) (MAGIC[i] & 0xff)) {
@@ -530,26 +520,24 @@ public class ELF {
     }
   }
 
-
   public void setPos(int pos) {
     this.pos = pos;
-}
+  }
 
-public int getPos() {
+  public int getPos() {
     return pos;
-}
+  }
 
+  private static class FileInfo {
+      public final String name;
+      public final int start;
+      public final int end;
 
-class FileInfo {
-    String name;
-    int start;
-    int end;
-
-    FileInfo(String name, int start, int end) {
-      this.name = name;
-      this.start = start;
-      this.end = end;
-    }
+      FileInfo(String name, int start, int end) {
+          this.name = name;
+          this.start = start;
+          this.end = end;
+      }
 
   }
 
