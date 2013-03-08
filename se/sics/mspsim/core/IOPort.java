@@ -347,9 +347,6 @@ public class IOPort extends IOUnit {
 
     public void write(int address, int data, boolean word, long cycles) {
         int iAddress = address - offset;
-        if (iAddress < 0 || iAddress >= portMap.length) {
-            throw new EmulationException("Writing to illegal IO port address at " + getID() + ": $" + Utils.hex(address, 4));
-        }
         PortReg fun = portMap[iAddress];
         if (DEBUG) {
             log("Writing to " + getID() + fun +
