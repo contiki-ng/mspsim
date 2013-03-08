@@ -171,7 +171,7 @@ public class IOPort extends IOUnit {
         timerCapture[pin] = timer;
     }
 
-    public void updateIV() {
+    private void updateIV() {
         int bitval = 0x01;
         iv = 0;
         int ie_ifg = ifg & ie;
@@ -183,6 +183,7 @@ public class IOPort extends IOUnit {
             bitval = bitval << 1;
         }
         //System.out.println("*** Setting IV to: " + iv + " ifg: " + ifg);
+        cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
     }
 
     public int getRegister(PortReg register) {
@@ -216,7 +217,7 @@ public class IOPort extends IOUnit {
     }
 
     /* only byte access!!! */
-    int read_port(PortReg function, long cycles) {
+    private int readPort(PortReg function, long cycles) {
         switch(function) {
         case OUT:
             return out;
@@ -238,18 +239,27 @@ public class IOPort extends IOUnit {
             return sel2;
         case DS:
             return ds;
-        case IV_L:
-            return iv & 0xff;
-        case IV_H:
-            int v = iv >> 8;
-            updateIV();
+        case IV_L: {
+            int v = iv & 0xff;
+            // Clear highest interrupt
+            if (iv != 0) {
+                if (iv > 1 && iv < 17) {
+                    ifg &= ~(1 << ((iv - 2) / 2));
+                }
+                updateIV();
+            }
             return v;
+        }
+        case IV_H: {
+            int v = iv >> 8;
+            return v;
+        }
         }
         /* default is zero ??? */
         return 0;
     }
 
-    void write_port(PortReg function, int data, long cycles) {
+    private void writePort(PortReg function, int data, long cycles) {
         switch(function) {
         case OUT: {
             out = data;
@@ -283,7 +293,6 @@ public class IOPort extends IOUnit {
             }
             ifg &= data;
             updateIV();
-            cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
             break;
         case IE:
             ie = data;
@@ -301,15 +310,21 @@ public class IOPort extends IOUnit {
         case SEL2:
             sel2 = data;
             break;
-            /* Can IV be written ? */
         case DS:
             ds = data;
             break;
         case IV_L:
-            iv = (iv & 0xff00) | data;
+            // IV can not be written but highest interrupt should be cleared
+            // on access.
+            if (iv != 0) {
+                if (iv > 1 && iv < 17) {
+                    ifg &= ~(1 << ((iv - 2) / 2));
+                }
+                updateIV();
+            }
             break;
         case IV_H:
-            iv = (iv & 0x00ff) | (data << 8);
+            // IV_H can not be written
             break;
         }
     }
@@ -319,14 +334,14 @@ public class IOPort extends IOUnit {
         PortReg reg = portMap[address - offset];
         /* only byte read allowed if not having an ioPair */
         if (word && reg == PortReg.IV_L) {
-            /* Always read low first then high => update on high!!! */
-            return read_port(reg, cycles) | (read_port(PortReg.IV_H, cycles) << 8);
+            /* Read hi first then low => update on low!!! */
+            return (readPort(PortReg.IV_H, cycles) << 8) | readPort(reg, cycles);
         } else if (word && ioPair != null) {
             /* read same function from both */
-            return read_port(reg, cycles) | (ioPair.read_port(reg, cycles) << 8);
+            return readPort(reg, cycles) | (ioPair.readPort(reg, cycles) << 8);
         }
         /* NOTE: read of PIV might be wrong here - might be word access on IV? */
-        return read_port(reg, cycles);
+        return readPort(reg, cycles);
     }
 
 
@@ -345,10 +360,10 @@ public class IOPort extends IOUnit {
 
         /* only byte write - need to convert any word write here... */
         if (word && ioPair != null) {
-            write_port(fun, data & 0xff, cycles);
-            ioPair.write_port(fun, data >> 8, cycles);
+            writePort(fun, data & 0xff, cycles);
+            ioPair.writePort(fun, data >> 8, cycles);
         } else {
-            write_port(fun, data, cycles);
+            writePort(fun, data, cycles);
         }
     }
 
@@ -370,23 +385,21 @@ public class IOPort extends IOUnit {
                     // LO/HI transition
                     if (state == PinState.HI) {
                         ifg |= bit;
-                        updateIV();
                         if (DEBUG) {
                             log("Flagging interrupt (HI): " + bit);
                         }
+                        updateIV();
                     }
                 } else {
                     // HI/LO transition
                     if (state == PinState.LOW) {
                         ifg |= bit;
-                        updateIV();
                         if (DEBUG) {
                             log("Flagging interrupt (LOW): " + bit);
                         }
+                        updateIV();
                     }
                 }
-                // Maybe this is not the only place where we should flag int?
-                cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
             }
 
             if (timerCapture[pin] != null) {
