@@ -455,10 +455,10 @@ public class ELF {
       addr += symTable.getEntrySize();
     }
 
-  if (sAddrHighest > 0) {
-    System.out.printf("Warning: Unable to parse _end symbol. I'm guessing that heap starts at 0x%05x\n", sAddrHighest);
-    map.setHeapStart(sAddrHighest);
-  }
+    if (map.getHeapStart() <= 0 && sAddrHighest > 0) {
+      System.err.printf("Warning: Unable to parse _end symbol. I'm guessing that heap starts at 0x%05x\n", sAddrHighest);
+      map.setHeapStart(sAddrHighest);
+    }
 
     return map;
   }
