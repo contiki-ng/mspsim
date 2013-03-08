@@ -116,9 +116,9 @@ public class IOPort extends IOUnit {
         String[] specs = specification.split(",");
         int port = specs[0].charAt(1) - '0';
         int offset = Integer.parseInt(specs[0].substring(3), 16);
-        
+
         PortReg[] portMap = new PortReg[0x20]; /* Worst case port-map */
-        
+        int highest = -1;
         for (int i = 1; i < specs.length; i++) {
             String[] preg = specs[i].split(" ");
             PortReg pr = PortReg.valueOf(preg[0]);
@@ -127,6 +127,12 @@ public class IOPort extends IOUnit {
                 portMap = Arrays.copyOf(portMap, offs + 1);
             }
             portMap[offs] = pr;
+            if (offs > highest) {
+                highest = offs;
+            }
+        }
+        if (highest + 1 < portMap.length) {
+            portMap = Arrays.copyOf(portMap, highest + 1);
         }
         IOPort newPort = new IOPort(cpu, port, interrupt, cpu.memory, offset, portMap);
         if (last != null && offset == last.offset && offset > 0) {
