@@ -289,9 +289,9 @@ public class IOPort extends IOUnit {
             break;
         case IFG:
             if (DEBUG) {
-                log("Clearing IFlag: " + data);
+                log("Setting IFlag: " + data);
             }
-            ifg &= data;
+            ifg = data;
             updateIV();
             break;
         case IE:
