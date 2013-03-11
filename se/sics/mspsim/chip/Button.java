@@ -76,6 +76,6 @@ public class Button extends Chip {
 
     @Override
     public String info() {
-        return id + ": " + (isPressed ? "pressed" : "released");
+        return " Button is " + (isPressed ? "pressed" : "not pressed");
     }
 }

@@ -36,9 +36,6 @@
  */
 
 package se.sics.mspsim.core;
-
-import java.io.PrintStream;
-
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 
 public abstract class IOUnit implements InterruptHandler, Loggable {
@@ -53,10 +50,9 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   private StateChangeListener stateListener;
   private int ioState;
   protected int logLevel;
-  
-  protected EmulationLogger logger;
-  private PrintStream log;
   protected boolean DEBUG = false;
+
+  protected EmulationLogger logger;
 
   public IOUnit(String id, MSP430Core cpu, int[] memory, int offset) {
     this(id, id, cpu, memory, offset);
@@ -79,8 +75,9 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   @Override 
   public void setLogLevel(int l) {
       logLevel = l;
+      DEBUG = logLevel == Loggable.DEBUG;
   }
-  
+
   public void addStateChangeListener(StateChangeListener listener) {
       stateListener = StateChangeListener.Proxy.INSTANCE.add(stateListener, listener);
   }
