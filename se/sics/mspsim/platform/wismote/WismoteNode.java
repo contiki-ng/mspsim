@@ -38,6 +38,7 @@ package se.sics.mspsim.platform.wismote;
 import java.io.IOException;
 import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.CC2520;
+import se.sics.mspsim.chip.DS2411;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.config.MSP430f5437Config;
 import se.sics.mspsim.core.EmulationException;
@@ -51,6 +52,10 @@ import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.util.ArgumentManager;
 
 public class WismoteNode extends GenericNode implements PortListener, USARTListener {
+
+    // Port 1.
+    public static final int DS2411_DATA_PIN = 1;
+    public static final int DS2411_DATA = 1 << DS2411_DATA_PIN;
 
     /* P1.6 - Input: FIFOP from CC2520 */
     /* P1.5 - Input: FIFO from CC2520 */
@@ -88,6 +93,7 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     private Leds leds;
     private Button button;
     private WismoteGui gui;
+    private DS2411 ds2411;
 
     public WismoteNode() {
         super("Wismote", new MSP430f5437Config());
@@ -121,6 +127,9 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
 
     public void portWrite(IOPort source, int data) {
         switch (source.getPort()) {
+        case 1:
+            ds2411.dataPin((data & DS2411_DATA) != 0);
+            break;
         case 2:
             //System.out.println("LEDS RED1 = " + ((data & LEDS_CONF_RED1) > 0));
             leds.setLeds(LEDS_RED1, (data & LEDS_CONF_RED1) == 0 && (source.getDirection() & LEDS_CONF_RED1) != 0);
@@ -149,9 +158,12 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
 //        if (flashFile != null) {
 //            setFlash(new FileM25P80(cpu, flashFile));
 //        }
+        ds2411 = new DS2411(cpu);
 
         IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
         port1.addPortListener(this);
+        ds2411.setDataPort(port1, DS2411_DATA_PIN);
+
         IOPort port2 = cpu.getIOUnit(IOPort.class, "P2");
         port2.addPortListener(this);
         cpu.getIOUnit(IOPort.class, "P3").addPortListener(this);
