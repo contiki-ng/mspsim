@@ -248,8 +248,16 @@ public class MapTable {
     return -1;
   }
 
+  public int getStackStart() {
+      return stackStartAddress;
+  }
+
   public void setStackStart(int start) {
     stackStartAddress = start;
+  }
+
+  public int getHeapStart() {
+      return heapStartAddress;
   }
 
   public void setHeapStart(int start) {

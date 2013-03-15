@@ -67,8 +67,8 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     /* P4.4 - Output: RESET_N to CC2520 */
     public static final int CC2520_RESET = 1 << 4;
 
-    /* P2.7 - Button */
-    public static final int BUTTON_PIN = 7;
+    /* P1.4 - Button */
+    public static final int BUTTON_PIN = 4;
 
     /* P8.6 - Red (left) led */
     private static final int LEDS_CONF_RED2   = 1 << 6;
@@ -173,7 +173,7 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             throw new EmulationException("Could not setup wismote mote - missing USCI B0");
         }
         leds = new Leds(cpu, LEDS);
-        button = new Button("Button", cpu, port2, BUTTON_PIN, true);
+        button = new Button("Button", cpu, port1, BUTTON_PIN, true);
 
         IOUnit usart = cpu.getIOUnit("USCI A1");
         if (usart instanceof USARTSource) {
