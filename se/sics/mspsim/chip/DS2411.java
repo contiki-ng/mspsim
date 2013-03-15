@@ -27,19 +27,14 @@
  *
  * This file is part of MSPSim.
  *
- * $Id: DS2411.java 177 2008-03-11 15:32:12Z nifi $
- *
  * -----------------------------------------------------------------
  *
  * DS2411 - MAC Address chip
  *
  * Author  : Joakim Eriksson
  * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date: 2008-03-11 16:32:12 +0100 (ti, 11 mar 2008) $
- *           $Revision: 177 $
  */
 package se.sics.mspsim.chip;
-
 
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
@@ -77,7 +72,7 @@ public class DS2411 extends Chip {
         if (!lastPin) {
           state = STATE.RESETTING;
           stateChanged(state.ordinal());
-          if (DEBUG) log("Reseting...");
+          if (DEBUG) log("Resetting...");
         }
         break;
       case SIGNAL_READY:
@@ -102,6 +97,14 @@ public class DS2411 extends Chip {
           writePos = 0;
           writeByte = writeBuf[writePos];              
         }
+        break;
+    case IDLE:
+        break;
+    case RESETTING:
+        break;
+    case WAIT_SENDING:
+        break;
+    case SENDING:
         break;
       }
     }
@@ -175,6 +178,8 @@ public class DS2411 extends Chip {
         cpu.scheduleTimeEventMillis(stateEvent, 0.400);
       }
       break;
+    case WAIT_FOR_RESET:
+        break;
     case RESETTING:
       if (high) {
         state = STATE.SIGNAL_READY;
@@ -186,6 +191,8 @@ public class DS2411 extends Chip {
         pos = 0;
       }
       break;
+    case SIGNAL_READY:
+        break;
     case READY:
       /* we should read a byte during the READY - 60us - 120us time slot*/
       if (!high) {
