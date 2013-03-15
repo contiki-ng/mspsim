@@ -38,6 +38,7 @@ package se.sics.mspsim.platform.wismote;
 import java.io.IOException;
 import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.CC2520;
+import se.sics.mspsim.chip.DS2411;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.config.MSP430f5437Config;
 import se.sics.mspsim.core.EmulationException;
@@ -51,6 +52,10 @@ import se.sics.mspsim.ui.SerialMon;
 import se.sics.mspsim.util.ArgumentManager;
 
 public class WismoteNode extends GenericNode implements PortListener, USARTListener {
+
+    // Port 1.
+    public static final int DS2411_DATA_PIN = 1;
+    public static final int DS2411_DATA = 1 << DS2411_DATA_PIN;
 
     /* P1.6 - Input: FIFOP from CC2520 */
     /* P1.5 - Input: FIFO from CC2520 */
@@ -71,14 +76,14 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     public static final int BUTTON_PIN = 4;
 
     /* P8.6 - Red (left) led */
-    private static final int LEDS_CONF_RED2   = 1 << 6;
-    private static final int LEDS_RED2        = 1 << 2;
+    private static final int LEDS_CONF_RED1   = 1 << 6;
+    private static final int LEDS_RED1        = 1 << 0;
     /* P5.2 - Green (middle) led */
-    private static final int LEDS_CONF_GREEN  = 1 << 2;
+    private static final int LEDS_CONF_GREEN  = 1 << 4;
     private static final int LEDS_GREEN       = 1 << 1;
     /* P2.4 - Red (right) led */
-    private static final int LEDS_CONF_RED1   = 1 << 4;
-    private static final int LEDS_RED1        = 1 << 0;
+    private static final int LEDS_CONF_RED2   = 1 << 2;
+    private static final int LEDS_RED2        = 1 << 2;
 
     private static final int[] LEDS = { 0xff2020, 0x20ff20, 0xff2020 };
 
@@ -88,6 +93,7 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
     private Leds leds;
     private Button button;
     private WismoteGui gui;
+    private DS2411 ds2411;
 
     public WismoteNode() {
         super("Wismote", new MSP430f5437Config());
@@ -121,9 +127,11 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
 
     public void portWrite(IOPort source, int data) {
         switch (source.getPort()) {
+        case 1:
+            ds2411.dataPin((data & DS2411_DATA) != 0);
+            break;
         case 2:
-            //System.out.println("LEDS RED1 = " + ((data & LEDS_CONF_RED1) > 0));
-            leds.setLeds(LEDS_RED1, (data & LEDS_CONF_RED1) == 0 && (source.getDirection() & LEDS_CONF_RED1) != 0);
+            leds.setLeds(LEDS_GREEN, (data & LEDS_CONF_GREEN) == 0 && (source.getDirection() & LEDS_CONF_GREEN) != 0);
             break;
         case 3:
             // Chip select = active low...
@@ -135,12 +143,10 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
             radio.setVRegOn((data & CC2520_VREG) != 0);
             break;
         case 5:
-            //System.out.println("LEDS GREEN = " + ((data & LEDS_CONF_GREEN) > 0));
-            leds.setLeds(LEDS_GREEN, (data & LEDS_CONF_GREEN) == 0 && (source.getDirection() & LEDS_CONF_GREEN) != 0);
+            leds.setLeds(LEDS_RED2, (data & LEDS_CONF_RED2) == 0 && (source.getDirection() & LEDS_CONF_RED2) != 0);
             break;
         case 8:
-            //System.out.println("LEDS RED2 = " + ((data & LEDS_CONF_RED2) > 0));
-            leds.setLeds(LEDS_RED2, (data & LEDS_CONF_RED2) == 0 && (source.getDirection() & LEDS_CONF_RED2) != 0);
+            leds.setLeds(LEDS_RED1, (data & LEDS_CONF_RED1) == 0 && (source.getDirection() & LEDS_CONF_RED1) != 0);
             break;
         }
     }
@@ -149,9 +155,12 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
 //        if (flashFile != null) {
 //            setFlash(new FileM25P80(cpu, flashFile));
 //        }
+        ds2411 = new DS2411(cpu);
 
         IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
         port1.addPortListener(this);
+        ds2411.setDataPort(port1, DS2411_DATA_PIN);
+
         IOPort port2 = cpu.getIOUnit(IOPort.class, "P2");
         port2.addPortListener(this);
         cpu.getIOUnit(IOPort.class, "P3").addPortListener(this);
