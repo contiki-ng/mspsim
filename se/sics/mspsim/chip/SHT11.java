@@ -142,11 +142,19 @@ public class SHT11 extends Chip {
   public void setTemperature(int temp) {
      this.temp = temp;
   }
+
+  public int getTemperature() {
+     return this.temp;
+  }
   
   public void setHumidity(int humidity) {
       this.humid = humidity;
   }
-    
+  
+  public int getHumidity() {
+     return this.humid;
+  }
+
   public SHT11(MSP430Core cpu) {
       super("SHT11", "Digital Humidity Sensor", cpu);
   }
