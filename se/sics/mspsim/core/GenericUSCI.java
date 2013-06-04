@@ -1,7 +1,8 @@
 package se.sics.mspsim.core;
 
-import com.tado.mspsim.chip.I2CUnit.I2CData;
-import com.tado.mspsim.utils.RingBuffer;
+import se.sics.mspsim.chip.I2CUnit.I2CData;
+import se.sics.mspsim.util.RingBuffer;
+
 
 /** 
  * GenericUSCI - for newer MSP430's

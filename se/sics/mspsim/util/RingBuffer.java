@@ -1,4 +1,4 @@
-package com.tado.mspsim.utils;
+package se.sics.mspsim.util;
 
 /******************************************************************************
  * File: RingBuffer.java 
