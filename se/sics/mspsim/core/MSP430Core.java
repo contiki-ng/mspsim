@@ -242,7 +242,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // Maybe for debugging purposes...
     ioUnits = new ArrayList<IOUnit>();
 
-    ioSegment.setIORange(config.flashControllerOffset, 6, flash);
+    ioSegment.setIORange(config.flashControllerOffset, Flash.SIZE, flash);
  
     /* Setup special function registers */
     sfr = new SFR(this, memory);
@@ -2249,4 +2249,13 @@ public class MSP430Core extends Chip implements MSP430Constants {
       }
       return buf.toString();
   }
+
+  public int getAclkFrq() {
+    return aclkFrq;
+  }
+
+  public int getSmclkFrq() {
+    return smclkFrq;
+  }
+
 }
