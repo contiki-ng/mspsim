@@ -54,6 +54,7 @@ import se.sics.mspsim.core.EventListener;
 import se.sics.mspsim.core.EventSource;
 import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.Profiler;
+import se.sics.mspsim.profiler.CallEntry;
 import se.sics.mspsim.profiler.CallEntry.CallCounter;
 import se.sics.mspsim.util.ArrayUtils;
 import se.sics.mspsim.util.MapEntry;
