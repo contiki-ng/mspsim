@@ -37,6 +37,8 @@ import java.nio.ByteBuffer;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+
 
 /**
  * AES128 msp430 peripheral emulation
