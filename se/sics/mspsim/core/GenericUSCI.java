@@ -1,7 +1,14 @@
 package se.sics.mspsim.core;
 
-/* 
+import se.sics.mspsim.chip.I2CUnit.I2CData;
+import se.sics.mspsim.util.RingBuffer;
+
+
+/** 
  * GenericUSCI - for newer MSP430's
+ * 
+ * @author Unknown
+ * @author Víctor Ariño <victor.arino@tado.com>
  */
 public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 
@@ -14,12 +21,15 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     public static final int STAT = 0x0a;
     public static final int RXBUF = 0x0c;
     public static final int TXBUF = 0x0e;
+    
+    // i2C Registers
+    public static final int I2COA = 0x10;
+    public static final int I2CSA = 0x12; 
 
     // Interrupt related
     public static final int IE = 0x1c;
     public static final int IFG = 0x1d;
     public static final int IV = 0x1e;
-
 
     // Misc flags
     public static final int RXIFG = 0x01;
@@ -43,8 +53,6 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 
     private int tickPerByte = 1000;
     private long nextTXReady = -1;
-    private int nextTXByte = -1;
-    private int txShiftReg = -1;
     private boolean transmitting = false;
 
     private int ctl0;
@@ -56,7 +64,7 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     private int txbuf;
     private int stat;
 
-    private boolean spiMode = false;
+    private boolean syncMode = false;
 
     /* always on for now - but SWRST controls it */
     private boolean moduleEnabled = true;
@@ -70,7 +78,14 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
             handleTransmit(t);
         }
     };
-
+	private boolean i2cEnabled;
+	private boolean i2cTransmitter;
+	private int i2cSlaveAddress;
+	private int i2cOwnAddress;
+	private boolean readyForNextTransmit;
+	private boolean stopConditionPending;
+	
+	private RingBuffer<Integer> txBuffer = new RingBuffer<>(100);
 
     public GenericUSCI(MSP430Core cpu, int uartIndex, int[] memory, MSP430Config config) {
         super(config.uartConfig[uartIndex].name, cpu, memory, config.uartConfig[uartIndex].offset);
@@ -85,14 +100,14 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     }
 
     public void reset(int type) {
-        nextTXReady = cpu.cycles + 100;
-        txShiftReg = nextTXByte = -1;
+        nextTXReady = cpu.cycles + tickPerByte + 100;
         transmitting = false;
         clrBitIFG(RXIFG);
         setBitIFG(TXIFG); /* empty at start! */
         stat &= ~USCI_BUSY;
         moduleEnabled = true; //false;
         updateIV();
+        txBuffer.clear();
       }
 
     void updateIV() {
@@ -140,30 +155,37 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     
     private void handleTransmit(long cycles) {
         if (cpu.getMode() >= MSP430Core.MODE_LPM3) {
-            System.out.println(getName() + " Warning: USART transmission during LPM!!! " + nextTXByte);
+            System.out.println(getName() + " Warning: USART transmission during LPM!!! ");
         }
-
+        
         if (transmitting) {
             /* in this case we have shifted out the last character */
             USARTListener listener = this.usartListener;
-            if (listener != null && txShiftReg != -1) {
-                listener.dataReceived(this, txShiftReg);
+            if (listener != null && !txBuffer.isEmpty()) {
+            	int t = txBuffer.remove();
+                listener.dataReceived(this, t);
+                
+                if (i2cEnabled) {  
+                	if ((t & I2CData.START) > 0) {
+                		ctl1 &= ~0x02;
+                	} else if ((t & I2CData.STOP) > 0) { 
+                		ctl1 &= ~0x04;
+                	}
+                }
             }
             /* nothing more to transmit after this - stop transmission */
-            if (nextTXByte == -1) {
-                /* ~BUSY - nothing more to send - and last data already in RX */
-                stat &= ~USCI_BUSY;
-                transmitting = false;
-                txShiftReg = -1;
+            if (txBuffer.isEmpty()) {
+        		/* ~BUSY - nothing more to send - and last data already in RX */
+            	stat &= ~USCI_BUSY;
+        		transmitting = false;
+        		setBitIFG(TXIFG);
             }
         }
 
         /* any more chars to transmit? */
-        if (nextTXByte != -1) {
-            txShiftReg = nextTXByte;
-            nextTXByte = -1;
+        if (!txBuffer.isEmpty()) {
             /* txbuf always empty after this */
-            setBitIFG(TXIFG);
+            clrBitIFG(TXIFG);
             transmitting = true;
             nextTXReady = cycles + tickPerByte + 1;
             cpu.scheduleCycleEvent(txTrigger, nextTXReady);
@@ -215,15 +237,14 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 //              address + " = " + data);
       switch (address) {
       case CTL0:
-        ctl0 = data;
-        spiMode = (data & 0x01) > 0;
+        syncMode = (data & 0x01) > 0;
+        i2cEnabled = (data & 0x06) == 0x06;
         if (DEBUG) log(" write to UxxCTL0 " + data);
         break;
       case CTL1:
           /* emulate the reset */
           if ((ctl1 & SWRST) == SWRST && (data & SWRST) == 0)
               reset(0);
-          ctl1 = data;
           moduleEnabled = (data & SWRST) == 0;
           if (DEBUG) log(" write to UxxCTL1 " + data + " => ModEn:" + moduleEnabled);
 
@@ -239,6 +260,34 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
               }
           }
           updateBaudRate();
+          
+          /*
+           * When in I2C mode and an start or stop condition is reached
+           * just transmit the corresponding signals.
+           */
+          if (i2cEnabled) {
+        	  if ((data & 0x04) > 0 && (ctl1 & 0x04) == 0) { // stop condition
+        		  txBuffer.add(I2CData.STOP);
+        	  } 
+        	  if ((data & 0x02) > 0 && (ctl1 & 0x02) == 0) {
+        		  i2cTransmitter = (data & 0x10) == 0x10;
+        		  /* Transmit a start condition START|ADDR|R/W */
+        		  int t = I2CData.START;
+        		  t |= i2cSlaveAddress << 1;
+        		  t |= i2cTransmitter ? 1 : 0;
+        		  txBuffer.add(t);
+        		  rxbuf = 0;
+        	  } 
+        	  clrBitIFG(TXIFG);
+        	  stat |= USCI_BUSY;
+              if (!transmitting) {
+                  nextTXReady = cycles + 1; //tickPerByte + 3;
+                  cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+              }
+          }
+          
+          ctl1 = data;
+          
           break;
       case MCTL:
         mctl = data;
@@ -272,12 +321,11 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
           // Schedule on cycles here
           // TODO: adding 3 extra cycles here seems to give
           // slightly better timing in some test...
-
-          nextTXByte = data;
+          txBuffer.add(data);
           if (!transmitting) {
               /* how long time will the copy from the TX_BUF to the shift reg take? */
               /* assume 3 cycles? */
-              nextTXReady = cycles + 1; //tickPerByte + 3;
+              nextTXReady = cycles + tickPerByte + 1; //tickPerByte + 3;
               cpu.scheduleCycleEvent(txTrigger, nextTXReady);
           }
         } else {
@@ -285,6 +333,14 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
         }
         txbuf = data;
         break;
+        
+      case I2CSA:
+    	i2cSlaveAddress = data & 0x3ff;
+    	break;
+    	
+      case I2COA:
+    	i2cOwnAddress = data & 0x3ff;
+    	break;
       }
     }
 
@@ -313,6 +369,20 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
             /* This should be changed to a state rather than an "event" */
             /* Force callback since this is not used as a state */
             stateChanged(USARTListener.RXFLAG_CLEARED, true);
+            
+            /* For timing issues we have to send the ACK after reading the
+             * register */
+            if (!i2cTransmitter) {
+        		txBuffer.add(I2CData.ACK);
+        		stat |= USCI_BUSY;
+                if (!transmitting) {
+                    /* how long time will the copy from the TX_BUF to the shift reg take? */
+                    /* assume 3 cycles? */
+                    nextTXReady = cpu.cpuCycles + tickPerByte + 1; //tickPerByte + 3;
+                    cpu.scheduleCycleEvent(txTrigger, nextTXReady);
+                }
+            }
+            
             return tmp;
         case MCTL:
             return mctl;
@@ -351,9 +421,16 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
         //System.out.println(getName() + " byte received: " + b);
 
         if (DEBUG) {
-            log(" byteReceived: " + b + " " + (char) b);
+            log("byteReceived: " + b + " " + (char) b);
         }
+        
+        /* Ignore i2c ACK messages */
+        if (i2cEnabled && b == I2CData.ACK) {
+			return;
+        }
+        
         rxbuf = b & 0xff;
+        
         // Indicate interrupt also!
         setBitIFG(RXIFG);
 
@@ -379,6 +456,16 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     public String info() {
         return "UTXIE: " + isIEBitsSet(TXIFG) + "  URXIE:" + isIEBitsSet(RXIFG) + "\n" +
         "UTXIFG: " + ((getIFG() & TXIFG) > 0) + "  URXIFG:" + ((getIFG() & RXIFG) > 0);
+    }
+        
+    public int getBaudRate() {
+    	return tickPerByte;
+    }
+    
+    protected void vlog(String msg) {
+    	if (i2cEnabled) {
+    		System.out.println("USCI "+msg);
+    	}
     }
 
 }
