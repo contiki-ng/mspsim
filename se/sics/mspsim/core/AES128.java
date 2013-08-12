@@ -151,10 +151,9 @@ public class AES128 extends IOUnit {
 	 */
 
 	/* avoid using NIO resources */
-	private class ByteBuffer {
+	private static class ByteBuffer {
 	    byte[] buffer;
 	    int pos;
-	    int limit; /* max data put in */
 
 	    ByteBuffer(int size) {
 	        buffer = new byte[size]; 
@@ -170,11 +169,11 @@ public class AES128 extends IOUnit {
 	    }
 
 	    public boolean hasRemaining() {
-	        return pos < limit;
+	        return pos < buffer.length;
 	    }
 
 	    public void clear() {
-	        limit = 0;
+	        pos = 0;
 	    }
 
 	    public void resetPos() {
@@ -193,7 +192,6 @@ public class AES128 extends IOUnit {
 
 	    public void put(byte data) {
 	        buffer[pos++] = data;
-	        limit++;
 	    }
 
 	    /* assume that calling code is ok... */
