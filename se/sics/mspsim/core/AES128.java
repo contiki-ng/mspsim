@@ -32,10 +32,10 @@
  */
 package se.sics.mspsim.core;
 
-import java.nio.ByteBuffer;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 
 
 /**
@@ -149,9 +149,64 @@ public class AES128 extends IOUnit {
 	/**
 	 * Variable holders for the different registers needed by this peripheral
 	 */
-	private ByteBuffer key = ByteBuffer.allocate(16);
-	private ByteBuffer inData = ByteBuffer.allocate(16);
-	private ByteBuffer outData = ByteBuffer.allocate(16);
+
+	/* avoid using NIO resources */
+	private static class ByteBuffer {
+	    byte[] buffer;
+	    int pos;
+
+	    ByteBuffer(int size) {
+	        buffer = new byte[size]; 
+	        pos = 0;
+	    }
+
+	    public int position() {
+	        return pos;
+	    }
+
+	    public void position(int p) {
+	        pos = p;
+	    }
+
+	    public boolean hasRemaining() {
+	        return pos < buffer.length;
+	    }
+
+	    public void clear() {
+	        pos = 0;
+	    }
+
+	    public void resetPos() {
+	        pos = 0;
+	    }
+
+	    public byte[] array() {
+	        return buffer;
+	    }
+
+	    public void put(byte[] bytes) {
+	        for (int i = 0; i < bytes.length; i++) {
+                    put(bytes[i]);
+                }
+	    }
+
+	    public void put(byte data) {
+	        buffer[pos++] = data;
+	    }
+
+	    /* assume that calling code is ok... */
+	    public byte get() {
+	        return buffer[pos++];
+	    }
+	    
+	    public int limit() {
+	        return buffer.length;
+	    }
+	}
+
+	private ByteBuffer key = new ByteBuffer(16);
+	private ByteBuffer inData = new ByteBuffer(16);
+	private ByteBuffer outData = new ByteBuffer(16);
 
 	/**
 	 * Syntax sugar
@@ -247,7 +302,7 @@ public class AES128 extends IOUnit {
 			byte[] bytes = cipher.doFinal(inData.array());
 			outData.clear();
 			outData.put(bytes);
-			outData.rewind();
+			outData.resetPos();
 		} catch (Exception e) {
 			log(e.getStackTrace().toString());
 		}
@@ -269,7 +324,7 @@ public class AES128 extends IOUnit {
 			byte[] bytes = cipher.doFinal(inData.array());
 			outData.clear();
 			outData.put(bytes);
-			outData.rewind();
+			outData.resetPos();
 		} catch (Exception e) {
 			log(e.getStackTrace().toString());
 		}
@@ -353,7 +408,7 @@ public class AES128 extends IOUnit {
 				if (!advancedCipherMode) {
 					value |= AESKEYWR;
 				} else {
-					key.rewind();
+					key.resetPos();
 				}
 			} else {
 				isBusy = true;
@@ -380,7 +435,7 @@ public class AES128 extends IOUnit {
 				if (!advancedCipherMode) {
 					value |= AESKEYWR;
 				} else {
-					inData.rewind();
+					inData.resetPos();
 				}
 			} else {
 				inData.position(inData.limit());

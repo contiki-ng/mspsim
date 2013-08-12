@@ -222,6 +222,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
   public static final int TYPE_BEACON_FRAME = 0x00;
   public static final int TYPE_DATA_FRAME = 0x01;
   public static final int TYPE_ACK_FRAME = 0x02;
+  public static final int TYPE_CMD_FRAME = 0x03;
   
   // FCF Low
   public static final int DESTINATION_ADDRESS_MODE = 0x30;
@@ -614,7 +615,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
                           frameType = fcf0 & FRAME_TYPE;
                       } else if (rxread == 2) {
                           fcf1 = data & 0xff;
-                          if (frameType == TYPE_DATA_FRAME) {
+                          if (frameType == TYPE_DATA_FRAME || frameType == TYPE_CMD_FRAME) {
                               ackRequest = (fcf0 & ACK_REQUEST) > 0;
                               destinationAddressMode = (fcf1 >> 2) & 3;
                               /* check this !!! */
