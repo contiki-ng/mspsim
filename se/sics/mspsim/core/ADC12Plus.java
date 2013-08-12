@@ -78,6 +78,8 @@ package se.sics.mspsim.core;
 
 import java.util.Arrays;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
+
 
 /**
  * ADC12 Plus IO peripheral

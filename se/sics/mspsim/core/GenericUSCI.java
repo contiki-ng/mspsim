@@ -1,7 +1,8 @@
 package se.sics.mspsim.core;
 
+import java.util.ArrayDeque;
+
 import se.sics.mspsim.chip.I2CUnit.I2CData;
-import se.sics.mspsim.util.RingBuffer;
 
 
 /** 
@@ -85,7 +86,7 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
 	private boolean readyForNextTransmit;
 	private boolean stopConditionPending;
 	
-	private RingBuffer<Integer> txBuffer = new RingBuffer<>(100);
+	private ArrayDeque<Integer> txBuffer = new ArrayDeque<Integer>(100);
 
     public GenericUSCI(MSP430Core cpu, int uartIndex, int[] memory, MSP430Config config) {
         super(config.uartConfig[uartIndex].name, cpu, memory, config.uartConfig[uartIndex].offset);
