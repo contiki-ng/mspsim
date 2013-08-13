@@ -2,7 +2,7 @@
 # Makefile for mspsim
 #
 # Needed stuff in the PATH:
-#  java, javac (JDK 1.6 or newer)
+#  java, javac (JDK 1.7 or newer)
 #
 # Under MS-DOS/Windows
 #  A GNU compatible Make (for example Cygwin's)
@@ -46,7 +46,7 @@ SPACE := ${EMPTY} ${EMPTY}
 LIBS := ${wildcard lib/*.jar}
 BUILD := build
 CLASSPATH=${subst ${SPACE},${SEPARATOR},$(BUILD)/ ${LIBS}}
-CCARGS=-deprecation -classpath ".${SEPARATOR}${CLASSPATH}" -d $(BUILD)
+CCARGS=-deprecation -Xlint:unchecked -source 1.7 -target 1.7 -classpath ".${SEPARATOR}${CLASSPATH}" -d $(BUILD)
 
 JAVAARGS=-classpath "${CLASSPATH}"
 
@@ -196,3 +196,6 @@ $(BUILD)/%.class : %.java $(BUILD)
 
 clean:
 	-$(RM) -r $(BUILD)
+
+distclean: clean
+	-$(RM) -f $(JARFILE)
