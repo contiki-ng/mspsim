@@ -7,9 +7,8 @@ some tools for monitoring stack, setting breakpoints, and profiling.
 
 * System requirements
 
-You need a recent Java to run MSPSim. Java SE 1.5 or newer is
-recommended. The current version of MSPSim also requires make for
-compiling.
+You need a recent Java to run MSPSim. Java SE 1.7 or newer is recommended.
+The current version of MSPSim also requires make or ant for compiling.
 
 * Building MSPSim
 
