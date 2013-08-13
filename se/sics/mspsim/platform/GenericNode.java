@@ -41,9 +41,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.net.URL;
-
 import javax.swing.JFrame;
-
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.cli.FileCommands;
@@ -54,7 +52,6 @@ import se.sics.mspsim.cli.StreamCommandHandler;
 import se.sics.mspsim.cli.WindowCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.EmulationException;
-import se.sics.mspsim.core.EmulationLogger;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Constants;
@@ -67,7 +64,6 @@ import se.sics.mspsim.ui.WindowUtils;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
-import se.sics.mspsim.util.DefaultEmulationLogger;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
@@ -276,11 +272,9 @@ public abstract class GenericNode extends Chip implements Runnable {
   public void stop() {
     cpu.stop();
   }
-  
+
   public void step() throws EmulationException {
-    if (!cpu.isRunning()) {
-      cpu.step();
-    }
+    step(1);
   }
 
   // A step that will break out of breakpoints!
