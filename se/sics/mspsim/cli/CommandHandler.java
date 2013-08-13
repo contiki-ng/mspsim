@@ -4,7 +4,6 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-
 import se.sics.mspsim.core.EmulationException;
 import se.sics.mspsim.util.ActiveComponent;
 import se.sics.mspsim.util.ComponentRegistry;
@@ -32,7 +31,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
 
   private MapTable getMapTable() {
     if (mapTable == null && registry != null) {
-      mapTable = (MapTable) registry.getComponent(MapTable.class);
+      mapTable = registry.getComponent(MapTable.class);
     }
     return mapTable;
   }
@@ -42,6 +41,7 @@ public class CommandHandler implements ActiveComponent, LineListener {
     commands.put(cmd, command);
   }
 
+  @SuppressWarnings("resource")
   public int executeCommand(String commandLine, CommandContext context) {
     String[][] parts;
     final PrintStream cOut = context == null ? this.out : context.out;
