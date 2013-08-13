@@ -91,7 +91,7 @@
   <target name="run" depends="runsky"/>
 
   <target name="cputest" depends="jar" description="run MSPSim CPU test">
-    <property name="FIRMWAREFILE" value="tests/cputest.firmware"/>
+    <property name="FIRMWAREFILE" value="tests/cputest.sky"/>
 
     <available file="${FIRMWAREFILE}" type="file" property="cputest.firmware"/>
     <fail message="Please compile the cputest firmware first." unless="cputest.firmware"/>
@@ -101,7 +101,7 @@
     </java>
   </target>
 
-  <target name="test" depends="cputest"/>
+  <target name="test" depends="jar"/>
 
   <target name="clean" description="clean up" >
     <delete dir="${build}"/>
