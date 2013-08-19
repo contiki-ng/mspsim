@@ -73,6 +73,10 @@ EXP5438FIRMWARE = ${FIRMWAREFILE}
 MSPEXP430f5438FIRMWARE = ${FIRMWAREFILE}
 endif
 
+ifdef MAPFILE
+MAPARGS := -map=$(MAPFILE)
+endif
+
 CPUTEST := tests/cputest.firmware
 TIMERTEST := tests/timertest.firmware
 
@@ -109,52 +113,52 @@ $(JARFILE):	$(OBJECTS)
 	-@$(RM) JarManifest.txt
 
 %.esb:	jar
-	java -jar $(JARFILE) -platform=esb $(ARGS) $@
+	java -jar $(JARFILE) -platform=esb $@ $(ARGS)
 
 %.sky:	jar
-	java -jar $(JARFILE) -platform=sky $(ARGS) $@
+	java -jar $(JARFILE) -platform=sky $@ $(ARGS)
 
 %.z1:	jar
-	java -jar $(JARFILE) -platform=z1 $(ARGS) $@
+	java -jar $(JARFILE) -platform=z1 $@ $(ARGS)
 
 %.exp5438:	jar
-	java -jar $(JARFILE) -platform=exp5438 $(ARGS) $@
+	java -jar $(JARFILE) -platform=exp5438 $@ $(ARGS)
 
 %.mspexp430f5438:	jar
 	java -jar $(JARFILE) -platform=mspexp430f5438 $(ARGS) $@
 
 %.tyndall:	jar
-	java -jar $(JARFILE) -platform=tyndall $(ARGS) $@
+	java -jar $(JARFILE) -platform=tyndall $@ $(ARGS)
 
 %.wismote:	jar
-	java -jar $(JARFILE) -platform=wismote $(ARGS) $@
+	java -jar $(JARFILE) -platform=wismote $@ $(ARGS)
 
 help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
 
 run:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.Main $(ARGS) $(FIRMWAREFILE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.Main $(FIRMWAREFILE) $(MAPARGS) $(ARGS)
 
 runesb:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ARGS) $(ESBFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ESBFIRMWARE) $(MAPARGS) $(ARGS)
 
 runsky:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPARGS) $(ARGS)
 
 runskyprof:	compile
-	$(JAVA) -agentlib:yjpagent $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) -agentlib:yjpagent $(JAVAARGS) se.sics.mspsim.platform.sky.SkyNode $(SKYFIRMWARE) $(MAPARGS) $(ARGS)
 
 runtelos:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.TelosNode $(ARGS) $(SKYFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.TelosNode $(SKYFIRMWARE) $(MAPARGS) $(ARGS)
 runz1:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.z1.Z1Node $(ARGS) $(Z1FIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.z1.Z1Node $(Z1FIRMWARE) $(MAPARGS) $(ARGS)
 runtyndall:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.tyndall.TyndallNode $(ARGS) $(TYNDALLFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.tyndall.TyndallNode $(TYNDALLFIRMWARE) $(MAPARGS) $(ARGS)
 runwismote:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.wismote.WismoteNode $(ARGS) $(WISMOTEFIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.wismote.WismoteNode $(WISMOTEFIRMWARE) $(MAPARGS) $(ARGS)
 
 runexp5438:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.ti.Exp5438Node $(ARGS) $(EXP5438FIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.ti.Exp5438Node $(EXP5438FIRMWARE) $(MAPARGS) $(ARGS)
 
 runmspexp430f5438:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.MSPEXP430F5438.Exp5438Node $(ARGS) $(MSPEXP430f5438FIRMWARE) $(MAPFILE)
