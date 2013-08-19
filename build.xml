@@ -29,6 +29,7 @@
            debug="${javac.debug}" includeantruntime="false">
       <compilerarg value="-Xlint:unchecked"/>
       <compilerarg value="-deprecation"/>
+      <exclude name="tests/**" />
     </javac>
   </target>
 
