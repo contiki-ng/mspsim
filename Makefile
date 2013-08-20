@@ -128,7 +128,7 @@ help:
 	@echo "Usage: make [all,compile,clean,run,runsky,runesb]"
 
 run:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.util.IHexReader $(ARGS) $(FIRMWAREFILE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.Main $(ARGS) $(FIRMWAREFILE) $(MAPFILE)
 
 runesb:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.esb.ESBNode $(ARGS) $(ESBFIRMWARE) $(MAPFILE)
