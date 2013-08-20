@@ -94,7 +94,12 @@
     </java>
   </target>
 
-  <target name="run" depends="runsky"/>
+  <target name="run" depends="jar" description="run MSPSim">
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
+    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.Main">
+      <arg value="${FIRMWAREFILE}"/>
+    </java>
+  </target>
 
   <target name="cputest" depends="jar" description="run MSPSim CPU test">
     <property name="FIRMWAREFILE" value="tests/cputest.sky"/>
