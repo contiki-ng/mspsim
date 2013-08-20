@@ -1306,7 +1306,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
   public void setRSSI(int power) {
     final int minp = -128 + RSSI_OFFSET;
-    final int maxp = 128 + RSSI_OFFSET;
+    final int maxp = 127 + RSSI_OFFSET;
     if (power < minp) {
         power = -minp;
     }
