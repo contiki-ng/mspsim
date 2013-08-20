@@ -427,6 +427,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
   
   private void reset() {
       setReg(REG_MDMCTRL0, 0x0ae2);
+      registers[REG_RSSI] =  0xE000 | (registers[REG_RSSI]  & 0xFF);
   }
   
   private boolean setState(RadioState state) {
@@ -717,7 +718,13 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
   private void setReg(int address, int data) {
       int oldValue = registers[address];
-      registers[address] = data;
+      switch(address){
+        case REG_RSSI:
+          registers[address] = (registers[address] & 0xFF) | (data & 0xFF00);
+          break;
+        default:
+          registers[address] = data;
+      }
       switch(address) {
       case REG_IOCFG0:
           fifopThr = data & FIFOP_THR;
@@ -1192,7 +1199,8 @@ public class CC2420 extends Radio802154 implements USARTListener {
 
     if (ccaMux == CCAMUX_CCA) {
       /* If RSSI is less than -95 then we have CCA / clear channel! */
-      cca = (status & STATUS_RSSI_VALID) > 0 && rssi < -95;
+      cca = (status & STATUS_RSSI_VALID) > 0 && (byte)(registers[REG_RSSI] & 0xFF) < (byte)(registers[REG_RSSI] >> 8);
+      //log("CCA: " + cca  + " - " +  (byte)(registers[REG_RSSI] & 0xFF) + " "  + (byte)(registers[REG_RSSI] >> 8));
     } else if (ccaMux == CCAMUX_XOSC16M_STABLE) {
       cca = (status & STATUS_XOSC16M_STABLE) > 0;
     }
@@ -1317,7 +1325,7 @@ public class CC2420 extends Radio802154 implements USARTListener {
     if (logLevel > INFO) log("external setRSSI to: " + power);
 
     rssi = power;
-    registers[REG_RSSI] = power - RSSI_OFFSET;
+    registers[REG_RSSI] = (registers[REG_RSSI] & 0xFF00) | ((power - RSSI_OFFSET) & 0xFF);
     updateCCA();
   }
 
