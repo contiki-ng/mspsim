@@ -46,6 +46,7 @@ import se.sics.mspsim.core.Memory.AccessMode;
 import se.sics.mspsim.core.Memory.AccessType;
 import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.RegisterMonitor;
+import se.sics.mspsim.core.TimeEvent;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
@@ -293,6 +294,10 @@ public class DebugCommands implements CommandBundle {
       if (node != null) {
         ch.registerCommand("stop", new BasicCommand("stop the CPU", "") {
           public int executeCommand(CommandContext context) {
+            if (!cpu.isRunning()) {
+                context.err.println("CPU is not running");
+                return 1;
+            }
             node.stop();
             context.out.println("CPU stopped at: $" + cpu.getAddressAsString(cpu.getPC()));
             return 0;
@@ -308,11 +313,16 @@ public class DebugCommands implements CommandBundle {
             return 0;
           }
         });
-        ch.registerCommand("throw", new BasicCommand("throw an Emulation Exception", "") {
+        ch.registerCommand("throw", new BasicCommand("throw an Emulation Exception", "[message]") {
             public int executeCommand(CommandContext context) {
-                throw new EmulationException(context.getArgument(0));
+                final String msg = context.getArgumentCount() > 0 ? context.getArgument(0) : "by request";
+                cpu.scheduleCycleEvent(new TimeEvent(0, "EmulationException") {
+                    @Override public void execute(long t) {
+                        throw new EmulationException(msg);
+                    }}, cpu.cycles);
+                return 0;
             }
-          });
+        });
 
         ch.registerCommand("step", new BasicCommand("single step the CPU", "[number of instructions]") {
           public int executeCommand(CommandContext context) {
