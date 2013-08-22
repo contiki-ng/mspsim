@@ -285,11 +285,11 @@ public class Timer extends IOUnit {
           /* trigger if trigger should be... */
           if ((tcctl & CC_TRIGGER_INT) == CC_TRIGGER_INT) {
               if (index == 0) {
-                  log("triggering interrupt");
+                  if (DEBUG) log("triggering interrupt");
                   cpu.flagInterrupt(interruptVector, Timer.this, true);
               } else if (lastTIV == 0) {
                   lastTIV = index * 2;
-                  log("triggering interrupt TIV: " + lastTIV);
+                  if (DEBUG) log("triggering interrupt TIV: " + lastTIV);
                   cpu.flagInterrupt(interruptVector, Timer.this, true);
               } else if (lastTIV > index * 2) {
                   /* interrupt already triggered, but set to this lower IRQ */
