@@ -373,7 +373,7 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
             
             /* For timing issues we have to send the ACK after reading the
              * register */
-            if (!i2cTransmitter) {
+            if (i2cEnabled && !i2cTransmitter) {
         		txBuffer.add(I2CData.ACK);
         		stat |= USCI_BUSY;
                 if (!transmitting) {
