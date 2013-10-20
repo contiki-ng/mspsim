@@ -79,6 +79,9 @@ public class Main {
       if ("exp5438".equals(platform)) {
           return "se.sics.mspsim.platform.ti.Exp5438Node";
       }
+      if ("mspexp430f5438".equals(platform)) {
+          return "se.sics.mspsim.platform.MSPEXP430F5438.Exp5438Node";
+      }
       // Try to guess the node type.
       return "se.sics.mspsim.platform." + platform + '.'
           + Character.toUpperCase(platform.charAt(0))
