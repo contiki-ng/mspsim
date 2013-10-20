@@ -277,7 +277,7 @@ public class Timer extends IOUnit {
 					}
 				} 
 				
-				System.out.println("Index:"+index+" Diff:"+diff+" tccr:"+tccr);
+				//System.out.println("Index:"+index+" Diff:"+diff+" tccr:"+tccr);
 				
 				/* sometimes the event seems to be triggered too early... */
 				if (diff>0) {

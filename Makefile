@@ -62,6 +62,7 @@ Z1FIRMWARE = firmware/z1/blink.z1
 WISMOTEFIRMWARE = firmware/wismote/blink.wismote
 TYNDALLFIRMWARE = firmware/tyndall/blink.tyndall
 EXP5438FIRMWARE = firmware/exp5438/testcase-bits.exp5438
+MSPEXP430f5438FIRMWARE = firmware/mspexp5438/LCDflat.out
 else
 ESBFIRMWARE = ${FIRMWAREFILE}
 SKYFIRMWARE = ${FIRMWAREFILE}
@@ -69,6 +70,7 @@ Z1FIRMWARE = ${FIRMWAREFILE}
 WISMOTEFIRMWARE = ${FIRMWAREFILE}
 TYNDALLFIRMWARE = ${FIRMWAREFILE}
 EXP5438FIRMWARE = ${FIRMWAREFILE}
+MSPEXP430f5438FIRMWARE = ${FIRMWAREFILE}
 endif
 
 CPUTEST := tests/cputest.firmware
@@ -77,7 +79,7 @@ TIMERTEST := tests/timertest.firmware
 SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg images/*.png firmware/*/*.firmware ${SCRIPTS}
 
-PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli config debug platform ${addprefix platform/,esb sky jcreate sentillausb z1 tyndall ti wismote} plugin profiler emulink net ui util extutil/highlight extutil/jfreechart}
+PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli config debug platform ${addprefix platform/,esb sky jcreate sentillausb z1 tyndall ti MSPEXP430F5438 wismote} plugin profiler emulink net ui util extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -118,6 +120,9 @@ $(JARFILE):	$(OBJECTS)
 %.exp5438:	jar
 	java -jar $(JARFILE) -platform=exp5438 $(ARGS) $@
 
+%.mspexp430f5438:	jar
+	java -jar $(JARFILE) -platform=mspexp430f5438 $(ARGS) $@
+
 %.tyndall:	jar
 	java -jar $(JARFILE) -platform=tyndall $(ARGS) $@
 
@@ -150,6 +155,10 @@ runwismote:	compile
 
 runexp5438:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.ti.Exp5438Node $(ARGS) $(EXP5438FIRMWARE) $(MAPFILE)
+
+runmspexp430f5438:	compile
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.MSPEXP430F5438.Exp5438Node $(ARGS) $(MSPEXP430f5438FIRMWARE) $(MAPFILE)
+
 
 test:	cputest
 
