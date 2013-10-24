@@ -82,7 +82,7 @@ public class IOPort extends IOUnit {
 	private int ren;
 	private int ds;
 
-	private int selValue; /* internal Multiplex Vale from Timer */
+	private int selValue; /* internal Multiplex Value from other components like timer */
 
 	private int iv; /* low / high */
 
@@ -286,21 +286,22 @@ public class IOPort extends IOUnit {
 	}
 
 	public boolean readPortSel(int Pin) {
-		return ((selValue | (1 << Pin)) != 0);
+		return ((selValue & (1 << Pin)) != 0);
 	}
 
+	//Write if not OUT aktiv
 	public void writePortSel(int Pin, boolean Value) {
 		PortListener listener = portListener;
 		int tmpselValue;
-		if (!Value)
+		if (!Value)	//set or clear bit
 			tmpselValue = selValue & ~(1 << Pin);
 		else
 			tmpselValue = selValue | (1 << Pin);
+		
 		if (tmpselValue != selValue) {
 			selValue = tmpselValue;
 			if (listener != null) {
-				listener.portWrite(this, (~sel & out) | (~dir)
-						| (sel & selValue));
+				listener.portWrite(this, ((~sel & out) | (sel & selValue)) & dir);
 			}
 		}
 	}
@@ -365,10 +366,6 @@ public class IOPort extends IOUnit {
 				listener.portWrite(this, (~sel & out) | (~dir)
 						| (sel & selValue)); // ROY
 			}
-			// ROY
-			Timer Timer2Port = cpu.getIOUnit(Timer.class, "TimerA0");
-			//if (Timer2Port != null)
-				//Timer2Port.setPortOut(this, 3, 3);
 			break;
 		case SEL2:
 			sel2 = data;

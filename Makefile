@@ -125,7 +125,7 @@ $(JARFILE):	$(OBJECTS)
 	java -jar $(JARFILE) -platform=exp5438 $@ $(ARGS)
 
 %.mspexp430f5438:	jar
-	java -jar $(JARFILE) -platform=mspexp430f5438 $(ARGS) $@
+	java -jar $(JARFILE) -platform=mspexp430f5438 $@ $(ARGS)
 
 %.tyndall:	jar
 	java -jar $(JARFILE) -platform=tyndall $@ $(ARGS)
@@ -161,7 +161,7 @@ runexp5438:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.ti.Exp5438Node $(EXP5438FIRMWARE) $(MAPARGS) $(ARGS)
 
 runmspexp430f5438:	compile
-	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.MSPEXP430F5438.Exp5438Node $(ARGS) $(MSPEXP430f5438FIRMWARE) $(MAPFILE)
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.MSPEXP430F5438.Exp5438Node $(MSPEXP430f5438FIRMWARE) $(MAPFILE) $(ARGS) 
 
 
 test:	cputest

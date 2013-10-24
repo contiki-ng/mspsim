@@ -45,19 +45,19 @@ public class Exp5438Gui extends AbstractNodeGUI {
 
 	private static final long serialVersionUID = 7753659717805292786L;
 
-	public static final Point Button1_Pos = new Point(398, 456);
-	public static final Point Button2_Pos = new Point(502, 456);
-	public static final Point ButtonR_Pos = new Point(320, 76);
-	public static final Point JoyL_Pos = new Point(106, 423);
-	public static final Point JoyM_Pos = new Point(126, 423);
-	public static final Point JoyR_Pos = new Point(146, 423);
-	public static final Point JoyT_Pos = new Point(126, 401);
-	public static final Point JoyB_Pos = new Point(126, 441);
+	public static final Point Button1_Pos = new Point(400, 463);
+	public static final Point Button2_Pos = new Point(500, 463);
+	public static final Point ButtonR_Pos = new Point(325, 84);
+	public static final Point JoyL_Pos = new Point(103, 437);
+	public static final Point JoyM_Pos = new Point(123, 437);
+	public static final Point JoyR_Pos = new Point(143, 437);
+	public static final Point JoyT_Pos = new Point(123, 421);
+	public static final Point JoyB_Pos = new Point(123, 461);
 
-	public static final int LEDR_X = 241;
-	public static final int LEDR_Y = 456;
-	public static final int LEDO_X = 297;
-	public static final int LEDO_Y = 456;
+	public static final int LEDR_X = 238;
+	public static final int LEDR_Y = 462;
+	public static final int LEDO_X = 294;
+	public static final int LEDO_Y = 462;
 
 	public static final Color LEDR_TRANS = new Color(0x80, 0x80, 0xff, 0xff);
 	public static final Color LEDO_TRANS = new Color(0x80, 0x80, 0xff, 0xff);

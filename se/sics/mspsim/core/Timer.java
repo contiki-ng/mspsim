@@ -246,6 +246,7 @@ public class Timer extends IOUnit {
 		}
 
 		public void execute(long t) {
+			
 			// System.out.println(info());
 			if (mode == STOP) {
 				// System.out.println("**** IGNORING EXECUTION OF CCR - timer stopped!!!");
@@ -255,6 +256,7 @@ public class Timer extends IOUnit {
 			updateCounter(cycles);
 
 			if (expCaptureTime != -1 && cycles >= expCaptureTime) {
+
 				long timerend=0xFFFF;
 				long diff;
 				if (mode == UP) timerend=ccr[0].tccr;
@@ -277,7 +279,7 @@ public class Timer extends IOUnit {
 					}
 				} 
 				
-				//System.out.println("Index:"+index+" Diff:"+diff+" tccr:"+tccr);
+				System.out.println("Index:"+index+" Diff:"+diff+" tccr:"+tccr);
 				
 				/* sometimes the event seems to be triggered too early... */
 				if (diff>0) {
@@ -325,7 +327,7 @@ public class Timer extends IOUnit {
 						if(DIR_UP){
 							steps=2*(ccr[0].tccr-tccr+diff);
 						}else{
-							steps=2*(tccr-diff);
+							steps=2*(tccr+diff);
 						}							
 					}
 					expCaptureTime = cycles + (long)(steps * cyclesMultiplicator);
@@ -817,8 +819,9 @@ public class Timer extends IOUnit {
 			reg.capMode = (data >> 14) & 3;
 
 			if (reg.outMode == 0) {
-				ccr[index].writePortSel((data & 4) != 0);
+				reg.writePortSel((data & 4) != 0);
 			}
+			
 
 			/* capture a port state? */
 			if (!oldCapture && reg.captureOn && (src & SRC_PORT) != 0) {
@@ -842,6 +845,8 @@ public class Timer extends IOUnit {
 			}
 
 			reg.updateCaptures(cycles);
+			startIt(index,cycles);
+
 			// updateCaptures(index, cycles);
 			break;
 		// Write to compare register!
@@ -867,38 +872,46 @@ public class Timer extends IOUnit {
 						"Timer write to " + Utils.hex16(address));
 			ccr[index].tccr = data;
 
-			int diff = data - counter;
-			if (diff <= 0) {
-				// Ok we need to wrap!
-				diff += 0x10000;
-			}
-			if (DEBUG) {
-				log("Write: Setting compare " + index + " to "
-						+ Utils.hex16(data) + " TR: " + Utils.hex16(counter)
-						+ " diff: " + Utils.hex16(diff));
-			}
-			// Use the counterPassed information to compensate the expected
-			// capture/compare time!!!
-			ccr[index].expCaptureTime = cycles
-					+ (long) (cyclesMultiplicator * diff + 1) - counterPassed;
-			if (DEBUG && counterPassed > 0) {
-				log("Comp: " + counterPassed + " cycl: " + cycles + " TR: "
-						+ counter + " CCR" + index + " = " + data + " diff = "
-						+ diff + " cycMul: " + cyclesMultiplicator
-						+ " expCyc: " + ccr[index].expCaptureTime);
-			}
-			counterPassed = 0;
-			if (DEBUG) {
-				log("Cycles: " + cycles + " expCap[" + index + "]: "
-						+ ccr[index].expCaptureTime + " ctr:" + counter
-						+ " data: " + data + " ~"
-						+ (100 * (cyclesMultiplicator * diff * 1L) / 2500000)
-						/ 100.0 + " sec" + "at cycles: "
-						+ ccr[index].expCaptureTime);
-			}
-			ccr[index].update();
+			startIt(index,cycles);
+			
 			// calculateNextEventTime(cycles);
 		}
+	}
+	
+	void startIt(int index,long cycles){
+		System.out.println("---------------------------------");
+		int tccr=ccr[index].tccr;
+		int diff = tccr - counter;
+		if (diff <= 0) {
+			//Calculation is complex because of modes with different wrap value
+			//Set it to result in an CCR execute(). In that function the calculation is included
+			diff = 0;
+		}
+		if (DEBUG) {
+			log("Write: Setting compare " + index + " to "
+					+ Utils.hex16(tccr) + " TR: " + Utils.hex16(counter)
+					+ " diff: " + Utils.hex16(diff));
+		}
+		// Use the counterPassed information to compensate the expected
+		// capture/compare time!!!
+		ccr[index].expCaptureTime = cycles
+				+ (long) (cyclesMultiplicator * diff + 1) - counterPassed;
+		if (DEBUG && counterPassed > 0) {
+			log("Comp: " + counterPassed + " cycl: " + cycles + " TR: "
+					+ counter + " CCR" + index + " = " + tccr + " diff = "
+					+ diff + " cycMul: " + cyclesMultiplicator
+					+ " expCyc: " + ccr[index].expCaptureTime);
+		}
+		counterPassed = 0;
+		if (DEBUG) {
+			log("Cycles: " + cycles + " expCap[" + index + "]: "
+					+ ccr[index].expCaptureTime + " ctr:" + counter
+					+ " data: " + tccr + " ~"
+					+ (100 * (cyclesMultiplicator * diff * 1L) / 2500000)
+					/ 100.0 + " sec" + "at cycles: "
+					+ ccr[index].expCaptureTime);
+		}
+		ccr[index].update();
 	}
 
 	void updateCyclesMultiplicator() {
@@ -1127,6 +1140,8 @@ public class Timer extends IOUnit {
 						case 7:
 							ccr[i].writePortSel(true);
 							break;
+						case 4:
+							if(i==0) ccr[i].togglePortSel();
 						}
 					} else if (mode == UPDWN) {
 						switch (ccr[i].outMode) {

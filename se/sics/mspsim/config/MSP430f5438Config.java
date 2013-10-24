@@ -34,7 +34,6 @@ package se.sics.mspsim.config;
 
 import java.util.ArrayList;
 
-import se.sics.mspsim.core.ADC12;
 import se.sics.mspsim.core.ADC12Plus;
 import se.sics.mspsim.core.ClockSystem;
 import se.sics.mspsim.core.GenericUSCI;
@@ -47,7 +46,6 @@ import se.sics.mspsim.core.PMM;
 import se.sics.mspsim.core.SysReg;
 import se.sics.mspsim.core.Timer;
 import se.sics.mspsim.core.UnifiedClockSystem;
-import se.sics.mspsim.core.MSP430Config.MUXConfig;
 import se.sics.mspsim.util.Utils;
 
 public class MSP430f5438Config extends MSP430Config {
