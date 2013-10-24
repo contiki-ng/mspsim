@@ -76,6 +76,13 @@ public class ArgumentManager extends ConfigManager {
     ArrayList<String> list = new ArrayList<String>();
     ArrayList<String> config = new ArrayList<String>();
     for (int i = 0, n = args.length; i < n; i++) {
+      if ("-".equals(args[i])) {
+          // The rest should be considered arguments
+          for(++i; i < args.length; i++) {
+              list.add(args[i]);
+          }
+          break;
+      }
       if (args[i].startsWith("-")) {
         String param = args[i].substring(1);
         String value = "";
