@@ -14,7 +14,8 @@ public abstract class MSP430Config {
         public final String name;
         public final int[] srcMap;
         public final int timerIVAddr;
-        
+        public MUXConfig[] muxConfig;
+
         public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
                 int[] srcMap, String name, int tiv) {
             ccr0Vector = ccr0Vec;
@@ -24,8 +25,32 @@ public abstract class MSP430Config {
             this.offset = offset;
             this.srcMap = srcMap;
             this.timerIVAddr = tiv;
+            this.muxConfig=null;
+        }        
+        
+        public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
+                int[] srcMap, String name, int tiv, MUXConfig[] muxConfig) {
+            ccr0Vector = ccr0Vec;
+            ccrXVector = ccrXVec;
+            this.ccrCount = ccrCount;
+            this.name = name;
+            this.offset = offset;
+            this.srcMap = srcMap;
+            this.timerIVAddr = tiv;
+            this.muxConfig=muxConfig;
         }
     }
+    
+    public static class MUXConfig {
+    	public final int Port;
+    	public final int Pin;
+    	public final int CCUnitIndex;       
+        public MUXConfig(int port, int pin, int cCUnitIndex) {
+            this.Port = port;
+            this.Pin = pin;
+            this.CCUnitIndex = cCUnitIndex;
+        }
+    }     
 
     public static class UARTConfig {
         private static final int USCI_2 = 1;
@@ -65,8 +90,9 @@ public abstract class MSP430Config {
         }
     }
 
-    public UARTConfig[] uartConfig;
+    public UARTConfig[] uartConfig;   
     
+
     /* default for the 149/1611 */
     public TimerConfig[] timerConfig = {
             new TimerConfig(6, 5, 3, 0x160, Timer.TIMER_Ax149, "TimerA", Timer.TAIV),
@@ -159,5 +185,4 @@ public abstract class MSP430Config {
     public ClockSystem createClockSystem(MSP430Core cpu, int[] memory, Timer[] timers) {
         return new BasicClockModule(cpu, memory, 0, timers);
     }
-
 }
