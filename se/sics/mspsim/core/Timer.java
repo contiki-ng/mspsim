@@ -244,6 +244,62 @@ public class Timer extends IOUnit {
 		String getName() {
 			return "CCR " + index;
 		}
+		
+		public int calcPeriodeTime(){
+			int CycleVal;
+			if (mode == UP){
+				CycleVal=ccr[0].tccr+1;
+			} else if (mode == CONTIN){
+				CycleVal=0x10000;						
+			} else {
+				CycleVal=2*(ccr[0].tccr)+1;	
+			}
+			return CycleVal;
+		}
+		
+		public int calcNextEvent(){
+			if(mode == UPDWN){
+				int CycleVal;
+				long bcount=bigCount(cpu.cycles)%(2*ccr[0].tccr);
+				boolean DIR_UP = (bcount <= ccr[0].tccr);						
+				if(DIR_UP){
+					CycleVal=2*(ccr[0].tccr-tccr);
+				}else{
+					CycleVal=2*(tccr);
+				}
+				return CycleVal;
+			} else{
+				return calcPeriodeTime();
+			}
+			
+		}
+		
+		public int calcDiv(){
+			int diff;
+
+			if(mode == UPDWN){
+				int bcount=(int)(bigCount(cpu.cycles)%(2*ccr[0].tccr));
+				boolean DIR_UP = (bcount <= ccr[0].tccr);
+
+				if(DIR_UP){
+					diff=tccr-bcount;
+				} else{
+					diff=2*ccr[0].tccr-tccr-bcount;
+				}
+			} else {
+				if(counter>=tccr) diff=tccr-counter;
+				else{
+					diff=tccr-counter;
+					int wrap_distance;
+					if (mode == UP) 
+						wrap_distance=ccr[0].tccr-tccr+counter;
+					else 
+						wrap_distance=0xFFFF-tccr+counter;
+					if(diff>wrap_distance) diff=-wrap_distance;
+				}
+			} 
+			return diff;
+		}
 
 		public void execute(long t) {
 			
@@ -257,29 +313,9 @@ public class Timer extends IOUnit {
 
 			if (expCaptureTime != -1 && cycles >= expCaptureTime) {
 
-				long timerend=0xFFFF;
-				long diff;
-				if (mode == UP) timerend=ccr[0].tccr;
-
-				if(mode == UPDWN){
-					long bcount=bigCount(cpu.cycles)%(2*ccr[0].tccr);
-					boolean DIR_UP = (bcount <= ccr[0].tccr);
-
-					if(DIR_UP){
-						diff=tccr-bcount;
-					} else{
-						diff=2*ccr[0].tccr-tccr-bcount;
-					}
-				} else {
-					if(counter>=tccr) diff=tccr-counter;
-					else{
-						diff=tccr-counter;
-						long wrap_distance=timerend-tccr+counter;
-						if(diff>wrap_distance) diff=-wrap_distance;
-					}
-				} 
+				int diff=calcDiv();
 				
-				System.out.println("Index:"+index+" Diff:"+diff+" tccr:"+tccr);
+				//System.out.println("Index:"+index+" Diff:"+diff+" tccr:"+tccr);
 				
 				/* sometimes the event seems to be triggered too early... */
 				if (diff>0) {
@@ -318,18 +354,8 @@ public class Timer extends IOUnit {
 								+ expCaptureTime);
 					}
 				} else {
-					long steps;
-					if ((mode == UP)|( mode == CONTIN)){
-						steps=timerend+1+diff;
-					} else {
-						long bcount=bigCount(cpu.cycles)%(2*ccr[0].tccr);
-						boolean DIR_UP = (bcount <= ccr[0].tccr);						
-						if(DIR_UP){
-							steps=2*(ccr[0].tccr-tccr+diff);
-						}else{
-							steps=2*(tccr+diff);
-						}							
-					}
+					int steps=calcNextEvent()+diff;
+
 					expCaptureTime = cycles + (long)(steps * cyclesMultiplicator);
 					if (DEBUG) {
 						log("setting expCaptureTime next compare: "
@@ -879,13 +905,10 @@ public class Timer extends IOUnit {
 	}
 	
 	void startIt(int index,long cycles){
-		System.out.println("---------------------------------");
 		int tccr=ccr[index].tccr;
-		int diff = tccr - counter;
+		int diff = ccr[index].calcDiv();
 		if (diff <= 0) {
-			//Calculation is complex because of modes with different wrap value
-			//Set it to result in an CCR execute(). In that function the calculation is included
-			diff = 0;
+			diff=ccr[index].calcNextEvent()+diff;
 		}
 		if (DEBUG) {
 			log("Write: Setting compare " + index + " to "
@@ -925,6 +948,10 @@ public class Timer extends IOUnit {
 		}
 		clockSpeed = (int) (cpu.smclkFrq / cyclesMultiplicator);
 	}
+	
+	int getTimerEndValue(){
+		return 0;
+	}
 
 	void resetCounter(long cycles) {
 		double divider = 1.0;
@@ -951,9 +978,11 @@ public class Timer extends IOUnit {
 			log("Counter reset at " + cycles + " cycMul: "
 					+ cyclesMultiplicator);
 		}
+		
+		
 
 		cpu.scheduleCycleEvent(counterTrigger, cycles
-				+ (long) ((0x10000 - counter) * cyclesMultiplicator));
+				+ (long) ((ccr[0].calcPeriodeTime() - counter) * cyclesMultiplicator));
 		// System.out.println("(re)Scheduling counter trigger..." +
 		// counterTrigger.time + " now = " + cycles + " ctr: " + counter);
 

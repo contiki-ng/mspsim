@@ -88,7 +88,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
   private final ArrayList<IOUnit> ioUnits;
   private final SFR sfr;
-  private final Watchdog watchdog;
+  private final WatchdogF5 watchdog;
   private final ClockSystem bcs;
 
   // From the possible interrupt sources - to be able to indicate is serviced.
@@ -271,7 +271,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         ioUnits.add(timers[i]);
     }
 
-    watchdog = new Watchdog(this, config.watchdogOffset);
+    watchdog = new WatchdogF5(this, config.watchdogOffset);
     ioSegment.setIORange(config.watchdogOffset, 1, watchdog);
 
     ioUnits.add(watchdog);
