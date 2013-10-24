@@ -32,47 +32,25 @@
 package se.sics.mspsim.chip;
 
 import java.awt.Color;
-import java.awt.FlowLayout;
-import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.ColorModel;
-import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferByte;
-import java.awt.image.DataBufferInt;
-import java.awt.image.DirectColorModel;
-import java.awt.image.Raster;
-import java.awt.image.SampleModel;
-import java.awt.image.WritableRaster;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
 
-import se.sics.mspsim.cli.Command;
-import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOUnit;
 import se.sics.mspsim.core.MSP430;
-import se.sics.mspsim.core.MSP430Core;
 import se.sics.mspsim.core.PortListener;
-import se.sics.mspsim.core.PortListenerProxy;
-import se.sics.mspsim.core.USART;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.core.GenericUSCI;
-import se.sics.mspsim.util.ArrayUtils;
 
 public class HD66753 implements USARTListener, PortListener, ActionListener {
 
@@ -261,7 +239,7 @@ public class HD66753 implements USARTListener, PortListener, ActionListener {
 		}
 
 		g.setColor(new Color(background, background, background, 0xff));
-		g.fillRect(367, 179, 177, 135);
+		g.fillRect(out.x,out.y,out.width,out.height);
 		g.drawImage(DisplayImage,out.x, out.y, out.x+out.width, out.y+out.height,8,0,138+8,110,null);
 		String txt=getText();
 		Rectangle2D rectText = g.getFont().getStringBounds(txt, g.getFontMetrics().getFontRenderContext());		

@@ -286,7 +286,7 @@ public class IOPort extends IOUnit {
 	}
 
 	public boolean readPortSel(int Pin) {
-		return ((selValue | (1 << Pin)) != 0);
+		return ((selValue & (1 << Pin)) != 0);
 	}
 
 	public void writePortSel(int Pin, boolean Value) {

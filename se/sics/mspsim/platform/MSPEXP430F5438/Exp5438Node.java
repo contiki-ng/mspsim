@@ -39,7 +39,6 @@ import se.sics.mspsim.chip.HD66753Listener;
 import se.sics.mspsim.chip.Leds;
 import se.sics.mspsim.config.MSP430f5438Config;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOPort.PortReg;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USART;
@@ -99,7 +98,7 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 		joyt = new Button("Button", cpu, port2, 4, false,Button.Btn_Typ.HighOpen);
 		joyb = new Button("Button", cpu, port2, 5, false,Button.Btn_Typ.HighOpen);
 		
-		lcd=new HD66753(cpu,"USCI B2",8,3,new Rectangle(367, 179, 177, 135));
+		lcd=new HD66753(cpu,"USCI B2",8,3,new Rectangle(368, 189, 179, 138));
 		lcd.addListener(this);		
 	}
 

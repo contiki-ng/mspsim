@@ -32,11 +32,9 @@ package se.sics.mspsim.chip;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.Timer;
 
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
-import se.sics.mspsim.core.IOPort.PinState;
 import se.sics.mspsim.core.IOPort.PortReg;
 import se.sics.mspsim.core.MSP430Core;
 
@@ -97,7 +95,7 @@ public class Button extends Chip implements ActionListener {
 			boolean Up_Down = ((this.port.getRegister(PortReg.OUT) & (1 << this.pin)) != 0);
 			boolean PullUp = Up_Down & Ren;
 			// if potential open, then wait 3 seconds to change
-			if (isHigh && (btnTyp == btnTyp.HighOpen) && !PullUp) {
+			if (isHigh && (btnTyp == Btn_Typ.HighOpen) && !PullUp) {
 				waittimer.restart();
 			} else {
 				waittimer.stop();
