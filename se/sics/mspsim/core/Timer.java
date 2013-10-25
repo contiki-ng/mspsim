@@ -245,18 +245,6 @@ public class Timer extends IOUnit {
 			return "CCR " + index;
 		}
 		
-		public int calcPeriodeTime(){
-			int CycleVal;
-			if (mode == UP){
-				CycleVal=ccr[0].tccr+1;
-			} else if (mode == CONTIN){
-				CycleVal=0x10000;						
-			} else {
-				CycleVal=2*(ccr[0].tccr)+1;	
-			}
-			return CycleVal;
-		}
-		
 		public int calcNextEvent(){
 			if(mode == UPDWN){
 				int CycleVal;
@@ -365,7 +353,6 @@ public class Timer extends IOUnit {
 				/* schedule again! */
 				update();
 				triggerInterrupt(cycles);
-
 			}
 		}
 
@@ -488,14 +475,18 @@ public class Timer extends IOUnit {
 
 	private TimeEvent counterTrigger = new TimeEvent(0, "Timer Counter Trigger") {
 		public void execute(long t) {
+			if(mode==STOP){
+				return;
+			}
+			
 			interruptPending = true;
 			/* and can be something else if mode is another... */
 			// This should be updated whenever clockspeed changes...
-			nextTimerTrigger = (long) (nextTimerTrigger + 0x10000 * cyclesMultiplicator);
+			nextTimerTrigger = (long) (nextTimerTrigger + calcPeriodeTime() * cyclesMultiplicator);
 			// System.out.println("*** scheduling counter trigger..." +
 			// nextTimerTrigger + " now = " + t);
 			cpu.scheduleCycleEvent(this, nextTimerTrigger);
-
+			
 			if (lastTIV == 0 && interruptEnable) {
 				lastTIV = memory[tiv] = timerOverflow;
 				cpu.flagInterrupt(ccr1Vector, Timer.this, true);
@@ -548,6 +539,18 @@ public class Timer extends IOUnit {
 
 		reset(0);
 	}
+
+	public int calcPeriodeTime(){
+		int CycleVal;
+		if (mode == UP){
+			CycleVal=ccr[0].tccr+1;
+		} else if (mode == CONTIN){
+			CycleVal=0x10000;						
+		} else {
+			CycleVal=2*(ccr[0].tccr)+1;	
+		}
+		return CycleVal;
+	}	
 
 	public void reset(int type) {
 
@@ -759,8 +762,10 @@ public class Timer extends IOUnit {
 				}
 			}
 
-			int newMode = (data >> 4) & 3;
-			if (mode == STOP && newMode != STOP) {
+			int oldMode = mode;
+			mode = (data >> 4) & 3;
+
+			if (oldMode == STOP && mode != STOP) {
 				// Set the initial counter to the value that counter should have
 				// after
 				// recalculation
@@ -768,7 +773,7 @@ public class Timer extends IOUnit {
 
 				// Wait until full wrap before setting the IRQ flag!
 				nextTimerTrigger = (long) (cycles + cyclesMultiplicator
-						* ((0xffff - counter) & 0xffff));
+						* ((calcPeriodeTime() - counter) & 0xffff));
 				if (DEBUG) {
 					log("Starting timer!");
 				}
@@ -782,7 +787,7 @@ public class Timer extends IOUnit {
 							+ ccr[1].expCaptureTime);
 
 			}
-			if (mode != STOP && newMode == STOP) {
+			if (oldMode != STOP && mode == STOP) {
 				/*
 				 * call update counter to remember how many cycles that passed
 				 * before this stop...
@@ -795,8 +800,6 @@ public class Timer extends IOUnit {
 					log(cpu.cycles + ": Timer stopped: " + counter + "  CCR1:"
 							+ ccr[1].expCaptureTime);
 			}
-
-			mode = newMode;
 
 			interruptEnable = (data & 0x02) > 0;
 
@@ -948,10 +951,6 @@ public class Timer extends IOUnit {
 		}
 		clockSpeed = (int) (cpu.smclkFrq / cyclesMultiplicator);
 	}
-	
-	int getTimerEndValue(){
-		return 0;
-	}
 
 	void resetCounter(long cycles) {
 		double divider = 1.0;
@@ -980,9 +979,9 @@ public class Timer extends IOUnit {
 		}
 		
 		
-
+		if(mode != STOP)
 		cpu.scheduleCycleEvent(counterTrigger, cycles
-				+ (long) ((ccr[0].calcPeriodeTime() - counter) * cyclesMultiplicator));
+				+ (long) ((calcPeriodeTime() - counter) * cyclesMultiplicator));
 		// System.out.println("(re)Scheduling counter trigger..." +
 		// counterTrigger.time + " now = " + cycles + " ctr: " + counter);
 
