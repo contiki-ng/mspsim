@@ -147,6 +147,7 @@ public class HD66753 implements USARTListener, PortListener, ActionListener {
 				int Value = dataCom.get(i) * 256 + dataCom.get(i+1);
 				SetPixel(y,x,Value);
 			}
+			Listen.displayChanged();			
 		} else {
 			//printCommand("", dataCom);
 		}
