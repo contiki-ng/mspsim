@@ -42,6 +42,15 @@ import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.core.Memory.AccessMode;
 import se.sics.mspsim.util.Utils;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class Flash extends IOUnit {
   
   private static final int FCTL1 = 0x00;
@@ -119,6 +128,8 @@ public class Flash extends IOUnit {
 
   private WriteMode currentWriteMode;
   private int blockwriteCount;
+  
+  private String flashSaveFileName = "";  
   
   /**
    * Infomem Configurations
@@ -353,6 +364,7 @@ public class Flash extends IOUnit {
       waitFlashProcess(wait_time);
       break;
     }
+	writeFile();
   }
   
   public void notifyRead(int address) {
@@ -619,5 +631,77 @@ public class Flash extends IOUnit {
     wait = true;
     locked = true;
     currentWriteMode = WriteMode.NONE;
+  }
+
+  public void setFile(String FileName) {
+    flashSaveFileName = FileName;
+    readFile();
+  }
+
+  public void readFile() {
+    if (flashSaveFileName.length() > 0) {
+      File file = new File(flashSaveFileName);
+
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      byte[] buf = new byte[1024];
+      try {
+        FileInputStream fis = new FileInputStream(file);
+        for (int readNum; (readNum = fis.read(buf)) != -1;) {
+          bos.write(buf, 0, readNum);
+        }
+      } catch (Exception ex) {
+        System.err.println(ex);
+        return;
+      }
+      byte[] bytes = bos.toByteArray();
+
+      int j = 0;
+      for (int i = main_range.start; i < main_range.end; i++) {
+        memory[i] = bytes[j++] << 24 | (bytes[j++] & 0xFF) << 16
+            | (bytes[j++] & 0xFF) << 8 | (bytes[j++] & 0xFF);
+      }
+      for (int i = info_range.start; i < info_range.end; i++) {
+        memory[i] = bytes[j++] << 24 | (bytes[j++] & 0xFF) << 16
+            | (bytes[j++] & 0xFF) << 8 | (bytes[j++] & 0xFF);
+      }
+    }
+  }
+
+  public void writeFile() {
+    if (flashSaveFileName.length() > 0) {
+      File someFile = new File(flashSaveFileName);
+      FileOutputStream fos;
+      try {
+        fos = new FileOutputStream(someFile);
+      } catch (Exception e) {
+        return;
+      }
+
+      int size = main_range.end - main_range.start + info_range.end
+          - info_range.start;
+      byte[] All = new byte[size * 4];
+
+      int j = 0;
+      for (int i = main_range.start; i < main_range.end; i++) {
+        All[j++] = (byte) (memory[i] >> 24);
+        All[j++] = (byte) (memory[i] >> 16);
+        All[j++] = (byte) (memory[i] >> 8);
+        All[j++] = (byte) memory[i];
+      }
+      for (int i = info_range.start; i < info_range.end; i++) {
+        All[j++] = (byte) (memory[i] >> 24);
+        All[j++] = (byte) (memory[i] >> 16);
+        All[j++] = (byte) (memory[i] >> 8);
+        All[j++] = (byte) memory[i];
+      }
+
+      try {
+        fos.write(All);
+        fos.flush();
+        fos.close();
+      } catch (Exception e) {
+        return;
+      }
+    }
   }
 }

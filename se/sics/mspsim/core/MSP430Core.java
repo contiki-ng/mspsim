@@ -278,6 +278,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     bcs.reset(0);
   }
+  
+  public void setFlashFile(String FileName) {
+    flash.setFile(FileName);
+  }  
 
   public void setIORange(int address, int range, IOUnit io) {
       if (address + range > MAX_MEM_IO) {
