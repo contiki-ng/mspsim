@@ -31,38 +31,82 @@
 package se.sics.mspsim.chip;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.IOPort;
+import se.sics.mspsim.core.IOPort.PortReg;
 import se.sics.mspsim.core.MSP430Core;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
  * @author Niclas Finne
  *
  */
-public class Button extends Chip {
+public class Button extends Chip implements ActionListener {
+
+	public enum Btn_Typ {
+		    HighOpen, NoOpen
+		  }
 
     private final IOPort port;
     private final int pin;
     private final boolean polarity;
     private boolean isPressed;
+    private Btn_Typ btnTyp = Btn_Typ.NoOpen;
+    private javax.swing.Timer waittimer;
 
     public Button(String id, MSP430Core cpu, IOPort port, int pin, boolean polarity) {
         super(id, cpu);
         this.port = port;
         this.pin = pin;
         this.polarity = polarity;
+        this.isPressed = false;
+        if (this.polarity == false) {
+          SetState();
+        }
     }
 
+    public Button(String id, MSP430Core cpu, IOPort port, int pin,
+    	      boolean polarity, Btn_Typ btnTyp) {
+    	    this(id,cpu,port,pin,polarity);
+    	    this.btnTyp = btnTyp;
+    	    waittimer = new javax.swing.Timer(3000, this);
+    	    waittimer.stop();
+    	    waittimer.setRepeats(false);
+    }    
+    
     public boolean isPressed() {
         return isPressed;
     }
 
     public void setPressed(boolean isPressed) {
-        if (this.isPressed != isPressed) {
-            this.isPressed = isPressed;
-            stateChanged(isPressed ? 1 : 0);
-            if (DEBUG) log(isPressed ? "pressed" : "released");
-            port.setPinState(pin, isPressed == polarity ? IOPort.PinState.HI : IOPort.PinState.LOW);
+      if (this.isPressed != isPressed) {
+        this.isPressed = isPressed;
+        boolean isHigh = isPressed ^ (!polarity);
+        boolean Ren = ((this.port.getRegister(PortReg.REN) & (1 << this.pin)) != 0);
+        boolean Up_Down = ((this.port.getRegister(PortReg.OUT) & (1 << this.pin)) != 0);
+        boolean PullUp = Up_Down & Ren;
+        // if potential open, then wait 3 seconds to change
+        if (isHigh && (btnTyp == Btn_Typ.HighOpen) && !PullUp) {
+          waittimer.restart();
+        } else {
+          waittimer.stop();
+          SetState();
         }
+      }
     }
+    
+    public void actionPerformed(ActionEvent e) {
+      waittimer.stop();
+      SetState();
+    }
+
+    public void SetState() {
+      boolean isHigh = this.isPressed ^ (!this.polarity);
+      stateChanged(this.isPressed ? 1 : 0);
+      if (DEBUG)
+        log(this.isPressed ? "pressed" : "released");
+      port.setPinState(pin, isHigh ? IOPort.PinState.HI : IOPort.PinState.LOW);
+    }    
 
     @Override
     public int getConfiguration(int parameter) {
@@ -78,4 +122,9 @@ public class Button extends Chip {
     public String info() {
         return " Button is " + (isPressed ? "pressed" : "not pressed");
     }
+    
+    @Override
+    public void notifyReset() {
+      SetState();
+    }    
 }
