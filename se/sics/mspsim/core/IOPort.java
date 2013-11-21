@@ -76,6 +76,11 @@ public class IOPort extends IOUnit {
     private int ren;
     private int ds;
 
+    private int selValue; /* this value is used for output when sel=1 and sel2=0*/
+    private int selValue2; /* this value is used for output when sel=1 and sel2=1 */
+    
+    private int oldPortOut;
+      
     private int iv; /* low / high */
 
     private Timer[] timerCapture = new Timer[8];
@@ -100,6 +105,9 @@ public class IOPort extends IOUnit {
         this.ie = 0;
         this.ifg = 0;
         this.portMap = portMap;
+        this.selValue = 0;
+        this.selValue2 = 0;
+        this.oldPortOut=CalcPortOut();
 
 //        System.out.println("Port " + port + " interrupt vector: " + interrupt);
         /* register all the registers from the port-map */
@@ -264,15 +272,53 @@ public class IOPort extends IOUnit {
         /* default is zero ??? */
         return 0;
     }
+    
+    public boolean readPortSel(int Sel, int Pin) {
+        if (Sel==0)
+            return ((selValue & (1 << Pin)) != 0);
+        else
+            return ((selValue2 & (1 << Pin)) != 0);        	
+    }    
 
+  //Set SelValue and 
+    public void writePortSel(int Sel, int Pin, boolean Value) {
+      if(Sel==0){
+          if (!Value) //set or clear bit
+              selValue = selValue & ~(1 << Pin);
+          else
+              selValue = selValue | (1 << Pin);
+      } else {
+          if (!Value) //set or clear bit
+              selValue2 = selValue2 & ~(1 << Pin);
+          else
+              selValue2 = selValue2 | (1 << Pin);       
+      }
+      listenerwrite();
+    }
+    
+    private void listenerwrite(){      
+      PortListener listener = portListener;
+        if (listener != null) {
+          int newPortOut=CalcPortOut();
+          if(newPortOut!=oldPortOut){
+            oldPortOut=newPortOut;
+            listener.portWrite(this, newPortOut);
+          }
+      }
+    }
+    
+    private int CalcPortOut(){
+      int selactive= sel ^ sel2;
+      int selValCombine= ((sel & selValue) | (sel2 & selValue2 )) & selactive;
+      int outVal=(~selactive & out);
+      return (selValCombine | outVal | ~dir ) & 0xff;      
+    }
+    
     private void writePort(PortReg function, int data, long cycles) {
         switch(function) {
         case OUT: {
             out = data;
-            PortListener listener = portListener;
-            if (listener != null) {
-            	listener.portWrite(this, out | (~dir) & 0xff);
-            }
+            listenerwrite();
             break;
         }
         case IN:
@@ -283,10 +329,7 @@ public class IOPort extends IOUnit {
             dir = data;
             PortListener listener = portListener;
             if (listener != null) {
-                // Any output configured pin (pin-bit = 0) should have 1 here?! 
-                //              if (name.equals("1"))
-                //                System.out.println(getName() + " write to IOPort via DIR reg: " + Utils.hex8(data));
-                listener.portWrite(this, out | (~dir) & 0xff);
+              listenerwrite();
             }
             break;
         }
@@ -312,9 +355,11 @@ public class IOPort extends IOUnit {
             break;
         case SEL:
             sel = data;
+            listenerwrite();
             break;
         case SEL2:
             sel2 = data;
+            listenerwrite();            
             break;
         case DS:
             ds = data;
@@ -417,22 +462,15 @@ public class IOPort extends IOUnit {
     }
 
     public void reset(int type) {
-        int oldValue = out | (~dir) & 0xff;
-
-        Arrays.fill(pinState, PinState.LOW);
-        in = 0;
+        //Arrays.fill(pinState, PinState.LOW);
+        //in = 0;
         dir = 0;
         ren = 0;
         ifg = 0;
         ie = 0;
         iv = 0;
         cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
-
-        PortListener listener = portListener;
-        int newValue = out | (~dir) & 0xff;
-        if (oldValue != newValue && listener != null) {
-            listener.portWrite(this, newValue);
-        }
+        listenerwrite();
     }
 
     public String info() {
