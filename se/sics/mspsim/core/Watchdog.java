@@ -52,15 +52,15 @@ public class Watchdog extends IOUnit implements SFRModule {
   private static final int WDTHOLD = 0x80;
   private static final int WDTCNTCL = 0x08;
   private static final int WDTMSEL = 0x10;
-  private static final int WDTSSEL = 0x04;
-  private static final int WDTISx = 0x03;
+  private static int WDTSSEL = 0x04;
+  private static int WDTISx = 0x03;
   
   private static final int WATCHDOG_VECTOR = 10;
   private static final int WATCHDOG_INTERRUPT_BIT = 0;
   private static final int WATCHDOG_INTERRUPT_VALUE = 1 << WATCHDOG_INTERRUPT_BIT;
   
   private static final int[] DELAY = {
-    32768, 8192, 512, 64
+    2*1024*1024*1024,128*1024*1024,8*1024*1024,512*1024,32768, 8192, 512, 64
   };
 
   private int resetVector = 15;
@@ -88,9 +88,14 @@ public class Watchdog extends IOUnit implements SFRModule {
     }
   };
 
-  public Watchdog(MSP430Core cpu, int address) {
+  public Watchdog(MSP430Core cpu, int address, int version) {
     super("Watchdog", cpu, cpu.memory, address);
 
+    if (version!=0){
+      WDTSSEL = 0x20;
+      WDTISx = 0x07;      
+    }
+    
     resetVector = cpu.MAX_INTERRUPT;
     
     this.offset = address;
@@ -136,10 +141,12 @@ public class Watchdog extends IOUnit implements SFRModule {
         wdtOn = (value & 0x80) == 0;
 //        boolean lastACLK = sourceACLK;
         sourceACLK = (value & WDTSSEL) != 0;
-        if ((value & WDTCNTCL) != 0) {
+        //scheduleTimer should use the current delay, so update delay each time
+        //issue: if WDTCNTCL is not active the timer should be recalculated but an new timer is scheduled 
+        //if ((value & WDTCNTCL) != 0) {
           // Clear timer => reset the delay
-          delay = DELAY[value & WDTISx];
-        }
+        delay = DELAY[value & WDTISx];
+        //}
         timerMode = (value & WDTMSEL) != 0;
         // Start it if it should be started!
         if (wdtOn) {

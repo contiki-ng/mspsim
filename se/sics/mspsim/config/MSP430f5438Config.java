@@ -46,6 +46,7 @@ import se.sics.mspsim.core.PMM;
 import se.sics.mspsim.core.SysReg;
 import se.sics.mspsim.core.Timer;
 import se.sics.mspsim.core.UnifiedClockSystem;
+import se.sics.mspsim.core.MSP430Config.MUXConfig;
 import se.sics.mspsim.util.Utils;
 
 public class MSP430f5438Config extends MSP430Config {
@@ -74,10 +75,23 @@ public class MSP430f5438Config extends MSP430Config {
     flashControllerOffset = 0x140;
     sfrOffset = 0x100;
 
+    MUXConfig[] muxConfigA0;
+    muxConfigA0= new MUXConfig[] {
+            new MUXConfig(0, 8, 0, 0),           
+            new MUXConfig(0, 8, 1, 1),           
+            new MUXConfig(0, 8, 2, 2),           
+            new MUXConfig(0, 8, 3, 3),           
+            new MUXConfig(0, 8, 4, 4),           
+            new MUXConfig(0, 1, 1, 0),           
+            new MUXConfig(0, 1, 2, 1),           
+            new MUXConfig(0, 1, 3, 2),           
+            new MUXConfig(0, 1, 4, 3),           
+            new MUXConfig(0, 1, 5, 4)            
+    };    
 
     /* configuration for the timers - need to set-up new source maps!!! */
     TimerConfig timerA0 = new TimerConfig(54, 53, 5, 0x340, Timer.TIMER_Bx149,
-        "TimerA0", 0x340 + 0x2e);
+        "TimerA0", 0x340 + 0x2e, muxConfigA0);
     TimerConfig timerA1 = new TimerConfig(49, 48, 3, 0x380, Timer.TIMER_Ax149,
         "TimerA1", 0x380 + 0x2e);
     TimerConfig timerB0 = new TimerConfig(60, 59, 7, 0x3C0, Timer.TIMER_Bx149,
@@ -100,6 +114,7 @@ public class MSP430f5438Config extends MSP430Config {
     ioMemSize(0x800); /* 2 KB of IO Memory */
 
     watchdogOffset = 0x15c;
+    watchdogVersion = 1;
     // bsl, IO, etc at a later stage...
   }
 

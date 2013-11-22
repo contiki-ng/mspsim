@@ -14,6 +14,7 @@ public abstract class MSP430Config {
         public final String name;
         public final int[] srcMap;
         public final int timerIVAddr;
+        public MUXConfig[] muxConfig;
         
         public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
                 int[] srcMap, String name, int tiv) {
@@ -25,8 +26,27 @@ public abstract class MSP430Config {
             this.srcMap = srcMap;
             this.timerIVAddr = tiv;
         }
+        
+        public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
+                int[] srcMap, String name, int tiv, MUXConfig[] muxConfig) {
+            this(ccr0Vec,ccrXVec,ccrCount,offset,srcMap,name,tiv);
+            this.muxConfig=muxConfig;
+        }        
     }
 
+    public static class MUXConfig {
+      public final int Port;
+      public final int Pin;
+      public final int Sel;
+      public final int CCUnitIndex;       
+        public MUXConfig(int sel, int port, int pin, int cCUnitIndex) {
+            this.Port = port;
+            this.Pin = pin;
+            this.Sel = sel;
+            this.CCUnitIndex = cCUnitIndex;
+        }
+    }    
+    
     public static class UARTConfig {
         private static final int USCI_2 = 1;
         private static final int USCI_5 = 2;
@@ -98,6 +118,7 @@ public abstract class MSP430Config {
     public int sfrOffset = 0;
 
     public int watchdogOffset = 0x120;
+    public int watchdogVersion = 0;
     
     public abstract int setup(MSP430Core cpu, ArrayList<IOUnit> ioUnits);
 

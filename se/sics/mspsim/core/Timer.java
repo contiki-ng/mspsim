@@ -37,7 +37,11 @@
 
 package se.sics.mspsim.core;
 import se.sics.mspsim.core.EmulationLogger.WarningType;
+import se.sics.mspsim.core.MSP430Config.MUXConfig;
 import se.sics.mspsim.util.Utils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Timer.java
@@ -204,6 +208,9 @@ public class Timer extends IOUnit {
       int tcctl;
       int tccr;
 
+      List<MUXConfig> PortCon;
+      
+      
       int expCompare;
       int expCapInterval;
       long expCaptureTime;
@@ -223,6 +230,7 @@ public class Timer extends IOUnit {
           super(time, name);
           interruptVector = vector;
           this.index = index;
+          this.PortCon = new ArrayList<MUXConfig>();
       }
       
       String getName() {
@@ -238,14 +246,19 @@ public class Timer extends IOUnit {
           updateCounter(cycles);
 
           if (expCaptureTime != -1 && cycles >= expCaptureTime) {
+              
+              int diff=calcDiv();
+            
               /* sometimes the event seems to be triggered too early... */
-              if (counter < tccr) {
+              if (diff>0) {
                   if (DEBUG) log("**** Counter too small: " + counter + " vs " + tccr);
-                  int diff = tccr - counter;
                   expCaptureTime = cycles + (long) (diff * cyclesMultiplicator);
                   update();
                   return;
               }
+              
+              ccrEvent(this);
+              
               if (DEBUG) {
                   log((captureOn ? "CAPTURE: " : "COMPARE: ") + index +
                           " Cycles: " + cycles + " expCap: " + expCaptureTime +
@@ -267,9 +280,9 @@ public class Timer extends IOUnit {
                       log("setting expCaptureTime to next capture: " + expCaptureTime);
                   }
               } else {
+                  int steps=calcNextEvent()+diff;
                   // Update expected compare time for this compare/cap register
-                  // 0x10000 cycles... e.g. a full 16 bits wrap of the timer
-                  expCaptureTime = expCaptureTime + (long) (0x10000 * cyclesMultiplicator);
+                  expCaptureTime = expCaptureTime + (long) (steps * cyclesMultiplicator);
                   if (DEBUG) {
                       log("setting expCaptureTime to full wrap: " + expCaptureTime);
                   }
@@ -280,6 +293,49 @@ public class Timer extends IOUnit {
           }
       }
 
+      public int calcNextEvent(){
+        if(mode == UPDWN){
+          int CycleVal;
+          long bcount=bigCount(cpu.cycles)%(2*ccr[0].tccr);
+          boolean DIR_UP = (bcount <= ccr[0].tccr);           
+          if(DIR_UP){
+            CycleVal=2*(ccr[0].tccr-tccr);
+          }else{
+            CycleVal=2*(tccr);
+          }
+          return CycleVal;
+        } else{
+          return calcPeriodeTime();
+        }
+      }
+      
+      public int calcDiv(){
+        int diff;
+
+        if(mode == UPDWN){
+          int bcount=(int)(bigCount(cpu.cycles)%(2*ccr[0].tccr));
+          boolean DIR_UP = (bcount <= ccr[0].tccr);
+
+          if(DIR_UP){
+            diff=tccr-bcount;
+          } else{
+            diff=2*ccr[0].tccr-tccr-bcount;
+          }
+        } else {
+          if(counter>=tccr) diff=tccr-counter;
+          else{
+            diff=tccr-counter;
+            int wrap_distance;
+            if (mode == UP) 
+              wrap_distance=ccr[0].tccr-tccr+counter;
+            else 
+              wrap_distance=0xFFFF-tccr+counter;
+            if(diff>wrap_distance) diff=-wrap_distance;
+          }
+        } 
+        return diff;
+      }      
+      
       /* this method only takes care of the interrupt triggering! */
       public void triggerInterrupt(long cycles) {
           /* trigger if trigger should be... */
@@ -374,22 +430,43 @@ public class Timer extends IOUnit {
       }
 
       public String info() {
+          String Listen = "";
+          for (MUXConfig con : PortCon) {
+            Listen += con.Port + "." + con.Pin + " ";
+          }
           return "CCR" + index + ":" +
           "  CM: " + capNames[capMode] +
           "  CCIS:" + inputSel + "  Source: " +
           getSourceName(inputSrc) +
           "  Capture: " + captureOn +
+          "  Listen: " + Listen +
           " IFG: " + ((tcctl & CC_IFG) > 0) + " IE: " + ((tcctl & CC_IE) > 0);
       }
 
+      public void togglePortSel() {
+        for (MUXConfig con : PortCon) {
+          IOPort out = cpu.getIOUnit(IOPort.class, "P" + con.Port);
+          boolean Value = out.readPortSel(con.Sel,con.Pin);
+          out.writePortSel(con.Sel,con.Pin, !Value);
+        }
+      }
+
+      public void writePortSel(boolean Value) {
+        for (MUXConfig con : PortCon) {
+          IOPort out = cpu.getIOUnit(IOPort.class, "P" + con.Port);
+          out.writePortSel(con.Sel,con.Pin, Value);
+        }
+      }      
   }
 
   private TimeEvent counterTrigger = new TimeEvent(0, "Timer Counter Trigger") {
       public void execute(long t) {
+          if(mode==STOP){
+            return;
+          }        
           interruptPending = true;
-          /* and can be something else if mode is another... */
           // This should be updated whenever clockspeed changes...
-          nextTimerTrigger = (long) (nextTimerTrigger + 0x10000 * cyclesMultiplicator);
+          nextTimerTrigger = (long) (nextTimerTrigger + calcPeriodeTime() * cyclesMultiplicator);
 //          System.out.println("*** scheduling counter trigger..." + nextTimerTrigger + " now = " + t);
           cpu.scheduleCycleEvent(this, nextTimerTrigger);
           
@@ -434,10 +511,29 @@ public class Timer extends IOUnit {
     for (int i = 0; i < noCompare; i++) {
         ccr[i] = new CCR(0, "CCR" + i + " " + config.name, i == 0 ? ccr0Vector : ccr1Vector, i);
     }
+
+    if (config.muxConfig != null)
+      for (int i = 0; i < config.muxConfig.length; i++) {
+        int j = config.muxConfig[i].CCUnitIndex;
+        ccr[j].PortCon.add(config.muxConfig[i]);
+        // System.out.println(ccr[j].info());
+    }    
     
     reset(0);
   }
-
+  
+  public int calcPeriodeTime(){
+    int CycleVal;
+    if (mode == UP){
+      CycleVal=ccr[0].tccr+1;
+    } else if (mode == CONTIN){
+      CycleVal=0x10000;           
+    } else {
+      CycleVal=2*(ccr[0].tccr)+1; 
+    }
+    return CycleVal;
+  }
+  
   public void reset(int type) {
 
       /* reset the capture and compare registers */
@@ -631,22 +727,23 @@ public class Timer extends IOUnit {
       updateCyclesMultiplicator();
 
       if ((data & TCLR) != 0) {
-	counter = 0;
-	resetCounter(cycles);
+	setCounter(0,cycles);
 	
 	for (int i = 0; i < noCompare; i++) {
             ccr[i].updateCaptures(cycles);
         }
       }
 
-      int newMode = (data >> 4) & 3;
-      if (mode == STOP && newMode != STOP) {
+      int oldMode = mode;
+      mode = (data >> 4) & 3;
+      
+      if (oldMode == STOP && mode != STOP) {
         // Set the initial counter to the value that counter should have after
         // recalculation
         resetCounter(cycles);
         
         // Wait until full wrap before setting the IRQ flag!
-        nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((0xffff - counter) & 0xffff));
+        nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((calcPeriodeTime() - counter) & 0xffff));
         if (DEBUG) {
           log("Starting timer!");
         }
@@ -658,7 +755,7 @@ public class Timer extends IOUnit {
         if (DEBUG) log(cpu.cycles + ": Timer started: " + counter + "  CCR1:" + ccr[1].expCaptureTime);
         
       }
-      if (mode != STOP && newMode == STOP) {
+      if (oldMode != STOP && mode == STOP) {
           /* call update counter to remember how many cycles that passed before this stop... */
           updateCounter(cycles);
           for (int i = 0; i < noCompare; i++) {
@@ -666,8 +763,6 @@ public class Timer extends IOUnit {
           }
           if (DEBUG) log(cpu.cycles + ": Timer stopped: " + counter + "  CCR1:" + ccr[1].expCaptureTime);
       }
-      
-      mode = newMode;
       
       interruptEnable = (data & 0x02) > 0;
 
@@ -688,7 +783,11 @@ public class Timer extends IOUnit {
       if ((data & 0x01) == 0) {
         interruptPending = false;
       }
-
+      
+      if (!interruptEnable){
+        resetTIV(cycles);
+      }
+      
       //    updateCaptures(-1, cycles);
       for (int i = 0; i < noCompare; i++) {
           ccr[i].updateCaptures(cycles);
@@ -736,6 +835,7 @@ public class Timer extends IOUnit {
       }
 
       reg.updateCaptures(cycles);
+      startIt(index,cycles);
 //      updateCaptures(index, cycles);
       break;
       // Write to compare register!
@@ -753,42 +853,52 @@ public class Timer extends IOUnit {
         // Reset the counter to bring it down to a smaller value...
         // Check if up or updwn and reset if counter too high...
         if (counter > data && (mode == UPDWN || mode == UP)) {
-          counter = 0;
-          resetCounter(cycles);
+          setCounter(0,cycles);
         }
       }
       if (ccr[index] == null)
           logw(WarningType.VOID_IO_WRITE, "Timer write to " + Utils.hex16(address));
       ccr[index].tccr = data;
 
-      int diff = data - counter;
-      if (diff <= 0) {
-        // Ok we need to wrap!
-        diff += 0x10000;
-      }
-      if (DEBUG) {
-	log("Write: Setting compare " + index + " to " +
-	        Utils.hex16(data) + " TR: " +
-	        Utils.hex16(counter) + " diff: " + Utils.hex16(diff));
-      }
-      // Use the counterPassed information to compensate the expected capture/compare time!!!
-      ccr[index].expCaptureTime = cycles + (long)(cyclesMultiplicator * diff + 1) - counterPassed;
-      if (DEBUG && counterPassed > 0) {
-        log("Comp: " + counterPassed + " cycl: " + cycles + " TR: " +
-            counter + " CCR" + index + " = " + data + " diff = " + diff + " cycMul: " + cyclesMultiplicator + " expCyc: " +
-            ccr[index].expCaptureTime);
-      }
-      counterPassed = 0;
-      if (DEBUG) {
-	log("Cycles: " + cycles + " expCap[" + index + "]: " + ccr[index].expCaptureTime
-	        + " ctr:" + counter + " data: " + data + " ~" +
-	        (100 * (cyclesMultiplicator * diff * 1L) / 2500000) / 100.0 + " sec" +
-	        "at cycles: " + ccr[index].expCaptureTime);
-      }
-      ccr[index].update();
+      startIt(index,cycles);
+      
       //calculateNextEventTime(cycles);
     }
   }
+
+  void startIt(int index,long cycles){
+    int tccr=ccr[index].tccr;
+    int diff = ccr[index].calcDiv();
+    if (diff <= 0) {
+      diff=ccr[index].calcNextEvent()+diff;
+    }
+    if (DEBUG) {
+      log("Write: Setting compare " + index + " to "
+          + Utils.hex16(tccr) + " TR: " + Utils.hex16(counter)
+          + " diff: " + Utils.hex16(diff));
+    }
+    // Use the counterPassed information to compensate the expected
+    // capture/compare time!!!
+    ccr[index].expCaptureTime = cycles
+        + (long) (cyclesMultiplicator * diff + 1) - counterPassed;
+    if (DEBUG && counterPassed > 0) {
+      log("Comp: " + counterPassed + " cycl: " + cycles + " TR: "
+          + counter + " CCR" + index + " = " + tccr + " diff = "
+          + diff + " cycMul: " + cyclesMultiplicator
+          + " expCyc: " + ccr[index].expCaptureTime);
+    }
+    counterPassed = 0;
+    if (DEBUG) {
+      log("Cycles: " + cycles + " expCap[" + index + "]: "
+          + ccr[index].expCaptureTime + " ctr:" + counter
+          + " data: " + tccr + " ~"
+          + (100 * (cyclesMultiplicator * diff * 1L) / 2500000)
+          / 100.0 + " sec" + "at cycles: "
+          + ccr[index].expCaptureTime);
+    }
+    ccr[index].update();
+  }  
+  
   void updateCyclesMultiplicator() {
     cyclesMultiplicator = inputDivider;
     if (clockSource == SRC_ACLK) {
@@ -830,15 +940,17 @@ public class Timer extends IOUnit {
 //    System.out.println("(re)Scheduling counter trigger..." + counterTrigger.time + " now = " + cycles + " ctr: " + counter);
 
   }
+
+  private void setCounter2(int newCtr, long cycles) {
+    counter = newCtr;
+  }
   
   private void setCounter(int newCtr, long cycles) {
     counter = newCtr;
     resetCounter(cycles);
   }
-
-  private int updateCounter(long cycles) {
-    if (mode == STOP) return counter;
-    
+  
+  private long bigCount(long cycles){
     // Needs to be non-integer since smclk Frq can be lower
     // than aclk
     /* this should be cached and changed whenever clockSource change!!! */
@@ -848,7 +960,7 @@ public class Timer extends IOUnit {
       divider = 1.0 * cpu.smclkFrq / cpu.aclkFrq;
     }
     divider = divider * inputDivider;
-    
+
     // These calculations assume that we have a big counter that counts from
     // last reset and upwards (without any roundoff errors).
     // tick - represent the counted value since last "reset" of some kind
@@ -856,37 +968,43 @@ public class Timer extends IOUnit {
     long cycctr = cycles - counterStart;
     double tick = cycctr / divider;
     counterPassed = (int) (divider * (tick - (long) (tick)));
-    long bigCounter = (long) (tick + counterAcc);
+
+    if (DEBUG) {
+      log("Updating counter cycctr: " + cycctr + " divider: " + divider
+          + " mode:" + mode + " => " + counter);
+    } 
+    return (long) (tick + counterAcc);    
+  }
+
+  private int updateCounter(long cycles) {
+    if (mode == STOP) return counter;
+    
+    long bigCounter=bigCount(cycles);
+
     
     switch (mode) {
     case CONTIN:
-      counter = (int) (bigCounter & 0xffff);
+      setCounter2((int) (bigCounter & 0xffff),cycles);
       break;
     case UP:
       if (ccr[0].tccr == 0) {
-	counter = 0;
+        setCounter2(0,cycles);
       } else {
-	counter = (int) (bigCounter % ccr[0].tccr);
+        setCounter2((int) (bigCounter % ccr[0].tccr),cycles);
       }
       break;
     case UPDWN:
       if (ccr[0].tccr == 0) {
-	counter = 0;
+        setCounter2(0,cycles);
       } else {
-	counter = (int) (bigCounter % (ccr[0].tccr * 2));
+        setCounter2((int) (bigCounter % (ccr[0].tccr * 2)),cycles);
 	if (counter > ccr[0].tccr) {
 	  // Should back down to start again!
-	  counter = 2 * ccr[0].tccr - counter;
+	  setCounter2(2 * ccr[0].tccr - counter,cycles);
 	}
       }
     }
-//    System.out.println("CounterStart: " + counterStart + " C:" + cycles + " bigCounter: " + bigCounter +
-//        " counter" + counter);
 
-    if (DEBUG) {
-      log("Updating counter cycctr: " + cycctr +
-          " divider: " + divider + " mode:" + mode + " => " + counter);
-    }
    return counter;
   }
 
@@ -978,5 +1096,84 @@ public class Timer extends IOUnit {
           sb.append("  ").append(reg.info()).append('\n');
       }
       return sb.toString();
+  }
+
+  public void ccrEvent(CCR ccrX) {
+
+    if (ccrX.index == 0) {
+      for (int i = 0; i < noCompare; i++) {
+        if (ccr[i].PortCon.size() > 0) {
+          if ((mode == UP) | (mode == CONTIN)) {
+            switch (ccr[i].outMode) {
+            case 2:
+            case 3:
+              ccr[i].writePortSel(false);
+              break;
+            case 6:
+            case 7:
+              ccr[i].writePortSel(true);
+              break;
+            case 4:
+              if(i==0) ccr[i].togglePortSel();
+            }
+          } else if (mode == UPDWN) {
+            switch (ccr[i].outMode) {
+            case 3:
+              ccr[i].writePortSel(false);
+              break;
+            case 7:
+              ccr[i].writePortSel(true);
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      if ((mode == UP) | (mode == CONTIN)) {
+        switch (ccrX.outMode) {
+        case 1:
+        case 2:
+        case 3:
+          ccrX.writePortSel(true);
+          break;
+        case 4:
+          ccrX.togglePortSel();
+          break;
+        case 5:
+        case 6:
+        case 7:
+          ccrX.writePortSel(false);
+          break;
+        }
+      } else if (mode == UPDWN) {
+        long bcount=bigCount(cpu.cycles)%(2*ccr[0].tccr);
+        boolean DIR_UP = (bcount < ccr[0].tccr);
+        if (DIR_UP) {
+          switch (ccrX.outMode) {
+          case 1:
+          case 4:
+          case 6:
+            ccrX.writePortSel(true);
+            break;
+          case 2:
+          case 5:
+            ccrX.writePortSel(false);
+            break;
+          }
+        } else {
+          switch (ccrX.outMode) {
+          case 2:
+          case 3:
+            ccrX.writePortSel(true);
+            break;
+          case 4:
+          case 6:
+          case 7:
+            ccrX.writePortSel(false);
+            break;
+          }
+        }
+      }
+    }
   }
 }
