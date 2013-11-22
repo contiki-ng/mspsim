@@ -640,26 +640,27 @@ public class Flash extends IOUnit {
 
   public void readFile() {
     if (flashSaveFileName.length() > 0) {
-      File file = new File(flashSaveFileName);
 
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       byte[] buf = new byte[1024];
       try {
+        File file = new File(flashSaveFileName);
         FileInputStream fis = new FileInputStream(file);
         for (int readNum; (readNum = fis.read(buf)) != -1;) {
           bos.write(buf, 0, readNum);
         }
       } catch (Exception ex) {
-        System.err.println(ex);
+        System.out.println("No file "+flashSaveFileName+ " found. Write a new file");
+        writeFile();
         return;
       }
       byte[] bytes = bos.toByteArray();
 
       int j = 0;
-      for (int i = main_range.start; i < main_range.end; i++) {
-        memory[i] = bytes[j++] << 24 | (bytes[j++] & 0xFF) << 16
-            | (bytes[j++] & 0xFF) << 8 | (bytes[j++] & 0xFF);
-      }
+//      for (int i = main_range.start; i < main_range.end; i++) {
+//        memory[i] = bytes[j++] << 24 | (bytes[j++] & 0xFF) << 16
+//            | (bytes[j++] & 0xFF) << 8 | (bytes[j++] & 0xFF);
+//      }
       for (int i = info_range.start; i < info_range.end; i++) {
         memory[i] = bytes[j++] << 24 | (bytes[j++] & 0xFF) << 16
             | (bytes[j++] & 0xFF) << 8 | (bytes[j++] & 0xFF);
@@ -677,17 +678,16 @@ public class Flash extends IOUnit {
         return;
       }
 
-      int size = main_range.end - main_range.start + info_range.end
-          - info_range.start;
+      int size = info_range.end - info_range.start;//+main_range.end - main_range.start;
       byte[] All = new byte[size * 4];
 
       int j = 0;
-      for (int i = main_range.start; i < main_range.end; i++) {
-        All[j++] = (byte) (memory[i] >> 24);
-        All[j++] = (byte) (memory[i] >> 16);
-        All[j++] = (byte) (memory[i] >> 8);
-        All[j++] = (byte) memory[i];
-      }
+//      for (int i = main_range.start; i < main_range.end; i++) {
+//        All[j++] = (byte) (memory[i] >> 24);
+//        All[j++] = (byte) (memory[i] >> 16);
+//        All[j++] = (byte) (memory[i] >> 8);
+//        All[j++] = (byte) memory[i];
+//      }
       for (int i = info_range.start; i < info_range.end; i++) {
         All[j++] = (byte) (memory[i] >> 24);
         All[j++] = (byte) (memory[i] >> 16);

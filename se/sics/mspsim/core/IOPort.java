@@ -469,6 +469,8 @@ public class IOPort extends IOUnit {
         ifg = 0;
         ie = 0;
         iv = 0;
+        sel = 0;
+        sel2 = 0;
         cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
         listenerwrite();
     }
