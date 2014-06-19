@@ -75,8 +75,7 @@ public class MSP430f5438Config extends MSP430Config {
     flashControllerOffset = 0x140;
     sfrOffset = 0x100;
 
-    MUXConfig[] muxConfigA0;
-    muxConfigA0= new MUXConfig[] {
+    MUXConfig[] muxConfigA0= new MUXConfig[] {
             new MUXConfig(0, 8, 0, 0),           
             new MUXConfig(0, 8, 1, 1),           
             new MUXConfig(0, 8, 2, 2),           
@@ -87,15 +86,35 @@ public class MSP430f5438Config extends MSP430Config {
             new MUXConfig(0, 1, 3, 2),           
             new MUXConfig(0, 1, 4, 3),           
             new MUXConfig(0, 1, 5, 4)            
-    };    
+    };
+    
+    MUXConfig[] muxConfigA1= new MUXConfig[] {
+            new MUXConfig(0, 8, 5, 0),           
+            new MUXConfig(0, 8, 6, 1),           
+            new MUXConfig(0, 7, 3, 2),           
+            new MUXConfig(0, 2, 1, 0),           
+            new MUXConfig(0, 2, 2, 1),           
+            new MUXConfig(0, 2, 3, 2)          
+    };      
 
+    MUXConfig[] muxConfigB0= new MUXConfig[] {
+            new MUXConfig(0, 4, 0, 0),           
+            new MUXConfig(0, 4, 1, 1),           
+            new MUXConfig(0, 4, 2, 2),           
+            new MUXConfig(0, 4, 3, 3),           
+            new MUXConfig(0, 4, 4, 4),          
+            new MUXConfig(0, 4, 5, 5),          
+            new MUXConfig(0, 4, 6, 6)          
+    };      
+    
+    
     /* configuration for the timers - need to set-up new source maps!!! */
-    TimerConfig timerA0 = new TimerConfig(54, 53, 5, 0x340, Timer.TIMER_Bx149,
+    TimerConfig timerA0 = new TimerConfig(54, 53, 5, 0x340, Timer.TIMER_Bx149, TimerType.Standard,
         "TimerA0", 0x340 + 0x2e, muxConfigA0);
-    TimerConfig timerA1 = new TimerConfig(49, 48, 3, 0x380, Timer.TIMER_Ax149,
-        "TimerA1", 0x380 + 0x2e);
-    TimerConfig timerB0 = new TimerConfig(60, 59, 7, 0x3C0, Timer.TIMER_Bx149,
-        "TimerB0", 0x3C0 + 0x2e);
+    TimerConfig timerA1 = new TimerConfig(49, 48, 3, 0x380, Timer.TIMER_Ax149, TimerType.Standard, 
+        "TimerA1", 0x380 + 0x2e, muxConfigA1);
+    TimerConfig timerB0 = new TimerConfig(60, 59, 7, 0x3C0, Timer.TIMER_Bx149, TimerType.TimerEndEdit, 
+        "TimerB0", 0x3C0 + 0x2e, muxConfigB0);
     timerConfig = new TimerConfig[] { timerA0, timerA1, timerB0 };
 
     uartConfig = new UARTConfig[] { new UARTConfig("USCI A0", 57, 0x5c0),

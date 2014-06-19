@@ -81,8 +81,6 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 		setMode(MODE_LEDS_OFF);	
 	}
 
-	
-
 	public void setupNodePorts() {	
 		IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
 		port1.addPortListener(this);	
@@ -120,9 +118,7 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 		}	
 	}
 	
-	public void displayChanged(){
-		
-		
+	public void displayChanged(){		
 		gui.repaint();
 	}
 
@@ -140,7 +136,7 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 			setupGUI();
 
 			IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
-
+			
 			// Add some windows for listening to serial output
 			USART usart = cpu.getIOUnit(USART.class, "USART1");
 			if (usart != null) {

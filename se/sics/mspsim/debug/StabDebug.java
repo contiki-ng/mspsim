@@ -118,6 +118,9 @@ public class StabDebug implements ELFDebug {
       return files.toArray(new StabFile[files.size()]);
   }
   
+  public int getPC(String FileName,int line) {
+    return -1;
+  }
   
   /* Just pick up file + some other things */
   public DebugInfo getDebugInfo(int address) {

@@ -46,14 +46,20 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+
+import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MemoryMonitor;
 import se.sics.mspsim.core.SimEvent;
 import se.sics.mspsim.core.SimEventListener;
+import se.sics.mspsim.core.Memory.AccessMode;
+import se.sics.mspsim.core.Memory.AccessType;
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.DebugInfo;
@@ -81,6 +87,8 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
   private Status status = Status.STOPPED;
 
   private String name;
+  
+  private TreeView tv = null;  
 
   public ControlUI() {
     super(new GridLayout(0, 1));
@@ -98,8 +106,9 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
     jp.setLayout(new BorderLayout());
 
     jp.add(this, BorderLayout.WEST);
-    jp.add(dui = new DebugUI(cpu), BorderLayout.CENTER);
+    jp.add(dui = new DebugUI(cpu,elfData), BorderLayout.CENTER);
     window.add(jp);
+    window.setSize(800, 500);
     
     createButton("Debug On");
     controlButton = createButton(cpu.isRunning() ? "Stop" : "Run");
@@ -124,7 +133,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 				   " => " + dbg.getFile() + ':' +
 				   dbg.getLine());
 	      }
-	      sourceViewer.viewFile(dbg.getPath(), dbg.getFile());
+	      sourceViewer.viewFile(dbg.getPath(), dbg.getFile(),false);
 	      sourceViewer.viewLine(dbg.getLine());
 	    }
 	  }
@@ -142,6 +151,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
       createButton("Show Source");
     }
     createButton("Profile Dump");
+    createButton("Component View");
 
     // Setup standard actions
     stepButton.getInputMap(WHEN_IN_FOCUSED_WINDOW)
@@ -168,6 +178,9 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
   private void updateCPUPercent() {
     window.setTitle(TITLE + "  CPU On: " + cpu.getCPUPercent() + "%");
   }
+  
+  
+  
 
   public void actionPerformed(ActionEvent ae) {
     String cmd = ae.getActionCommand();
@@ -182,42 +195,60 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 
     } else if ("Run".equals(cmd)) {
       node.start();
-      
+
     } else if ("Stop".equals(cmd)) {
       node.stop();
-      
+      UpdateSourceView(false);      
+
     } else if ("Profile Dump".equals(cmd)) {
       if (cpu.getProfiler() != null) {
-	cpu.getProfiler().printProfile(System.out);
+        cpu.getProfiler().printProfile(System.out);
       } else {
-	System.out.println("*** No profiler available");
+        System.out.println("*** No profiler available");
       }
-      //     } else if ("Single Step".equals(cmd)) {
-      //       cpu.step();
-//       dui.repaint();
+      // } else if ("Single Step".equals(cmd)) {
+      // cpu.step();
+      // dui.repaint();
     } else if ("Show Source".equals(cmd)) {
-      int pc = cpu.getPC();
-      if (elfData != null) {
-	DebugInfo dbg = elfData.getDebugInfo(pc);
-	if (dbg != null) {
-	  if (cpu.getDebug()) {
-	    System.out.println("looking up $" + Integer.toString(pc, 16) +
-			       " => " + dbg.getFile() + ':' + dbg.getLine());
-	  }
-	  if (sourceViewer != null) {
-	    sourceViewer.viewFile(dbg.getPath(), dbg.getFile());
-	    sourceViewer.viewLine(dbg.getLine());
-	  } else {
-	    System.out.println("File: " + dbg.getFile());
-	    System.out.println("LineNr: " + dbg.getLine());
-	  }
-	}
-      }
+      UpdateSourceView(true);
     } else if ("Stack Trace".equals(cmd)) {
       cpu.getProfiler().printStackTrace(System.out);
     }
+    else if ("Component View".equals(cmd)){                                                           //
+      if(tv==null)                                                                              //Initializes the tree view frame
+        tv = new TreeView(cpu);                                                                 //Button does nothing, if tree is created and visible
+                                                                                                //
+      else{                                                                                     //
+        tv.ReOpen();                                                                            //If tree is not visible, but already built, makes it visible
+      }                                                                                         //
+    }                                                                                           //
     dui.updateRegs();
   }
+  
+  public void UpdateSourceView(boolean useChooser){
+    int pc = cpu.getPC();
+    if (elfData != null) {
+      DebugInfo dbg = elfData.getDebugInfo(pc);
+      if (dbg != null) {
+        if (cpu.getDebug()) {
+          System.out.println("looking up $" + Integer.toString(pc, 16)
+              + " => " + dbg.getFile() + ':' + dbg.getLine());
+        }
+        if (sourceViewer != null) {
+          sourceViewer.viewFile(dbg.getPath(), dbg.getFile(),useChooser);
+          if(cpu.isRunning())
+            sourceViewer.viewLine(-1);
+          else
+            sourceViewer.viewLine(dbg.getLine());
+        } else {
+          System.out.println("File: " + dbg.getFile());
+          System.out.println("LineNr: " + dbg.getLine());
+        }
+      }
+    }    
+  }
+  
+  
 
   public void simChanged(SimEvent event) {
     switch (event.getType()) {
@@ -232,7 +263,10 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
           } else {
             controlButton.setText("Run");
             stepAction.setEnabled(true);
+            dui.updateRegs();
+            dui.repaint();
           }
+          UpdateSourceView(false);
         }
 
       });

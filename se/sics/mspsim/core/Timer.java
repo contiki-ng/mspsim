@@ -43,6 +43,8 @@ import se.sics.mspsim.util.Utils;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+
 /**
  * Timer.java
  *
@@ -100,6 +102,8 @@ public class Timer extends IOUnit {
   public static final int TCCR4 = 0x1a;
   public static final int TCCR5 = 0x1c;
   public static final int TCCR6 = 0x1e;
+
+  public static final int TEX0 = 0x20;
 
   public static final int STOP = 0;
   public static final int UP = 1;
@@ -168,7 +172,7 @@ public class Timer extends IOUnit {
     SRC_PORT + 0x45, SRC_PORT + 0x45, SRC_GND, SRC_VCC,    // Cap 5
     SRC_PORT + 0x46, SRC_ACLK, SRC_GND, SRC_VCC            // Cap 6
   };
-
+  
   public static final String[] capNames = new String[] {
     "NONE", "RISING", "FALLING", "BOTH"
   };
@@ -179,7 +183,13 @@ public class Timer extends IOUnit {
 
   
   private final int tiv;
-  private int inputDivider = 1;
+  private int inputDivider1 = 1;  
+  private int inputDivider2 = 1;  
+  
+  private int endValueIndex = 0;
+  private static final int[] EndValue = new int[] {
+   16, 12, 10, 8
+  };
 
   // If clocked by anything other than the SubMainClock at full
   // speed this needs to be calculated for correct handling.
@@ -244,11 +254,16 @@ public class Timer extends IOUnit {
           }
           long cycles = cpu.cycles;
           updateCounter(cycles);
+          
+          if(!eventReachable()){
+            System.out.println("CCR Value bigger than TimerMaxValue!");
+            return;            
+          }
 
           if (expCaptureTime != -1 && cycles >= expCaptureTime) {
               
               int diff=calcDiv();
-            
+
               /* sometimes the event seems to be triggered too early... */
               if (diff>0) {
                   if (DEBUG) log("**** Counter too small: " + counter + " vs " + tccr);
@@ -257,7 +272,6 @@ public class Timer extends IOUnit {
                   return;
               }
               
-              ccrEvent(this);
               
               if (DEBUG) {
                   log((captureOn ? "CAPTURE: " : "COMPARE: ") + index +
@@ -266,15 +280,17 @@ public class Timer extends IOUnit {
                           " TR: " + counter + " CCR" + index + ": " + tccr + " pass: " +
                           counterPassed);
               }
-              // Set the interrupt flag...
-              tcctl |= CC_IFG;
+              
+                ccrEvent(this);
+                // Set the interrupt flag...
+                tcctl |= CC_IFG;
 
               if (captureOn) {
                   // Write the expected capture time to the register (counter could
                   // differ slightly)
                   tccr = expCompare;
                   // Update capture times... for next capture
-                  expCompare = (expCompare + expCapInterval) & 0xffff;
+                  expCompare = (expCompare + expCapInterval) & WrapValue();
                   expCaptureTime += expCapInterval * cyclesMultiplicator;
                   if (DEBUG) {
                       log("setting expCaptureTime to next capture: " + expCaptureTime);
@@ -309,6 +325,19 @@ public class Timer extends IOUnit {
         }
       }
       
+      public boolean eventReachable(){
+        if(mode == UPDWN){
+          if(WrapValue()<ccr[0].tccr) return false;
+        } else {
+            if (mode == UP){
+              if(WrapValue()<ccr[0].tccr) return false;
+            } else { 
+              if(WrapValue()<tccr) return false;        //Counter cannot count to tccr
+            }
+        } 
+        return true;
+      }      
+      
       public int calcDiv(){
         int diff;
 
@@ -326,10 +355,11 @@ public class Timer extends IOUnit {
           else{
             diff=tccr-counter;
             int wrap_distance;
-            if (mode == UP) 
+            if (mode == UP){
               wrap_distance=ccr[0].tccr-tccr+counter;
-            else 
-              wrap_distance=0xFFFF-tccr+counter;
+            } else { 
+              wrap_distance=WrapValue()+1-tccr+counter;
+            }
             if(diff>wrap_distance) diff=-wrap_distance;
           }
         } 
@@ -363,9 +393,9 @@ public class Timer extends IOUnit {
           boolean clkSource = false;
 
           if (clockSource == SRC_SMCLK) {
-              frqClk = cpu.smclkFrq / inputDivider;
+              frqClk = cpu.smclkFrq / (inputDivider1+inputDivider2);
           } else if (clockSource == SRC_ACLK) {
-              frqClk = cpu.aclkFrq / inputDivider;
+              frqClk = cpu.aclkFrq / (inputDivider1+inputDivider2);
           }
 
           // Handle the captures...
@@ -387,9 +417,9 @@ public class Timer extends IOUnit {
               if (clkSource) {
                   /* assume that this was capture recently */
                   //            System.out.println(">>> ACLK! fixing with expCompare!!!");
-                  expCompare = (tccr + expCapInterval) & 0xffff;
+                  expCompare = (tccr + expCapInterval) & WrapValue();
               } else {
-                  expCompare = (counter + expCapInterval) & 0xffff;
+                  expCompare = (counter + expCapInterval) & WrapValue();
               }
               // This could be formulated in something other than cycles...
               // ...??? should be multiplied with clockspeed diff also?
@@ -442,6 +472,23 @@ public class Timer extends IOUnit {
           "  Listen: " + Listen +
           " IFG: " + ((tcctl & CC_IFG) > 0) + " IE: " + ((tcctl & CC_IE) > 0);
       }
+      
+      public DefaultMutableTreeNode getNode() {
+        String Listen = "";
+        for (MUXConfig con : PortCon) {
+          Listen += con.Port + "." + con.Pin + " ";
+        }
+        DefaultMutableTreeNode CCRx = new DefaultMutableTreeNode("CCR" + index + ":");
+        
+        CCRx.add(new DefaultMutableTreeNode("CM: " + capNames[capMode]));
+        CCRx.add(new DefaultMutableTreeNode("CCIS:" + inputSel));
+        CCRx.add(new DefaultMutableTreeNode("Source: " + getSourceName(inputSrc)));
+        CCRx.add(new DefaultMutableTreeNode("Capture: " + captureOn));
+        CCRx.add(new DefaultMutableTreeNode("Listen: " + Listen));
+        CCRx.add(new DefaultMutableTreeNode("IFG: " + ((tcctl & CC_IFG))));
+        CCRx.add(new DefaultMutableTreeNode("IE: " + ((tcctl & CC_IE) > 0)));
+        return CCRx; 
+    }      
 
       public void togglePortSel() {
         for (MUXConfig con : PortCon) {
@@ -486,6 +533,8 @@ public class Timer extends IOUnit {
 
   private long triggerTime;
   
+  private MSP430Config.TimerType typ;
+  
   /**
    * Creates a new <code>Timer</code> instance.
    *
@@ -517,7 +566,9 @@ public class Timer extends IOUnit {
         int j = config.muxConfig[i].CCUnitIndex;
         ccr[j].PortCon.add(config.muxConfig[i]);
         // System.out.println(ccr[j].info());
-    }    
+    }
+    
+    this.typ=config.typ;
     
     reset(0);
   }
@@ -527,7 +578,7 @@ public class Timer extends IOUnit {
     if (mode == UP){
       CycleVal=ccr[0].tccr+1;
     } else if (mode == CONTIN){
-      CycleVal=0x10000;           
+      CycleVal=WrapValue()+1;           
     } else {
       CycleVal=2*(ccr[0].tccr)+1; 
     }
@@ -563,7 +614,13 @@ public class Timer extends IOUnit {
       cyclesMultiplicator = 1;
       mode = STOP;
       nextTimerTrigger = 0;
-      inputDivider = 1;
+      inputDivider1 = 1;
+      inputDivider2 = 1;
+      endValueIndex = 0;
+  }
+  
+  public int WrapValue(){
+    return ((1<<EndValue[endValueIndex])-1);       
   }
 
   // Should handle read of byte also (currently ignores that...)
@@ -597,7 +654,7 @@ public class Timer extends IOUnit {
       }
       if (DEBUG) {
         log("Read: " +
-            " CTL: inDiv:" + inputDivider +
+            " CTL: inDiv:" + inputDivider1 + " " + inputDivider2 +
             " src: " + getSourceName(clockSource) +
             " IEn:" + interruptEnable + " IFG: " +
             interruptPending + " mode: " + mode);
@@ -626,6 +683,9 @@ public class Timer extends IOUnit {
           throw new EmulationException(getName() + " Reading from CCR register that is not available " + i);
       }
       val = ccr[i].tccr;
+      break;
+    case TEX0:
+      val=inputDivider2-1;
       break;
     default:
       logw(WarningType.VOID_IO_READ, "Not supported read, returning zero!!! addr: " + index + " addr: $" + Utils.hex(address, 4));
@@ -721,11 +781,14 @@ public class Timer extends IOUnit {
       if (DEBUG) {
         log("wrote to TCTL: " + Utils.hex16(data));
       }
-      inputDivider = 1 << ((data >> 6) & 3);
+      inputDivider1 = 1 << ((data >> 6) & 3);
       clockSource = srcMap[(data >> 8) & 3];
-
-      updateCyclesMultiplicator();
-
+      
+      if(typ==MSP430Config.TimerType.TimerEndEdit)
+        endValueIndex = ((data >> 11) & 3);
+      
+      setCounter(counter&WrapValue(),cycles);
+      
       if ((data & TCLR) != 0) {
 	setCounter(0,cycles);
 	
@@ -743,7 +806,7 @@ public class Timer extends IOUnit {
         resetCounter(cycles);
         
         // Wait until full wrap before setting the IRQ flag!
-        nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((calcPeriodeTime() - counter) & 0xffff));
+        nextTimerTrigger = (long) (cycles + cyclesMultiplicator * ((calcPeriodeTime() - counter) & WrapValue()));
         if (DEBUG) {
           log("Starting timer!");
         }
@@ -767,7 +830,7 @@ public class Timer extends IOUnit {
       interruptEnable = (data & 0x02) > 0;
 
       if (DEBUG) {
-	log("Write:  CTL: inDiv:" + inputDivider +
+	log("Write:  CTL: inDiv:" + inputDivider1 + " " + inputDivider2 +
 	        " src: " + getSourceName(clockSource) +
 	        " IEn:" + interruptEnable + " IFG: " +
 	        interruptPending + " mode: " + mode +
@@ -861,8 +924,12 @@ public class Timer extends IOUnit {
       ccr[index].tccr = data;
 
       startIt(index,cycles);
-      
       //calculateNextEventTime(cycles);
+      break;
+    case TEX0:
+      inputDivider2 = (data&7)+1;      
+      updateCyclesMultiplicator();      
+      break;
     }
   }
 
@@ -900,7 +967,7 @@ public class Timer extends IOUnit {
   }  
   
   void updateCyclesMultiplicator() {
-    cyclesMultiplicator = inputDivider;
+    cyclesMultiplicator = inputDivider1*inputDivider2;
     if (clockSource == SRC_ACLK) {
       cyclesMultiplicator = (cyclesMultiplicator * cpu.smclkFrq) /
       cpu.aclkFrq;
@@ -917,7 +984,7 @@ public class Timer extends IOUnit {
           // Should later be divided with DCO clock?
           divider = 1.0 * cpu.smclkFrq / cpu.aclkFrq;
       }
-      divider = divider * inputDivider;
+      divider = divider * inputDivider1 * inputDivider2;
         
       // These calculations assume that we have a big counter that counts from
       // last reset and upwards (without any roundoff errors).
@@ -936,7 +1003,7 @@ public class Timer extends IOUnit {
       log("Counter reset at " + cycles +  " cycMul: " + cyclesMultiplicator);
     }
 
-    cpu.scheduleCycleEvent(counterTrigger, cycles + (long)((0x10000 - counter) * cyclesMultiplicator));
+    cpu.scheduleCycleEvent(counterTrigger, cycles + (long)((WrapValue() + 1 - counter) * cyclesMultiplicator));
 //    System.out.println("(re)Scheduling counter trigger..." + counterTrigger.time + " now = " + cycles + " ctr: " + counter);
 
   }
@@ -959,7 +1026,7 @@ public class Timer extends IOUnit {
       // Should later be divided with DCO clock?
       divider = 1.0 * cpu.smclkFrq / cpu.aclkFrq;
     }
-    divider = divider * inputDivider;
+    divider = divider * inputDivider1 * inputDivider2;
 
     // These calculations assume that we have a big counter that counts from
     // last reset and upwards (without any roundoff errors).
@@ -984,7 +1051,7 @@ public class Timer extends IOUnit {
     
     switch (mode) {
     case CONTIN:
-      setCounter2((int) (bigCounter & 0xffff),cycles);
+      setCounter2((int) (bigCounter & WrapValue()),cycles);
       break;
     case UP:
       if (ccr[0].tccr == 0) {
@@ -1082,6 +1149,7 @@ public class Timer extends IOUnit {
     if (reg < 0x10) return "TCTL" + (reg - 2) / 2;
     if (reg == 0x10) return "TR";
     if (reg < 0x20) return "TCCR" + (reg - 0x12) / 2;
+    if (reg == 0x20) return "TEXO";
     return " UNDEF(" + Utils.hex(address, 4) + ")";
   }
 
@@ -1089,7 +1157,7 @@ public class Timer extends IOUnit {
   public String info() {
       StringBuilder sb = new StringBuilder();
       sb.append("  Source: " + getSourceName(clockSource) + "  Speed: " + clockSpeed
-              + " Hz  inDiv: " + inputDivider + "  Multiplier: " + cyclesMultiplicator + '\n'
+              + " Hz  inDiv: " + inputDivider1 + " " + inputDivider2 + "  Multiplier: " + cyclesMultiplicator + '\n'
               + "  Mode: " + modeNames[mode] + "  IEn: " + interruptEnable
               + "  IFG: " + interruptPending + "  TR: " + updateCounter(cpu.cycles) + '\n');
       for (CCR reg : ccr) {
@@ -1097,6 +1165,24 @@ public class Timer extends IOUnit {
       }
       return sb.toString();
   }
+  
+  public DefaultMutableTreeNode getNode(){
+    DefaultMutableTreeNode node = new DefaultMutableTreeNode(getName());
+    node.add(new DefaultMutableTreeNode ("Source: " + getSourceName(clockSource)));                                                                                      //
+    node.add(new DefaultMutableTreeNode ("Speed: " + clockSpeed + " Hz"));                                                                                          //
+    node.add(new DefaultMutableTreeNode ("inDiv1: " + inputDivider1));                                                                                          //
+    node.add(new DefaultMutableTreeNode ("inDiv2: " + inputDivider2));                                                                                          //
+    node.add(new DefaultMutableTreeNode ("Multiplier: " + cyclesMultiplicator));                                                                                     //
+    node.add(new DefaultMutableTreeNode ("Mode: " + modeNames[mode]));                                                                                           //
+    node.add(new DefaultMutableTreeNode ("IEn: " + interruptEnable));                                                                                            //
+    node.add(new DefaultMutableTreeNode ("IFG: " + interruptPending));                                                                                            //
+    node.add(new DefaultMutableTreeNode ("TR: " + updateCounter(cpu.cycles)));                                                                                             //
+    
+    for (CCR reg : ccr) {
+      node.add(reg.getNode());
+    }
+    return node;
+  }   
 
   public void ccrEvent(CCR ccrX) {
 

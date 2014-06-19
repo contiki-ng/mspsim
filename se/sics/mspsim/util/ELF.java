@@ -349,6 +349,14 @@ public class ELF {
     return debug;
   }
 
+  public int getPC(String FileName,int line) {
+    if (debug != null) {
+        return debug.getPC(FileName, line);
+    }
+    return -1;
+}
+  
+  
   public DebugInfo getDebugInfo(int adr) {
       if (debug != null) {
           return debug.getDebugInfo(adr);

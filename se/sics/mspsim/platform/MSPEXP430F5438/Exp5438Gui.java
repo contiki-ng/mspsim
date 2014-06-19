@@ -73,8 +73,9 @@ public class Exp5438Gui extends AbstractNodeGUI {
   };
 
   public Exp5438Gui(Exp5438Node node) {
-    super("Exp5438Gui", "images/MSP-EXP430F5438.jpg");
+    super("MSPSIM fork by Prof. Rüdiger Heintz", "images/MSP-EXP430F5438.jpg");
     this.node = node;
+
   }
 
   protected boolean isIn(Point mouse, Point btn) {
@@ -127,6 +128,8 @@ public class Exp5438Gui extends AbstractNodeGUI {
   }
 
   protected void paintComponent(Graphics g) {
+    
+    
     Color old = g.getColor();
 
     super.paintComponent(g);

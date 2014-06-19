@@ -44,7 +44,7 @@ package se.sics.mspsim.ui;
 public interface SourceViewer {
 
   public boolean isVisible();
-  public void viewFile(String path, String file);
+  public void viewFile(String path, String file, boolean UseChooser);
   public void viewLine(int line);
 
 }

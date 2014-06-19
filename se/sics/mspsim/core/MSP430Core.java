@@ -252,7 +252,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     Timer[] timers = new Timer[config.timerConfig.length];
     for (int i = 0; i < config.timerConfig.length; i++) {
         Timer t = new Timer(this, memory, config.timerConfig[i]);
-        ioSegment.setIORange(config.timerConfig[i].offset, 0x20, t);
+        ioSegment.setIORange(config.timerConfig[i].offset, 0x22, t);
         ioSegment.setIORange(config.timerConfig[i].timerIVAddr, 1, t);
         timers[i] = t;
     }
@@ -725,6 +725,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       vTimeEventQueue.print(out);
   }
  
+  public Object[] getIOUnits(){
+    return ioUnits.toArray();
+  }
+  
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
     for (IOUnit ioUnit : ioUnits) {

@@ -156,10 +156,12 @@ public class MSP430 extends MSP430Core {
       throw new IllegalStateException("step not possible when CPU is running");
     }
     setRunning(true);
+    int trys=0;
     try {
-    while (count > 0 && !isStopping) {
+    while (count > 0 && !isStopping) {      
       int pc = emulateOP(-1);
       if (pc >= 0) {
+        trys=0;
         count--;
         if (execCounter != null) {
           execCounter[pc]++;
@@ -181,6 +183,10 @@ public class MSP430 extends MSP430Core {
                 disAsm.disassemble(pc, memory, reg);
             }
         }
+      }
+      else{
+        trys++;
+        if(trys==1000) break;
       }
     }
     } finally { 

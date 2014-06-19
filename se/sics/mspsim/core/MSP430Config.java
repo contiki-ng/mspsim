@@ -5,7 +5,11 @@ import java.util.ArrayList;
 import se.sics.mspsim.util.Utils;
 
 public abstract class MSP430Config {
-    
+
+  public enum TimerType {
+    Standard, TimerEndEdit
+  }  
+  
     public static class TimerConfig {
         public final int ccr0Vector;
         public final int ccrXVector;
@@ -15,6 +19,7 @@ public abstract class MSP430Config {
         public final int[] srcMap;
         public final int timerIVAddr;
         public MUXConfig[] muxConfig;
+        public TimerType typ;
         
         public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
                 int[] srcMap, String name, int tiv) {
@@ -28,9 +33,17 @@ public abstract class MSP430Config {
         }
         
         public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
-                int[] srcMap, String name, int tiv, MUXConfig[] muxConfig) {
+                int[] srcMap, TimerType typ, String name, int tiv, MUXConfig[] muxConfig) {
             this(ccr0Vec,ccrXVec,ccrCount,offset,srcMap,name,tiv);
             this.muxConfig=muxConfig;
+            this.typ = typ;
+        }        
+
+        public TimerConfig(int ccr0Vec, int ccrXVec, int ccrCount, int offset,
+            int[] srcMap, String name, int tiv, MUXConfig[] muxConfig) {
+          this(ccr0Vec,ccrXVec,ccrCount,offset,srcMap,name,tiv);
+          this.muxConfig=muxConfig;
+          this.typ=typ;
         }        
     }
 

@@ -38,6 +38,8 @@
 package  se.sics.mspsim.core;
 import java.util.Arrays;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
 
@@ -487,5 +489,17 @@ public class IOPort extends IOUnit {
         }
         return sb.toString();
     }
+
+    public DefaultMutableTreeNode getNode(){                                                                      //Collects information and converts them into tree nodes    
+      DefaultMutableTreeNode node = new DefaultMutableTreeNode(getName());                                        //
+      for (int i = 0, n = portMap.length; i < n; i++){                                                            //
+        PortReg reg = portMap[i];                                                                                 //
+        if (reg != null) {                                                                                        //
+          DefaultMutableTreeNode child = new DefaultMutableTreeNode(reg+": " + Utils.hex(getRegister(reg), 2));   //
+          node.add(child);                                                                                        //
+        }                                                                                                         //
+      }                                                                                                           //
+      return node;                                                                                                //Returns main nodes
+    }   
 
 }
