@@ -131,12 +131,12 @@ public class MSP430 extends MSP430Core {
       /* Just a test to see if it gets down to a reasonable speed */
       if (cycles > nextSleep) {
 	try {
-	  Thread.sleep(100);
+	  Thread.sleep(5);
 	} catch (Exception e) {
 	}
 	// Frequency = 100 * cycles ratio
 	// Ratio = Frq / 100
-	nextSleep = cycles + (long)(rate * dcoFrq / 10);
+	nextSleep = cycles + (long)(rate * dcoFrq / (10*20));
       }
 
 //       if ((instruction & 0xff80) == CALL) {
