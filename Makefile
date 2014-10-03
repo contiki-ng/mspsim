@@ -62,6 +62,7 @@ Z1FIRMWARE = firmware/z1/blink.z1
 WISMOTEFIRMWARE = firmware/wismote/blink.wismote
 TYNDALLFIRMWARE = firmware/tyndall/blink.tyndall
 EXP5438FIRMWARE = firmware/exp5438/testcase-bits.exp5438
+LCD122DIPFIRMWARE = firmware/lcd122dip/testcase-lcd.lcd122dip
 else
 ESBFIRMWARE = ${FIRMWAREFILE}
 SKYFIRMWARE = ${FIRMWAREFILE}
@@ -69,6 +70,7 @@ Z1FIRMWARE = ${FIRMWAREFILE}
 WISMOTEFIRMWARE = ${FIRMWAREFILE}
 TYNDALLFIRMWARE = ${FIRMWAREFILE}
 EXP5438FIRMWARE = ${FIRMWAREFILE}
+LCD122DIPFIRMWARE = ${FIRMWAREFILE}
 endif
 
 ifdef MAPFILE
@@ -81,7 +83,7 @@ TIMERTEST := tests/timertest.firmware
 SCRIPTS := ${addprefix scripts/,autorun.sc duty.sc}
 BINARY := README.txt license.txt CHANGE_LOG.txt images/*.jpg images/*.png firmware/*/*.firmware ${SCRIPTS}
 
-PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli config debug platform ${addprefix platform/,esb sky jcreate sentillausb z1 tyndall ti wismote} plugin profiler emulink net ui util extutil/highlight extutil/jfreechart}
+PACKAGES := se/sics/mspsim ${addprefix se/sics/mspsim/,core chip cli config debug platform ${addprefix platform/,esb sky jcreate sentillausb z1 tyndall ti wismote lcd122dip} plugin profiler emulink net ui util extutil/highlight extutil/jfreechart}
 
 SOURCES := ${wildcard *.java $(addsuffix /*.java,$(PACKAGES))}
 
@@ -110,6 +112,9 @@ $(JARFILE):	$(OBJECTS)
 	$(JAR) cfm $(JARFILE) JarManifest.txt images/*.jpg -C $(BUILD) .
 	-@$(RM) JarManifest.txt
 
+%.lcd122dip:	jar
+	java -jar $(JARFILE) -platform=lcd122dip $@ $(ARGS)
+	
 %.esb:	jar
 	java -jar $(JARFILE) -platform=esb $@ $(ARGS)
 
@@ -145,16 +150,22 @@ runskyprof:	compile
 
 runtelos:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.sky.TelosNode $(SKYFIRMWARE) $(MAPARGS) $(ARGS)
+
 runz1:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.z1.Z1Node $(Z1FIRMWARE) $(MAPARGS) $(ARGS)
+
 runtyndall:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.tyndall.TyndallNode $(TYNDALLFIRMWARE) $(MAPARGS) $(ARGS)
+
 runwismote:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.wismote.WismoteNode $(WISMOTEFIRMWARE) $(MAPARGS) $(ARGS)
 
 runexp5438:	compile
 	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.ti.Exp5438Node $(EXP5438FIRMWARE) $(MAPARGS) $(ARGS)
 
+runlcd122dip: compile
+	$(JAVA) $(JAVAARGS) se.sics.mspsim.platform.lcd122dip.LCD122DIPNode $(LCD122DIPFIRMWARE) $(MAPARGS) $(ARGS)
+	
 test:	cputest
 
 cputest:	$(CPUTEST)
