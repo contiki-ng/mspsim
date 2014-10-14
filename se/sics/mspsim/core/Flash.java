@@ -649,6 +649,7 @@ public class Flash extends IOUnit {
         for (int readNum; (readNum = fis.read(buf)) != -1;) {
           bos.write(buf, 0, readNum);
         }
+        fis.close();
       } catch (Exception ex) {
         System.out.println("No file "+flashSaveFileName+ " found. Write a new file");
         writeFile();

@@ -43,7 +43,6 @@ public abstract class MSP430Config {
             int[] srcMap, String name, int tiv, MUXConfig[] muxConfig) {
           this(ccr0Vec,ccrXVec,ccrCount,offset,srcMap,name,tiv);
           this.muxConfig=muxConfig;
-          this.typ=typ;
         }        
     }
 

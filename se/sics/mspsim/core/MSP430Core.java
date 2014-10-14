@@ -245,7 +245,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     ioSegment.setIORange(config.flashControllerOffset, Flash.SIZE, flash);
  
     /* Setup special function registers */
-    sfr = new SFR(this, memory);
+    sfr = new SFR(this, memory,config.sfrOffset);
     ioSegment.setIORange(config.sfrOffset, 0x10, sfr);
 
     // first step towards making core configurable

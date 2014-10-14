@@ -52,7 +52,7 @@ public class MSP430 extends MSP430Core {
   private boolean debug = false;
   private boolean running = false;
   private boolean isBreaking = false;
-  private double rate = 2.0;
+  private double rate = 1.0;
 
   // Debug time - measure cycles
   private long lastCycles = 0;

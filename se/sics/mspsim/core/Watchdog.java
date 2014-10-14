@@ -55,7 +55,7 @@ public class Watchdog extends IOUnit implements SFRModule {
   private static int WDTSSEL = 0x04;
   private static int WDTISx = 0x03;
   
-  private static final int WATCHDOG_VECTOR = 10;
+  private static int WATCHDOG_VECTOR = 10;
   private static final int WATCHDOG_INTERRUPT_BIT = 0;
   private static final int WATCHDOG_INTERRUPT_VALUE = 1 << WATCHDOG_INTERRUPT_BIT;
   
@@ -93,13 +93,16 @@ public class Watchdog extends IOUnit implements SFRModule {
 
     if (version!=0){
       WDTSSEL = 0x20;
-      WDTISx = 0x07;      
+      WDTISx = 0x07; 
+      WATCHDOG_VECTOR = 58;
     }
     
     resetVector = cpu.MAX_INTERRUPT;
     
     this.offset = address;
     cpu.getSFR().registerSFDModule(0, WATCHDOG_INTERRUPT_BIT, this, WATCHDOG_VECTOR);
+
+
   }
    
   public void interruptServiced(int vector) {
@@ -119,7 +122,6 @@ public class Watchdog extends IOUnit implements SFRModule {
           scheduleTimer();
           //System.out.println("WDT trigger - will set interrupt flag (no reset)");
           //cpu.generateTrace(System.out);
-          cpu.flagInterrupt(58, this, true);          
       } else {
           System.out.println("WDT trigger - will reset node!");
           cpu.generateTrace(System.out);
