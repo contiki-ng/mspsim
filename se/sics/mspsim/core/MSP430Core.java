@@ -974,7 +974,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // -------------------------------------------------------------------
     // Interrupt processing [after the last instruction was executed]
     // -------------------------------------------------------------------
-    if (interruptsEnabled && servicedInterrupt == -1 && interruptMax >= 0) {
+    if (interruptsEnabled && (servicedInterrupt == -1) && (interruptMax >= 0)) {
       pc = serviceInterrupt(pc);
     }
 
@@ -1009,6 +1009,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     int pcBefore = pc;
     instruction = currentSegment.read(pc, AccessMode.WORD, AccessType.EXECUTE);
+    
     if (isStopping) {
         // Signaled to stop the execution before performing the instruction
         return -2;

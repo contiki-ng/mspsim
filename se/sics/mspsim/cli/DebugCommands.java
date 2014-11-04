@@ -600,7 +600,7 @@ public class DebugCommands implements CommandBundle {
             } else {
               int port = context.getArgumentAsInt(0);
               stubs = new GDBStubs();
-              stubs.setupServer(cpu, port);
+              stubs.setupServer(node,cpu, port,getELF());
             }
             return 0;
           }
