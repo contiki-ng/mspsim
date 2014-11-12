@@ -48,11 +48,13 @@ public class Exp5438Gui extends AbstractNodeGUI {
   public static final Point Button1_Pos = new Point(400, 463);
   public static final Point Button2_Pos = new Point(500, 463);
   public static final Point ButtonR_Pos = new Point(325, 84);
-  public static final Point JoyL_Pos = new Point(103, 437);
-  public static final Point JoyM_Pos = new Point(123, 437);
-  public static final Point JoyR_Pos = new Point(143, 437);
+  public static final Point JoyL_Pos = new Point(103, 441);
+  public static final Point JoyM_Pos = new Point(123, 441);
+  public static final Point JoyR_Pos = new Point(143, 441);
   public static final Point JoyT_Pos = new Point(123, 421);
   public static final Point JoyB_Pos = new Point(123, 461);
+  public static Boolean ButtonR_Pressed = false;
+  public static int ButtonSize=10;
 
   public static final int LEDR_X = 238;
   public static final int LEDR_Y = 462;
@@ -73,14 +75,14 @@ public class Exp5438Gui extends AbstractNodeGUI {
   };
 
   public Exp5438Gui(Exp5438Node node) {
-    super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.11", "images/MSP-EXP430F5438.jpg");
+    super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.12", "images/MSP-EXP430F5438.jpg");
     this.node = node;
 
   }
 
   protected boolean isIn(Point mouse, Point btn) {
-    if (mouse.y > (btn.y - 10) && mouse.y < (btn.y + 10)) {
-      if (mouse.x > (btn.x - 10) && mouse.x < (btn.x + 10)) {
+    if (mouse.y > (btn.y - ButtonSize) && mouse.y < (btn.y + ButtonSize)) {
+      if (mouse.x > (btn.x - ButtonSize) && mouse.x < (btn.x + ButtonSize)) {
         return true;
       }
     }
@@ -106,7 +108,10 @@ public class Exp5438Gui extends AbstractNodeGUI {
           Exp5438Gui.this.node.joyt.setPressed(true);
         } else if (isIn(e.getPoint(), JoyB_Pos)) {
           Exp5438Gui.this.node.joyb.setPressed(true);
+        } else if (isIn(e.getPoint(), ButtonR_Pos)) {
+          ButtonR_Pressed=true;
         }
+        repaint();
       }
 
       public void mouseReleased(MouseEvent e) {
@@ -117,10 +122,11 @@ public class Exp5438Gui extends AbstractNodeGUI {
         Exp5438Gui.this.node.joyr.setPressed(false);
         Exp5438Gui.this.node.joyt.setPressed(false);
         Exp5438Gui.this.node.joyb.setPressed(false);
-
+        ButtonR_Pressed=false;
         if (isIn(e.getPoint(), ButtonR_Pos)) {
           Exp5438Gui.this.node.getCPU().reset();
         }
+        repaint();
       }
     };
     this.addMouseListener(mouseHandler);
@@ -133,6 +139,16 @@ public class Exp5438Gui extends AbstractNodeGUI {
     Color old = g.getColor();
 
     super.paintComponent(g);
+    
+    g.setColor(new Color(0,0,0,128));
+    if(this.node.button1.isPressed()) g.fillRect(Button1_Pos.x-ButtonSize, Button1_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(this.node.button2.isPressed()) g.fillRect(Button2_Pos.x-ButtonSize, Button2_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(this.node.joyl.isPressed()) g.fillRect(JoyL_Pos.x-ButtonSize, JoyL_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(this.node.joym.isPressed()) g.fillRect(JoyM_Pos.x-ButtonSize, JoyM_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(this.node.joyr.isPressed()) g.fillRect(JoyR_Pos.x-ButtonSize, JoyR_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(this.node.joyt.isPressed()) g.fillRect(JoyT_Pos.x-ButtonSize, JoyT_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(this.node.joyb.isPressed()) g.fillRect(JoyB_Pos.x-ButtonSize, JoyB_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+    if(ButtonR_Pressed) g.fillRect(ButtonR_Pos.x-ButtonSize, ButtonR_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
 
     // Display all active leds
     if (node.LEDR) {
