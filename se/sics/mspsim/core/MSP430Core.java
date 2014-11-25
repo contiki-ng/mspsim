@@ -853,7 +853,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
       if (function == null) {
           function = getFunction(map, dst);
       }
-      profiler.profileCall(function, cpuCycles, pc);
+      profiler.profileCall(function, cycles, pc);
   }
   
   void printWarning(EmulationLogger.WarningType type, int address) throws EmulationException {
@@ -1096,7 +1096,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
             break;
         case MOVA_IND_AUTOINC:
             if (profiler != null && instruction == 0x0110) {
-                profiler.profileReturn(cpuCycles);
+                profiler.profileReturn(cycles);
             }
             writeRegister(PC, pc);
             /* read from address in register */
@@ -2017,7 +2017,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
               updateStatus = false;
 
               if (instruction == RETURN && profiler != null) {
-                  profiler.profileReturn(cpuCycles);
+                  profiler.profileReturn(cycles);
               }
 
               break;
