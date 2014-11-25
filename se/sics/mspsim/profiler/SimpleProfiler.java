@@ -134,7 +134,7 @@ public class SimpleProfiler implements Profiler, EventListener {
         if (servicedInterrupt >= 0) logger.printf("[%2d] ", servicedInterrupt);
         printSpace(logger, (cSP - interruptLevel) * 2);
         logger.println("Call to $" + Utils.hex(entry.getAddress(), 4) +
-                       ": " + entry.getInfo());
+                       ": " + entry.getInfo() + " at " + cycles);
         if (ignoreFunctions.get(entry.getName()) != null) {
           hide = 1;
         }
@@ -231,7 +231,7 @@ public class SimpleProfiler implements Profiler, EventListener {
         if ((cspEntry.hide <= 1) && (!hideIRQ || servicedInterrupt == -1)) {
           if (servicedInterrupt >= 0) logger.printf("[%2d] ",servicedInterrupt);
           printSpace(logger, (cSP - interruptLevel) * 2);
-          logger.println("return from " + ce.function.getInfo() + " elapsed: " + elapsed + " maxStackUsage: " + maxUsage);
+          logger.println("return from " + ce.function.getInfo() + " at " + cycles + " elapsed: " + elapsed + " maxStackUsage: " + maxUsage);
         }
       }
 
@@ -254,7 +254,7 @@ public class SimpleProfiler implements Profiler, EventListener {
 
     PrintStream logger = this.logger;
     if (logger != null && !hideIRQ) {
-      logger.println("----- Interrupt vector " + vector + " start execution -----");
+      logger.println("----- Interrupt vector " + vector + " start execution at " + cycles +  " -----");
     }
   }
   
@@ -267,7 +267,7 @@ public class SimpleProfiler implements Profiler, EventListener {
 
     PrintStream logger = this.logger;
     if (logger != null && !hideIRQ) {
-      logger.println("----- Interrupt vector " + servicedInterrupt + " returned - elapsed: " +
+      logger.println("----- Interrupt vector " + servicedInterrupt + " returned at " + cycles +  " - elapsed: " +
           (cycles - lastInterruptTime[servicedInterrupt]));
     }
     interruptLevel = 0;
