@@ -113,7 +113,7 @@ public class MSP430f1611Config extends MSP430Config {
         cpu.setIORange(0x080, 16, adc12);
         cpu.setIORange(0x140, 16, adc12);
         cpu.setIORange(0x150, 16, adc12);
-        cpu.setIORange(0x1a0,  8, adc12);
+        cpu.setIORange(0x1a0, 10, adc12);
 
         return 3 + 6;
     }
