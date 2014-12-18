@@ -132,6 +132,8 @@ public abstract class AbstractNodeGUI extends JComponent implements ServiceCompo
 
         status = Status.STARTED;
         window.setVisible(true);
+        window.setAlwaysOnTop(true);
+        window.setExitOnClose();
     }
 
     private URL getImageURL(String image) {

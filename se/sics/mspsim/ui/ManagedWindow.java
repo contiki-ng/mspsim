@@ -7,9 +7,12 @@ public interface ManagedWindow {
   public void setSize(int width, int height);
   public void setBounds(int x, int y, int width, int height);
   public void pack();
+  public void setAlwaysOnTop(boolean val);
 
   public void add(Component component);
   public void removeAll();
+  
+  public void setExitOnClose();
 
   public boolean isVisible();
 

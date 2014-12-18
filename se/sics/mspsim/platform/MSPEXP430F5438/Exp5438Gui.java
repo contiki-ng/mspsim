@@ -75,9 +75,8 @@ public class Exp5438Gui extends AbstractNodeGUI {
   };
 
   public Exp5438Gui(Exp5438Node node) {
-    super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.12", "images/MSP-EXP430F5438.jpg");
+    super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.13", "images/MSP-EXP430F5438.jpg");
     this.node = node;
-
   }
 
   protected boolean isIn(Point mouse, Point btn) {
