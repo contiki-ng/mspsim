@@ -80,13 +80,6 @@ public class GDBStubs implements Runnable {
     this.node = node;
     this.elf = elf;
 
-    String FName = elf.lookupFile(0x5c76);
-    System.out.println(FName);
-
-    for (int i = 0; i < 18; i++)
-      System.out.println("Zeile:" + i + " : "
-          + Utils.hex16(elf.getPC(FName, i)));
-
     try {
       serverSocket = new ServerSocket(port);
       System.out.println("GDBStubs open server socket port: " + port);
@@ -97,8 +90,7 @@ public class GDBStubs implements Runnable {
     }
   }
 
-  int[] buffer = new int[256];
-  int len;
+  List<Integer> buffer = new ArrayList<Integer>();
   Socket s;
 
   public void run() {
@@ -121,12 +113,12 @@ public class GDBStubs implements Runnable {
             if (c == '#') {
               readCmd = false;
               output.write('+');
-              handleCmd(cmd, buffer, len);
+              handleCmd(cmd, (Integer [])buffer.toArray(new Integer[buffer.size()]), buffer.size());
               cmd = "";
-              len = 0;
+              buffer.clear();
             } else {
               cmd += (char) c;
-              buffer[len++] = (c & 0xff);
+              buffer.add(c & 0xff);
               if (c == '$') {
                 System.out
                     .println("GDBStubs: server send start $ without end #");
@@ -140,7 +132,7 @@ public class GDBStubs implements Runnable {
               System.out.println("GDBStubs: server send - (NAK) ");
             } else if (c == 3) {
               output.write('+');
-              handleCmd("3", buffer, 0);
+              handleCmd("3", new Integer [0], 0);
             }
 
           }
@@ -183,7 +175,7 @@ public class GDBStubs implements Runnable {
    * @throws IOException
    * @throws EmulationException
    */
-  private void handleCmd(String cmd, int[] cmdBytes, int cmdLen)
+  private void handleCmd(String cmd, Integer[] cmdBytes, int cmdLen)
       throws IOException, EmulationException {
     System.out.println("cmd: " + cmd);
     char c = cmd.charAt(0);
@@ -251,6 +243,7 @@ public class GDBStubs implements Runnable {
       sendResponse(OK, "kill task");
       s.close();
       s = null;
+      System.exit(0); 
       break;
     case '3': // Pause
     case 's':
@@ -292,8 +285,11 @@ public class GDBStubs implements Runnable {
       if (c == 'm') {
         System.out.println("Returning memory from: 0x" + Integer.toHexString(addr) + " len = " + len);
         /* This might be wrong - which is the correct byte order? */
-        for (int i = 0; i < len; i++) {
-          data += Utils.hex8(mem.get(addr++, Memory.AccessMode.BYTE));
+        for (int i = 0; i < len; i+=2) {
+          String data2 = Utils.hex16(mem.get(addr, Memory.AccessMode.WORD));
+          data+=data2.substring(2);
+          data+=data2.substring(0, 2);
+          addr+=2;
         }
         sendResponse(data);
       } else {
@@ -308,8 +304,9 @@ public class GDBStubs implements Runnable {
         System.out.println("Writing to memory at: " + Integer.toHexString(addr) + " len = " + len + " with: "
             + ((wdata.length > 1) ? wdata[1] : ""));
         cPos++;
-        for (int i = 0; i < len; i++) {
-          mem.set(addr++, cmdBytes[cPos++], Memory.AccessMode.BYTE);
+        for (int i = 0; i < len; i+=2) {
+          mem.set(addr, cmdBytes[cPos++]+cmdBytes[cPos++]*256, Memory.AccessMode.WORD);
+          addr+=2;
           // cpu.memory[addr+i]=cmdBytes[cPos++];
         }
         // for (int i = 0; i < len; i++) {
