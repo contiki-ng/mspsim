@@ -120,8 +120,7 @@ public class GDBStubs implements Runnable {
               cmd += (char) c;
               buffer.add(c & 0xff);
               if (c == '$') {
-                System.out
-                    .println("GDBStubs: server send start $ without end #");
+                System.out.println("GDBStubs: server send start $ without end #");
               }
 
             }
@@ -177,7 +176,7 @@ public class GDBStubs implements Runnable {
    */
   private void handleCmd(String cmd, Integer[] cmdBytes, int cmdLen)
       throws IOException, EmulationException {
-    System.out.println("cmd: " + cmd);
+//    System.out.println("cmd: " + cmd);
     char c = cmd.charAt(0);
     String parts[];
     switch (c) {
@@ -283,7 +282,7 @@ public class GDBStubs implements Runnable {
       Memory mem = cpu.getMemory();
 
       if (c == 'm') {
-        System.out.println("Returning memory from: 0x" + Integer.toHexString(addr) + " len = " + len);
+        //System.out.println("Returning memory from: 0x" + Integer.toHexString(addr) + " len = " + len);
         /* This might be wrong - which is the correct byte order? */
         for (int i = 0; i < len; i+=2) {
           String data2 = Utils.hex16(mem.get(addr, Memory.AccessMode.WORD));
@@ -301,8 +300,8 @@ public class GDBStubs implements Runnable {
         // supplierNames.add(Val+" "+Integer.toHexString(addr+2*i));
         // }
 
-        System.out.println("Writing to memory at: " + Integer.toHexString(addr) + " len = " + len + " with: "
-            + ((wdata.length > 1) ? wdata[1] : ""));
+        //System.out.println("Writing to memory at: " + Integer.toHexString(addr) + " len = " + len + " with: "
+        //    + ((wdata.length > 1) ? wdata[1] : ""));
         cPos++;
         for (int i = 0; i < len; i+=2) {
           mem.set(addr, cmdBytes[cPos++]+cmdBytes[cPos++]*256, Memory.AccessMode.WORD);
@@ -395,14 +394,14 @@ public class GDBStubs implements Runnable {
   }
 
   public void sendResponse(String resp, String info) throws IOException {
-    System.out.print("ans: ");
+//    System.out.print("ans: ");
     String a = "";
     a += '$';
     int cs = 0;
     if (resp != null) {
       for (int i = 0; i < resp.length(); i++) {
         a += resp.charAt(i);
-        System.out.print(resp.charAt(i));
+        //System.out.print(resp.charAt(i));
         cs += resp.charAt(i);
       }
     }
@@ -422,11 +421,11 @@ public class GDBStubs implements Runnable {
       c = c - 10 + 'a';
     }
     a += (char) c;
-    if (info == "") {
-      System.out.println("");
-    } else {
-      System.out.println(" (" + info + ")");
-    }
+//    if (info == "") {
+//      System.out.println("");
+//    } else {
+//      System.out.println(" (" + info + ")");
+//    }
     output.write(a.getBytes());
   }
 }
