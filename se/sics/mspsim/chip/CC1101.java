@@ -39,7 +39,7 @@ import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
 
 public class CC1101 extends Radio802154 implements USARTListener {
-    protected boolean DEBUG = true;
+    protected boolean DEBUG = false;
 
 	/* cc1101-const.h: Configuration registers */
 	public static final int CC1101_IOCFG1 = 0x01;
@@ -133,6 +133,9 @@ public class CC1101 extends Radio802154 implements USARTListener {
 	public static final int CC1101_SWORRST = 0x3C;
 	public static final int CC1101_SNOP = 0x3D;
 
+        public static final int CC1101_PKTSTATUS_CS_BIT = (1 << 6);
+	public static final int CC1101_PKTSTATUS_CCA_BIT = (1 << 4);
+
 	public static enum CC1101RadioState {
 		CC1101_STATE_SLEEP(0x00)/* 0 */,
 		CC1101_STATE_IDLE(0x01),
@@ -174,15 +177,18 @@ public class CC1101 extends Radio802154 implements USARTListener {
 		}
 	};
 
-	public final static double SYMBOL_PERIOD = 0.016; /* TODO XXX 16 us */
 	public final static double FREQUENCY_CHANNEL_0 = 902; /* MHz */
 	public final static double FREQUENCY_CHANNEL_WIDTH = 0.125; /* MHz */
 
   public final static int CCA_THRESHOLD = -95;
 
+  private boolean triggerGDO0onSynch = false;
+  private boolean triggerGDO0onFifoThreshold = true;
+
 	private StateListener stateListener = null;
 	private ReceiverListener receiverListener = null;
-	
+
+        private boolean currentRssiValid;
 	private int currentRssiReg = 0;
 
 	private CC1101RadioState state = null;
@@ -206,6 +212,24 @@ public class CC1101 extends Radio802154 implements USARTListener {
 		super("CC1101", "Radio", cpu);
 		reset();
 	}
+
+    public long getBitRate() {
+        /* This function returns the current bit rate of the radio. It
+           should use the CC1101 configuration registers to figure out
+           the actual bit rate, but this code simply checks for two
+           specific configurations that correspond to known bit
+           rates. */
+        if(registers[CC1101_MDMCFG3] == 0xf8) {
+            return 50000;
+        } else if(registers[CC1101_MDMCFG3] == 0x3b) {
+            return 250000;
+        }
+        return 250000;
+    }
+
+    public double getInterByteDelayMs() {
+        return 1000.0 / (getBitRate() / 8.0);
+    }
 
 	public void log(String str) {
 	    if (DEBUG) {
@@ -233,7 +257,38 @@ public class CC1101 extends Radio802154 implements USARTListener {
 			break;
 
 		case CC1101_SRX:
-			setState(CC1101RadioState.CC1101_STATE_RX);
+                    if(getState() == CC1101RadioState.CC1101_STATE_IDLE ||
+                       getState() == CC1101RadioState.CC1101_STATE_SLEEP) {
+                        log("CC1101 from idle to rx, should wait");
+                        TimeEvent goToRX = new TimeEvent(0, "CC1101 go to RX") {
+                                public void execute(long t) {
+                                    if(getState() == CC1101RadioState.CC1101_STATE_RX) {
+                                        /* Radio already in RX, ignore */
+                                        return;
+                                    }
+                                    rxfifo.clear();
+                                    rxExpectedLen = -1;
+                                    rxGotSynchByte = false;
+                                    setGDO0(false);
+                                    setState(CC1101RadioState.CC1101_STATE_RX);
+                                }
+                            };
+                        int RXTIME = 190;
+                        cpu.scheduleTimeEventMillis(goToRX, RXTIME / 1000.0);
+
+                        TimeEvent rssiValid = new TimeEvent(0, "CC1101 set RSSI valid") {
+                                public void execute(long t) {
+                                    log("RSSI is now valid");
+                                    currentRssiValid = true;
+                                }
+                            };
+                        log("RSSI is not valid");
+                        int RSSITIME = 380;
+                        cpu.scheduleTimeEventMillis(rssiValid, RSSITIME / 1000.0);
+                        //                        setState(CC1101RadioState.CC1101_STATE_RX);
+                    } else {
+                        setStateRX();
+                    }
 			break;
 
 		case CC1101_STX:
@@ -248,6 +303,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
 
 		case CC1101_SIDLE:
 			setState(CC1101RadioState.CC1101_STATE_IDLE);
+                        currentRssiValid = false;
 			break;
 
 		case CC1101_SAFC:
@@ -259,11 +315,11 @@ public class CC1101 extends Radio802154 implements USARTListener {
 			break;
 
 		case CC1101_SPWD:
-			log("CC1101_SPWD almost implemented");
+                    //			log("CC1101_SPWD almost implemented");
 			/* TODO XXX
 			* Wait until CS is de-asserted. (We should at least wait
 			* receiving or transmitting.)*/
-			setState(CC1101RadioState.CC1101_STATE_IDLE);
+			setState(CC1101RadioState.CC1101_STATE_SLEEP);
 			break;
 
 		case CC1101_SFRX:
@@ -285,7 +341,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
 			break;
 
 		case CC1101_SNOP:
-			log("CC1101_SNOP not implemented");
+                    //			log("CC1101_SNOP not implemented");
 			break;
 
 		default:
@@ -398,6 +454,8 @@ public class CC1101 extends Radio802154 implements USARTListener {
 	public int getReg(int address) {
 		/* MSP430Core.profiler.printStackTrace(System.out); */
 		switch (address) {
+		case CC1101_CHANNR:
+			return channel;
 		case CC1101_MARCSTATE:
 			return getMarcstate();
 		case CC1101_RXBYTES:
@@ -407,13 +465,14 @@ public class CC1101 extends Radio802154 implements USARTListener {
 		  /*log("getReg(CC1101_TXBYTES) " + txfifo.size());*/
 			return txfifo.size();
 		case CC1101_PKTSTATUS:
-		  int status;
-		  final int CCA_BIT = (1<<4);
-		  if(currentRssiReg < CCA_THRESHOLD) {
-		    status = CCA_BIT;
-		  } else {
-		    status = 0;
-		  }
+		  int status = 0;
+                  if(currentRssiValid) {
+                      if(currentRssiReg < CCA_THRESHOLD) {
+                          status |= CC1101_PKTSTATUS_CCA_BIT;
+                      } else {
+                          status |= CC1101_PKTSTATUS_CS_BIT;
+                      }
+                  }
 		  return status;
 		case CC1101_RSSI:
 			return currentRssiReg;
@@ -421,6 +480,9 @@ public class CC1101 extends Radio802154 implements USARTListener {
 			if (rxfifo.size() > 0) {
 				int ret = (int) rxfifo.remove(0);
 				/*printRXFIFO();*/
+                if (triggerGDO0onFifoThreshold && rxfifo.size() == 0) {
+                    setGDO0(false);
+                }
 				return ret;
 			}
 			System.err.println("Warning: reading from empty RXFIFO");
@@ -468,7 +530,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
                 if (rfListener != null) {
                     rfListener.receivedByte((byte) (0xaa));
                 }
-                cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+                cpu.scheduleTimeEventMillis(sendEvent, getInterByteDelayMs());
                 return;
             }
             /* Send NUM_SYNCH-1 synch bytes */
@@ -477,7 +539,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
                 if (rfListener != null) {
                     rfListener.receivedByte((byte) (SYNCH_BYTE_LAST + 1));
                 }
-                cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+                cpu.scheduleTimeEventMillis(sendEvent, getInterByteDelayMs());
                 return;
             }
             /* Send last synch byte */
@@ -486,7 +548,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
                 if (rfListener != null) {
                     rfListener.receivedByte((byte) (SYNCH_BYTE_LAST));
                 }
-                cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+                cpu.scheduleTimeEventMillis(sendEvent, getInterByteDelayMs());
 
                 txSentSynchByte = true;
                 return;
@@ -518,7 +580,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
                 rfListener.receivedByte((byte) (0xee));
             }
             txSentFirstCRC = true;
-            cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+            cpu.scheduleTimeEventMillis(sendEvent, getInterByteDelayMs());
             return;
         }
 
@@ -528,7 +590,8 @@ public class CC1101 extends Radio802154 implements USARTListener {
             if (rfListener != null) {
                 rfListener.receivedByte((byte) 0);
             }
-            cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+
+            cpu.scheduleTimeEventMillis(sendEvent, getInterByteDelayMs());
             setState(CC1101RadioState.CC1101_STATE_TXFIFO_UNDERFLOW);
             return;
         }
@@ -537,7 +600,7 @@ public class CC1101 extends Radio802154 implements USARTListener {
             rfListener.receivedByte((byte) (txfifo.get(0).intValue()));
         }
         txfifo.remove(0);
-        cpu.scheduleTimeEventMillis(sendEvent, SYMBOL_PERIOD * 2);
+        cpu.scheduleTimeEventMillis(sendEvent, getInterByteDelayMs());
 
         /*printTXFIFO();*/
     }
@@ -643,11 +706,16 @@ public class CC1101 extends Radio802154 implements USARTListener {
 	boolean rxGotSynchByte = false;
 	private int rxExpectedLen = -1;
 	public void receivedByte(byte data) {
+            if(state != CC1101RadioState.CC1101_STATE_RX) {
+                return;
+            }
 		if (!rxGotSynchByte) {
 			/* Await synch byte */
 			if (data == SYNCH_BYTE_LAST) {
 				rxGotSynchByte = true;
-				setGDO0(true);
+                if(triggerGDO0onSynch) {
+                    setGDO0(true);
+                }
 			}
 			return;
 		}
@@ -663,7 +731,16 @@ public class CC1101 extends Radio802154 implements USARTListener {
 			rxGotSynchByte = false;
 		}
 
-		rxfifo.add(data);
+                if (rxfifo.size() < 64) {
+                        rxfifo.add(data);
+                        
+                        if (triggerGDO0onFifoThreshold && rxfifo.size() >= 3 && rxExpectedLen > 0) {
+                            setGDO0(true);
+                        }
+                } else {
+                        log("rxfifo overflow " + rxfifo.size());
+                        setState(CC1101RadioState.CC1101_STATE_RXFIFO_OVERFLOW);
+                }
 		/*printRXFIFO();*/
 	}
 
@@ -749,10 +826,11 @@ public class CC1101 extends Radio802154 implements USARTListener {
 
 	void setStateRX() {
 		setState(CC1101RadioState.CC1101_STATE_RX);
+                currentRssiValid = true;
 	}
 
 	void reset() {
-	  setState(CC1101RadioState.CC1101_STATE_IDLE);
+	  setState(CC1101RadioState.CC1101_STATE_SLEEP);
 
 	  registers[CC1101_PARTNUM] = 0;
 	  registers[CC1101_VERSION] = 6;
