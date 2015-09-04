@@ -57,7 +57,7 @@ public class BasicClockModule extends ClockSystem {
   // Max speed is 8Mhz (CPU limits it) - is max DCO 8Mhz?
   // Based on the scatterweb code it looks like less than
   // 5Mhz is more correct...
-  private static final int MAX_DCO_FRQ = 4915200;
+  private static final int MAX_DCO_FRQ = 9000000;
   private static final int MIN_DCO_FRQ = 1000;
   private static final int DCO_FACTOR = (MAX_DCO_FRQ - MIN_DCO_FRQ) / 2048;
 
