@@ -52,7 +52,7 @@ public class MSP430 extends MSP430Core {
   private boolean debug = false;
   private boolean running = false;
   private boolean isBreaking = false;
-  private double rate = 2.0;
+  private double rate = 1.0;
 
   // Debug time - measure cycles
   private long lastCycles = 0;
@@ -131,12 +131,12 @@ public class MSP430 extends MSP430Core {
       /* Just a test to see if it gets down to a reasonable speed */
       if (cycles > nextSleep) {
 	try {
-	  Thread.sleep(100);
+	  Thread.sleep(5);
 	} catch (Exception e) {
 	}
 	// Frequency = 100 * cycles ratio
 	// Ratio = Frq / 100
-	nextSleep = cycles + (long)(rate * dcoFrq / 10);
+	nextSleep = cycles + (long)(rate * dcoFrq / (10*20));
       }
 
 //       if ((instruction & 0xff80) == CALL) {
@@ -156,10 +156,12 @@ public class MSP430 extends MSP430Core {
       throw new IllegalStateException("step not possible when CPU is running");
     }
     setRunning(true);
+    int trys=0;
     try {
-    while (count > 0 && !isStopping) {
+    while (count > 0 && !isStopping) {      
       int pc = emulateOP(-1);
       if (pc >= 0) {
+        trys=0;
         count--;
         if (execCounter != null) {
           execCounter[pc]++;
@@ -181,6 +183,10 @@ public class MSP430 extends MSP430Core {
                 disAsm.disassemble(pc, memory, reg);
             }
         }
+      }
+      else{
+        trys++;
+        if(trys==1000) break;
       }
     }
     } finally { 

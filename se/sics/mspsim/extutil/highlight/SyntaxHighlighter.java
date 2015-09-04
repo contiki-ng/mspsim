@@ -22,7 +22,9 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
   private Scanner scanner;
   private int rows, columns;
 
-  private int currentY, currentHeight = -1;
+  private int currentY_Select, currentHeight = -1;
+  private int currentY_PC=-1;
+  private Integer [] BreakPointList=null;
 
   /**
    * Create a graphics component which displays text with syntax highlighting.
@@ -48,14 +50,14 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
           try {
             Rectangle r = getUI().modelToView(SyntaxHighlighter.this, caret);
             if (currentHeight > 0) {
-              repaint(0, currentY, getWidth(), currentHeight);
+              repaint(0, currentY_Select, getWidth(), currentHeight);
             }
             if (r != null && r.height > 0) {
-              currentY = r.y;
-              currentHeight = r.height;
+              currentY_Select = r.y;
+              //currentHeight = r.height;
               repaint(0, r.y, getWidth(), r.height);
             } else {
-              currentHeight = -1;
+              //currentHeight = -1;
             }
 
           } catch (BadLocationException e1) {
@@ -90,6 +92,7 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     Dimension size = new Dimension(paneWidth, paneHeight);
     setMinimumSize(size);
     setPreferredSize(size);
+    currentHeight=metrics.getHeight();    
     invalidate();
   }
 
@@ -181,6 +184,17 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     }
     return root.getElement(line).getStartOffset();
   }
+  
+  public int getLine(int Offset) {
+    Element root = getDocument().getDefaultRootElement();
+    for(int i=0;i<getLineCount();i++){
+      if( (root.getElement(i).getStartOffset()<=Offset)&
+          (root.getElement(i).getEndOffset()>=Offset)){
+        return i;
+      }
+    }
+    return getLineCount();
+  }  
 
   public int getLineEndOffset(int line) {
     Element root = getDocument().getDefaultRootElement();
@@ -189,7 +203,11 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
     }
     return root.getElement(line).getEndOffset();
   }
-
+  
+  public void setBreakpointList(Integer [] List){
+    BreakPointList=List;
+    repaint();
+  }
 
   /**
    * <font style='color:gray;'>Ignore this method. Responds to the underlying
@@ -230,18 +248,29 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
 
   private int smallAmount = 100;
 
-  private Color highlightColor = new Color(0, 240, 0, 255);
+  private Color highlightColorSelect = new Color(0, 240, 0, 255);
+  private Color highlightColorBreakpoint = new Color(0, 0, 240, 255);
+  private Color highlightColorPC = new Color(240, 0, 0, 255);
 
   /**
    * <font style='color:gray;'>Ignore this method. Carries out a small amount of
    * re-highlighting for each call to <code>repaint</code>.</font>
    */
   protected void paintComponent(Graphics g) {
-    if (currentHeight > 0) {
-      g.setColor(highlightColor);
-      g.fillRect(0, currentY, getWidth(), currentHeight);
-    }
+//      g.setColor(highlightColorSelect);
+//      g.fillRect(0, currentY_Select, getWidth(), currentHeight);
+      if(BreakPointList!=null){
+        for( int k: BreakPointList ){
+          g.setColor(highlightColorBreakpoint);
+          g.fillRect(0, k*currentHeight, getWidth(), currentHeight);              
+        }
+      }
+      if(currentY_PC>0){
+        g.setColor(highlightColorPC);
+        g.fillRect(0, currentY_PC*currentHeight, getWidth(), currentHeight);      
+      }
 
+    
     super.paintComponent(g);
 
 
@@ -281,7 +310,11 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
   }
 
   public void viewLine(int line) {
-    if (line >= 0 && line < getLineCount()) {
+    if(line<0){
+      currentY_PC=-1;
+      repaint();
+    }
+    else if (line < getLineCount()) {
       try {
         int pos = getLineStartOffset(line);
 
@@ -295,8 +328,10 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
           }
           scrollRectToVisible(vr);
         }
-
-        setCaretPosition(pos);
+        
+        currentY_PC=line;
+        repaint();
+         //setCaretPosition(pos);
       } catch (BadLocationException e1) {
         // Ignore
       }

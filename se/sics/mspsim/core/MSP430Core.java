@@ -245,14 +245,14 @@ public class MSP430Core extends Chip implements MSP430Constants {
     ioSegment.setIORange(config.flashControllerOffset, Flash.SIZE, flash);
  
     /* Setup special function registers */
-    sfr = new SFR(this, memory);
+    sfr = new SFR(this, memory,config.sfrOffset);
     ioSegment.setIORange(config.sfrOffset, 0x10, sfr);
 
     // first step towards making core configurable
     Timer[] timers = new Timer[config.timerConfig.length];
     for (int i = 0; i < config.timerConfig.length; i++) {
         Timer t = new Timer(this, memory, config.timerConfig[i]);
-        ioSegment.setIORange(config.timerConfig[i].offset, 0x20, t);
+        ioSegment.setIORange(config.timerConfig[i].offset, 0x22, t);
         ioSegment.setIORange(config.timerConfig[i].timerIVAddr, 1, t);
         timers[i] = t;
     }
@@ -271,13 +271,17 @@ public class MSP430Core extends Chip implements MSP430Constants {
         ioUnits.add(timers[i]);
     }
 
-    watchdog = new Watchdog(this, config.watchdogOffset);
+    watchdog = new Watchdog(this, config.watchdogOffset,config.watchdogVersion);
     ioSegment.setIORange(config.watchdogOffset, 1, watchdog);
 
     ioUnits.add(watchdog);
 
     bcs.reset(0);
   }
+  
+  public void setFlashFile(String FileName) {
+    flash.setFile(FileName);
+  }  
 
   public void setIORange(int address, int range, IOUnit io) {
       if (address + range > MAX_MEM_IO) {
@@ -721,6 +725,10 @@ public class MSP430Core extends Chip implements MSP430Constants {
       vTimeEventQueue.print(out);
   }
  
+  public Object[] getIOUnits(){
+    return ioUnits.toArray();
+  }
+  
   // Should also return active units...
   public IOUnit getIOUnit(String name) {
     for (IOUnit ioUnit : ioUnits) {
@@ -966,7 +974,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     // -------------------------------------------------------------------
     // Interrupt processing [after the last instruction was executed]
     // -------------------------------------------------------------------
-    if (interruptsEnabled && servicedInterrupt == -1 && interruptMax >= 0) {
+    if (interruptsEnabled && (servicedInterrupt == -1) && (interruptMax >= 0)) {
       pc = serviceInterrupt(pc);
     }
 
@@ -1001,6 +1009,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     int pcBefore = pc;
     instruction = currentSegment.read(pc, AccessMode.WORD, AccessType.EXECUTE);
+    
     if (isStopping) {
         // Signaled to stop the execution before performing the instruction
         return -2;

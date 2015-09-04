@@ -2,6 +2,8 @@ package se.sics.mspsim.core;
 
 import java.util.ArrayDeque;
 
+import javax.swing.tree.DefaultMutableTreeNode;
+
 import se.sics.mspsim.chip.I2CUnit.I2CData;
 
 
@@ -468,5 +470,18 @@ public class GenericUSCI extends IOUnit implements DMATrigger, USARTSource {
     		System.out.println("USCI "+msg);
     	}
     }
+
+    public DefaultMutableTreeNode getNode(){                                                                 //Collects information and converts them into tree nodes
+      DefaultMutableTreeNode node = new DefaultMutableTreeNode(getName());                                   //
+      DefaultMutableTreeNode UTXIE = new DefaultMutableTreeNode("UTXIE: " + isIEBitsSet(TXIFG));             //
+      DefaultMutableTreeNode URXIE = new DefaultMutableTreeNode("URXIE: " + isIEBitsSet(RXIFG));             //
+      DefaultMutableTreeNode UTXIFG = new DefaultMutableTreeNode("UTXIFG: " + ((getIFG() & TXIFG) > 0));     //
+      DefaultMutableTreeNode URXIFG = new DefaultMutableTreeNode("URXIFG: " + ((getIFG() & RXIFG) > 0));     //
+      node.add(UTXIE);                                                                                       //
+      node.add(URXIE);                                                                                       //
+      node.add(UTXIFG);                                                                                      //
+      node.add(URXIFG);                                                                                      //
+      return node;                                                                                           //Returns main nodes
+    } 
 
 }

@@ -4,6 +4,9 @@ import java.awt.Component;
 
 import javax.swing.JFrame;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
 public class JFrameWindowManager implements WindowManager {
 
     public ManagedWindow createWindow(final String name) {
@@ -14,6 +17,8 @@ public class JFrameWindowManager implements WindowManager {
             public void setSize(int width, int height) {
                 window.setSize(width, height);
             }
+            
+
 
             public void setBounds(int x, int y, int width, int height) {
                 window.setBounds(x, y, width, height);
@@ -34,6 +39,19 @@ public class JFrameWindowManager implements WindowManager {
             public void removeAll() {
                 window.removeAll();
             }
+            
+            public void setAlwaysOnTop(boolean val) {
+              window.setAlwaysOnTop( val);
+           }
+            
+            public void setExitOnClose(){
+              window.addWindowListener(new WindowAdapter(){
+                public void windowClosing(WindowEvent e){
+                        System.exit(0);//cierra aplicacion
+                }
+            }); 
+            }
+            
 
             public boolean isVisible() {
                 return window.isVisible();

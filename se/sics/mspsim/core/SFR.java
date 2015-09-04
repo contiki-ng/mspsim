@@ -67,8 +67,8 @@ public class SFR extends IOUnit {
   private boolean[] autoclear = new boolean[64];
   private int[] irqTriggeredPos = new int[64];
 
-  public SFR(MSP430Core cpu, int[] memory) {
-    super("SFR", "Special Function Register", cpu, memory, 0);
+  public SFR(MSP430Core cpu, int[] memory,int offset) {
+    super("SFR", "Special Function Register", cpu, memory, offset);
     reset(0);
   }
 
@@ -100,28 +100,30 @@ public class SFR extends IOUnit {
   // write a value to the IO unit
   public void write(int address, int value, boolean word,
 			     long cycles) {
-    if (DEBUG) log("write to: " + address + " = " + value);
-    switch (address) {
+    int addressRel=address-offset;    
+    if (DEBUG) log("write to: " + addressRel + " = " + value);
+    switch (addressRel) {
     case IE1:
     case IE2:
-        updateIE(address - IE1, value);
+        updateIE(addressRel - IE1, value);
       break;
     case IFG1:
     case IFG2:
-      updateIFG(address - IFG1, value);
+      updateIFG(addressRel - IFG1, value);
       break;
     case ME1:
     case ME2:
-      updateME(address - ME1, value);
+      updateME(addressRel - ME1, value);
     }
-    memory[address] = value;
+    memory[addressRel] = value;
   }
 
   // read
   // read a value from the IO unit
   public int read(int address, boolean word, long cycles) {
-    if (DEBUG) log("read from: " + address);
-    switch (address) {
+    int addressRel=address-offset;
+    if (DEBUG) log("read from: " + addressRel);
+    switch (addressRel) {
     case IE1:
       return ie1;
     case IE2:
@@ -135,7 +137,7 @@ public class SFR extends IOUnit {
     case ME2:
       return me2;
     default:
-      return memory[address];
+      return memory[addressRel];
     }
   }
 

@@ -47,5 +47,7 @@ public interface ELFDebug {
   public ArrayList<Integer> getExecutableAddresses();
 
   public String[] getSourceFiles();
+  
+  public int getPC(String FileName,int line);
 
 } // ELFDebug

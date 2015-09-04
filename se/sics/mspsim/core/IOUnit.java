@@ -36,6 +36,8 @@
  */
 
 package se.sics.mspsim.core;
+import javax.swing.tree.DefaultMutableTreeNode;
+
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 
 public abstract class IOUnit implements InterruptHandler, Loggable {
@@ -133,4 +135,8 @@ public abstract class IOUnit implements InterruptHandler, Loggable {
   public String info() {
       return "* no info";
   }
+  
+  public DefaultMutableTreeNode getNode(){                                                    //Default function returns null, if there are no collectible information
+    return null;                                                                              //
+  }                                                                                           //  
 }

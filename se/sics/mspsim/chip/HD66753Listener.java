@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2007, Swedish Institute of Computer Science.
+ * Copyright (c) 2013, DHBW Cooperative State University Mannheim 
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,24 +27,10 @@
  *
  * This file is part of MSPSim.
  *
- *
- * -----------------------------------------------------------------
- *
- * Source Viewer
- *
- * Author  : Joakim Eriksson
- * Created : Sun Oct 21 22:00:00 2007
- * Updated : $Date$
- *           $Revision$
+ * Author: Rüdiger Heintz <ruediger.heintz@dhbw-mannheim.de>
  */
+package se.sics.mspsim.chip;
 
-package se.sics.mspsim.ui;
-
-
-public interface SourceViewer {
-
-  public boolean isVisible();
-  public void viewFile(String path, String file, boolean UseChooser);
-  public void viewLine(int line);
-
+public interface HD66753Listener {
+  public void displayChanged();
 }

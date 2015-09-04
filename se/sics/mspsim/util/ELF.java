@@ -333,21 +333,30 @@ public class ELF {
     for (int i = 0, n = len; i < n; i++) {
       memory[addr++] = elfData[offset++] & 0xff;
     }
-    if (fill > len) {
-      int n = fill - len;
-      if (n + addr > memory.length) {
-	n = memory.length - addr;
-      }
-      for (int i = 0; i < n; i++) {
-	memory[addr++] = 0;
-      }
-    }
+// Flash is overridden but I want to define the values in the flash class
+//    if (fill > len) {
+//      int n = fill - len;
+//      if (n + addr > memory.length) {
+//	n = memory.length - addr;
+//      }
+//      for (int i = 0; i < n; i++) {
+//	memory[addr++] = 0;
+//      }
+//    }
   }
 
   public ELFDebug getDebug() {
     return debug;
   }
 
+  public int getPC(String FileName,int line) {
+    if (debug != null) {
+        return debug.getPC(FileName, line);
+    }
+    return -1;
+}
+  
+  
   public DebugInfo getDebugInfo(int adr) {
       if (debug != null) {
           return debug.getDebugInfo(adr);

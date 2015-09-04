@@ -437,6 +437,28 @@ public class DwarfReader implements ELFDebug {
         } while (pos < sec.getSize());
     }
 
+    public int getPC(String FileName,int line) {
+      for (int i = 0; i < lineInfo.size(); i++) {
+        LineData data = lineInfo.get(i);
+        int start = data.lineEntries[0].address;
+        /* XXX ignore all line entries starting on address 0 */
+        if (start == 0) continue;
+
+            for (int j = 0; j < data.lineEntries.length; j++) {
+              LineEntry lineEntry = data.lineEntries[j];
+              
+              if(lineEntry.line==line){
+                String FileName2=data.sourceFiles[lineEntry.file-1];
+                if(FileName2.equals(FileName)){
+                  return lineEntry.address;
+                }
+            }
+        }
+    }
+    return -1;
+      
+    }
+    
     /* Access methods for data... */
     public DebugInfo getDebugInfo(int address) {
         for (int i = 0; i < lineInfo.size(); i++) {

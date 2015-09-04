@@ -42,14 +42,28 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+
 import javax.swing.AbstractListModel;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.ListCellRenderer;
+
+import se.sics.mspsim.cli.CommandContext;
 import se.sics.mspsim.core.DbgInstruction;
 import se.sics.mspsim.core.DisAsm;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MemoryMonitor;
+import se.sics.mspsim.core.Memory.AccessMode;
+import se.sics.mspsim.core.Memory.AccessType;
+import se.sics.mspsim.util.DebugInfo;
+import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.Utils;
 
 public class DebugUI extends JPanel {
@@ -63,26 +77,60 @@ public class DebugUI extends JPanel {
 
   private DisAsm disAsm;
 
+  private MemoryMonitor monitor;
+
+  
   /**
    * Creates a new <code>DebugUI</code> instance.
    *
    */
-  public DebugUI(MSP430 cpu) {
-    this(cpu, true);
+  public DebugUI(MSP430 cpu,ELF elfData) {
+    this(cpu, elfData, true);
+  }
+  
+  private void setMonitor(){
+    monitor = new MemoryMonitor.Adapter() {
+      private long lastCycles = -1;
+      @Override
+      public void notifyReadBefore(int address, AccessMode mode, AccessType type) {
+          if (type == AccessType.EXECUTE && cpu.cycles != lastCycles) {
+              cpu.triggBreakpoint();
+              lastCycles = cpu.cycles;
+          }
+      }
+  };    
   }
 
-  public DebugUI(MSP430 cpu, boolean showRegs) {
+  public DebugUI(MSP430 cpu,ELF elfData, boolean showRegs) {
     super(new BorderLayout());
     this.cpu = cpu;
-    disAsm = cpu.getDisAsm();
-
+    disAsm = cpu.getDisAsm();    
+    
+    setMonitor();
+    
     listModel = new DbgListModel();
     disList = new JList<DbgInstruction>(listModel);
     disList.setFont(new Font("courier", 0, 12));
-    disList.setCellRenderer(new MyCellRenderer());
-    disList.setPreferredSize(new Dimension(500, 350));
-    add(disList, BorderLayout.CENTER);
+    disList.setCellRenderer(new MyCellRenderer(elfData));
+    disList.setPreferredSize(new Dimension(500, 2000));
+    
+    JScrollPane scrollPane = new JScrollPane();
+    scrollPane.setViewportView(disList);
+    add(scrollPane, BorderLayout.CENTER);
 
+    MouseAdapter mouseListener = new MouseAdapter() {
+      public void mouseClicked(MouseEvent e) {
+          if (e.getClickCount() == 2) {
+            int pos=disList.getSelectedValue().getPos();
+            editBreakpoint(pos);
+           }
+          disList.updateUI();
+      }
+  };
+  disList.addMouseListener(mouseListener);    
+    
+    
+    
     if (showRegs) {
       JPanel regs = new JPanel(new GridLayout(2,8,4,0));
       regsLabel = new JLabel[16];
@@ -102,13 +150,23 @@ public class DebugUI extends JPanel {
     }
     repaint();
   }
+  
+  
+  private void editBreakpoint(int pos){
+    if (cpu.hasWatchPoint(pos)) {
+      cpu.removeWatchPoint(pos, monitor); 
+    }else{
+      cpu.addWatchPoint(pos, monitor);
+    }
+  }
+  
 
   private class DbgListModel extends AbstractListModel<DbgInstruction> {
     private static final long serialVersionUID = -2856626511548201481L;
 
     int startPos = -1;
     int endPos = -1;
-    final int size = 21;
+    final int size = 101;
 
     DbgInstruction[] instructions = new DbgInstruction[size];
 
@@ -160,8 +218,10 @@ public class DebugUI extends JPanel {
   class MyCellRenderer extends JLabel implements ListCellRenderer<DbgInstruction> {
 
     private static final long serialVersionUID = -2633138712695105181L;
+    private ELF elfData;
 
-    public MyCellRenderer() {
+    public MyCellRenderer(ELF elfData) {
+      this.elfData=elfData;
       setOpaque(true);
     }
 
@@ -189,6 +249,16 @@ public class DebugUI extends JPanel {
                s += ";   " + instruction.getFunction();
            }
        }
+       s=String.format("%1$-" + 60 + "s", s);
+       
+       try{
+       String s2= elfData.getDebugInfo(pos).toString();
+       s2=s2.replace("(function: * not available)", "");
+       s2=s2.replace("in file: ", "");     
+       s2=s2.replace(".//../", "");     
+       s += ","+s2;
+       }catch(Exception e){}
+       
        setText(s);
        if (pos == cpu.getPC()) {
 	 setBackground(Color.green);
