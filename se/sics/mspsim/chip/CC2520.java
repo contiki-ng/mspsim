@@ -521,6 +521,13 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
         }
     }
 
+    public int getFooterLength() {
+    	if (autoCRC) {
+    		return 2;
+    	}
+    	return 0;
+    }
+    
     private void reset() {
         // FCF max fram version = 3 and frame filtering enabled
         memory[REG_FRMFILT0] = 0x0d;
@@ -837,20 +844,24 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
 
                     // Here we check the CRC of the packet!
                     //System.out.println("Reading from " + ((rxfifoWritePos + 128 - 2) & 127));
-                    int crc = rxFIFO.get(-2) << 8;
-                    crc += rxFIFO.get(-1); //memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
+                    if (autoCRC) {
+                        int crc = rxFIFO.get(-2) << 8;
+                        crc += rxFIFO.get(-1); //memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)];
 
-                    crcOk = crc == rxCrc.getCRCBitrev();
-                    if (DEBUG && !crcOk) {
-                        log("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
+                        crcOk = crc == rxCrc.getCRCBitrev();
+                        if (DEBUG && !crcOk) {
+                            log("CRC not OK: recv:" + Utils.hex16(crc) + " calc: " + Utils.hex16(rxCrc.getCRCBitrev()));
+                        }
+                        // Should take a RSSI value as input or use a set-RSSI value...
+                        rxFIFO.set(-2, memory[REG_RSSI] & 0xff);
+                        rxFIFO.set(-1, (corrval & 0x7F) | (crcOk ? 0x80 : 0));
+                        //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = ;
+                        //          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
+                        //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
+                        //              (crcOk ? 0x80 : 0);
+                    } else {
+                    	crcOk = true;
                     }
-                    // Should take a RSSI value as input or use a set-RSSI value...
-                    rxFIFO.set(-2, memory[REG_RSSI] & 0xff);
-                    rxFIFO.set(-1, (corrval & 0x7F) | (crcOk ? 0x80 : 0));
-                    //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 2) & 127)] = ;
-                    //          // Set CRC ok and add a correlation - TODO: fix better correlation value!!!
-                    //          memory[RAM_RXFIFO + ((rxfifoWritePos + 128 - 1) & 127)] = 37 |
-                    //              (crcOk ? 0x80 : 0);
 
                     /* set FIFOP only if this is the first received packet - e.g. if rxfifoLen is at most rxlen + 1
                      * TODO: check what happens when rxfifoLen < rxlen - e.g we have been reading before FIFOP */
@@ -910,6 +921,15 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
             //                        + " CCAMUX: " + (memory[address] & CCAMUX));
             //            updateCCA();
             //            break;
+        case REG_GPIOCTRL0:
+			/*
+			 * XXX TODO Implement support for GPIO control. Below example code
+			 * demonstrates how GPIO0 is set to fifop functionality (0x28).
+			 */
+			if (data == 0x28) {
+				fifopGPIO = gpio[0];
+			}
+        	break;
         case REG_FSCTRL: {
             ChannelListener listener = this.channelListener;
             if (listener != null) {
@@ -926,6 +946,10 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     }
 
     int readMemory(int address) {
+        switch(address) {
+        case REG_RXFIFOCNT:
+        	return rxFIFO.length();
+        }
         return memory[address];
     }
 
@@ -1084,14 +1108,18 @@ public class CC2520 extends Radio802154 implements USARTListener, SPIData {
     private void txNext() {
         if(txfifoPos <= memory[RAM_TXFIFO]) {
             int len = memory[RAM_TXFIFO] & 0xff;
-            if (txfifoPos == len - 1) {
-                txCrc.setCRC(0);
-                for (int i = 1; i < len - 1; i++) {
-                    txCrc.addBitrev(memory[RAM_TXFIFO + i] & 0xff);
+            
+            if (autoCRC) {
+                if (txfifoPos == len - 1) {
+                    txCrc.setCRC(0);
+                    for (int i = 1; i < len - 1; i++) {
+                        txCrc.addBitrev(memory[RAM_TXFIFO + i] & 0xff);
+                    }
+                    memory[RAM_TXFIFO + len - 1] = txCrc.getCRCHi();
+                    memory[RAM_TXFIFO + len] = txCrc.getCRCLow();
                 }
-                memory[RAM_TXFIFO + len - 1] = txCrc.getCRCHi();
-                memory[RAM_TXFIFO + len] = txCrc.getCRCLow();
             }
+            
             if (txfifoPos > 0x7f) {
                 logw(WarningType.EXECUTION, "**** Warning - packet size too large - repeating packet bytes txfifoPos: " + txfifoPos);
             }

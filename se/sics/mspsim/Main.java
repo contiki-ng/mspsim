@@ -75,6 +75,15 @@ public class Main {
       if ("exp5438".equals(platform)) {
           return "se.sics.mspsim.platform.ti.Exp5438Node";
       }
+      if ("exp1101".equals(platform)) {
+          return "se.sics.mspsim.platform.ti.Exp1101Node";
+      }
+      if ("exp1120".equals(platform)) {
+          return "se.sics.mspsim.platform.ti.Exp1120Node";
+      }
+      if ("cc430".equals(platform)) {
+          return "se.sics.mspsim.platform.ti.CC430Node";
+      }
       // Try to guess the node type.
       return "se.sics.mspsim.platform." + platform + '.'
           + Character.toUpperCase(platform.charAt(0))
