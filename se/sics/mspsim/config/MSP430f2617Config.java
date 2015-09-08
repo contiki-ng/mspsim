@@ -134,6 +134,11 @@ public class MSP430f2617Config extends MSP430Config {
     }
 
     @Override
+    public int getMaxClockSpeed() {
+        return 9000000;
+    }
+
+    @Override
     public String getAddressAsString(int addr) {
         return Utils.hex20(addr);
     }
