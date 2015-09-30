@@ -28,16 +28,12 @@
  *
  * This file is part of MSPSim.
  *
- * $Id$
- *
  * -----------------------------------------------------------------
  *
  * Main
  *
  * Authors : Joakim Eriksson, Niclas Finne
  * Created : 6 nov 2008
- * Updated : $Date$
- *           $Revision$
  */
 
 package se.sics.mspsim;
@@ -104,7 +100,21 @@ public class Main {
     if (nodeType != null) {
       node = createNode(nodeType);
     } else {
-      platform = config.getProperty("platform", "sky");
+      platform = config.getProperty("platform");
+      if (platform == null) {
+          // Default platform
+          platform = "sky";
+
+          // Guess platform based on firmware filename suffix.
+          // TinyOS firmware files are often named 'main.exe'.
+          String[] a = config.getArguments();
+          if (a.length > 0 && !"main.exe".equals(a[0])) {
+              int index = a[0].lastIndexOf('.');
+              if (index > 0) {
+                  platform = a[0].substring(index + 1);
+              }
+          }
+      }
       nodeType = getNodeTypeByPlatform(platform);
       node = createNode(nodeType);
     }

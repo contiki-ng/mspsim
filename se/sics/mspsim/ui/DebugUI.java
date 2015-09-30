@@ -47,19 +47,19 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.ListCellRenderer;
-
-import se.sics.mspsim.core.*;
+import se.sics.mspsim.core.DbgInstruction;
+import se.sics.mspsim.core.DisAsm;
+import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.util.Utils;
 
 public class DebugUI extends JPanel {
 
   private static final long serialVersionUID = 2123628878332126912L;
 
-  private JList disList;
+  private JList<DbgInstruction> disList;
+  private DbgListModel listModel;
   private JLabel[] regsLabel;
   private MSP430 cpu;
-  private DbgListModel listModel;
-  private int currentAddress = 0;
 
   private DisAsm disAsm;
 
@@ -76,7 +76,8 @@ public class DebugUI extends JPanel {
     this.cpu = cpu;
     disAsm = cpu.getDisAsm();
 
-    disList = new JList(listModel = new DbgListModel());
+    listModel = new DbgListModel();
+    disList = new JList<DbgInstruction>(listModel);
     disList.setFont(new Font("courier", 0, 12));
     disList.setCellRenderer(new MyCellRenderer());
     disList.setPreferredSize(new Dimension(500, 350));
@@ -102,7 +103,7 @@ public class DebugUI extends JPanel {
     repaint();
   }
 
-  private class DbgListModel extends AbstractListModel {
+  private class DbgListModel extends AbstractListModel<DbgInstruction> {
     private static final long serialVersionUID = -2856626511548201481L;
 
     int startPos = -1;
@@ -111,44 +112,36 @@ public class DebugUI extends JPanel {
 
     DbgInstruction[] instructions = new DbgInstruction[size];
 
-    // 64K Dbg instructions...
-    // private DbgInstruction[] instrs = new DbgInstruction[0x10000];
-
-    public void setCurrentAddress(int address) {
-      startPos = address;
-    }
-
     // -------------------------------------------------------------------
     // ListAPI
     // -------------------------------------------------------------------
 
+    @Override
     public int getSize() {
       return size;
     }
 
     private void checkPC() {
-      int pc = cpu.reg[MSP430Core.PC];
+      int pc = cpu.getPC();
       if (pc < startPos || pc > endPos) {
 	startPos = pc;
 	// recalculate index!!! with PC at the top of the "page"
 	int currentPos = pc;
-	DbgInstruction inst;
 	for (int i = 0, n = size; i < n; i++) {
-	  if (cpu.getExecCount(currentPos) != 0 || true) {
-	    inst = disAsm.getDbgInstruction(currentPos, cpu);
-	    inst.setPos(currentPos);
-	    currentPos += inst.getSize();
-	  } else {
-	    inst = new DbgInstruction();
-	    inst.setASMLine("    " + Utils.hex16(currentPos) + " " +
-			    Utils.hex8(cpu.memory[currentPos]) + " " +
-			    Utils.hex8(cpu.memory[currentPos + 1]) +
-			    "       .word " + Utils.hex8(cpu.memory[currentPos]) +
-			    Utils.hex8(cpu.memory[currentPos + 1]));
-	    inst.setPos(currentPos);
-	    currentPos += 2;
-	  }
-	  instructions[i] = inst;
+//        if (cpu.getExecCount(currentPos) == 0) {
+//	    inst = new DbgInstruction();
+//	    inst.setInstruction(cpu.memory[currentPos] + (cpu.memory[currentPos + 1] << 8), 2);
+//	    inst.setASMLine("    " + Utils.hex(currentPos, 4) + " " +
+//			    Utils.hex8(cpu.memory[currentPos]) + " " +
+//			    Utils.hex8(cpu.memory[currentPos + 1]) +
+//			    "       .word " + Utils.hex8(cpu.memory[currentPos]) +
+//			    Utils.hex8(cpu.memory[currentPos + 1]));
+//	  } else {
+
+          DbgInstruction inst = disAsm.getDbgInstruction(currentPos, cpu);
+          inst.setPos(currentPos);
+          currentPos += inst.getSize();
+          instructions[i] = inst;
 	}
 	endPos = currentPos;
       }
@@ -157,13 +150,14 @@ public class DebugUI extends JPanel {
     // Should cache the current 20 (or size) instructions to get a faster
     // version of this...
     // And have a call to "update" instead...
-    public Object getElementAt(int index) {
+    @Override
+    public DbgInstruction getElementAt(int index) {
       checkPC();
       return instructions[index];
     }
   }
 
-  class MyCellRenderer extends JLabel implements ListCellRenderer {
+  class MyCellRenderer extends JLabel implements ListCellRenderer<DbgInstruction> {
 
     private static final long serialVersionUID = -2633138712695105181L;
 
@@ -171,36 +165,32 @@ public class DebugUI extends JPanel {
       setOpaque(true);
     }
 
+    @Override
     public Component getListCellRendererComponent(
-       JList list,
-       Object value,            // value to display
+       JList<? extends DbgInstruction> list,
+       DbgInstruction instruction,            // instruct to display
        int index,               // cell index
        boolean isSelected,      // is the cell selected
        boolean cellHasFocus)    // the list and the cell have the focus
      {
        String s;
        int pos = 0;
-       if (value == null) {
-	 s = "---";
+       if (instruction == null) {
+           s = "---";
        } else {
-	 if (value instanceof DbgInstruction) {
-	   DbgInstruction i = (DbgInstruction) value;
-	   s = i.getASMLine(false);
-	   if (i.getFunction() != null) {
-	     s += ";   " + i.getFunction();
-	   }
-	   pos = i.getPos();
+           pos = instruction.getPos();
+	   s = instruction.getASMLine(false);
 	   if (cpu.hasWatchPoint(pos)) {
 	     s = "*B " + s;
 	   } else {
 	     s = "   " + s;
 	   }
-	 } else {
-	   s = value.toString();
-	 }
+           if (instruction.getFunction() != null) {
+               s += ";   " + instruction.getFunction();
+           }
        }
        setText(s);
-       if (pos == cpu.reg[MSP430Core.PC]) {
+       if (pos == cpu.getPC()) {
 	 setBackground(Color.green);
        } else {
 	 if (isSelected) {

@@ -8,6 +8,9 @@
   <property name="lib" location="lib"/>
   <property name="jarfile" location="mspsim.jar"/>
   <property name="javac.debug" value="true"/>
+  <property name="ant.build.javac.source" value="1.7"/>
+  <property name="ant.build.javac.target" value="1.7"/>
+  <property name="ARGS" value=""/>
 
   <path id="classpath">
     <fileset dir="${lib}" includes="**/*.jar"/>
@@ -23,8 +26,12 @@
   </target>
 
   <target name="compile" depends="init" description="compile the source">
-    <javac srcdir="${src}" destdir="${build}" classpathref="classpath" debug="${javac.debug}"
-      includeantruntime="false"/>
+    <javac srcdir="${src}" destdir="${build}" classpathref="classpath"
+           debug="${javac.debug}" includeantruntime="false">
+      <compilerarg value="-Xlint:unchecked"/>
+      <compilerarg value="-deprecation"/>
+      <exclude name="tests/**" />
+    </javac>
   </target>
 
   <target name="jar" depends="compile" description="generate MSPSim jar file" >
@@ -42,6 +49,7 @@
     <property name="FIRMWAREFILE" value="firmware/esb/sensor-demo.esb"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.esb.ESBNode">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
@@ -49,6 +57,7 @@
     <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.SkyNode">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
@@ -57,6 +66,7 @@
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.SkyNode">
       <jvmarg value="-agentlib:yjpagent" />
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
@@ -64,6 +74,7 @@
     <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.TelosNode">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
@@ -71,6 +82,7 @@
     <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.jcreate.JCreateNode">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
@@ -78,6 +90,7 @@
     <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sentillausb.SentillaUSBNode">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
@@ -85,10 +98,17 @@
     <property name="FIRMWAREFILE" value="firmware/z1/blink.z1"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.z1.Z1Node">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 
-  <target name="run" depends="runsky"/>
+  <target name="run" depends="jar" description="run MSPSim">
+    <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
+    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.Main">
+      <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
+    </java>
+  </target>
 
   <target name="cputest" depends="jar" description="run MSPSim CPU test">
     <property name="FIRMWAREFILE" value="tests/cputest.sky"/>
@@ -98,6 +118,7 @@
 
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.util.Test">
       <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
     </java>
   </target>
 

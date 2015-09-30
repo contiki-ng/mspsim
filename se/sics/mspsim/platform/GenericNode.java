@@ -41,9 +41,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.net.URL;
-
 import javax.swing.JFrame;
-
 import se.sics.mspsim.cli.CommandHandler;
 import se.sics.mspsim.cli.DebugCommands;
 import se.sics.mspsim.cli.FileCommands;
@@ -54,7 +52,6 @@ import se.sics.mspsim.cli.StreamCommandHandler;
 import se.sics.mspsim.cli.WindowCommands;
 import se.sics.mspsim.core.Chip;
 import se.sics.mspsim.core.EmulationException;
-import se.sics.mspsim.core.EmulationLogger;
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.MSP430Config;
 import se.sics.mspsim.core.MSP430Constants;
@@ -67,7 +64,6 @@ import se.sics.mspsim.ui.WindowUtils;
 import se.sics.mspsim.util.ArgumentManager;
 import se.sics.mspsim.util.ComponentRegistry;
 import se.sics.mspsim.util.ConfigManager;
-import se.sics.mspsim.util.DefaultEmulationLogger;
 import se.sics.mspsim.util.ELF;
 import se.sics.mspsim.util.IHexReader;
 import se.sics.mspsim.util.MapTable;
@@ -140,17 +136,21 @@ public abstract class GenericNode extends Chip implements Runnable {
       }
     }
 
-    int[] memory = cpu.memory;
     if (firmwareFile.endsWith("ihex")) {
       // IHEX Reading
+      int[] memory = cpu.memory;
       IHexReader reader = new IHexReader();
       reader.readFile(memory, firmwareFile);
     } else {
-      loadFirmware(firmwareFile, memory);
+      loadFirmware(firmwareFile);
     }
-    if (args.length > 1) {
-      MapTable map = new MapTable(args[1]);
+    config.setProperty("firmwareFile", firmwareFile);
+
+    String mapFile = config.getProperty("map");
+    if (mapFile != null) {
+      MapTable map = new MapTable(mapFile);
       cpu.getDisAsm().setMap(map);
+      cpu.setMap(map);
       registry.registerComponent("mapTable", map);
     }
     
@@ -163,18 +163,16 @@ public abstract class GenericNode extends Chip implements Runnable {
       registry.registerComponent("controlgui", control);
       registry.registerComponent("stackchart", new StackUI(cpu));
       HighlightSourceViewer sourceViewer = new HighlightSourceViewer();
-      if (firmwareFile != null) {
-        // Add the firmware location to the search path
-        File fp = new File(firmwareFile).getParentFile();
-        if (fp != null) {
+      // Add the firmware location to the search path
+      File fp = new File(firmwareFile).getParentFile();
+      if (fp != null) {
           try {
-            // Get absolute path
-            fp = fp.getCanonicalFile();
+              // Get absolute path
+              fp = fp.getCanonicalFile();
           } catch (Exception e) {
-            // Ignore
+              // Ignore
           }
           sourceViewer.addSearchPath(fp);
-        }
       }
       control.setSourceViewer(sourceViewer);
     }
@@ -183,7 +181,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     if (script != null) {
       File fp = new File(script);
       if (fp.canRead()) {
-        CommandHandler ch = (CommandHandler) registry.getComponent("commandHandler");
+        CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
         script = script.replace('\\', '/');
         System.out.println("Autoloading script: " + script);
         config.setProperty("autoloadScript", script);
@@ -192,7 +190,17 @@ public abstract class GenericNode extends Chip implements Runnable {
         }
       }
     }
-    config.setProperty("firmwareFile", firmwareFile);
+
+    if (args.length > 1) {
+        // Run the following arguments as commands
+        CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
+        if (ch != null) {
+            for (int i = 1; i < args.length; i++) {
+                System.out.println("calling '" + args[i] + "'");
+                ch.lineRead(args[i]);
+            }
+        }
+    }
     System.out.println("-----------------------------------------------");
     System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
     System.out.println("-----------------------------------------------");
@@ -276,11 +284,9 @@ public abstract class GenericNode extends Chip implements Runnable {
   public void stop() {
     cpu.stop();
   }
-  
+
   public void step() throws EmulationException {
-    if (!cpu.isRunning()) {
-      cpu.step();
-    }
+    step(1);
   }
 
   // A step that will break out of breakpoints!

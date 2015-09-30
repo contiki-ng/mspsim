@@ -152,12 +152,16 @@ public abstract class MSP430Config {
         ramMirrorAddress = address;
     }
 
+    public int getMaxClockSpeed() {
+        return 4915200;
+    }
+
     public void ioMemSize(int size) {
         maxMemIO = size;
     }
 
     public ClockSystem createClockSystem(MSP430Core cpu, int[] memory, Timer[] timers) {
-        return new BasicClockModule(cpu, memory, 0, timers);
+        return new BasicClockModule(cpu, memory, 0, timers, getMaxClockSpeed());
     }
 
 }

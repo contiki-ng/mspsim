@@ -324,9 +324,8 @@ public class EmuLink {
         }
     }
 
-    public void run() throws IOException {
-        try {
-            ServerSocket serverSocket = new ServerSocket(8000);
+    public void run() {
+        try (ServerSocket serverSocket = new ServerSocket(8000)) {
 
             while(true) {
 
@@ -356,7 +355,7 @@ public class EmuLink {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         EmuLink el = new EmuLink();
         el.run();
     }

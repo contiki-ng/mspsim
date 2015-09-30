@@ -146,7 +146,8 @@ public class MSP430 extends MSP430Core {
     isStopping = isBreaking = false;
   }
 
-  public long step() throws EmulationException {
+  /* Use stepInstructions or stepMicros instead */
+  @Deprecated public long step() throws EmulationException {
     return stepMicros(1, 1);
   }
 
@@ -156,16 +157,18 @@ public class MSP430 extends MSP430Core {
     }
     setRunning(true);
     try {
-    while (count-- > 0 && !isStopping) {
+    while (count > 0 && !isStopping) {
       int pc = emulateOP(-1);
       if (pc >= 0) {
+        count--;
         if (execCounter != null) {
           execCounter[pc]++;
         }
         if (trace != null) {
   	  trace[tracePos++] = pc;
-  	  if (tracePos >= trace.length)
-  	      tracePos = 0;
+          if (tracePos >= trace.length) {
+            tracePos = 0;
+          }
         }
 
         // -------------------------------------------------------------------
