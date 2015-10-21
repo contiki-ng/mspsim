@@ -96,7 +96,7 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 		joyt = new Button("Button", cpu, port2, 4, false,Button.Btn_Typ.HighOpen);
 		joyb = new Button("Button", cpu, port2, 5, false,Button.Btn_Typ.HighOpen);
 		
-		lcd=new HD66753(cpu,"USCI B2",8,3,new Rectangle(368, 189, 179, 138));
+		lcd=new HD66753("Display",cpu,"USCI B2",8,3,new Rectangle(368, 189, 179, 138));
 		lcd.addListener(this);		
 	}
 
