@@ -652,15 +652,10 @@ public class Flash extends IOUnit {
 	public byte[] convertHexByte2Byte(byte[] buf){
 		byte[] bufO = new byte[buf.length/2];
 		for(int i=0;i<buf.length/2;i++){
-
-			int high = Integer.decode("0x" + (char)(buf[2*i]));
-			int low = Integer.decode("0x" + (char)(buf[2*i+1]));
-			bufO[i]=(byte)(high*16+low);
-
+			bufO[i]= (byte)Integer.parseInt(String.format("%c", buf[2*i])+String.format("%c", buf[2*i+1]),16);
+		}
+		return bufO;	
 	}
-	return bufO;
-}
-
 
 public void readFile() {
 	if (flashSaveFileName.length() > 0) {
