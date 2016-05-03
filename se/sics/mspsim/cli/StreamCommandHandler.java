@@ -81,9 +81,13 @@ public class StreamCommandHandler extends CommandHandler implements Runnable {
   private String readLine(BufferedReader inReader2) throws IOException {
     if (workaround) {
       StringBuilder str = new StringBuilder();
-      while(true) {
+      while(!exit) {
         if (inReader2.ready()) {
           int c = inReader2.read();
+          if (c < 0) {
+              // Input stream closed
+              return null;
+          }
           if (c == '\n') {
             return str.toString();
           }
@@ -98,6 +102,7 @@ public class StreamCommandHandler extends CommandHandler implements Runnable {
           }
         }
       }
+      return null;
     } else {
       return inReader2.readLine();
     }
@@ -109,12 +114,17 @@ public class StreamCommandHandler extends CommandHandler implements Runnable {
       try {
         out.print(prompt);
         out.flush();
-        String line = readLine(inReader);//.readLine();
+        String line = readLine(inReader);
+        if (line == null) {
+            // Input stream closed
+            exit = true;
+            break;
+        }
         // Simple execution of last called command line when not running from terminal with history support
         if (((char) 27 + "[A").equals(line)) {
-          line = lastLine;          
+          line = lastLine;
         }
-        if (line != null && line.length() > 0) {
+        if (line.length() > 0) {
           lastLine = line;
           lineRead(line);
         }
@@ -123,6 +133,12 @@ public class StreamCommandHandler extends CommandHandler implements Runnable {
         err.println("Command line tool exiting...");
         exit = true;
       }
+    }
+    try {
+        inReader.close();
+    } catch (IOException e) {
+        err.println("Error closing command line");
+        e.printStackTrace(err);
     }
   }
 
