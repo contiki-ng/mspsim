@@ -150,11 +150,11 @@ public class Z1Node extends GenericNode implements PortListener, USARTListener {
         port2 = cpu.getIOUnit(IOPort.class, "P2");
 //        port2.addPortListener(this);
         port3 = cpu.getIOUnit(IOPort.class, "P3");
-        port3.addPortListener(this);
+        port3.addPortOutListener(this);
         port4 = cpu.getIOUnit(IOPort.class, "P4");
-        port4.addPortListener(this);
+        port4.addPortOutListener(this);
         port5 = cpu.getIOUnit(IOPort.class, "P5");
-        port5.addPortListener(this);
+        port5.addPortOutListener(this);
 
 //        tmp102 = new TMP102(cpu);
 

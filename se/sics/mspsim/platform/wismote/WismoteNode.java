@@ -158,15 +158,15 @@ public class WismoteNode extends GenericNode implements PortListener, USARTListe
         ds2411 = new DS2411(cpu);
 
         IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
-        port1.addPortListener(this);
+        port1.addPortOutListener(this);
         ds2411.setDataPort(port1, DS2411_DATA_PIN);
 
         IOPort port2 = cpu.getIOUnit(IOPort.class, "P2");
-        port2.addPortListener(this);
-        cpu.getIOUnit(IOPort.class, "P3").addPortListener(this);
-        cpu.getIOUnit(IOPort.class, "P4").addPortListener(this);
-        cpu.getIOUnit(IOPort.class, "P5").addPortListener(this);
-        cpu.getIOUnit(IOPort.class, "P8").addPortListener(this);
+        port2.addPortOutListener(this);
+        cpu.getIOUnit(IOPort.class, "P3").addPortOutListener(this);
+        cpu.getIOUnit(IOPort.class, "P4").addPortOutListener(this);
+        cpu.getIOUnit(IOPort.class, "P5").addPortOutListener(this);
+        cpu.getIOUnit(IOPort.class, "P8").addPortOutListener(this);
 
         IOUnit usart0 = cpu.getIOUnit("USCI B0");
         if (usart0 instanceof USARTSource) {

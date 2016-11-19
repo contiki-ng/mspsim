@@ -63,7 +63,8 @@ public class IOPort extends IOUnit {
 
     private final PortReg[] portMap;
 
-    private PortListener portListener = null;
+    private PortListener portOutListener = null;
+    private PortListener portInListener = null;
 
     /* Registers for Digital I/O */
 
@@ -172,14 +173,22 @@ public class IOPort extends IOUnit {
         return sel;
     }
 
-    public synchronized void addPortListener(PortListener newListener) {
-        portListener = PortListenerProxy.addPortListener(portListener, newListener);
+    public synchronized void addPortOutListener(PortListener newListener) {
+        portOutListener = PortListenerProxy.addPortListener(portOutListener, newListener);
     }
 
-    public synchronized void removePortListener(PortListener oldListener) {
-        portListener = PortListenerProxy.removePortListener(portListener, oldListener);
+    public synchronized void removePortOutListener(PortListener oldListener) {
+        portOutListener = PortListenerProxy.removePortListener(portOutListener, oldListener);
     }
 
+    public synchronized void addPortInListener(PortListener newListener) {
+        portInListener = PortListenerProxy.addPortListener(portInListener, newListener);
+    }
+
+    public synchronized void removePortInListener(PortListener oldListener) {
+        portInListener = PortListenerProxy.removePortListener(portInListener, oldListener);
+    }
+    
     public void setTimerCapture(Timer timer, int pin) {
         if (DEBUG) {
             log("Setting timer capture for pin: " + pin);
@@ -295,11 +304,11 @@ public class IOPort extends IOUnit {
           else
               selValue2 = selValue2 | (1 << Pin);       
       }
-      listenerwrite();
+      listenOutput();
     }
     
-    private void listenerwrite(){      
-      PortListener listener = portListener;
+    private void listenOutput(){      
+      PortListener listener = portOutListener;
         if (listener != null) {
           int newPortOut=CalcPortOut();
           if(newPortOut!=oldPortOut){
@@ -308,6 +317,13 @@ public class IOPort extends IOUnit {
           }
       }
     }
+    
+    private void listenInput(){      
+        PortListener listener = portInListener;
+          if (listener != null) {
+              listener.portWrite(this, -1);
+        }
+      }    
     
     //Possible Output 0,1,x but x not implemented therefore 0 is returned
     private int CalcPortOut(){
@@ -321,7 +337,8 @@ public class IOPort extends IOUnit {
         switch(function) {
         case OUT: {
             out = data;
-            listenerwrite();
+            listenOutput();
+            listenInput();
             break;
         }
         case IN:
@@ -330,14 +347,12 @@ public class IOPort extends IOUnit {
             //          in = data;
         case DIR: {
             dir = data;
-            PortListener listener = portListener;
-            if (listener != null) {
-              listenerwrite();
-            }
+            listenOutput();
             break;
         }
         case REN:
             ren = data;
+            listenInput();
             break;
         case IFG:
             if (DEBUG) {
@@ -358,11 +373,11 @@ public class IOPort extends IOUnit {
             break;
         case SEL:
             sel = data;
-            listenerwrite();
+            listenOutput();
             break;
         case SEL2:
             sel2 = data;
-            listenerwrite();            
+            listenOutput();            
             break;
         case DS:
             ds = data;
@@ -475,7 +490,7 @@ public class IOPort extends IOUnit {
         sel = 0;
         sel2 = 0;
         cpu.flagInterrupt(interrupt, this, (ifg & ie) > 0);
-        listenerwrite();
+        listenOutput();
     }
 
     public String info() {

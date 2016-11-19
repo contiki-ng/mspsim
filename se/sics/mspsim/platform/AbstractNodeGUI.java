@@ -44,11 +44,17 @@ package se.sics.mspsim.platform;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.event.ActionEvent;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.net.URL;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 
 import se.sics.mspsim.ui.ManagedWindow;
 import se.sics.mspsim.ui.WindowManager;
@@ -57,114 +63,130 @@ import se.sics.mspsim.util.ServiceComponent;
 
 public abstract class AbstractNodeGUI extends JComponent implements ServiceComponent {
 
-    private static final long serialVersionUID = 1435276301923987019L;
+	private static final long serialVersionUID = 1435276301923987019L;
 
-    private final String windowName;
-    private final String nodeImageName;
+	private final String windowName;
+	private final String nodeImageName;
 
-    private String name;
-    private ComponentRegistry registry;
+	private String name;
+	private ComponentRegistry registry;
 
-    private ImageIcon nodeImage;
-    private ManagedWindow window;
+	private ImageIcon nodeImage;
+	protected ManagedWindow window;
 
-    private ServiceComponent.Status status = Status.STOPPED;
+	protected Dimension baseSize;
 
 
-    protected AbstractNodeGUI(String windowName, String imageName) {
-        this.windowName = windowName;
-        this.nodeImageName = imageName;
-        setBackground(Color.black);
-        setOpaque(true);
-    }
+	private ServiceComponent.Status status = Status.STOPPED;
 
-    public Status getStatus() {
-        return status;
-    }
 
-    public String getName() {
-        return name;
-    }
+	protected AbstractNodeGUI(String windowName, String imageName) {
+		this.windowName = windowName;
+		this.nodeImageName = imageName;
+		setBackground(Color.black);
+		setOpaque(true);
+	}
 
-    protected ImageIcon getNodeImage() {
-        return nodeImage;
-    }
 
-    protected ComponentRegistry getRegistry() {
-        return registry;
-    }
+	public Status getStatus() {
+		return status;
+	}
 
-    public final void init(String name, ComponentRegistry registry) {
-        this.name = name;
-        this.registry = registry;
-    }
+	public String getName() {
+		return name;
+	}
 
-    public final void start() {
-        File fp = new File(nodeImageName);
-        if (!fp.canRead()) {
-            URL imageURL = getImageURL(nodeImageName);
-            if (imageURL == null
-                    && !nodeImageName.startsWith("images/")
-                    && !nodeImageName.startsWith("/images/")) {
-                imageURL = getImageURL("images/" + nodeImageName);
-            }
-            if (imageURL != null) {
-                nodeImage = new ImageIcon(imageURL);
-            } else {
-                throw new IllegalStateException("image not found: " + nodeImageName);
-            }
-        } else {
-            nodeImage = new ImageIcon(nodeImageName);
-        }
-        if (nodeImage.getIconWidth() == 0 || nodeImage.getIconHeight() == 0) {
-          // Image not found
-          throw new IllegalStateException("image not found: " + nodeImageName);
-        }
-        setPreferredSize(new Dimension(nodeImage.getIconWidth(),
-                                       nodeImage.getIconHeight()));
+	protected ImageIcon getNodeImage() {
+		return nodeImage;
+	}
 
-        WindowManager wm = registry.getComponent(WindowManager.class);
-        window = wm.createWindow(windowName);
-        window.add(this);
-        window.pack();
+	protected ComponentRegistry getRegistry() {
+		return registry;
+	}
 
-        startGUI();
+	public final void init(String name, ComponentRegistry registry) {
+		this.name = name;
+		this.registry = registry;
+	}
 
-        status = Status.STARTED;
-        window.setVisible(true);
-        window.setAlwaysOnTop(true);
-        window.setExitOnClose();
-    }
+	public final void start() {
+		File fp = new File(nodeImageName);
+		if (!fp.canRead()) {
+			URL imageURL = getImageURL(nodeImageName);
+			if (imageURL == null
+					&& !nodeImageName.startsWith("images/")
+					&& !nodeImageName.startsWith("/images/")) {
+				imageURL = getImageURL("images/" + nodeImageName);
+			}
+			if (imageURL != null) {
+				nodeImage = new ImageIcon(imageURL);
+			} else {
+				throw new IllegalStateException("image not found: " + nodeImageName);
+			}
+		} else {
+			nodeImage = new ImageIcon(nodeImageName);
+		}
+		if (nodeImage.getIconWidth() == 0 || nodeImage.getIconHeight() == 0) {
+			// Image not found
+			throw new IllegalStateException("image not found: " + nodeImageName);
+		}
 
-    private URL getImageURL(String image) {
-        URL imageURL = getClass().getResource(image);
-        if (imageURL == null && !image.startsWith("/")) {
-            imageURL = getClass().getResource("/" + image);
-        }
-        return imageURL;
-    }
+		this.baseSize= new Dimension(nodeImage.getIconWidth(),nodeImage.getIconHeight());
 
-    public final void stop() {
-        status = Status.STOPPED;
-        stopGUI();
-        if (window != null) {
-            window.setVisible(false);
-            window = null;
-        }
-    }
+		setPreferredSize(baseSize);
 
-    protected abstract void startGUI();
 
-    protected abstract void stopGUI();
+		WindowManager wm = registry.getComponent(WindowManager.class);
+		window = wm.createWindow(windowName);
+		window.pack();
 
-    protected void paintComponent(Graphics g) {
-        Color old = g.getColor();
-        g.setColor(getBackground());
-        g.fillRect(0, 0, getWidth(), getHeight());
+		startGUI();
+		window.add(this);
 
-        ImageIcon nodeImage = getNodeImage();
-        nodeImage.paintIcon(this, g, 0, 0);
+		status = Status.STARTED;
+		window.setVisible(true);
+		window.setAlwaysOnTop(true);
+		window.setExitOnClose();
+	} 
 
-        g.setColor(old);
-    }
+	private URL getImageURL(String image) {
+		URL imageURL = getClass().getResource(image);
+		if (imageURL == null && !image.startsWith("/")) {
+			imageURL = getClass().getResource("/" + image);
+		}
+		return imageURL;
+	}
+
+	public final void stop() {
+		status = Status.STOPPED;
+		stopGUI();
+		if (window != null) {
+			window.setVisible(false);
+			window = null;
+		}
+	}
+
+	protected abstract void startGUI();
+
+	protected abstract void stopGUI();
+
+	protected double getRatio(){
+		return Math.min(getWidth()/baseSize.getWidth(),getHeight()/baseSize.getHeight());
+
+	}
+
+	protected void paintComponent(Graphics g) {
+		Color old = g.getColor();
+		g.setColor(getBackground());
+		g.fillRect(0, 0, getWidth(), getHeight());
+
+		double ratio=getRatio();
+
+		ImageIcon nodeImage = getNodeImage();
+		//nodeImage.paintIcon(this, g, 0, 0);
+
+		g.drawImage(nodeImage.getImage(), 0, 0, (int)(ratio*baseSize.getWidth()), (int)(ratio*baseSize.getHeight()), this); // draw the image
+
+		g.setColor(old);
+	}
 }

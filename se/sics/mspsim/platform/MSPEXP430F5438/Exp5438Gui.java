@@ -32,141 +32,184 @@
 package se.sics.mspsim.platform.MSPEXP430F5438;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.KeyStroke;
 
 import se.sics.mspsim.core.StateChangeListener;
 import se.sics.mspsim.platform.AbstractNodeGUI;
 
 public class Exp5438Gui extends AbstractNodeGUI {
 
-  private static final long serialVersionUID = 7753659717805292786L;
+	private static final long serialVersionUID = 7753659717805292786L;
 
-  public static final Point Button1_Pos = new Point(400, 463);
-  public static final Point Button2_Pos = new Point(500, 463);
-  public static final Point ButtonR_Pos = new Point(325, 84);
-  public static final Point JoyL_Pos = new Point(103, 441);
-  public static final Point JoyM_Pos = new Point(123, 441);
-  public static final Point JoyR_Pos = new Point(143, 441);
-  public static final Point JoyT_Pos = new Point(123, 421);
-  public static final Point JoyB_Pos = new Point(123, 461);
-  public static Boolean ButtonR_Pressed = false;
-  public static int ButtonSize=10;
+	public static final Point Button1_Pos = new Point(400, 463);
+	public static final Point Button2_Pos = new Point(500, 463);
+	public static final Point ButtonR_Pos = new Point(325, 84);
+	public static final Point JoyL_Pos = new Point(103, 441);
+	public static final Point JoyM_Pos = new Point(123, 441);
+	public static final Point JoyR_Pos = new Point(143, 441);
+	public static final Point JoyT_Pos = new Point(123, 421);
+	public static final Point JoyB_Pos = new Point(123, 461);
+	public static Boolean ButtonR_Pressed = false;
+	public static int ButtonSize=10;
 
-  public static final int LEDR_X = 238;
-  public static final int LEDR_Y = 462;
-  public static final int LEDO_X = 294;
-  public static final int LEDO_Y = 462;
+	public static final Point LEDR = new Point(238, 462);
+	public static final Point LEDO = new Point(294, 462);
 
-  public static final Color LEDR_TRANS = new Color(0x80, 0x80, 0xff, 0xff);
-  public static final Color LEDO_TRANS = new Color(0x80, 0x80, 0xff, 0xff);
+	public static final Color LEDR_TRANS = new Color(0x80, 0x80, 0xff, 0xff);
+	public static final Color LEDO_TRANS = new Color(0x80, 0x80, 0xff, 0xff);
 
-  public static final Color LEDO_C = new Color(0xff, 0x8C, 0x00, 0xff);
-  public static final Color LEDR_C = new Color(0xf0, 0x10, 0x10, 0xff);
+	public static final Color LEDO_C = new Color(0xff, 0x8C, 0x00, 0xff);
+	public static final Color LEDR_C = new Color(0xf0, 0x10, 0x10, 0xff);
 
-  private final Exp5438Node node;
-  private final StateChangeListener ledsListener = new StateChangeListener() {
-    public void stateChanged(Object source, int oldState, int newState) {
-      repaint();
-    }
-  };
+	private final Exp5438Node node;
+	private final StateChangeListener ledsListener = new StateChangeListener() {
+		public void stateChanged(Object source, int oldState, int newState) {
+			repaint();
+		}
+	};
 
-  public Exp5438Gui(Exp5438Node node) {
-    super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.15", "images/MSP-EXP430F5438.jpg");
-    this.node = node;
-  }
+	public Exp5438Gui(Exp5438Node node) {
+		super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.19", "images/MSP-EXP430F5438.jpg");
+		this.node = node;
+		Action scaleDownAction = new AbstractAction() {
+			private static final long serialVersionUID = 1L;
 
-  protected boolean isIn(Point mouse, Point btn) {
-    if (mouse.y > (btn.y - ButtonSize) && mouse.y < (btn.y + ButtonSize)) {
-      if (mouse.x > (btn.x - ButtonSize) && mouse.x < (btn.x + ButtonSize)) {
-        return true;
-      }
-    }
-    return false;
-  }
+			public void actionPerformed(ActionEvent e) {
+				window.scale(1.0/1.2,(double)baseSize.getWidth()/baseSize.getHeight());
+			}
 
-  protected void startGUI() {
-    MouseAdapter mouseHandler = new MouseAdapter() {
+		};        
+		getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_DOWN,0),"scaleDown");
+		getActionMap().put("scaleDown",scaleDownAction);
+		Action scaleUpAction = new AbstractAction() {
+			private static final long serialVersionUID = 2L;
 
-      public void mousePressed(MouseEvent e) {
+			public void actionPerformed(ActionEvent e) {
+				window.scale(1.2,(double)baseSize.getWidth()/baseSize.getHeight());
+			}
 
-        if (isIn(e.getPoint(), Button1_Pos)) {
-          Exp5438Gui.this.node.button1.setPressed(true);
-        } else if (isIn(e.getPoint(), Button2_Pos)) {
-          Exp5438Gui.this.node.button2.setPressed(true);
-        } else if (isIn(e.getPoint(), JoyL_Pos)) {
-          Exp5438Gui.this.node.joyl.setPressed(true);
-        } else if (isIn(e.getPoint(), JoyM_Pos)) {
-          Exp5438Gui.this.node.joym.setPressed(true);
-        } else if (isIn(e.getPoint(), JoyR_Pos)) {
-          Exp5438Gui.this.node.joyr.setPressed(true);
-        } else if (isIn(e.getPoint(), JoyT_Pos)) {
-          Exp5438Gui.this.node.joyt.setPressed(true);
-        } else if (isIn(e.getPoint(), JoyB_Pos)) {
-          Exp5438Gui.this.node.joyb.setPressed(true);
-        } else if (isIn(e.getPoint(), ButtonR_Pos)) {
-          ButtonR_Pressed=true;
-        }
-        repaint();
-      }
+		};        
+		getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_PAGE_UP,0),"scaleUp");
+		getActionMap().put("scaleUp",scaleUpAction);	}
 
-      public void mouseReleased(MouseEvent e) {
-        Exp5438Gui.this.node.button1.setPressed(false);
-        Exp5438Gui.this.node.button2.setPressed(false);
-        Exp5438Gui.this.node.joyl.setPressed(false);
-        Exp5438Gui.this.node.joym.setPressed(false);
-        Exp5438Gui.this.node.joyr.setPressed(false);
-        Exp5438Gui.this.node.joyt.setPressed(false);
-        Exp5438Gui.this.node.joyb.setPressed(false);
-        ButtonR_Pressed=false;
-        if (isIn(e.getPoint(), ButtonR_Pos)) {
-          Exp5438Gui.this.node.getCPU().reset();
-        }
-        repaint();
-      }
-    };
-    this.addMouseListener(mouseHandler);
-    node.leds.addStateChangeListener(ledsListener);
-  }
+	protected boolean isIn(Point mouse, Point btn) {
+		double btnSize=ButtonSize*getRatio();
+		if (mouse.y > (btn.y*getRatio() - btnSize) && mouse.y < (btn.y*getRatio() + btnSize)) {
+			if (mouse.x > (btn.x*getRatio() - btnSize) && mouse.x < (btn.x*getRatio() + btnSize)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-  protected void paintComponent(Graphics g) {
-    
-    
-    Color old = g.getColor();
+	protected void startGUI() {
+		MouseAdapter mouseHandler = new MouseAdapter() {
 
-    super.paintComponent(g);
-    
-    g.setColor(new Color(0,0,0,128));
-    if(this.node.button1.isPressed()) g.fillRect(Button1_Pos.x-ButtonSize, Button1_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(this.node.button2.isPressed()) g.fillRect(Button2_Pos.x-ButtonSize, Button2_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(this.node.joyl.isPressed()) g.fillRect(JoyL_Pos.x-ButtonSize, JoyL_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(this.node.joym.isPressed()) g.fillRect(JoyM_Pos.x-ButtonSize, JoyM_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(this.node.joyr.isPressed()) g.fillRect(JoyR_Pos.x-ButtonSize, JoyR_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(this.node.joyt.isPressed()) g.fillRect(JoyT_Pos.x-ButtonSize, JoyT_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(this.node.joyb.isPressed()) g.fillRect(JoyB_Pos.x-ButtonSize, JoyB_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
-    if(ButtonR_Pressed) g.fillRect(ButtonR_Pos.x-ButtonSize, ButtonR_Pos.y-ButtonSize, 2*ButtonSize, 2*ButtonSize);
+			public void mousePressed(MouseEvent e) {
 
-    // Display all active leds
-    if (node.LEDR) {
-      g.setColor(LEDR_TRANS);
-      g.fillOval(LEDR_X - 7, LEDR_Y - 2, 13, 9);
-      g.setColor(LEDR_C);
-      g.fillOval(LEDR_X - 5, LEDR_Y - 1, 9, 7);
-    }
-    if (node.LEDO) {
-      g.setColor(LEDO_TRANS);
-      g.fillOval(LEDO_X - 7, LEDO_Y - 2, 13, 9);
-      g.setColor(LEDO_C);
-      g.fillOval(LEDO_X - 5, LEDO_Y - 1, 9, 7);
-    }
-    this.node.lcd.drawDisplay(g);
-    g.setColor(old);
-  }
+				if (isIn(e.getPoint(), Button1_Pos)) {
+					Exp5438Gui.this.node.button1.setPressed(true);
+				} else if (isIn(e.getPoint(), Button2_Pos)) {
+					Exp5438Gui.this.node.button2.setPressed(true);
+				} else if (isIn(e.getPoint(), JoyL_Pos)) {
+					Exp5438Gui.this.node.joyl.setPressed(true);
+				} else if (isIn(e.getPoint(), JoyM_Pos)) {
+					Exp5438Gui.this.node.joym.setPressed(true);
+				} else if (isIn(e.getPoint(), JoyR_Pos)) {
+					Exp5438Gui.this.node.joyr.setPressed(true);
+				} else if (isIn(e.getPoint(), JoyT_Pos)) {
+					Exp5438Gui.this.node.joyt.setPressed(true);
+				} else if (isIn(e.getPoint(), JoyB_Pos)) {
+					Exp5438Gui.this.node.joyb.setPressed(true);
+				} else if (isIn(e.getPoint(), ButtonR_Pos)) {
+					ButtonR_Pressed=true;
+				}
+				repaint();
+			}
 
-  protected void stopGUI() {
-    node.leds.removeStateChangeListener(ledsListener);
-  }
+			public void mouseReleased(MouseEvent e) {
+				Exp5438Gui.this.node.button1.setPressed(false);
+				Exp5438Gui.this.node.button2.setPressed(false);
+				Exp5438Gui.this.node.joyl.setPressed(false);
+				Exp5438Gui.this.node.joym.setPressed(false);
+				Exp5438Gui.this.node.joyr.setPressed(false);
+				Exp5438Gui.this.node.joyt.setPressed(false);
+				Exp5438Gui.this.node.joyb.setPressed(false);
+				ButtonR_Pressed=false;
+				if (isIn(e.getPoint(), ButtonR_Pos)) {
+					Exp5438Gui.this.node.getCPU().reset();
+				}
+				repaint();
+			}
+		};
+		this.addMouseListener(mouseHandler);
+		node.leds.addStateChangeListener(ledsListener);
+	}
+
+	public Point calcPos(Point In){
+		return new Point((int)(In.x*getRatio()+.5),(int)(In.y*getRatio()+.5));
+	}
+
+	public void fillR(Graphics g,Point pos){
+		Point corrpos=calcPos(pos);
+		int btnSize=(int)(ButtonSize*getRatio()+.5);
+		g.fillRect(corrpos.x-btnSize, corrpos.y-btnSize, 2*btnSize, 2*btnSize);
+	}
+
+	public void fillO(Graphics g,Point pos,int x1,int y1,int x2,int y2 ){
+		Point corrpos=calcPos(pos);
+		g.fillOval(corrpos.x-(int)(x1*getRatio()), corrpos.y-(int)(y1*getRatio()), (int)(x2*getRatio()), (int)(y2*getRatio()));
+	}
+
+	protected void paintComponent(Graphics g) {
+
+		Color old = g.getColor();
+
+		super.paintComponent(g);
+		
+		g.setColor(new Color(0,0,0,128));
+		if(this.node.button1.isPressed()) fillR(g,Button1_Pos);
+		if(this.node.button2.isPressed()) fillR(g,Button2_Pos);
+		if(this.node.joyl.isPressed()) fillR(g,JoyL_Pos);
+		if(this.node.joym.isPressed())  fillR(g,JoyM_Pos);
+		if(this.node.joyr.isPressed())  fillR(g,JoyR_Pos);
+		if(this.node.joyt.isPressed())  fillR(g,JoyT_Pos);
+		if(this.node.joyb.isPressed())  fillR(g,JoyB_Pos);
+		if(ButtonR_Pressed){
+			fillR(g,ButtonR_Pos);
+		}
+
+		// Display all active leds
+		if (node.LEDR) {
+			g.setColor(LEDR_TRANS);
+			fillO(g,LEDR,7,2,13,9);
+			g.setColor(LEDR_C);
+			fillO(g,LEDR,5,1,9,7);
+		}
+		if (node.LEDO) {
+			
+			g.setColor(LEDO_TRANS);
+			fillO(g,LEDO,7,2,13,9);
+			g.setColor(LEDO_C);
+			fillO(g,LEDO,5,1,9,7);
+		}
+		this.node.lcd.drawDisplay(g,getRatio());
+		g.setColor(old);
+	}
+
+	protected void stopGUI() {
+		node.leds.removeStateChangeListener(ledsListener);
+	}
+
 }

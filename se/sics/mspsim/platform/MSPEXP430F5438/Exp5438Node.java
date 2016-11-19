@@ -37,6 +37,7 @@ import java.io.IOException;
 import se.sics.mspsim.chip.Button;
 import se.sics.mspsim.chip.HD66753Listener;
 import se.sics.mspsim.chip.Leds;
+import se.sics.mspsim.chip.NotConnected;
 import se.sics.mspsim.config.MSP430f5438Config;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.MSP430;
@@ -83,7 +84,7 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 
 	public void setupNodePorts() {	
 		IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
-		port1.addPortListener(this);	
+		port1.addPortOutListener(this);	
 		
 		IOPort port2 = cpu.getIOUnit(IOPort.class, "P2");
 
@@ -95,7 +96,8 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 		joym = new Button("Button", cpu, port2, 3, false,Button.Btn_Typ.HighOpen);
 		joyt = new Button("Button", cpu, port2, 4, false,Button.Btn_Typ.HighOpen);
 		joyb = new Button("Button", cpu, port2, 5, false,Button.Btn_Typ.HighOpen);
-		
+		new NotConnected("Not connected",cpu,port2,0);
+				
 		lcd=new HD66753("Display",cpu,"USCI B2",8,3,new Rectangle(368, 189, 179, 138));
 		lcd.addListener(this);		
 	}
@@ -135,8 +137,6 @@ public class Exp5438Node extends GenericNode implements PortListener,HD66753List
 		if (!config.getPropertyAsBoolean("nogui", true)) {
 			setupGUI();
 
-			IOPort port1 = cpu.getIOUnit(IOPort.class, "P1");
-			
 			// Add some windows for listening to serial output
 			USART usart = cpu.getIOUnit(USART.class, "USART1");
 			if (usart != null) {

@@ -148,9 +148,9 @@ public class ESBNode extends GenericNode implements PortListener {
     port1 = cpu.getIOUnit(IOPort.class, "P1");
 
     port2 = cpu.getIOUnit(IOPort.class, "P2");
-    port2.addPortListener(this);
+    port2.addPortOutListener(this);
     port5 = cpu.getIOUnit(IOPort.class, "P5");
-    port5.addPortListener(this);
+    port5.addPortOutListener(this);
 
     USART usart0 = cpu.getIOUnit(USART.class, "USART0");
     if (usart0 == null) {

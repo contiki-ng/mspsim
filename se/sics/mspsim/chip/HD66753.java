@@ -32,6 +32,7 @@
 package se.sics.mspsim.chip;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
@@ -41,18 +42,20 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import se.sics.mspsim.core.Chip;
+import se.sics.mspsim.core.GenericUSCI;
 import se.sics.mspsim.core.IOPort;
 import se.sics.mspsim.core.MSP430;
+import se.sics.mspsim.core.MSP430Config.MUXConfig;
+import se.sics.mspsim.core.MSP430Config.TimerConfig;
 import se.sics.mspsim.core.PortListener;
 import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
-import se.sics.mspsim.core.Chip;
-import se.sics.mspsim.core.GenericUSCI;
+import se.sics.mspsim.core.Timer;
 
 public class HD66753 extends Chip implements USARTListener, PortListener, ActionListener {
 
@@ -88,6 +91,8 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	private javax.swing.Timer displayresetFrequenztimer;
 
 	private HD66753Listener Listen = null;
+	
+	private Timer LEDTimer=null;
 
 	public HD66753(String id, MSP430 cpu, String USARTUnit, int LED_Port, int LED_Bit,
 			Rectangle out) {
@@ -109,7 +114,17 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		usart.addUSARTListener(this);
 
 		IOPort port8 = cpu.getIOUnit(IOPort.class, "P" + LED_Port);
-		port8.addPortListener(this);
+		port8.addPortOutListener(this);
+		
+		
+		
+		for (TimerConfig tconf : cpu.config.timerConfig) {
+			for (MUXConfig mconf : tconf.muxConfig) {
+				if((mconf.Port==LED_Port)&&(mconf.Pin==LED_Bit)){
+					LEDTimer=(Timer)cpu.getIOUnit(tconf.name);
+				}
+			}
+		}
 
 		displayUpdatetimer = new javax.swing.Timer(100, this);
 		displayUpdatetimer.stop();
@@ -281,15 +296,18 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	public void portWrite(IOPort source, int data) {
 		int curvalue = ((data >> LED_Bit) & 1);
 		if ((source.getPort() == LED_Port) && (curvalue != value)) {
+			long eventcycles=cpu.cycles;
+			if(LEDTimer!=null) eventcycles+=(LEDTimer.currentdiff+1);
+			
 			value = ((data >> LED_Bit) & 1);
 			if (value == 0) {
-				ti = cpu.cycles - old;
+				ti = eventcycles - old;
 			} else {
-				tp = cpu.cycles - old;
+				tp = eventcycles - old;
 			}
-			// System.out.println(tp+" "+ti);
+			
 
-			old = cpu.cycles;
+			old = eventcycles;
 			DisplayTimerRestart();
 			displayresetFrequenztimer.restart();		
 		}
@@ -344,20 +362,21 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		}
 		return background;
 	}
-	public void drawDisplay(Graphics g) {
+	public void drawDisplay(Graphics g,double scale) {
 		int background=getBackground();
 
+		Rectangle outscale=new Rectangle((int)(out.x*scale+.5),(int)(out.y*scale+.5),(int)(out.width*scale+.5),(int)(out.height*scale+.5));
 
 		g.setColor(new Color(background, background, background, 0xff));
-		g.fillRect(out.x, out.y, out.width, out.height);
-		g.drawImage(DisplayImage, out.x, out.y, out.x + out.width, out.y
-				+ out.height, 8, 0, 138 + 8, 110, null);
+		g.fillRect(outscale.x, outscale.y, outscale.width, outscale.height);
+		g.drawImage(DisplayImage, outscale.x, outscale.y, outscale.x + outscale.width, outscale.y
+				+ outscale.height, 8, 0, 138 + 8, 110, null);
+		
 		String txt = getText();
-		Rectangle2D rectText = g.getFont().getStringBounds(txt,
-				g.getFontMetrics().getFontRenderContext());
-
 		g.setColor(new Color(255, 0, 0, 0xff));
-		g.drawString(txt, (int) (out.x + out.width - rectText.getWidth()), out.y+ out.height);
+		g.setFont(new Font( "SansSerif", Font.PLAIN, (int)(15*scale+.5) ));
+		Rectangle2D rectText = g.getFont().getStringBounds(txt,g.getFontMetrics().getFontRenderContext());
+		g.drawString(txt, (int) (outscale.x + outscale.width - rectText.getWidth()), outscale.y+ outscale.height);
 	}
 
     @Override

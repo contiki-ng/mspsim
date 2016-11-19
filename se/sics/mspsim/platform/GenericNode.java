@@ -216,7 +216,6 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.registerComponent("config", config);
     
     CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
-
     if (ch == null) {
         if (config.getPropertyAsBoolean("jconsole", false)) {
             ConsoleUI console = new ConsoleUI();
@@ -257,6 +256,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     registry.start();
 
     cpu.reset();
+    
   }
   
  

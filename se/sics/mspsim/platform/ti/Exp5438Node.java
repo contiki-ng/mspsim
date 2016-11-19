@@ -66,17 +66,17 @@ public class Exp5438Node extends GenericNode implements PortListener, USARTListe
 
     private void setupNodePorts() {
         port1 = cpu.getIOUnit(IOPort.class, "P1");
-        port1.addPortListener(this);
+        port1.addPortOutListener(this);
         port3 = cpu.getIOUnit(IOPort.class, "P3");
-        port3.addPortListener(this);
+        port3.addPortOutListener(this);
         port4 = cpu.getIOUnit(IOPort.class, "P4");
-        port4.addPortListener(this);
+        port4.addPortOutListener(this);
         port5 = cpu.getIOUnit(IOPort.class, "P5");
-        port5.addPortListener(this);
+        port5.addPortOutListener(this);
         port7 = cpu.getIOUnit(IOPort.class, "P7");
-        port7.addPortListener(this);
+        port7.addPortOutListener(this);
         port8 = cpu.getIOUnit(IOPort.class, "P8");
-        port8.addPortListener(this);
+        port8.addPortOutListener(this);
 
         IOUnit usart0 = cpu.getIOUnit("USCI B0"); 
         if (usart0 instanceof USARTSource) {

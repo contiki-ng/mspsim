@@ -72,17 +72,17 @@ public abstract class CC2420Node extends GenericNode implements PortListener, US
         ds2411 = new DS2411(cpu);
 
         port1 = cpu.getIOUnit(IOPort.class, "P1");
-        port1.addPortListener(this);
+        port1.addPortOutListener(this);
 
         port2 = cpu.getIOUnit(IOPort.class, "P2");
         ds2411.setDataPort(port2, DS2411_DATA_PIN);
-        port2.addPortListener(this);
+        port2.addPortOutListener(this);
 
         port4 = cpu.getIOUnit(IOPort.class, "P4");
-        port4.addPortListener(this);
+        port4.addPortOutListener(this);
 
         port5 = cpu.getIOUnit(IOPort.class, "P5");
-        port5.addPortListener(this);
+        port5.addPortOutListener(this);
 
         USART usart0 = cpu.getIOUnit(USART.class, "USART0");
         radio = new CC2420(cpu);

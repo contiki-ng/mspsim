@@ -4,22 +4,23 @@ import java.awt.Component;
 
 public interface ManagedWindow {
 
-  public void setSize(int width, int height);
-  public void setBounds(int x, int y, int width, int height);
-  public void pack();
-  public void setAlwaysOnTop(boolean val);
+	public void scale(double val,double aspect);
+	public void setSize(int width, int height);
+	public void setBounds(int x, int y, int width, int height);
+	public void pack();
+	public void setAlwaysOnTop(boolean val);
 
-  public void add(Component component);
-  public void removeAll();
-  
-  public void setExitOnClose();
+	public void add(Component component);
+	public void removeAll();
 
-  public boolean isVisible();
+	public void setExitOnClose();
 
-  public void setVisible(boolean b);
+	public boolean isVisible();
 
-  public String getTitle();
+	public void setVisible(boolean b);
 
-  public void setTitle(String string);
+	public String getTitle();
+
+	public void setTitle(String string);
 
 }
