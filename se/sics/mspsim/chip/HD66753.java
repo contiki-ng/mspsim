@@ -71,8 +71,8 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		{0x74, 0x00, 0x05, 0x76},				//NotUused
 		{0x74, 0x00, 0x06, 0x76},				//NotUused
 		{0x74, 0x00, 0x07, 0x76},				//NotUused
-		};		
-	
+	};		
+
 	int[] MacroReadBlockAddress = { 0x74, 0x00, 0x12, 0x77, 0x00, 0x00 };
 	int[] MacroDrawBlockAdress = { 0x74, 0x00, 0x11, 0x76 };
 	int[] MacroDrawBlockValue = { 0x74, 0x00, 0x12, 0x76 };
@@ -86,18 +86,19 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	int LED_Port;
 	int LED_Bit;
 	Rectangle out;
+	boolean valueChanged=false;
 
 	private javax.swing.Timer displayUpdatetimer;
 	private javax.swing.Timer displayresetFrequenztimer;
 
 	private HD66753Listener Listen = null;
-	
+
 	private Timer LEDTimer=null;
 
 	public HD66753(String id, MSP430 cpu, String USARTUnit, int LED_Port, int LED_Bit,
 			Rectangle out) {
 		super(id, cpu);
-		
+
 		DisplayImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 		int[] initVal = new int[4 * w * h];
 		for (int i = 0; i < initVal.length; i++) {
@@ -115,9 +116,9 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 
 		IOPort port8 = cpu.getIOUnit(IOPort.class, "P" + LED_Port);
 		port8.addPortOutListener(this);
-		
-		
-		
+
+
+
 		for (TimerConfig tconf : cpu.config.timerConfig) {
 			for (MUXConfig mconf : tconf.muxConfig) {
 				if((mconf.Port==LED_Port)&&(mconf.Pin==LED_Bit)){
@@ -133,24 +134,18 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		displayresetFrequenztimer.stop();
 		displayresetFrequenztimer.setRepeats(false);	
 	}
-    
+
 	ActionListener actionListener2 = new ActionListener()
 	{
 		public void actionPerformed(ActionEvent actionEvent)
 		{
-			if (value == 0) {
-				ti = 0;
-				tp = Long.MAX_VALUE;
-			} else {
-				ti = Long.MAX_VALUE;
-				tp = 0;
-			}
+			valueChanged=false;
 			displayresetFrequenztimer.stop();
 			DisplayTimerRestart();
 		}
 	};
-	
-	
+
+
 	public synchronized void addListener(HD66753Listener newListener) {
 		Listen = HD66753ListenerProxy.addListener(Listen, newListener);
 	}
@@ -210,36 +205,36 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	public void analyseCommand() {
 		int index=commandIndex(dataCom);
 		switch (index){
-			case 1://MacroDrawBlockAdress
-				if(dataCom.size()>5){
-					Adress = dataCom.get(4) * 256 + dataCom.get(5);
-				}else printCommand("Illegal", dataCom);
-				break;
-			case 2://MacroDrawBlockValue
-				int x = (Adress % 32) * 8;
-				int y = Adress / 32;
-				int maxX=x+((dataCom.size()-1)/2)*8;
-				if((maxX>=256)|(y>=110)){
-					System.out.println("Error: Writing outside display");
-				} else {
-					for (int i = 4; i < (dataCom.size()-1); i += 2) {
-						x = x + 8;
-						int Value = dataCom.get(i) * 256 + dataCom.get(i + 1);
-						SetPixel(y, x, Value);
-					}
-				}				
-				DisplayTimerRestart();
-				break;
-			case 7://Contrast Value
-				if(dataCom.size()>5){
-					Contrast=dataCom.get(5);
+		case 1://MacroDrawBlockAdress
+			if(dataCom.size()>5){
+				Adress = dataCom.get(4) * 256 + dataCom.get(5);
+			}else printCommand("Illegal", dataCom);
+			break;
+		case 2://MacroDrawBlockValue
+			int x = (Adress % 32) * 8;
+			int y = Adress / 32;
+			int maxX=x+((dataCom.size()-1)/2)*8;
+			if((maxX>=256)|(y>=110)){
+				System.out.println("Error: Writing outside display");
+			} else {
+				for (int i = 4; i < (dataCom.size()-1); i += 2) {
+					x = x + 8;
+					int Value = dataCom.get(i) * 256 + dataCom.get(i + 1);
+					SetPixel(y, x, Value);
 				}
-			case -1://Unkown
-				//printCommand("Unkown", dataCom);
-				break;
-			default://Not Used
-				//printCommand(index+" not Used", dataCom);
-				break;
+			}				
+			DisplayTimerRestart();
+			break;
+		case 7://Contrast Value
+			if(dataCom.size()>5){
+				Contrast=dataCom.get(5);
+			}
+		case -1://Unkown
+			//printCommand("Unkown", dataCom);
+			break;
+		default://Not Used
+			//printCommand(index+" not Used", dataCom);
+			break;
 		}
 	}
 
@@ -258,7 +253,7 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		iArray[5] = SetInt(Contrast,(byte) (255 - ((Value & 0x0C00) >> 4)));
 		iArray[6] = SetInt(Contrast,(byte) (255 - ((Value & 0x3000) >> 6)));
 		iArray[7] = SetInt(Contrast,(byte) (255 - ((Value & 0xC000) >> 8)));
-		
+
 
 		DisplayImage.setRGB(x, y, 8, 1, iArray, 0, 8);
 
@@ -272,11 +267,11 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		iArray2[5]=255;
 		iArray2[6]=255;
 		iArray2[7]=255;
-		
-		
+
+
 		DisplayImage.getRaster().setPixels(x, y, 8, 1, iArray2);
-		*/	
-	
+		 */	
+
 	}
 
 	void SavetoImage() {
@@ -296,17 +291,18 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	public void portWrite(IOPort source, int data) {
 		int curvalue = ((data >> LED_Bit) & 1);
 		if ((source.getPort() == LED_Port) && (curvalue != value)) {
-			long eventcycles=cpu.cycles;
+			System.err.println(cpu.cpuCycles);
+			long eventcycles=cpu.cpuCycles;
 			if(LEDTimer!=null) eventcycles+=(LEDTimer.currentdiff+1);
-			
+
 			value = ((data >> LED_Bit) & 1);
 			if (value == 0) {
 				ti = eventcycles - old;
 			} else {
 				tp = eventcycles - old;
 			}
-			
 
+			valueChanged=true;
 			old = eventcycles;
 			DisplayTimerRestart();
 			displayresetFrequenztimer.restart();		
@@ -322,7 +318,7 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		}
 		else displayUpdatetimer.restart();
 	} 
-	
+
 	private void DisplayTimerFired(){
 		Restarts=0;
 		displayUpdatetimer.stop();
@@ -340,21 +336,28 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 
 	private String getText() {
 		double frequenz = getFrequenz();
-		String[] Unit = new String[] { "Hz", "kHz", "MHz", "Ghz" };
-		int i = 0;
+		String[] Unit = new String[] {"µHz", "mHz", "Hz", "kHz", "MHz", "Ghz" };
+		int i = 2;
 		if (frequenz == Double.POSITIVE_INFINITY)
 			return "INFINITY";
 		while (frequenz > 1000.0) {
 			frequenz = frequenz / 1000.0;
 			i++;
 		}
+		if(frequenz>0){
+			while (frequenz < 1.0 && (i>1)) {
+				frequenz = frequenz * 1000.0;
+				i--;
+			}
+		}
+
 		return String.format("State: %d  ti/T=%.2f  %.1f" + Unit[i], value, ti
 				/ (double) (ti + tp), frequenz);
 	}
-	
+
 	public int getBackground(){
 		int background;
-		if (getFrequenz() < 5) {
+		if (!valueChanged) {
 			background = value * 255;
 		} else {
 			background = (int) Math.min(
@@ -371,7 +374,7 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		g.fillRect(outscale.x, outscale.y, outscale.width, outscale.height);
 		g.drawImage(DisplayImage, outscale.x, outscale.y, outscale.x + outscale.width, outscale.y
 				+ outscale.height, 8, 0, 138 + 8, 110, null);
-		
+
 		String txt = getText();
 		g.setColor(new Color(255, 0, 0, 0xff));
 		g.setFont(new Font( "SansSerif", Font.PLAIN, (int)(15*scale+.5) ));
@@ -379,20 +382,20 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		g.drawString(txt, (int) (outscale.x + outscale.width - rectText.getWidth()), outscale.y+ outscale.height);
 	}
 
-    @Override
-    public int getModeMax() {
-        return 0;
-    }	
-	
-    @Override
-    public void notifyReset() {
-    	dataCom.clear();
-    }  	
-	
+	@Override
+	public int getModeMax() {
+		return 0;
+	}	
 
-    @Override
-    public int getConfiguration(int parameter) {
-        return 0;
-    }	
-	
+	@Override
+	public void notifyReset() {
+		dataCom.clear();
+	}  	
+
+
+	@Override
+	public int getConfiguration(int parameter) {
+		return 0;
+	}	
+
 }
