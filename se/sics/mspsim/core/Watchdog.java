@@ -59,8 +59,8 @@ public class Watchdog extends IOUnit implements SFRModule {
   private static final int WATCHDOG_INTERRUPT_BIT = 0;
   private static final int WATCHDOG_INTERRUPT_VALUE = 1 << WATCHDOG_INTERRUPT_BIT;
   
-  private static final int[] DELAY = {
-    2*1024*1024*1024,128*1024*1024,8*1024*1024,512*1024,32768, 8192, 512, 64
+  private static final long[] DELAY = {
+    2*1024*1024*1024l,128*1024*1024,8*1024*1024,512*1024,32768, 8192, 512, 64
   };
 
   private int resetVector = 15;
@@ -72,9 +72,9 @@ public class Watchdog extends IOUnit implements SFRModule {
   private boolean hold = false;
 
   // The current "delay" when started/clered (or hold)
-  private int delay;
+  private long delay;
   // The target time for this timer
-  private long targetTime;
+  //private long targetTime;
   // Timer ACLK
   private boolean sourceACLK = false;
 
@@ -170,10 +170,10 @@ public class Watchdog extends IOUnit implements SFRModule {
   private void scheduleTimer() {
       if (sourceACLK) {
           if (DEBUG) log("setting delay in ms (ACLK): " + 1000.0 * delay / cpu.aclkFrq);
-          targetTime = cpu.scheduleTimeEventMillis(wdtTrigger, 1000.0 * delay / cpu.aclkFrq);
+          cpu.scheduleTimeEventMillis(wdtTrigger, 1000.0 * delay / cpu.aclkFrq);
       } else {
           if (DEBUG) log("setting delay in cycles");
-          cpu.scheduleCycleEvent(wdtTrigger, targetTime = cpu.cycles + delay);
+          cpu.scheduleCycleEvent(wdtTrigger,  cpu.cycles + delay);
       }
   }
 
