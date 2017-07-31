@@ -300,7 +300,8 @@ public class GDBStubs implements Runnable {
 					int high=Integer.decode("0x"+wdata[1].substring(2*i, 2*i+1));
 					int low=Integer.decode("0x"+wdata[1].substring(2*i+1, 2*i+2));
 					int Val=low+high*16;
-			         cpu.memory[addr+i]=Val;
+					mem.set(addr+i, Val, Memory.AccessMode.WORD);
+			        // cpu.memory[addr+i]=Val;
 				}
 				sendResponse(OK);
 			}

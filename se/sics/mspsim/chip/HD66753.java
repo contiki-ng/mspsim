@@ -291,7 +291,6 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	public void portWrite(IOPort source, int data) {
 		int curvalue = ((data >> LED_Bit) & 1);
 		if ((source.getPort() == LED_Port) && (curvalue != value)) {
-			System.err.println(cpu.cpuCycles);
 			long eventcycles=cpu.cpuCycles;
 			if(LEDTimer!=null) eventcycles+=(LEDTimer.currentdiff+1);
 
