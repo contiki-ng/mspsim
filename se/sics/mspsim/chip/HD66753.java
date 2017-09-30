@@ -57,7 +57,7 @@ import se.sics.mspsim.core.USARTListener;
 import se.sics.mspsim.core.USARTSource;
 import se.sics.mspsim.core.Timer;
 
-public class HD66753 extends Chip implements USARTListener, PortListener, ActionListener {
+public class HD66753 extends Chip implements USARTListener, PortListener {
 
 	int[][] Commands = new int[][] {
 		{0x74, 0x00, 0x12, 0x77, 0x00, 0x00},	//MacroReadBlockAddress
@@ -87,9 +87,11 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 	int LED_Bit;
 	Rectangle out;
 	boolean valueChanged=false;
+	int Restarts=0;
+	
 
 	private javax.swing.Timer displayUpdatetimer;
-	private javax.swing.Timer displayresetFrequenztimer;
+	private javax.swing.Timer valueChangedDetectionTimer;
 
 	private HD66753Listener Listen = null;
 
@@ -125,24 +127,51 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 			}
 		}
 
-		displayUpdatetimer = new javax.swing.Timer(3, this);
+		displayUpdatetimer = new javax.swing.Timer(30, new ActionListener()
+		{
+			public void actionPerformed(ActionEvent actionEvent)
+			{
+				displayTimerFired();
+			}
+		});
+		
 		displayUpdatetimer.stop();
 		displayUpdatetimer.setRepeats(false);
-		displayresetFrequenztimer = new javax.swing.Timer(30, actionListener2);
-		displayresetFrequenztimer.stop();
-		displayresetFrequenztimer.setRepeats(false);	
-	}
-
-	ActionListener actionListener2 = new ActionListener()
-	{
-		public void actionPerformed(ActionEvent actionEvent)
+		valueChangedDetectionTimer = new javax.swing.Timer(30, new ActionListener()
 		{
-			valueChanged=false;
-			displayresetFrequenztimer.stop();
-			DisplayTimerRestart();
+			public void actionPerformed(ActionEvent actionEvent)
+			{
+				valueChanged=false;
+				valueChangedDetectionTimer.stop();
+				displayTimerFired();
+			}
+		});
+		valueChangedDetectionTimer.stop();
+		valueChangedDetectionTimer.setRepeats(false);	
+	}
+	
+	private void valueChanged() {
+		displayTimerRestart();
+		valueChangedDetectionTimer.restart();		
+		valueChanged=true;
+		
+	}
+	
+	private void displayTimerRestart(){
+		Restarts++;
+		if(Restarts>20) {
+			displayTimerFired();
 		}
-	};
+		else displayUpdatetimer.restart();
+	} 
 
+	//Fired after value changed, display changed 
+	private void displayTimerFired(){
+		Restarts=0;
+		displayUpdatetimer.stop();
+		if (Listen != null)
+			Listen.displayChanged();		
+	}
 
 	public synchronized void addListener(HD66753Listener newListener) {
 		Listen = HD66753ListenerProxy.addListener(Listen, newListener);
@@ -221,7 +250,7 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 					SetPixel(y, x, Value);
 				}
 			}				
-			DisplayTimerRestart();
+			displayTimerRestart();
 			break;
 		case 7://Contrast Value
 			if(dataCom.size()>5){
@@ -299,32 +328,10 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 				tp = eventcycles - old;
 			}
 
-			valueChanged=true;
 			old = eventcycles;
-			DisplayTimerRestart();
-			displayresetFrequenztimer.restart();		
+			
+			valueChanged();
 		}
-	}
-
-	int Restarts=0;
-
-	private void DisplayTimerRestart(){
-		Restarts++;
-		if(Restarts>20) {
-			DisplayTimerFired();
-		}
-		else displayUpdatetimer.restart();
-	} 
-
-	private void DisplayTimerFired(){
-		Restarts=0;
-		displayUpdatetimer.stop();
-		if (Listen != null)
-			Listen.displayChanged();		
-	}
-
-	public void actionPerformed(ActionEvent e) {
-		DisplayTimerFired();
 	}
 
 	private double getFrequenz() {
