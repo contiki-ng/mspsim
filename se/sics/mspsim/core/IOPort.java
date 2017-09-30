@@ -330,7 +330,7 @@ public class IOPort extends IOUnit {
       int selactive= sel ^ sel2;
       int selValCombine= ((sel & selValue) | (sel2 & selValue2 )) & selactive;
       int outVal=(~selactive & out);
-      return (selValCombine | (outVal & dir) ) & 0xff;  
+      return ((selValCombine | outVal) & dir ) & 0xff;  
     }
     
     private void writePort(PortReg function, int data, long cycles) {

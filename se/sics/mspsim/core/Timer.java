@@ -305,7 +305,12 @@ public class Timer extends IOUnit {
 				int ccr0tccr=ccr[0].tccr&WrapValue();
 				int tccrW=tccr&WrapValue();
 				int CycleVal;
-				long bcount = updateBigCount(cpu.cycles) % (2 * ccr0tccr);
+				long bcount;
+				if(ccr0tccr<=0) {
+					bcount = 0;
+				} else {
+					bcount = updateBigCount(cpu.cycles) % (2 * ccr0tccr);
+				}
 				boolean DIR_UP = (bcount <= ccr0tccr);
 				if (DIR_UP) {
 					CycleVal = 2 * (ccr0tccr - tccrW);
@@ -338,7 +343,13 @@ public class Timer extends IOUnit {
 			int diff;
 
 			if (mode == UPDWN) {
-				int bcount = (int) (updateBigCount(cpu.cycles) % (2 * ccr[0].tccr));
+				
+				int bcount;
+				if(ccr[0].tccr<=0) {
+					bcount = 0;
+				} else {
+					bcount = (int) (updateBigCount(cpu.cycles) % (2 * ccr[0].tccr));
+				}
 				boolean DIR_UP = (bcount <= ccr[0].tccr);
 
 				if (DIR_UP) {
@@ -1207,7 +1218,12 @@ public class Timer extends IOUnit {
 					break;
 				}
 			} else if (mode == UPDWN) {
-				long bcount = updateBigCount(cpu.cycles) % (2 * ccr[0].tccr);
+				long bcount;
+				if(ccr[0].tccr<=0) {
+					bcount = 0;
+				} else {
+					bcount = updateBigCount(cpu.cycles) % (2 * ccr[0].tccr);
+				}
 				boolean DIR_UP = (bcount < ccr[0].tccr);
 				if (DIR_UP) {
 					switch (ccrX.outMode) {

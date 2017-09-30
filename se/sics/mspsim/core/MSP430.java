@@ -1,4 +1,4 @@
- /**
+/**
  * Copyright (c) 2007, Swedish Institute of Computer Science.
  * All rights reserved.
  *
@@ -45,412 +45,412 @@ import se.sics.mspsim.util.MapTable;
 
 public class MSP430 extends MSP430Core {
 
-  private int[] execCounter;
-  private int[] trace;
-  private int tracePos;
-  
-  private boolean debug = false;
-  private boolean running = false;
-  private boolean isBreaking = false;
-  private double rate = 1.0;
+	private int[] execCounter;
+	private int[] trace;
+	private int tracePos;
 
-  // Debug time - measure cycles
-  private long lastCycles = 0;
-  private long lastCpuCycles = 0;
-  private long time;
-  private long nextSleep = 0;
-  private long nextOut = 0;
+	private boolean debug = false;
+	private boolean running = false;
+	private boolean isBreaking = false;
+	private double rate = 1.0;
 
-  private double lastCPUPercent = 0d;
+	// Debug time - measure cycles
+	private long lastCycles = 0;
+	private long lastCpuCycles = 0;
+	private long time;
+	private long nextSleep = 0;
+	private long nextOut = 0;
 
-  private DisAsm disAsm;
+	private double lastCPUPercent = 0d;
 
-  private SimEventListener[] simEventListeners;
+	private DisAsm disAsm;
 
-  /**
-   * Creates a new <code>MSP430</code> instance.
-   *
-   */
-  public MSP430(int type, ComponentRegistry registry, MSP430Config config) {
-    super(type, registry, config);
-    disAsm = new DisAsm();
-  }
+	private SimEventListener[] simEventListeners;
 
-  public double getCPUPercent() {
-    return lastCPUPercent;
-  }
-
-  public DisAsm getDisAsm() {
-    return disAsm;
-  }
-
-  public void cpuloop() throws EmulationException {
-    if (isRunning()) {
-      throw new IllegalStateException("already running");
-    }
-    setRunning(true);
-    try {
-        // ??? - power-up  should be executed?!
-        time = System.currentTimeMillis();
-        run();
-    } finally {
-        setRunning(false);
-    }
-  }
-
-  private void run() throws EmulationException {
-      while (!isStopping) {
-
-      if (cycles > nextOut && !debug) {
-	printCPUSpeed(reg[PC]);
-	nextOut = cycles + 20000007;
-      }
-
-      int pc = emulateOP(-1);
-      if (pc >= 0) {
-	if (execCounter != null) {
-	  execCounter[pc]++;
+	/**
+	 * Creates a new <code>MSP430</code> instance.
+	 *
+	 */
+	public MSP430(int type, ComponentRegistry registry, MSP430Config config) {
+		super(type, registry, config);
+		disAsm = new DisAsm();
 	}
-	if (trace != null) {
-	    trace[tracePos++] = pc;
-	    if (tracePos >= trace.length)
-		tracePos = 0;
+
+	public double getCPUPercent() {
+		return lastCPUPercent;
 	}
-	// -------------------------------------------------------------------
-	// Debug information
-	// -------------------------------------------------------------------
-	if (debug) {
-	    if (servicedInterrupt >= 0) {
-	        disAsm.disassemble(pc, memory, reg, servicedInterrupt);
-	    } else {
-	        disAsm.disassemble(pc, memory, reg);
-	    }
+
+	public DisAsm getDisAsm() {
+		return disAsm;
 	}
-      }
 
-      /* Just a test to see if it gets down to a reasonable speed */
-      if (cycles > nextSleep) {
-	try {
-	  Thread.sleep(5);
-	} catch (Exception e) {
+	public void cpuloop() throws EmulationException {
+		if (isRunning()) {
+			throw new IllegalStateException("already running");
+		}
+		setRunning(true);
+		try {
+			// ??? - power-up  should be executed?!
+			time = System.currentTimeMillis();
+			run();
+		} finally {
+			setRunning(false);
+		}
 	}
-	// Frequency = 100 * cycles ratio
-	// Ratio = Frq / 100
-	nextSleep = cycles + (long)(rate * dcoFrq / (10*20));
-      }
 
-//       if ((instruction & 0xff80) == CALL) {
-// 	System.out.println("Call to PC = " + reg[PC]);
-//       }
-    }
-    isStopping = isBreaking = false;
-  }
+	private void run() throws EmulationException {
+		while (!isStopping) {
 
-  /* Use stepInstructions or stepMicros instead */
-  @Deprecated public long step() throws EmulationException {
-    return stepMicros(1, 1);
-  }
+			if (cycles > nextOut && !debug) {
+				printCPUSpeed(reg[PC]);
+				nextOut = cycles + 20000007;
+			}
 
-  public long stepInstructions(int count) throws EmulationException {
-    if (isRunning()) {
-      throw new IllegalStateException("step not possible when CPU is running");
-    }
-    setRunning(true);
-    int trys=0;
-    try {
-    while (count > 0 && !isStopping) {      
-      int pc = emulateOP(-1);
-      if (pc >= 0) {
-        trys=0;
-        count--;
-        if (execCounter != null) {
-          execCounter[pc]++;
-        }
-        if (trace != null) {
-  	  trace[tracePos++] = pc;
-          if (tracePos >= trace.length) {
-            tracePos = 0;
-          }
-        }
+			int pc = emulateOP(-1);
+			if (pc >= 0) {
+				if (execCounter != null) {
+					execCounter[pc]++;
+				}
+				if (trace != null) {
+					trace[tracePos++] = pc;
+					if (tracePos >= trace.length)
+						tracePos = 0;
+				}
+				// -------------------------------------------------------------------
+				// Debug information
+				// -------------------------------------------------------------------
+				if (debug) {
+					if (servicedInterrupt >= 0) {
+						disAsm.disassemble(pc, memory, reg, servicedInterrupt);
+					} else {
+						disAsm.disassemble(pc, memory, reg);
+					}
+				}
+			}
 
-        // -------------------------------------------------------------------
-        // Debug information
-        // -------------------------------------------------------------------
-        if (debug) {
-            if (servicedInterrupt >= 0) {
-                disAsm.disassemble(pc, memory, reg, servicedInterrupt);
-            } else {
-                disAsm.disassemble(pc, memory, reg);
-            }
-        }
-      }
-      else{
-        trys++;
-        if(trys==1000) break;
-      }
-    }
-    } finally { 
-        setRunning(false);
-    }
-    isStopping = isBreaking = false;
-    return cycles;
-  }
-  
-  /* this represents the micros time that was "promised" last time */
-  /* NOTE: this is a delta compared to "current micros" 
-   */
-  long lastReturnedMicros;
-  long lastMicrosCycles;
-  boolean microClockReady = false;
+			/* Just a test to see if it gets down to a reasonable speed */
+			if (cycles > nextSleep) {
+				try {
+					Thread.sleep(5);
+				} catch (Exception e) {
+				}
+				// Frequency = 100 * cycles ratio
+				// Ratio = Frq / 100
+				nextSleep = cycles + (long)(rate * dcoFrq / (10*20));
+			}
 
-  /* when DCO has changed speed, this method will be called */
-  protected void dcoReset() {
-      microClockReady = false;
-  }
-  
-  /* 
-   * Perform a single step (even if in LPM) but no longer than to maxCycles + 1 instr
-   * Note: jumpMicros just jump the clock until that time
-   * executeMicros also check eventQ, etc and executes instructions
-   */
-  long maxCycles = 0;
-  public long stepMicros(long jumpMicros, long executeMicros) throws EmulationException {
-    if (isRunning()) {
-      throw new IllegalStateException("step not possible when CPU is running");
-    }
+			//       if ((instruction & 0xff80) == CALL) {
+			// 	System.out.println("Call to PC = " + reg[PC]);
+			//       }
+		}
+		isStopping = isBreaking = false;
+	}
 
-    if (jumpMicros < 0) {
-      throw new IllegalArgumentException("Can not jump a negative time: " + jumpMicros);
-    }
-    /* quick hack - if microdelta == 0 => ensure that we have correct zery cycles
-     */
-    if (!microClockReady) {
-      lastMicrosCycles = maxCycles;
-    }
-    
-    // Note: will be reset during DCO-syncs... => problems ???
-    lastMicrosDelta += jumpMicros;
+	/* Use stepInstructions or stepMicros instead */
+	@Deprecated public long step() throws EmulationException {
+		return stepMicros(1, 1);
+	}
 
-    if (microClockReady) {
-    /* check that we did not miss any events (by comparing with last return value) */
-    maxCycles = lastMicrosCycles + (lastMicrosDelta * dcoFrq) / 1000000;
-    if (cpuOff) {
-      if(maxCycles > nextEventCycles) {
-        /* back this time again... */
-        lastMicrosDelta -= jumpMicros;
-        printEventQueues(System.out);
-        throw new IllegalArgumentException("Jumping to a time that is further than possible in LPM maxCycles:" + 
-            maxCycles + " cycles: " + cycles + " nextEventCycles: " + nextEventCycles);
-      }
-    } else if (maxCycles > cycles) {
-      /* back this time again... */
-      lastMicrosDelta -= jumpMicros;
-      throw new IllegalArgumentException("Jumping to a time that is further than possible not LPM maxCycles:" + 
-          maxCycles + " cycles: " + cycles);
-    }
+	public long stepInstructions(int count) throws EmulationException {
+		if (isRunning()) {
+			throw new IllegalStateException("step not possible when CPU is running");
+		}
+		setRunning(true);
+		int trys=0;
+		try {
+			while (count > 0 && !isStopping) {      
+				int pc = emulateOP(-1);
+				if (pc >= 0) {
+					trys=0;
+					count--;
+					if (execCounter != null) {
+						execCounter[pc]++;
+					}
+					if (trace != null) {
+						trace[tracePos++] = pc;
+						if (tracePos >= trace.length) {
+							tracePos = 0;
+						}
+					}
 
-    }
-    microClockReady = true;
+					// -------------------------------------------------------------------
+					// Debug information
+					// -------------------------------------------------------------------
+					if (debug) {
+						if (servicedInterrupt >= 0) {
+							disAsm.disassemble(pc, memory, reg, servicedInterrupt);
+						} else {
+							disAsm.disassemble(pc, memory, reg);
+						}
+					}
+				}
+				else{
+					trys++;
+					if(trys==1000) break;
+				}
+			}
+		} finally { 
+			setRunning(false);
+		}
+		isStopping = isBreaking = false;
+		return cycles;
+	}
 
-    /* run until this cycle time */
-    maxCycles = lastMicrosCycles + ((lastMicrosDelta + executeMicros) * dcoFrq) / 1000000;
-    /*System.out.println("Current cycles: " + cycles + " additional micros: " + (jumpMicros) +
+	/* this represents the micros time that was "promised" last time */
+	/* NOTE: this is a delta compared to "current micros" 
+	 */
+	long lastReturnedMicros;
+	long lastMicrosCycles;
+	boolean microClockReady = false;
+
+	/* when DCO has changed speed, this method will be called */
+	protected void dcoReset() {
+		microClockReady = false;
+	}
+
+	/* 
+	 * Perform a single step (even if in LPM) but no longer than to maxCycles + 1 instr
+	 * Note: jumpMicros just jump the clock until that time
+	 * executeMicros also check eventQ, etc and executes instructions
+	 */
+	long maxCycles = 0;
+	public long stepMicros(long jumpMicros, long executeMicros) throws EmulationException {
+		if (isRunning()) {
+			throw new IllegalStateException("step not possible when CPU is running");
+		}
+
+		if (jumpMicros < 0) {
+			throw new IllegalArgumentException("Can not jump a negative time: " + jumpMicros);
+		}
+		/* quick hack - if microdelta == 0 => ensure that we have correct zery cycles
+		 */
+		if (!microClockReady) {
+			lastMicrosCycles = maxCycles;
+		}
+
+		// Note: will be reset during DCO-syncs... => problems ???
+		lastMicrosDelta += jumpMicros;
+
+		if (microClockReady) {
+			/* check that we did not miss any events (by comparing with last return value) */
+			maxCycles = lastMicrosCycles + (lastMicrosDelta * dcoFrq) / 1000000;
+			if (cpuOff) {
+				if(maxCycles > nextEventCycles) {
+					/* back this time again... */
+					lastMicrosDelta -= jumpMicros;
+					printEventQueues(System.out);
+					throw new IllegalArgumentException("Jumping to a time that is further than possible in LPM maxCycles:" + 
+							maxCycles + " cycles: " + cycles + " nextEventCycles: " + nextEventCycles);
+				}
+			} else if (maxCycles > cycles) {
+				/* back this time again... */
+				lastMicrosDelta -= jumpMicros;
+				throw new IllegalArgumentException("Jumping to a time that is further than possible not LPM maxCycles:" + 
+						maxCycles + " cycles: " + cycles);
+			}
+
+		}
+		microClockReady = true;
+
+		/* run until this cycle time */
+		maxCycles = lastMicrosCycles + ((lastMicrosDelta + executeMicros) * dcoFrq) / 1000000;
+		/*System.out.println("Current cycles: " + cycles + " additional micros: " + (jumpMicros) +
           " exec micros: " + executeMicros + " => Execute until cycles: " + maxCycles);*/
 
 
-    while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
-        int pc = emulateOP(maxCycles);
-        if (pc >= 0) {
-            if (execCounter != null) {
-                execCounter[pc]++;
-            }
-            if (trace != null) {
-              if (tracePos >= trace.length) {
-                tracePos = 0;
-              }
-              trace[tracePos++] = pc;
-            }
-            // -------------------------------------------------------------------
-            // Debug information
-            // -------------------------------------------------------------------
-            if (debug) {
-              if (servicedInterrupt >= 0) {
-                disAsm.disassemble(pc, memory, reg, servicedInterrupt);
-              } else {
-                disAsm.disassemble(pc, memory, reg);
-              }
-            }
-        }
+		while (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
+			int pc = emulateOP(maxCycles);
+			if (pc >= 0) {
+				if (execCounter != null) {
+					execCounter[pc]++;
+				}
+				if (trace != null) {
+					if (tracePos >= trace.length) {
+						tracePos = 0;
+					}
+					trace[tracePos++] = pc;
+				}
+				// -------------------------------------------------------------------
+				// Debug information
+				// -------------------------------------------------------------------
+				if (debug) {
+					if (servicedInterrupt >= 0) {
+						disAsm.disassemble(pc, memory, reg, servicedInterrupt);
+					} else {
+						disAsm.disassemble(pc, memory, reg);
+					}
+				}
+			}
 
-        if (isStopping) {
-            isStopping = false;
-            if (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
-                // Did not complete the execution cycle
-                lastMicrosDelta -= jumpMicros;
-            }
-            if (isBreaking) {
-                isBreaking = false;
-                throw new BreakpointException();
-            }
-            lastReturnedMicros = 0;
-            return 0;
-        }
-    }
+			if (isStopping) {
+				isStopping = false;
+				if (cycles < maxCycles || (cpuOff && (nextEventCycles < cycles))) {
+					// Did not complete the execution cycle
+					lastMicrosDelta -= jumpMicros;
+				}
+				if (isBreaking) {
+					isBreaking = false;
+					throw new BreakpointException();
+				}
+				lastReturnedMicros = 0;
+				return 0;
+			}
+		}
 
-    if (cpuOff && !(interruptsEnabled && servicedInterrupt == -1 && interruptMax >= 0)) {
-      lastReturnedMicros = (1000000 * (nextEventCycles - cycles)) / dcoFrq;
-    } else {
-      lastReturnedMicros = 0;
-    }
-    
-    if(cycles < maxCycles) {
-      throw new RuntimeException("cycles < maxCycles : " + cycles + " < " + maxCycles);
-    }
-    if(lastReturnedMicros < 0) {
-      throw new RuntimeException("lastReturnedMicros < 0 : " + lastReturnedMicros);
-    }
+		if (cpuOff && !(interruptsEnabled && servicedInterrupt == -1 && interruptMax >= 0)) {
+			lastReturnedMicros = (1000000 * (nextEventCycles - cycles)) / dcoFrq;
+		} else {
+			lastReturnedMicros = 0;
+		}
 
-    return lastReturnedMicros;
-  }
+		if(cycles < maxCycles) {
+			throw new RuntimeException("cycles < maxCycles : " + cycles + " < " + maxCycles);
+		}
+		if(lastReturnedMicros < 0) {
+			throw new RuntimeException("lastReturnedMicros < 0 : " + lastReturnedMicros);
+		}
 
-  public void stop() {
-      isStopping = true;
-  }
+		return lastReturnedMicros;
+	}
 
-  public void triggBreakpoint() {
-      isBreaking = true;
-      stop();
-  }
+	public void stop() {
+		isStopping = true;
+	}
 
-  public int getDCOFrequency() {
-    return dcoFrq;
-  }
-  public int getExecCount(int address) {
-    if (execCounter != null) {
-      return execCounter[address];
-    }
-    return 0;
-  }
+	public void triggBreakpoint() {
+		isBreaking = true;
+		stop();
+	}
 
-  public void setMonitorExec(boolean mon) {
-    if (mon) {
-      if (execCounter == null) {
-	execCounter = new int[MAX_MEM];
-      }
-    } else {
-      execCounter = null;
-    }
-  }
+	public int getDCOFrequency() {
+		return dcoFrq;
+	}
+	public int getExecCount(int address) {
+		if (execCounter != null) {
+			return execCounter[address];
+		}
+		return 0;
+	}
 
-  public void setTrace(int size) {
-      if (size == 0) {
-	  trace = null;
-      } else {
-	  trace = new int[size];
-      }
-      tracePos = 0;
-  }
-  
-  public int getBackTrace(int pos) {
-      int tPos = tracePos - pos - 1;
-      if (tPos < 0) {
-	  tPos += trace.length;
-      }
-      return trace[tPos];
-  }
-  
-  public int getTraceSize() {
-      return trace == null ? 0 : trace.length;
-  }
+	public void setMonitorExec(boolean mon) {
+		if (mon) {
+			if (execCounter == null) {
+				execCounter = new int[MAX_MEM];
+			}
+		} else {
+			execCounter = null;
+		}
+	}
 
-  
-  private void printCPUSpeed(int pc) {
-    // Passed time
-    int td = (int)(System.currentTimeMillis() - time);
-    // Passed total cycles
-    long cd = (cycles - lastCycles);
-    // Passed "active" CPU cycles
-    long cpud = (cpuCycles - lastCpuCycles);
+	public void setTrace(int size) {
+		if (size == 0) {
+			trace = null;
+		} else {
+			trace = new int[size];
+		}
+		tracePos = 0;
+	}
 
-    if (td == 0 || cd == 0) {
-      return;
-    }
+	public int getBackTrace(int pos) {
+		int tPos = tracePos - pos - 1;
+		if (tPos < 0) {
+			tPos += trace.length;
+		}
+		return trace[tPos];
+	}
 
-    if (DEBUGGING_LEVEL > 0) {
-      System.out.println("Elapsed: " + td
-			 +  " cycDiff: " + cd + " => " + 1000 * (cd / td )
-			 + " cyc/s  cpuDiff:" + cpud + " => "
-			 + 1000 * (cpud / td ) + " cyc/s  "
-			 + (10000 * cpud / cd)/100.0 + "%");
-    }
-    lastCPUPercent = (10000 * cpud / cd) / 100.0;
-    time = System.currentTimeMillis();
-    lastCycles = cycles;
-    lastCpuCycles = cpuCycles;
-    if (DEBUGGING_LEVEL > 0) {
-      disAsm.disassemble(pc, memory, reg);
-    }
-  }
+	public int getTraceSize() {
+		return trace == null ? 0 : trace.length;
+	}
 
-  public void generateTrace(PrintStream out) {
-    if (profiler != null && out != null) {
-      profiler.printStackTrace(out);
-    }
-  }
-  
-  public boolean getDebug() {
-    return debug;
-  }
 
-  public void setDebug(boolean db) {
-    debug = db;
-  }
+	private void printCPUSpeed(int pc) {
+		// Passed time
+		int td = (int)(System.currentTimeMillis() - time);
+		// Passed total cycles
+		long cd = (cycles - lastCycles);
+		// Passed "active" CPU cycles
+		long cpud = (cpuCycles - lastCpuCycles);
 
-  public void setMap(MapTable map) {
-    this.map = map;
-    /* When we got the map table we can also profile! */
-    if (profiler == null) {
-      setProfiler(new SimpleProfiler());
-      profiler.setCPU(this);
-    }
-  }
+		if (td == 0 || cd == 0) {
+			return;
+		}
 
-  private void setRunning(boolean running) {
-    if (this.running != running) {
-      this.running = running;
-      if (running) {
-          isStopping = false;
-          isBreaking = false;
-      }
-      SimEventListener[] listeners = this.simEventListeners;
-      if (listeners != null) {
-        SimEvent.Type type = running ? SimEvent.Type.START : SimEvent.Type.STOP;
-        SimEvent event = new SimEvent(type);
-        for(SimEventListener l : listeners) {
-          l.simChanged(event);
-        }
-      }
-    }
-  }
+		if (DEBUGGING_LEVEL > 0) {
+			System.out.println("Elapsed: " + td
+					+  " cycDiff: " + cd + " => " + 1000 * (cd / td )
+					+ " cyc/s  cpuDiff:" + cpud + " => "
+					+ 1000 * (cpud / td ) + " cyc/s  "
+					+ (10000 * cpud / cd)/100.0 + "%");
+		}
+		lastCPUPercent = (10000 * cpud / cd) / 100.0;
+		time = System.currentTimeMillis();
+		lastCycles = cycles;
+		lastCpuCycles = cpuCycles;
+		if (DEBUGGING_LEVEL > 0) {
+			disAsm.disassemble(pc, memory, reg);
+		}
+	}
 
-  public boolean isRunning() {
-    return running;
-  }
+	public void generateTrace(PrintStream out) {
+		if (profiler != null && out != null) {
+			profiler.printStackTrace(out);
+		}
+	}
 
-  public double getExecutionRate() {
-    return rate;
-  }
+	public boolean getDebug() {
+		return debug;
+	}
 
-  public void setExecutionRate(double rate) {
-    this.rate = rate;
-  }
+	public void setDebug(boolean db) {
+		debug = db;
+	}
 
-  public synchronized void addSimEventListener(SimEventListener l) {
-    simEventListeners = ArrayUtils.add(SimEventListener.class, simEventListeners, l);
-  }
+	public void setMap(MapTable map) {
+		this.map = map;
+		/* When we got the map table we can also profile! */
+		if (profiler == null) {
+			setProfiler(new SimpleProfiler());
+			profiler.setCPU(this);
+		}
+	}
 
-  public synchronized void removeSimEventListener(SimEventListener l) {
-    simEventListeners = ArrayUtils.remove(simEventListeners, l);
-  }
+	private void setRunning(boolean running) {
+		if (this.running != running) {
+			this.running = running;
+			if (running) {
+				isStopping = false;
+				isBreaking = false;
+			}
+			SimEventListener[] listeners = this.simEventListeners;
+			if (listeners != null) {
+				SimEvent.Type type = running ? SimEvent.Type.START : SimEvent.Type.STOP;
+				SimEvent event = new SimEvent(type);
+				for(SimEventListener l : listeners) {
+					l.simChanged(event);
+				}
+			}
+		}
+	}
+
+	public boolean isRunning() {
+		return running;
+	}
+
+	public double getExecutionRate() {
+		return rate;
+	}
+
+	public void setExecutionRate(double rate) {
+		this.rate = rate;
+	}
+
+	public synchronized void addSimEventListener(SimEventListener l) {
+		simEventListeners = ArrayUtils.add(SimEventListener.class, simEventListeners, l);
+	}
+
+	public synchronized void removeSimEventListener(SimEventListener l) {
+		simEventListeners = ArrayUtils.remove(simEventListeners, l);
+	}
 
 }

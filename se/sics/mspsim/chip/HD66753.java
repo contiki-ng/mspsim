@@ -117,8 +117,6 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 		IOPort port8 = cpu.getIOUnit(IOPort.class, "P" + LED_Port);
 		port8.addPortOutListener(this);
 
-
-
 		for (TimerConfig tconf : cpu.config.timerConfig) {
 			for (MUXConfig mconf : tconf.muxConfig) {
 				if((mconf.Port==LED_Port)&&(mconf.Pin==LED_Bit)){
@@ -127,10 +125,10 @@ public class HD66753 extends Chip implements USARTListener, PortListener, Action
 			}
 		}
 
-		displayUpdatetimer = new javax.swing.Timer(100, this);
+		displayUpdatetimer = new javax.swing.Timer(3, this);
 		displayUpdatetimer.stop();
 		displayUpdatetimer.setRepeats(false);
-		displayresetFrequenztimer = new javax.swing.Timer(1000, actionListener2);
+		displayresetFrequenztimer = new javax.swing.Timer(30, actionListener2);
 		displayresetFrequenztimer.stop();
 		displayresetFrequenztimer.setRepeats(false);	
 	}
