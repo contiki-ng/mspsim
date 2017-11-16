@@ -27,7 +27,7 @@
 
   <target name="compile" depends="init" description="compile the source">
     <javac srcdir="${src}" destdir="${build}" classpathref="classpath"
-           debug="${javac.debug}" includeantruntime="false">
+           debug="${javac.debug}" includeantruntime="false" encoding="utf-8">
       <compilerarg value="-Xlint:unchecked"/>
       <compilerarg value="-deprecation"/>
       <exclude name="tests/**" />
