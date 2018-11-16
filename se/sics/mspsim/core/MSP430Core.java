@@ -1077,6 +1077,11 @@ public class MSP430Core extends Chip implements MSP430Constants {
 
     // When is PC increased  probably immediately (e.g. here)?
     pc += 2;
+    if(pc>0xFFFF) {
+    	System.out.println("PC overflow => reset");
+    	reset();
+    	 return -1;
+    }
 
     writeRegister(PC, pc);
 

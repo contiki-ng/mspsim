@@ -150,7 +150,7 @@ public class GDBStubs implements Runnable {
 	private void stepSource() {
 		node.stop();
 		node.step(1);
-		}
+	}
 
 	/**
 	 * @param cmd
@@ -168,7 +168,7 @@ public class GDBStubs implements Runnable {
 	 */
 	private void handleCmd(String cmd, Integer[] cmdBytes, int cmdLen)
 			throws IOException, EmulationException {
-//		System.out.println("cmd: " + cmd);
+		//System.out.println("cmd: " + cmd);
 		char c = cmd.charAt(0);
 		String parts[];
 		switch (c) {
@@ -230,7 +230,7 @@ public class GDBStubs implements Runnable {
 			break;
 		case 'P': // write Register
 			sendResponse("", "command unknown");
-/*			parts = cmd.split("=");
+			/*			parts = cmd.split("=");
 			if (parts.length == 2) {
 				String Val = parts[1].substring(2, 4) + parts[1].substring(0, 2);
 				cpu.writeRegister(Integer.parseInt(parts[0].substring(1)),
@@ -277,7 +277,7 @@ public class GDBStubs implements Runnable {
 				cmd2 = wdata[0];
 			}
 			parts = cmd2.split(",");
-			
+
 			int addr = Integer.decode("0x" + parts[0]);
 			int len = Integer.decode("0x" + parts[1]);
 			String data = "";
@@ -295,15 +295,23 @@ public class GDBStubs implements Runnable {
 			} else {
 				System.out.println("Writing to memory at: " + Integer.toHexString(addr) + " len = " + len + " with: "
 						+ ((wdata.length > 1) ? wdata[1] : ""));
-				
-				for(int i=0;i<wdata[1].length()/2;i++){
-					int high=Integer.decode("0x"+wdata[1].substring(2*i, 2*i+1));
-					int low=Integer.decode("0x"+wdata[1].substring(2*i+1, 2*i+2));
-					int Val=low+high*16;
-					mem.set(addr+i, Val, Memory.AccessMode.WORD);
-			        // cpu.memory[addr+i]=Val;
+
+				if(wdata[1].length()!=(len*2)) {
+					System.err.println("*************************");
+					System.err.println("    wrong data size!");
+					System.err.println("    "+wdata[1].length()+" != "+(2*len));
+					System.err.println("*************************");
+					sendResponse("","wrong data size "+wdata[1].length()+" != "+(2*len));
+				} else {
+					for(int i=0;i<wdata[1].length()/2;i++){
+						int high=Integer.decode("0x"+wdata[1].substring(2*i, 2*i+1));
+						int low=Integer.decode("0x"+wdata[1].substring(2*i+1, 2*i+2));
+						int Val=low+high*16;
+						mem.set(addr+i, Val, Memory.AccessMode.BYTE);
+						// cpu.memory[addr+i]=Val;
+					}
+					sendResponse(OK);
 				}
-				sendResponse(OK);
 			}
 			break;
 		default:
@@ -351,14 +359,13 @@ public class GDBStubs implements Runnable {
 		};
 	}
 
-	
+
 	private void writeRegisters(String data) throws IOException {
-		System.err.println(data);
 		if(data.length()!=(8*16)){
 			sendResponse("", "Wrong length for write register");
 			return;
 		}
-		
+
 		for(int i=0;i<16;i++){
 			String packet=data.substring(8*i, 8*i+7);
 			int low = Integer.decode("0x" + packet.substring(0,1));
@@ -367,7 +374,7 @@ public class GDBStubs implements Runnable {
 		}
 		sendResponse(OK, "write register");
 	}	
-	
+
 	private void sendRegisters() throws IOException {
 		String regs = "";
 		for (int i = 0; i < 16; i++) {
@@ -400,14 +407,14 @@ public class GDBStubs implements Runnable {
 	}
 
 	public void sendResponse(String resp, String info) throws IOException {
-//		System.out.print("ans2: ");
+		//		System.out.print("ans2: ");
 		String a = "";
 		a += '$';
 		int cs = 0;
 		if (resp != null) {
 			for (int i = 0; i < resp.length(); i++) {
 				a += resp.charAt(i);
-//				System.out.print(resp.charAt(i));
+				//				System.out.print(resp.charAt(i));
 				cs += resp.charAt(i);
 			}
 		}
@@ -427,12 +434,12 @@ public class GDBStubs implements Runnable {
 				c = c - 10 + 'a';
 			}
 			a += (char) c;
-/*			if (info == "") {
+			/*			if (info == "") {
 				System.out.println(" (" +  bytesToHexString(a.getBytes()) +")");
 			} else {
 				System.out.println(" (" + info + "::" + bytesToHexString(a.getBytes()) +")");
 			}
-*/			output.write(a.getBytes());
+			 */			output.write(a.getBytes());
 
 	}
 

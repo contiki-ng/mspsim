@@ -37,6 +37,7 @@
 
 package se.sics.mspsim.core;
 
+import se.sics.mspsim.chip.CC2420.Reg;
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.core.MSP430Config.MUXConfig;
 import se.sics.mspsim.util.Utils;
@@ -271,21 +272,21 @@ public class Timer extends IOUnit {
 							+ ": " + tccr);
 				}
 
-				ccrEvent(this);
-				// Set the interrupt flag...
-				tcctl |= CC_IFG;
 
 				if (captureOn) {
 					// Write the expected capture time to the register (counter could
 					// differ slightly)
-					tccr = expCompare;
+					//tccr = expCompare;
 					// Update capture times... for next capture
-					expCompare = (expCompare + expCapInterval) & WrapValue();
-					expCaptureTime += expCapInterval * cyclesMultiplicator;
+					//expCompare = (expCompare + expCapInterval) & WrapValue();
+					//expCaptureTime += expCapInterval * cyclesMultiplicator;
 					if (DEBUG) {
 						log("setting expCaptureTime to next capture: " + expCaptureTime);
 					}
 				} else {
+					ccrEvent(this);
+					// Set the interrupt flag...
+					tcctl |= CC_IFG;
 					int steps = calcNextEvent() + diff;
 					// Update expected compare time for this compare/cap register
 					expCaptureTime = expCaptureTime
@@ -293,10 +294,10 @@ public class Timer extends IOUnit {
 					if (DEBUG) {
 						log("setting expCaptureTime to full wrap: " + expCaptureTime);
 					}
+					if(tccr!=0)	triggerInterrupt(cycles);
 				}
 				/* schedule again! */
 				update();
-				triggerInterrupt(cycles);
 			}
 		}
 
@@ -760,6 +761,10 @@ public class Timer extends IOUnit {
 			ccr[lastTIV / 2].tcctl &= ~CC_IFG;
 		}
 
+		reEvaluteCCR1Interrupt(cycles);
+	}
+	
+	public void reEvaluteCCR1Interrupt(long cycles) {
 		/* flag this interrupt off */
 		cpu.flagInterrupt(ccr1Vector, this, false);
 		lastTIV = 0;
@@ -775,7 +780,7 @@ public class Timer extends IOUnit {
 		if (lastTIV == 0 && interruptEnable & interruptPending) {
 			lastTIV = timerOverflow;
 			cpu.flagInterrupt(ccr1Vector, this, true);
-		}
+		}		
 	}
 
 	public void write(int address, int data, boolean word, long cycles) {
@@ -870,6 +875,7 @@ public class Timer extends IOUnit {
 			// Control register...
 			int index = (iAddress - TCCTL0) / 2;
 			CCR reg = ccr[index];
+			int oldtcctl=reg.tcctl;
 			reg.tcctl = data;
 			reg.outMode = (data >> 5) & 7;
 			boolean oldCapture = reg.captureOn;
@@ -879,7 +885,7 @@ public class Timer extends IOUnit {
 			int src = reg.inputSrc = srcMap[4 + index * 4 + reg.inputSel];
 			reg.capMode = (data >> 14) & 3;
 
-			/* capture a port state? */
+			/* capture a port state?
 			if (!oldCapture && reg.captureOn && (src & SRC_PORT) != 0) {
 				int port = (src & 0xff) >> 4;
 				int pin = src & 0x0f;
@@ -887,6 +893,23 @@ public class Timer extends IOUnit {
 				if (DEBUG)
 					log("Assigning Port: " + port + " pin: " + pin + " for capture");
 				ioPort.setTimerCapture(this, pin);
+			} */
+			
+			if (!oldCapture)
+				for (MUXConfig con : reg.PortCon) {
+					IOPort ioPort = cpu.getIOUnit(IOPort.class, "P" + con.Port);
+					if(reg.captureOn ) {
+						if (DEBUG)
+							log("Assigning Port: " + con.Port + " pin: " + con.Pin + " for capture");
+						ioPort.setTimerCapture(this, con.Pin,index);
+					} else {
+						ioPort.removeTimerCapture(con.Pin);
+						if (DEBUG)
+							log("Remove Port: " + con.Port + " pin: " + con.Pin + " for capture");
+					}	
+				}
+			if(((reg.tcctl&CC_IFG)==0)&&((oldtcctl&CC_IFG)!=0)) {
+				reEvaluteCCR1Interrupt(cycles);
 			}
 
 			updateCounter(cycles);
@@ -1114,8 +1137,7 @@ public class Timer extends IOUnit {
 					+ " at cycles: " + cpu.cycles + " servicing delay: "
 					+ (cpu.cycles - triggerTime));
 		}
-		/* old method is replaced */
-		/* triggerInterrupts(cpu.cycles); */
+
 	}
 
 	public int getModeMax() {

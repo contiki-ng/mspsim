@@ -330,8 +330,9 @@ public class ELF {
       System.out.println("Loading " + len + " bytes into " +
              Integer.toString(addr, 16) + " fill " + fill);
     }
-    for (int i = 0, n = len; i < n; i++) {
-      memory[addr++] = elfData[offset++] & 0xff;
+      for (int i = 0, n = len; i < n; i++) {
+          //System.out.print( Integer.toHexString(0x100 |(elfData[offset] & 0xff)).substring(1));
+          memory[addr++] = elfData[offset++] & 0xff;
     }
 // Flash is overridden but I want to define the values in the flash class
 //    if (fill > len) {

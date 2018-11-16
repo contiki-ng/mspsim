@@ -84,7 +84,12 @@ public class Button extends Chip implements ActionListener {
 		return Up_Down & Ren;
 	}
 
-
+	public boolean isPullDown() {
+		boolean Ren = ((this.port.getRegister(PortReg.REN) & (1 << this.pin)) != 0);
+		boolean Up_Down = ((this.port.getRegister(PortReg.OUT) & (1 << this.pin)) != 0);
+		return !Up_Down & Ren;
+	}
+	
 	public void setPressed(boolean isPressed) {
 		if (this.isPressed != isPressed) {
 			this.isPressed = isPressed;
@@ -108,7 +113,7 @@ public class Button extends Chip implements ActionListener {
 	public void SetState() {
 		boolean isHigh = this.isPressed ^ (!this.polarity);
 		stateChanged(this.isPressed ? 1 : 0);
-		if((btnTyp==Btn_Typ.HighOpen)&!isPullUp()) isHigh=false;
+		if((btnTyp==Btn_Typ.HighOpen)&isPullDown()) isHigh=false;
 		if (DEBUG)
 			log(this.isPressed ? "pressed" : "released");
 		port.setPinState(pin, isHigh ? IOPort.PinState.HI : IOPort.PinState.LOW);

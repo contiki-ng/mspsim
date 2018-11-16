@@ -87,6 +87,7 @@ public class IOPort extends IOUnit {
     private int iv; /* low / high */
 
     private Timer[] timerCapture = new Timer[8];
+    private int[] ccr_index = new int[8];
 
     private IOPort ioPair;
     
@@ -189,13 +190,20 @@ public class IOPort extends IOUnit {
         portInListener = PortListenerProxy.removePortListener(portInListener, oldListener);
     }
     
-    public void setTimerCapture(Timer timer, int pin) {
+    public void setTimerCapture(Timer timer, int pin, int ccr_i) {
         if (DEBUG) {
             log("Setting timer capture for pin: " + pin);
         }
         timerCapture[pin] = timer;
+        ccr_index[pin]=ccr_i;
     }
 
+    public void removeTimerCapture(int pin) {
+        if (DEBUG) {
+            log("Remove timer capture for pin: " + pin);
+        }
+        timerCapture[pin] = null;
+    }
     private void updateIV() {
         int bitval = 0x01;
         iv = 0;
@@ -469,11 +477,8 @@ public class IOPort extends IOUnit {
             }
 
             if (timerCapture[pin] != null) {
-                /* should not be pin and 0 here
-                 * pin might need configuration and 0 can maybe also be 1? 
-                 */
-                //        if (DEBUG) log("Notifying timer of changed pin value");
-                timerCapture[pin].capture(pin, 0, state);
+            	if(((sel&(1 << pin))!=0)&&((sel2&(1 << pin))==0))
+            		timerCapture[pin].capture(ccr_index[pin], 0, state);
             }
 
         }
