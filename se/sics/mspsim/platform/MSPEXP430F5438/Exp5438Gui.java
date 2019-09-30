@@ -80,7 +80,7 @@ public class Exp5438Gui extends AbstractNodeGUI {
 	};
 
 	public Exp5438Gui(Exp5438Node node) {
-		super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.25", "images/MSP-EXP430F5438.jpg");
+		super("MSPSIM fork by Prof. Rüdiger Heintz 0.4.26", "images/MSP-EXP430F5438.jpg");
 		this.node = node;
 		Action scaleDownAction = new AbstractAction() {
 			private static final long serialVersionUID = 1L;
