@@ -112,6 +112,8 @@ public class Watchdog extends IOUnit implements SFRModule {
   public void reset(int type) {
       super.reset(type);
       wdtctl = 0x4;
+      delay=DELAY[wdtctl & WDTISx];
+      scheduleTimer();
   }
 
   private void triggerWDT(long time) {

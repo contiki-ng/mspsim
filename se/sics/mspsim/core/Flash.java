@@ -194,7 +194,6 @@ public class Flash extends IOUnit {
 		super("Flash", "Internal Flash", cpu, memory, offset);
 		this.main_range = main_range;
 		this.info_range = info_range;
-		locked = true;
 
 		Arrays.fill(memory, main_range.start, main_range.end, 0xff);
 		Arrays.fill(memory, info_range.start, info_range.end, 0xff);
