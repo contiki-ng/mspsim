@@ -933,23 +933,20 @@ public class Timer extends IOUnit {
 		case TCCR6:
 			// update of compare register
 			index = (iAddress - TCCR0) / 2;
-			if (ccr[index] == null)
-				logw(WarningType.VOID_IO_WRITE,
-						"Timer write to " + Utils.hex16(address));
-
-			updateCounter(cycles);
-			ccr[index].tccr = data;
-			if (index == 0) {
-				
-				// Reset the counter to bring it down to a smaller value...
-				// Check if up or updwn and reset if counter too high...
-				if (counter > data && (mode == UPDWN || mode == UP)) {
-					setCounter(0,cycles);
+			if (ccr[index] == null) logw(WarningType.VOID_IO_WRITE,"Timer write to " + Utils.hex16(address));
+			else if (ccr[index].tccr != data) {
+				updateCounter(cycles);
+				ccr[index].tccr = data;
+				if (index == 0) {			
+					// Reset the counter to bring it down to a smaller value...
+					// Check if up or updwn and reset if counter too high...
+					if (counter > data && (mode == UPDWN || mode == UP)) {
+						setCounter(0,cycles);
+					}
+					updateEvent(cycles);
 				}
-				updateEvent(cycles);
+				updateCCREvent(index, cycles);
 			}
-
-			updateCCREvent(index, cycles);
 			break;
 		case TEX0:
 			inputDivider2 = (data & 7) + 1;
