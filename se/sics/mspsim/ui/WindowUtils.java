@@ -36,6 +36,13 @@
  */
 
 package se.sics.mspsim.ui;
+import java.awt.Dimension;
+import java.awt.DisplayMode;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -79,23 +86,40 @@ public class WindowUtils {
   }
 
   private static void setBounds(Window window, String bounds) {
-    String[] b;
-    if ((bounds != null)
+    
+	String[] b;
+	if ((bounds != null)
 	&& ((b = bounds.split(",")) != null)
 	&& b.length == 4) {
-      try {
-	window.setBounds(Integer.parseInt(b[0]),
-			 Integer.parseInt(b[1]),
-			 Integer.parseInt(b[2]),
-			 Integer.parseInt(b[3]));
-      } catch (Exception e) {
-	e.printStackTrace();
-	window.pack();
-      }
-    } else {
-      window.setLocationByPlatform(true);
-      window.pack();
-    }
+	  try {
+		  
+		  Rectangle virtualBounds = new Rectangle();
+		  GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		  GraphicsDevice[] gs =ge.getScreenDevices();
+		  for (int j = 0; j < gs.length; j++) { 
+		      GraphicsDevice gd = gs[j];
+		      GraphicsConfiguration[] gc =gd.getConfigurations();
+		      for (int i=0; i < gc.length; i++) {
+		          virtualBounds =virtualBounds.union(gc[i].getBounds());
+		      }
+		  }
+		  int x=Integer.parseInt(b[0]);
+		  int y=Integer.parseInt(b[1]);
+		  int w=Integer.parseInt(b[2]);
+		  int h=Integer.parseInt(b[3]);
+		  
+		  if(x<virtualBounds.x) x=virtualBounds.x;
+		  if(y<virtualBounds.y) y=virtualBounds.y;
+		  
+		  window.setBounds(x,y,w,h);
+	  } catch (Exception e) {
+		  e.printStackTrace();
+		  window.pack();
+	  }
+	} else {
+		window.setLocationByPlatform(true);
+		window.pack();
+	}
   }
 
   public static void clearState() {
