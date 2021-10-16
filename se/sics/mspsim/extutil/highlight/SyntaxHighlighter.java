@@ -3,7 +3,7 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.text.*;
 import javax.swing.event.*;
-
+import java.awt.geom.Rectangle2D;
 import java.io.*;
 
 // Public domain, no restrictions, Ian Holyer, University of Bristol.
@@ -46,14 +46,14 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
         int caret = getCaretPosition();
         if (caret >= 0) {
           try {
-            Rectangle r = getUI().modelToView(SyntaxHighlighter.this, caret);
+            Rectangle2D r = getUI().modelToView2D(SyntaxHighlighter.this, caret, Position.Bias.Forward);
             if (currentHeight > 0) {
               repaint(0, currentY, getWidth(), currentHeight);
             }
-            if (r != null && r.height > 0) {
-              currentY = r.y;
-              currentHeight = r.height;
-              repaint(0, r.y, getWidth(), r.height);
+            if (r != null && r.getHeight() > 0) {
+              currentY = (int) r.getY();
+              currentHeight = (int) r.getHeight();
+              repaint(0, currentY, getWidth(), currentHeight);
             } else {
               currentHeight = -1;
             }
@@ -286,10 +286,10 @@ public class SyntaxHighlighter extends JTextPane implements DocumentListener, To
         int pos = getLineStartOffset(line);
 
         // Quick fix to position the line somewhere in the center
-        Rectangle r = getUI().modelToView(this, pos);
-        if (r != null && r.height > 0) {
+        Rectangle2D r = getUI().modelToView2D(this, pos, Position.Bias.Forward);
+        if (r != null && r.getHeight() > 0) {
           Rectangle vr = getVisibleRect();
-          vr.y = r.y - vr.height / 2;
+          vr.y = (int) (r.getY() - vr.height / 2);
           if (vr.y < 0) {
             vr.y = 0;
           }

@@ -93,11 +93,11 @@ public class Enc28J60 extends Chip {
 	private boolean nextEcon1 = false;
 	private boolean nextEcon2 = false;
 
-	private ArrayList<Byte> wbmData = new ArrayList<Byte>();
+	private ArrayList<Byte> wbmData = new ArrayList<>();
 
-	private ArrayList<RbmPacket> rbmPackets = new ArrayList<RbmPacket>();
+	private ArrayList<RbmPacket> rbmPackets = new ArrayList<>();
 	private static class RbmPacket {
-		ArrayList<Byte> data = new ArrayList<Byte>();
+		ArrayList<Byte> data = new ArrayList<>();
 		boolean wasRead = false;
 	}
 	
@@ -105,17 +105,17 @@ public class Enc28J60 extends Chip {
 		RbmPacket p = new RbmPacket();
 		int len = data.length;
 
-		p.data.add(new Byte((byte) 0x00)); /* ignored: next packet pointer */
-		p.data.add(new Byte((byte) 0x00)); /* ignored: next packet pointer */
+		p.data.add((byte) 0x00); /* ignored: next packet pointer */
+		p.data.add((byte) 0x00); /* ignored: next packet pointer */
 
-		p.data.add(new Byte((byte) (len & 0xff))); /* length */
-		p.data.add(new Byte((byte) ((len >> 8) & 0xff))); /* length */
+		p.data.add((byte) (len & 0xff)); /* length */
+		p.data.add((byte) ((len >> 8) & 0xff)); /* length */
 
-		p.data.add(new Byte((byte) 0x00)); /* ignored: status */
-		p.data.add(new Byte((byte) 0x00)); /* ignored: status */
+		p.data.add((byte) 0x00); /* ignored: status */
+		p.data.add((byte) 0x00); /* ignored: status */
 
 		for (byte b : data) {
-			p.data.add(new Byte(b)); /* data */
+			p.data.add(b); /* data */
 		}
 		
 		rbmPackets.add(p);
@@ -123,7 +123,7 @@ public class Enc28J60 extends Chip {
 	}
 
 	private PacketListener listener = null;
-	public static interface PacketListener {
+	public interface PacketListener {
 		public void packetSent(Byte[] packetData);
 	}
 	public void setPacketListener(PacketListener l) {
@@ -134,7 +134,7 @@ public class Enc28J60 extends Chip {
 		int val = 0x00;
 
 		if (writingToWBM) {
-			wbmData.add(new Byte((byte) data));
+			wbmData.add((byte) data);
 			val = 0x00;
 			return val;
 		} else if (readingFromRBM) {

@@ -46,11 +46,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
-import javax.swing.AbstractAction;
-import javax.swing.Action;
-import javax.swing.JButton;
-import javax.swing.JPanel;
-import javax.swing.KeyStroke;
+import javax.swing.*;
+
 import se.sics.mspsim.core.MSP430;
 import se.sics.mspsim.core.SimEvent;
 import se.sics.mspsim.core.SimEventListener;
@@ -84,8 +81,8 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 
   public ControlUI() {
     super(new GridLayout(0, 1));
-  };
-  
+  }
+
   private void setup() {
     if (window != null) return;
     this.cpu = (MSP430) registry.getComponent("cpu");
@@ -130,8 +127,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 	  }
 	}
       };
-    stepAction.putValue(Action.MNEMONIC_KEY,
-			new Integer(KeyEvent.VK_S));
+    stepAction.putValue(Action.MNEMONIC_KEY, KeyEvent.VK_S);
     stepAction.setEnabled(!cpu.isRunning());
 
     JButton stepButton = new JButton(stepAction);
@@ -144,10 +140,10 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
     createButton("Profile Dump");
 
     // Setup standard actions
-    stepButton.getInputMap(WHEN_IN_FOCUSED_WINDOW)
-      .put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_MASK),
-	   "cpuStep");
-    stepButton.getActionMap().put("cpuStep", stepAction);
+    stepButton.registerKeyboardAction(stepAction,
+                                      KeyStroke.getKeyStroke(KeyEvent.VK_S,
+                                                             InputEvent.CTRL_DOWN_MASK),
+                                      JComponent.WHEN_IN_FOCUSED_WINDOW);
 
     cpu.addSimEventListener(this);
 
@@ -223,18 +219,14 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
     switch (event.getType()) {
     case START:
     case STOP:
-      java.awt.EventQueue.invokeLater(new Runnable() {
-
-        public void run() {
-          if (cpu.isRunning()) {
-            controlButton.setText("Stop");
-            stepAction.setEnabled(false);
-          } else {
-            controlButton.setText("Run");
-            stepAction.setEnabled(true);
-          }
+      java.awt.EventQueue.invokeLater(() -> {
+        if (cpu.isRunning()) {
+          controlButton.setText("Stop");
+          stepAction.setEnabled(false);
+        } else {
+          controlButton.setText("Run");
+          stepAction.setEnabled(true);
         }
-
       });
       break;
     }

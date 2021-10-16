@@ -38,7 +38,7 @@ import java.util.ArrayList;
 
 public class ComponentRegistry {
 
-    private ArrayList<ComponentEntry> components = new ArrayList<ComponentEntry>();
+    private ArrayList<ComponentEntry> components = new ArrayList<>();
     private boolean running = false;
 
     private synchronized ComponentEntry[] getAllEntries() {
@@ -87,7 +87,7 @@ public class ComponentRegistry {
     }
 
     public synchronized Object[] getAllComponents(String name) {
-        ArrayList<Object> list = new ArrayList<Object>();
+        ArrayList<Object> list = new ArrayList<>();
         for (ComponentEntry entry : components) {
             if (name.equals(entry.name)) {
                 list.add(entry.component);

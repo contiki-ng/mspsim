@@ -81,9 +81,8 @@ public class PluginRepository implements ActiveComponent {
 
 	  for (int i = 0; i < pluginCount; i++) {
 	    try {
-	      PluginBundle bundle = (PluginBundle) classLoader.loadClass(plugins[i]).newInstance();
-	      //	          System.out.println("PluginBundle: " + bundles[i].getClass()
-	      //	                             + "  (" + plugins[i] + ')');
+              PluginBundle bundle = (PluginBundle)
+			      classLoader.loadClass(plugins[i]).getDeclaredConstructor().newInstance();
 	      bundle.init(registry);
 	    } catch (Exception e) {
 	      // TODO: handle exception
