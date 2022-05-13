@@ -67,7 +67,8 @@ public class Test implements USARTListener {
       lineBuffer.setLength(0);
       System.out.println("#|" + line);
       if (line.startsWith("FAIL:")) {
-	System.exit(0);
+	System.err.println("Tests failed!");
+	System.exit(1);
       } else if (line.startsWith("EXIT")) {
 	System.out.println("Tests succeded!");
 	System.exit(0);
