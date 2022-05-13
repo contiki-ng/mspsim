@@ -38,6 +38,8 @@
 
 package se.sics.mspsim;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+
 import se.sics.mspsim.platform.GenericNode;
 import se.sics.mspsim.util.ArgumentManager;
 
@@ -49,17 +51,13 @@ public class Main {
   public static GenericNode createNode(String className) {
     try {
       Class<? extends GenericNode> nodeClass = Class.forName(className).asSubclass(GenericNode.class);
-      return nodeClass.newInstance();
-    } catch (ClassNotFoundException e) {
-      // Can not find specified class
-    } catch (ClassCastException e) {
-      // Wrong class type
-    } catch (InstantiationException e) {
-      // Failed to instantiate
-    } catch (IllegalAccessException e) {
-      // Failed to access constructor
+      return nodeClass.getDeclaredConstructor().newInstance();
+    } catch (ClassNotFoundException | ClassCastException | InstantiationException | IllegalAccessException e) {
+      // Can not find specified class, or wrong class type, or failed to instantiate
+    } catch (InvocationTargetException | NoSuchMethodException e) {
+        e.printStackTrace();
     }
-    return null;
+      return null;
   }
 
   public static String getNodeTypeByPlatform(String platform) {
@@ -97,16 +95,14 @@ public class Main {
     String nodeType = config.getProperty("nodeType");
     String platform = nodeType;
     GenericNode node;
-    if (nodeType != null) {
-      node = createNode(nodeType);
-    } else {
+    if (nodeType == null) {
       platform = config.getProperty("platform");
       if (platform == null) {
           // Default platform
           platform = "sky";
 
           // Guess platform based on firmware filename suffix.
-          // TinyOS firmware files are often named 'main.exe'.
+          // TinyOS's firmware files are often named 'main.exe'.
           String[] a = config.getArguments();
           if (a.length > 0 && !"main.exe".equals(a[0])) {
               int index = a[0].lastIndexOf('.');
@@ -116,8 +112,8 @@ public class Main {
           }
       }
       nodeType = getNodeTypeByPlatform(platform);
-      node = createNode(nodeType);
     }
+    node = createNode(nodeType);
     if (node == null) {
       System.err.println("MSPSim does not currently support the platform '" + platform + "'.");
       System.exit(1);

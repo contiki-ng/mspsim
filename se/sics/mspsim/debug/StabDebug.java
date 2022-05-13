@@ -97,7 +97,7 @@ public class StabDebug implements ELFDebug {
   }
 
   public StabFile[] getStabFiles() {
-      ArrayList<StabFile> files = new ArrayList<StabFile>();
+      ArrayList<StabFile> files = new ArrayList<>();
       StabFile currentFile = null;
       for (int i = 0, n = stabs.length; i < n; i++) {
           Stab stab = stabs[i];
@@ -115,7 +115,7 @@ public class StabDebug implements ELFDebug {
               break;
           }
       }
-      return files.toArray(new StabFile[files.size()]);
+      return files.toArray(new StabFile[0]);
   }
   
   
@@ -134,14 +134,12 @@ public class StabDebug implements ELFDebug {
 	if (stab.value < address) {
 	  if (stab.data != null && stab.data.endsWith("/")) {
 	    currentPath = stab.data;
-	    lastAddress = stab.value;
-	    currentFunction = null;
-	  } else {
+          } else {
 	    currentFile = stab.data;
-	    lastAddress = stab.value;
-	    currentFunction = null;
-	  }
-	} else {
+          }
+          lastAddress = stab.value;
+          currentFunction = null;
+        } else {
 	  /* requires sorted order of all file entries in stab section */
 	  if (DEBUG) {
 	    System.out.println("FILE: Already passed address..." +
@@ -186,7 +184,7 @@ public class StabDebug implements ELFDebug {
   }
 
   public ArrayList<Integer> getExecutableAddresses() {
-    ArrayList<Integer> allAddresses = new ArrayList<Integer>();
+    ArrayList<Integer> allAddresses = new ArrayList<>();
 
     int address = Integer.MAX_VALUE;
 
@@ -203,12 +201,12 @@ public class StabDebug implements ELFDebug {
           if (stab.data != null && stab.data.endsWith("/")) {
             currentPath = stab.data;
             lastAddress = stab.value;
-            allAddresses.add(new Integer(lastAddress));
+            allAddresses.add(lastAddress);
             currentFunction = null;
           } else {
             currentFile = stab.data;
             lastAddress = stab.value;
-            allAddresses.add(new Integer(lastAddress));
+            allAddresses.add(lastAddress);
             currentFunction = null;
           }
         } else {
@@ -226,7 +224,7 @@ public class StabDebug implements ELFDebug {
           if (currentLineAdr < address) {
 //            currentLine = stab.desc;
             currentLineAdr = lastAddress + stab.value;
-            allAddresses.add(new Integer(currentLineAdr));
+            allAddresses.add(currentLineAdr);
             /*if (currentLineAdr >= address) {
               // Finished!!!
               if (DEBUG) {
@@ -244,7 +242,7 @@ public class StabDebug implements ELFDebug {
         if (stab.value < address) {
           currentFunction = stab.data;
           lastAddress = stab.value;
-          allAddresses.add(new Integer(lastAddress));
+          allAddresses.add(lastAddress);
         } else {
           if (DEBUG) {
             System.out.println("FUN: Already passed address...");
@@ -260,7 +258,7 @@ public class StabDebug implements ELFDebug {
   public String[] getSourceFiles() {
     String currentPath = null;
     String currentFile = null;
-    ArrayList<String> sourceFiles = new ArrayList<String>();
+    ArrayList<String> sourceFiles = new ArrayList<>();
 
     for (Stab stab : stabs) {
       if (stab.type == N_SO) {

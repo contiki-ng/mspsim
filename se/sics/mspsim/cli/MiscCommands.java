@@ -41,9 +41,8 @@
 package se.sics.mspsim.cli;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.regex.Pattern;
 
@@ -160,13 +159,12 @@ public class MiscCommands implements CommandBundle {
           if (i > 0) sb.append(' ');
           sb.append(context.getArgument(i));
         }
-        context.out.println(sb.toString());
+        context.out.println(sb);
         return 0;
       }
     });
     
     
-
     handler.registerCommand("source", new BasicCommand("run script", "[-v] <filename>") {
       public int executeCommand(CommandContext context) {
           boolean verbose = false;
@@ -178,17 +176,11 @@ public class MiscCommands implements CommandBundle {
           context.err.println("could not find the script file '" + context.getArgument(0) + "'.");
           return 1;
         }
-        try {
-          FileInputStream infs = new FileInputStream(fp);
-          BufferedReader input = new BufferedReader(new InputStreamReader(infs));
-          try {
-            String line;
-            while ((line = input.readLine()) != null) {
-              if (verbose) context.out.println(line);
-              context.executeCommand(line);
-            }
-          } finally {
-            input.close();
+        try (BufferedReader input = new BufferedReader(new FileReader(fp))) {
+          String line;
+          while ((line = input.readLine()) != null) {
+            if (verbose) context.out.println(line);
+            context.executeCommand(line);
           }
         } catch (IOException e) {
           e.printStackTrace(context.err);
@@ -296,8 +288,8 @@ public class MiscCommands implements CommandBundle {
           context.err.println("Another component with name '" + name + "' is already installed");
           return 1;
         }
-        Class<?> pluginClass = null;
-        PluginRepository plugins = (PluginRepository) registry.getComponent("pluginRepository");
+        Class<?> pluginClass;
+        PluginRepository plugins = registry.getComponent(PluginRepository.class, "pluginRepository");
         try {
           try {
             pluginClass = plugins != null ? plugins.loadClass(className) :
@@ -307,7 +299,7 @@ public class MiscCommands implements CommandBundle {
             pluginClass = plugins != null ? plugins.loadClass(newClassName) :
               Class.forName(newClassName);
           }
-          Object component = pluginClass.newInstance();
+          Object component = pluginClass.getDeclaredConstructor().newInstance();
           registry.registerComponent(name, component);
           return 0;
         } catch (Exception e1) {
@@ -415,8 +407,8 @@ public class MiscCommands implements CommandBundle {
           byte[] data = Utils.hexconv(line);
           if (data != null) {
             context.out.println("RFListener: to radio: " + line);
-            for (int i = 0; i < data.length; i++) {
-              listener.receivedByte(data[i]);
+            for (byte b : data) {
+              listener.receivedByte(b);
             }
           } else {
             context.out.println("RFListener: " + line);
@@ -436,7 +428,7 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("sysinfo", new BasicCommand("show info about the MSPSim system", "[-registry] [-config]") {
         public int executeCommand(CommandContext context) {
-            ConfigManager config = (ConfigManager) registry.getComponent("config");
+            ConfigManager config = registry.getComponent(ConfigManager.class, "config");
             context.out.println("--------- System info ----------\n");
             context.out.println("MSPSim version: " + MSP430Constants.VERSION);
             context.out.println("Java version  : " + System.getProperty("java.version") + " " +
@@ -473,7 +465,7 @@ public class MiscCommands implements CommandBundle {
 
     handler.registerCommand("set", new BasicCommand("set a config parameter", "<parameter> <value>") {
         public int executeCommand(CommandContext context) {
-            ConfigManager config = (ConfigManager) registry.getComponent("config");
+            ConfigManager config = registry.getComponent(ConfigManager.class, "config");
             config.setProperty(context.getArgument(0), context.getArgument(1));
             context.out.println("set " + context.getArgument(0) + " to " + context.getArgument(1));
             return 0;

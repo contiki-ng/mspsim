@@ -17,6 +17,6 @@ jobs:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
       - name: Build MSPSim
-      - run: ant compile
+        run: ant compile
       - name: Test MSPSim
-      - run: ant test
+        run: ant test
