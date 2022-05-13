@@ -79,13 +79,14 @@ static int caseID = 0;
 /*---------------------------------------------------------------------------*/
 static int pos = 0;
 static unsigned int times[10];
-interrupt(TIMERB1_VECTOR) timerb1 (void) {
-  if (TBIV == 2) {
-	  if (pos < 10) {
-		  times[pos] = TBR;
-		  pos++;
-		  TBCCR1 = TBCCR1 + 100;
-	  }
+interrupt(TIMERB1_VECTOR) timerb1 (void)
+{
+  if(TBIV == 2) {
+    if(pos < 10) {
+      times[pos] = TBR;
+      pos++;
+      TBCCR1 = TBCCR1 + 100;
+    }
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -259,13 +260,13 @@ static void testBitFields() {
   invert.green ^= 1;
   assertTrue(invert.green == 0);
 
+  assertTrue(pelle == 0x4711);
 }
 
 
 /*--------------------------------------------------------------------------*/
 static int flag;
-interrupt(UART0TX_VECTOR)
-     usart_tx_test0(void)
+interrupt(UART0TX_VECTOR) usart_tx_test0 (void)
 {
   printf("*IRQ: Flags:%d %d\n", IFG1, UTCTL0);
   flag++;
@@ -352,7 +353,7 @@ uint16_t test_calib_busywait_delta( int calib )
   int8_t aclk_count = 2;
   uint16_t dco_prev = 0;
   uint16_t dco_curr = 0;
-  
+
   set_dco_calib( calib );
 
   while( aclk_count-- > 0 )
@@ -391,18 +392,18 @@ void busyCalibrateDco()
   for( calib=0,step=0x800; step!=0; step>>=1 )
     {
       // if the step is not past the target, commit it
-      printf(" step: %d\n", step); 
-      if((tmp = test_calib_busywait_delta(calib|step)) <= TARGET_DCO_DELTA ) 
+      printf(" step: %d\n", step);
+      if((tmp = test_calib_busywait_delta(calib|step)) <= TARGET_DCO_DELTA )
       {
         calib |= step;
         printf(" committed: tmp = %d\n", tmp);
       }
     }
-  
+
     // if DCOx is 7 (0x0e0 in calib), then the 5-bit MODx is not useable, set it to 0
   if( (calib & 0x0e0) == 0x0e0 )
     calib &= ~0x01f;
-  
+
   set_dco_calib( calib );
 }
 
@@ -429,5 +430,9 @@ main(void)
   busyCalibrateDco();
   /*  printf("PROFILE\n"); */
   printf("EXIT\n");
-  return 0;
+
+  /* Short delay to allow serial output to finish */
+  __delay_cycles(2000);
+
+return 0;
 }

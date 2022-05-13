@@ -76,17 +76,17 @@ static int caseID = 0;
 
 #define RTIMER_ARCH_SECOND 4096
 #define CLOCK_SECOND 128
-#define CLOCK_CONF_SECOND CLOCK_SECOND
 #define INTERVAL (RTIMER_ARCH_SECOND / CLOCK_SECOND)
 
 /*---------------------------------------------------------------------------*/
 static int pos = 0;
-static unsigned int ticka0 = 0;
-static unsigned int count = 0;
-static unsigned int seconds = 0;
-static unsigned int last_tar = 0;
+static volatile unsigned int ticka0 = 0;
+static volatile unsigned int count = 0;
+static volatile unsigned int seconds = 0;
+static volatile unsigned int last_tar = 0;
 
-interrupt(TIMERA1_VECTOR) timera1 (void) {
+interrupt(TIMERA1_VECTOR) timera1 (void)
+{
   if(TAIV == 2) {
     eint();
     do {
@@ -99,7 +99,7 @@ interrupt(TIMERA1_VECTOR) timera1 (void) {
 	}
       }
 
-      if(count % CLOCK_CONF_SECOND == 0) {
+      if(count % CLOCK_SECOND == 0) {
 	++seconds;
       }
     } while((TACCR1 - TAR) > INTERVAL);
@@ -109,7 +109,8 @@ interrupt(TIMERA1_VECTOR) timera1 (void) {
 
 
 /*---------------------------------------------------------------------------*/
-interrupt(TIMERA0_VECTOR) timera0 (void) {
+interrupt(TIMERA0_VECTOR) timera0 (void)
+{
   ticka0++;
   TACCR0 += 4;
 }
@@ -132,6 +133,10 @@ static void testCase(char *description) {
 }
 
 static void testTimers() {
+  unsigned int counter = 0;
+
+  testCase("Timers");
+
   dint();
   /* Timer A1 */
   /* Select ACLK 32768Hz clock, divide by 8 */
@@ -154,10 +159,11 @@ static void testTimers() {
   eint();
 
 
-  while (ticka0 < 200) {
-    printf("Timer a0:%d \n", ticka0);
+  for(counter = 0; ticka0 < 100 && counter < 2000; counter++) {
+    printf("Timer a0:%d\n", ticka0);
   }
-  
+  assertTrue(ticka0 >= 100);
+  assertTrue(count > 10);
 }
 
 int
@@ -170,5 +176,9 @@ main(void)
   testTimers();
 
   printf("EXIT\n");
+
+  /* Short delay to allow serial output to finish */
+  __delay_cycles(2000);
+
   return 0;
 }
