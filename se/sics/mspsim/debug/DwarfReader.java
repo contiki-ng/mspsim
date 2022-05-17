@@ -77,7 +77,7 @@ public class DwarfReader implements ELFDebug {
     ELF elfFile;
 
     /* Address ranges */
-    class Arange {
+    static class Arange {
         int length;
         int version;
         int offset;
@@ -85,7 +85,7 @@ public class DwarfReader implements ELFDebug {
         int segmentSize;
     }
 
-    class LineEntry {
+    static class LineEntry {
         int address;
         int line;
         int file;
@@ -96,7 +96,7 @@ public class DwarfReader implements ELFDebug {
         }
     }
     /* Line number lookup data */
-    class LineData {
+    static class LineData {
         String[] includeDirs;
         String[] sourceFiles;
         LineEntry[] lineEntries;
