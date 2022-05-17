@@ -21,7 +21,7 @@ public class StabFunction {
     }
     
     public String toString() {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("Function: " + name);
         if (params != null) {
             sb.append("(");

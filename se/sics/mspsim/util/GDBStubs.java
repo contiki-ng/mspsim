@@ -201,7 +201,7 @@ public class GDBStubs implements Runnable {
 
     public static String stringToHex(String base)
     {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         int intValue;
         for(int x = 0; x < base.length(); x++)
         {

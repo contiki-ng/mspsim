@@ -264,7 +264,7 @@ public class LineNumberedBorder extends AbstractBorder {
    * @return the line number for drawing
    */
   private static String padLabel(int lineNumber, int length, boolean addSpace) {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     buffer.append(lineNumber);
     for (int count = (length - buffer.length()); count > 0; count--) {
       buffer.insert(0, ' ');
