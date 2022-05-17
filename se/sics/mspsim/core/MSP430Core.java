@@ -662,7 +662,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   /**
    * Schedules a new Time event using the cycles counter
    * @param event
-   * @param time
+   * @param cycles
    */
   public void scheduleCycleEvent(TimeEvent event, long cycles) {
     long currentNext = cycleEventQueue.nextTime;
@@ -703,7 +703,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   /**
    * Schedules a new Time event msec milliseconds in the future
    * @param event
-   * @param time
+   * @param msec
    */
   public long scheduleTimeEventMillis(TimeEvent event, double msec) {
       /*    System.out.println("MAX_DCO " + bcs.getMaxDCOFrequency());*/
