@@ -38,6 +38,7 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.core.Memory.AccessMode;
@@ -267,9 +268,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     config.setup(this, ioUnits);
 
     /* timers after ports ? */
-    for (int i = 0; i < timers.length; i++) {
-        ioUnits.add(timers[i]);
-    }
+    ioUnits.addAll(Arrays.asList(timers));
 
     watchdog = new Watchdog(this, config.watchdogOffset);
     ioSegment.setIORange(config.watchdogOffset, 1, watchdog);

@@ -15,7 +15,7 @@ public class TextScanner extends Scanner {
           + "7333333333333333333333333337777473333333333333333333333333377771";
 
   static final byte[] kinds = new byte[cs.length()];
-  {
+  static {
     for (int i = 0; i < cs.length(); i++) {
       kinds[i] = (byte) (cs.charAt(i) - '0');
     }

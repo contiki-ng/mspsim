@@ -78,7 +78,7 @@ public class DebugUI extends JPanel {
 
     listModel = new DbgListModel();
     disList = new JList<DbgInstruction>(listModel);
-    disList.setFont(new Font("courier", 0, 12));
+    disList.setFont(new Font("courier", Font.PLAIN, 12));
     disList.setCellRenderer(new MyCellRenderer());
     disList.setPreferredSize(new Dimension(500, 350));
     add(disList, BorderLayout.CENTER);

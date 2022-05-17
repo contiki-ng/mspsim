@@ -630,14 +630,14 @@ public class DisAsm implements MSP430Constants {
   }
 
   private static String dumpMem(int pc, int size, int[] memory) {
-    String output = "";
+    StringBuilder output = new StringBuilder();
     for (int i = 0, n = size; i < n; i++) {
       if (size > i) {
-	output += Utils.hex8(memory[pc + i]) + " ";
+	output.append(Utils.hex8(memory[pc + i])).append(" ");
       } else {
-	output += "   ";
+	output.append("   ");
       }
     }
-    return output;
+    return output.toString();
   }
 }
