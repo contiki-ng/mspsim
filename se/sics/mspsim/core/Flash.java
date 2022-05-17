@@ -578,7 +578,7 @@ public class Flash extends IOUnit {
       break;
 
     case FCTL3:
-      if ((statusreg & EMEX) == 0 && (regdata & EMEX) == 1) {
+      if ((statusreg & EMEX) == 0 && (regdata & EMEX) != 0) {
 	triggerEmergencyExit();
       }
 
