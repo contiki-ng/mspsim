@@ -102,6 +102,30 @@
     </java>
   </target>
 
+  <target name="runwismote" depends="jar" description="run MSPSim with platform Wismote">
+    <property name="FIRMWAREFILE" value="firmware/wismote/blink.wismote"/>
+    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.wismote.WismoteNode">
+      <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
+    </java>
+  </target>
+
+  <target name="runtyndall" depends="jar" description="run MSPSim with platform Tyndall">
+    <property name="FIRMWAREFILE" value="firmware/tyndall/blink.tyndall"/>
+    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.tyndall.TyndallNode">
+      <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
+    </java>
+  </target>
+
+  <target name="runexp5438" depends="jar" description="run MSPSim with platform exp5438">
+    <property name="FIRMWAREFILE" value="firmware/exp5438/tesetcase-bits.exp5438"/>
+    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.ti.Exp5438">
+      <arg value="${FIRMWAREFILE}"/>
+      <arg line="${ARGS}"/>
+    </java>
+  </target>
+
   <target name="run" depends="jar" description="run MSPSim">
     <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.Main">
@@ -110,19 +134,25 @@
     </java>
   </target>
 
-  <target name="cputest" depends="jar" description="run MSPSim CPU test">
-    <property name="FIRMWAREFILE" value="tests/cputest.sky"/>
-
-    <available file="${FIRMWAREFILE}" type="file" property="cputest.firmware"/>
-    <fail message="Please compile the cputest firmware first." unless="cputest.firmware"/>
-
-    <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.util.Test">
-      <arg value="${FIRMWAREFILE}"/>
-      <arg line="${ARGS}"/>
+  <target name="test-cpu" depends="jar" description="run MSPSim CPU test">
+    <java fork="true" classpath="${jarfile}"
+          classname="se.sics.mspsim.util.Test"
+          failonerror="true"
+          timeout="10000">
+      <arg value="firmware/sky/cputest.sky"/>
     </java>
   </target>
 
-  <target name="test" depends="jar"/>
+  <target name="test-timer" depends="jar" description="run MSPSim Timer test">
+    <java fork="true" classpath="${jarfile}"
+          classname="se.sics.mspsim.util.Test"
+          failonerror="true"
+          timeout="10000">
+      <arg value="firmware/sky/timertest.sky"/>
+    </java>
+  </target>
+
+  <target name="test" depends="jar, test-cpu, test-timer"/>
 
   <target name="clean" description="clean up" >
     <delete dir="${build}"/>
