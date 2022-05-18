@@ -147,6 +147,9 @@ public class CC2420 extends Radio802154 implements USARTListener {
   public static final int SFDMUX = 0x3E0;
   public static final int CCAMUX = 0x1F;
 
+  public static final int SFDMUX_SHIFT = 5;
+  public static final int CCAMUX_SHIFT = 0;
+
   // CCAMUX values
   public static final int CCAMUX_CCA = 0;
   public static final int CCAMUX_XOSC16M_STABLE = 24;
@@ -741,8 +744,8 @@ public class CC2420 extends Radio802154 implements USARTListener {
       case REG_IOCFG1:
           if (logLevel > INFO)
             log("IOCFG1: SFDMUX "
-                          + ((registers[address] & SFDMUX) >> SFDMUX)
-                          + " CCAMUX: " + (registers[address] & CCAMUX));
+                          + ((registers[address] & SFDMUX) >> SFDMUX_SHIFT)
+                          + " CCAMUX: " + ((registers[address] & CCAMUX) >> CCAMUX_SHIFT));
           updateCCA();
           break;
       case REG_MDMCTRL0:

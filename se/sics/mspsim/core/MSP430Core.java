@@ -38,6 +38,7 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.core.Memory.AccessMode;
@@ -267,9 +268,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
     config.setup(this, ioUnits);
 
     /* timers after ports ? */
-    for (int i = 0; i < timers.length; i++) {
-        ioUnits.add(timers[i]);
-    }
+    ioUnits.addAll(Arrays.asList(timers));
 
     watchdog = new Watchdog(this, config.watchdogOffset);
     ioSegment.setIORange(config.watchdogOffset, 1, watchdog);
@@ -662,7 +661,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   /**
    * Schedules a new Time event using the cycles counter
    * @param event
-   * @param time
+   * @param cycles
    */
   public void scheduleCycleEvent(TimeEvent event, long cycles) {
     long currentNext = cycleEventQueue.nextTime;
@@ -703,7 +702,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
   /**
    * Schedules a new Time event msec milliseconds in the future
    * @param event
-   * @param time
+   * @param msec
    */
   public long scheduleTimeEventMillis(TimeEvent event, double msec) {
       /*    System.out.println("MAX_DCO " + bcs.getMaxDCOFrequency());*/

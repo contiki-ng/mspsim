@@ -297,10 +297,6 @@ public abstract class GenericNode extends Chip implements Runnable {
   }
 
   public ELF loadFirmware(URL url) throws IOException {
-      return loadFirmware(url, cpu.memory);
-  }
-
-  @Deprecated public ELF loadFirmware(URL url, int[] memory) throws IOException {
     DataInputStream inputStream = new DataInputStream(url.openStream());
     ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
     byte[] firmwareData = new byte[2048];
@@ -311,27 +307,19 @@ public abstract class GenericNode extends Chip implements Runnable {
     inputStream.close();
     ELF elf = new ELF(byteStream.toByteArray());
     elf.readAll();
-    return loadFirmware(elf, memory);
+    return loadFirmware(elf);
   }
 
   public ELF loadFirmware(String name) throws IOException {
-      return loadFirmware(name, cpu.memory);
-  }
-
-  @Deprecated public ELF loadFirmware(String name, int[] memory) throws IOException {
-    return loadFirmware(ELF.readELF(firmwareFile = name), memory);
+    return loadFirmware(ELF.readELF(firmwareFile = name));
   }
 
   public ELF loadFirmware(ELF elf) {
-      return loadFirmware(elf, cpu.memory);
-  }
-
-  @Deprecated public ELF loadFirmware(ELF elf, int[] memory) {
     if (cpu.isRunning()) {
         stop();
     }
     this.elf = elf;
-    elf.loadPrograms(memory);
+    elf.loadPrograms(cpu.memory);
     MapTable map = elf.getMap();
     cpu.getDisAsm().setMap(map);
     cpu.setMap(map);

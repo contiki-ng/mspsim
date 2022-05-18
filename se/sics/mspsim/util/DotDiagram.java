@@ -180,7 +180,7 @@ public class DotDiagram extends JComponent {
 //       names = new String[diagrams];
 //     }
 //     names[index] = name;
-//     StringBuffer sb = new StringBuffer();
+//     StringBuilder sb = new StringBuilder();
 //     for (int i = 0, n = names.length; i < n; i++) {
 //       // Setup JLables...
 //     }

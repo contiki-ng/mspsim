@@ -55,7 +55,7 @@ public abstract class I2CUnit implements USARTListener {
 	 * 
 	 * @author Víctor Ariño <victor.arino@tado.com>
 	 */
-	public class I2CData {
+	public static class I2CData {
 
 		/**
 		 * Several mask for messages. This may not implement a real i2c but is

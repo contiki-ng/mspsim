@@ -130,7 +130,7 @@ public class StabFile {
     }
 
     public String toString() {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         sb.append("File: " + path + file + " starts at: " + startAddress + "\n");
         for (int i = 0; i < functions.size(); i++) {
             sb.append("  ").append(functions.get(i)).append("\n");

@@ -41,6 +41,8 @@
 
 package se.sics.mspsim.chip;
 import java.io.IOException;
+import java.util.Arrays;
+
 import se.sics.mspsim.core.*;
 import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.util.Utils;
@@ -170,9 +172,7 @@ public class M25P80 extends ExternalFlash implements USARTListener, PortListener
           pos++;
           if (pos == 3) {
             // Clear buffer
-            for (int i = 0; i < buffer.length; i++) {
-              buffer[i] = (byte) 0xff;
-            }
+            Arrays.fill(buffer, (byte) 0xff);
             blockWriteAddress = readAddress & 0xfff00;
             if (DEBUG) {
               log("programming at $" + Integer.toHexString(readAddress));
@@ -356,9 +356,7 @@ public class M25P80 extends ExternalFlash implements USARTListener, PortListener
     writeStatus(SECTOR_ERASE_MILLIS);
     int sectorAddress = address & 0xf0000;
     loadedAddress = -1;
-    for (int i = 0; i < buffer.length; i++) {
-      buffer[i] = (byte)0xff;
-    }
+    Arrays.fill(buffer, (byte) 0xff);
     // Erase a complete sector
     blockWriteAddress = sectorAddress;
     for (int i = 0; i < 0x100; i++) {
