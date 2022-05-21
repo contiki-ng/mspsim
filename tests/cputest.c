@@ -40,7 +40,10 @@
 #include "msp430setup.h"
 #include <stdio.h>
 #include <string.h>
-#if __MSPGCC__
+#if defined(__GNUC__) && (__GNUC__ >= 9)
+#include <msp430.h>
+#include <stdarg.h>
+#elif __MSPGCC__
 #include <msp430.h>
 #include <legacymsp430.h>
 #define eint() __eint()
@@ -79,7 +82,7 @@ static int caseID = 0;
 /*---------------------------------------------------------------------------*/
 static int pos = 0;
 static unsigned int times[10];
-interrupt(TIMERB1_VECTOR) timerb1 (void)
+ISR(TIMERB1, timerb1)
 {
   if(TBIV == 2) {
     if(pos < 10) {
@@ -266,7 +269,7 @@ static void testBitFields() {
 
 /*--------------------------------------------------------------------------*/
 static int flag;
-interrupt(UART0TX_VECTOR) usart_tx_test0 (void)
+ISR(USART0TX, usart_tx_test0)
 {
   printf("*IRQ: Flags:%d %d\n", IFG1, UTCTL0);
   flag++;

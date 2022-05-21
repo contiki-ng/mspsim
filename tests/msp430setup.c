@@ -37,7 +37,9 @@
  */
 
 #include "msp430setup.h"
-#if __MSPGCC__
+#if defined(__GNUC__) && (__GNUC__ >= 9)
+#include <msp430.h>
+#elif __MSPGCC__
 #include <msp430.h>
 #include <msp430libc.h>
 #include <legacymsp430.h>
@@ -49,7 +51,6 @@
 #endif /* __MSPGCC__ */
 #include <stdio.h>
 
-
 /*--------------------------------------------------------------------------*/
 /* RS232 Interface */
 /*--------------------------------------------------------------------------*/
@@ -57,8 +58,7 @@
 static int (* input_handler)(unsigned char) = NULL;
 
 /*---------------------------------------------------------------------------*/
-interrupt(UART1RX_VECTOR)
-     rs232_rx_usart1(void)
+ISR(USART1RX, rs232_rx_usart1)
 {
   /* Check status register for receive errors. - before reading RXBUF since
      it clears the error and interrupt flags */
@@ -129,12 +129,24 @@ rs232_set_input(int (*f)(unsigned char))
   input_handler = f;
 }
 /*--------------------------------------------------------------------------*/
+#if defined(__GNUC__) && (__GNUC__ >= 9)
+int
+write(int fd, const char *buf, int len)
+{
+  int i = 0;
+  for(; i < len && buf[i]; i++) {
+    rs232_send(buf[i]);
+  }
+  return i;
+}
+#else
 int
 putchar(int c)
 {
   rs232_send(c);
   return c;
 }
+#endif
 /*--------------------------------------------------------------------------*/
 
 
