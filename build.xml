@@ -61,6 +61,14 @@
     </java>
   </target>
 
+  <target name="runsky-firmware" depends="jar"
+          description="run MSPSim with platform Sky">
+    <java fork="true" classpath="${jarfile}"
+          classname="se.sics.mspsim.platform.sky.SkyNode" failonerror="true">
+      <arg line="${ARGS}"/>
+    </java>
+  </target>
+
   <target name="runskyprof" depends="jar" description="run MSPSim with platform Sky for profiling">
     <property name="FIRMWAREFILE" value="firmware/sky/blink.sky"/>
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.platform.sky.SkyNode">
@@ -131,6 +139,15 @@
     <java fork="true" classpath="${jarfile}" classname="se.sics.mspsim.Main">
       <arg value="${FIRMWAREFILE}"/>
       <arg line="${ARGS}"/>
+    </java>
+  </target>
+
+  <target name="test-firmware" depends="jar"
+          description="run MSPSim firmware as test">
+    <java fork="true" classpath="${jarfile}"
+          classname="se.sics.mspsim.util.Test"
+          failonerror="true" timeout="10000">
+      <arg line="${ARGS}" />
     </java>
   </target>
 
