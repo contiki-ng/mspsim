@@ -23,7 +23,7 @@ all:	cputest.firmware timertest.firmware
 
 
 %.firmware:	%.o $(OBJECTS)
-	$(CC) -mmcu=$(MCU) -Wl,-Map=$(@:.firmware=.map) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -Wl,-Map=$(@:.firmware=.map) -o $@ $^
 
 %.ihex: %.firmware
 	$(OBJCOPY) $^ -O ihex $@
