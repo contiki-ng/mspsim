@@ -67,11 +67,6 @@
 #define assertTrue2(text,...) TEST2(text,__VA_ARGS__)
 #define assertFalse2(text,...) TEST2(text,!(__VA_ARGS__))
 
-static int testzero(int hm)
-{
-  return hm > 0;
-}
-
 static int caseID = 0;
 
 #define RTIMER_ARCH_SECOND 4096
