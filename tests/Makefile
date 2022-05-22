@@ -11,7 +11,7 @@ AR       = msp430-ar
 OBJCOPY  = msp430-objcopy
 STRIP    = msp430-strip
 BSL      = msp430-bsl
-CFLAGSNO = -I. -Wall -mmcu=$(MCU) -g
+CFLAGSNO = -I. -Wall -mmcu=$(MCU) -g -gstabs+
 CFLAGS  += $(CFLAGSNO) -Os
 
 SOURCES := msp430setup.c
