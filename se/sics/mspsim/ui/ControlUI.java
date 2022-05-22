@@ -41,6 +41,7 @@
 
 package se.sics.mspsim.ui;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -88,7 +89,7 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
     this.cpu = (MSP430) registry.getComponent("cpu");
     this.node = (GenericNode) registry.getComponent("node");
     elfData = (ELF) registry.getComponent("elf");
-    
+
     WindowManager wm = (WindowManager) registry.getComponent("windowManager");
     window = wm.createWindow("ControlUI");
     JPanel jp = new JPanel();
@@ -97,18 +98,38 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
     jp.add(this, BorderLayout.WEST);
     jp.add(dui = new DebugUI(cpu), BorderLayout.CENTER);
     window.add(jp);
-    
+
     createButton("Debug On");
     controlButton = createButton(cpu.isRunning() ? "Stop" : "Run");
-    stepAction = new AbstractAction("Single Step") {
+
+    JButton stepButton = new JButton();
+    // Allow the button to get the same height as the other buttons.
+    stepButton.setMaximumSize(new Dimension(60, Short.MAX_VALUE));
+
+    SpinnerNumberModel stepsModel = new SpinnerNumberModel();
+    stepsModel.setValue(1);
+    stepsModel.setMinimum(1);
+    JSpinner stepsSpinner = new JSpinner(stepsModel);
+
+    JPanel stepsPanel = new JPanel();
+    stepsPanel.setLayout(new BoxLayout(stepsPanel, BoxLayout.LINE_AXIS));
+    stepsPanel.add(stepButton);
+    stepsPanel.add(stepsSpinner);
+    add(stepsPanel);
+
+    stepAction = new AbstractAction("Step") {
       private static final long serialVersionUID = 1L;
 
       public void actionPerformed(ActionEvent e) {
+        stepButton.setEnabled(false);
+        int steps = (int)stepsSpinner.getValue();
+        for (int i = 0; i < steps; i++) {
           try {
             ControlUI.this.node.step();
           } catch (Exception e2) {
             e2.printStackTrace();
           }
+        }
 	  dui.updateRegs();
 	  dui.repaint();
 	  if (elfData != null && sourceViewer != null
@@ -125,13 +146,13 @@ public class ControlUI extends JPanel implements ActionListener, SimEventListene
 	      sourceViewer.viewLine(dbg.getLine());
 	    }
 	  }
+        stepButton.setEnabled(true);
 	}
       };
     stepAction.putValue(Action.MNEMONIC_KEY, KeyEvent.VK_S);
     stepAction.setEnabled(!cpu.isRunning());
+    stepButton.setAction(stepAction);
 
-    JButton stepButton = new JButton(stepAction);
-    add(stepButton);
     createButton("Stack Trace");
 
     if (elfData != null) {
