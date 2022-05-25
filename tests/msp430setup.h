@@ -39,6 +39,15 @@
 #ifndef __MSP430SETUP_H__
 #define __MSP430SETUP_H__
 
+#if defined(__GNUC__) && (__GNUC__ >= 9)
+#define ISR(a,b) void __attribute__((interrupt(a ## _VECTOR))) b(void)
+#define eint() __eint()
+#define dint() __dint()
+#elif defined(__GNUC__)  &&  defined(__MSP430__)
+     /* This is the MSPGCC compiler */
+#define ISR(a,b) interrupt(a ## _VECTOR) b(void)
+#endif
+
 void msp430_setup(void);
 
 #define RS232_19200 1

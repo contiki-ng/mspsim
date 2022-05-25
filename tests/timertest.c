@@ -38,7 +38,9 @@
  */
 
 #include "msp430setup.h"
-#if __MSPGCC__
+#if defined(__GNUC__) && (__GNUC__ >= 9)
+#include <msp430.h>
+#elif __MSPGCC__
 #include <msp430.h>
 #include <legacymsp430.h>
 #else /* __MSPGCC__ */
@@ -80,7 +82,7 @@ static volatile unsigned int count = 0;
 static volatile unsigned int seconds = 0;
 static volatile unsigned int last_tar = 0;
 
-interrupt(TIMERA1_VECTOR) timera1 (void)
+ISR(TIMERA1, timera1)
 {
   if(TAIV == 2) {
     eint();
@@ -104,7 +106,7 @@ interrupt(TIMERA1_VECTOR) timera1 (void)
 
 
 /*---------------------------------------------------------------------------*/
-interrupt(TIMERA0_VECTOR) timera0 (void)
+ISR(TIMERA0, timera0)
 {
   ticka0++;
   TACCR0 += 4;
