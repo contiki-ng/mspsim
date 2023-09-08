@@ -184,7 +184,9 @@ public abstract class GenericNode extends Chip implements Runnable {
       if (fp.canRead()) {
         CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
         script = script.replace('\\', '/');
-        System.out.println("Autoloading script: " + script);
+	if (!config.getPropertyAsBoolean("quiet", false)) {
+	  System.out.println("Autoloading script: " + script);
+	}
         config.setProperty("autoloadScript", script);
         if (ch != null) {
           ch.lineRead("source \"" + script + '"');
@@ -197,16 +199,19 @@ public abstract class GenericNode extends Chip implements Runnable {
         CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
         if (ch != null) {
             for (int i = 1; i < args.length; i++) {
-                System.out.println("calling '" + args[i] + "'");
+	        if (!config.getPropertyAsBoolean("quiet", false))
+                  System.out.println("calling '" + args[i] + "'");
                 ch.lineRead(args[i]);
             }
         }
     }
-    System.out.println("-----------------------------------------------");
-    System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
-    System.out.println("-----------------------------------------------");
-    System.out.print(PROMPT);
-    System.out.flush();
+    if (!config.getPropertyAsBoolean("quiet", false)) {
+	System.out.println("-----------------------------------------------");
+	System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
+	System.out.println("-----------------------------------------------");
+	System.out.print(PROMPT);
+	System.out.flush();
+    }
   }
 
   public void setup(ConfigManager config) {
