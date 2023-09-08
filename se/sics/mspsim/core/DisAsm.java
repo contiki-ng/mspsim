@@ -556,16 +556,16 @@ public class DisAsm implements MSP430Constants {
       output += dumpMem(startPC, size, memory);
       output += opstr + " " + srcadr + ", " + dstadr;
 
-      regs = "R" + dstRegister + "=" + Utils.hex16(reg[dstRegister]) +
-	" R" + srcRegister + "=" + Utils.hex16(reg[srcRegister]);
+      regs = "R" + dstRegister + "=" + Utils.hex20(reg[dstRegister]) +
+	" R" + srcRegister + "=" + Utils.hex20(reg[srcRegister]);
       regs += " SR=" + dumpSR(reg[SR]);
-      regs += " SP=" + Utils.hex16(reg[SP]);
+      regs += " SP=" + Utils.hex20(reg[SP]);
       regs += "; as = " + as;
-      srcAddress &= 0xffff;
+      srcAddress &= 0xfffff;
       if (srcAddress != -1) {
-	srcAddress &= 0xffff;
+	srcAddress &= 0xfffff;
 	regs += " sMem:" + Utils.hex16(memory[srcAddress] +
-				       (memory[(srcAddress + 1) % 0xffff]
+				       (memory[(srcAddress + 1) % 0xfffff]
 					<< 8));
       }
     }
