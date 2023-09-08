@@ -2069,7 +2069,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
               tmpAdd = 1;
           case SUBC:
               // Both sub and subc does one complement (not) + 1 (or carry)
-              src = (src ^ 0xffff) & 0xffff;
+	      int mask = word ? 0xffff : (wordx20 ? 0xfffff : 0xff);
+              src = (src ^ mask) & mask;
           case ADDC: // ADDC
               if (op == ADDC || op == SUBC)
                   tmpAdd = ((sr & CARRY) > 0) ? 1 : 0;
