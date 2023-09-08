@@ -156,6 +156,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     
     setup(config);
 
+    cpu.setRealtime(config.getPropertyAsBoolean("realtime", true));
 
     if (!config.getPropertyAsBoolean("nogui", false)) {
       // Setup control and other UI components

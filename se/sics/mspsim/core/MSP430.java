@@ -55,6 +55,7 @@ public class MSP430 extends MSP430Core {
   private boolean running = false;
   private boolean isBreaking = false;
   private double rate = 2.0;
+  private boolean realtime = true;
 
   // Debug time - measure cycles
   private long lastCycles = 0;
@@ -76,6 +77,10 @@ public class MSP430 extends MSP430Core {
   public MSP430(int type, ComponentRegistry registry, MSP430Config config) {
     super(type, registry, config);
     disAsm = new DisAsm();
+  }
+
+  public void setRealtime(boolean realtime) {
+    this.realtime = realtime;
   }
 
   public double getCPUPercent() {
@@ -135,7 +140,7 @@ public class MSP430 extends MSP430Core {
       }
 
       /* Just a test to see if it gets down to a reasonable speed */
-      if (cycles > nextSleep) {
+      if (realtime && cycles > nextSleep) {
 	try {
 	  Thread.sleep(100);
 	} catch (Exception e) {
