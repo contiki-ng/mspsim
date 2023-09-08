@@ -160,6 +160,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         @Override
         public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
             if (address >= MAX_MEM) {
+		logw(WarningType.EXECUTION, "Read out of bounds");
             	throw new EmulationException("Reading outside memory: 0x" + Utils.hex(address, 4));
             }
             return memorySegments[address >> 8].read(address, mode, type);
@@ -167,6 +168,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         @Override
         public void write(int address, int data, AccessMode mode) throws EmulationException {
             if (address >= MAX_MEM) {
+		logw(WarningType.EXECUTION, "write out of bounds");
                 throw new EmulationException("Writing outside memory: 0x" + Utils.hex(address, 4));
             }
             memorySegments[address >> 8].write(address, data, mode);
@@ -454,10 +456,50 @@ public class MSP430Core extends Chip implements MSP430Constants {
            * Yet, this has been observed at least once with msp430-gcc 4.6.3. */
           System.out.println("Warning: tried to write odd PC, not allowed! PC=0x" + Integer.toHexString(value));
           value -= 1;
-      }
+      } 
 
       /* SR can never take values above 0xfff */
       if (r == SR) {
+
+	  /* semihosting by trapping and ignoring writes to SR */
+
+	  /* exit (0xf000) */
+	  if (value == 0xf000) {
+	      int code = reg[15];
+	      System.exit(code);
+	  }
+
+	  /* putchar (0xf001) */
+	  if (value == 0xf001) {
+	      int data = reg[12];
+	      System.out.print((char) data);
+	      return;
+	  }
+
+	  /* message and value (char *, int) (0xf002) */
+	  if (value == 0xf002) {
+	      int message = reg[12];
+	      int data = reg[13];
+	      char c;
+	      System.out.printf("0x%x 0x%x: ", reg[0], message);
+	      try {
+		  int off;
+		  for (off = 0; off < 20 && (c = (char) currentSegment.read(message + off, AccessMode.BYTE, AccessType.READ)) != 0; off++)
+		      System.out.print(c);
+	      } catch(Exception e) {
+		  System.out.printf("Bad message at 0x%x", reg[13]);
+	      }
+	      System.out.printf(" 0x%x %d\n", data, data);
+	      return;
+	  }
+
+	  /* dump registers (0xf003) */
+	  if (value == 0xf003) {
+	      for (int rn = 0; rn < 15; rn++)
+		  System.out.printf("R%02d: 0x%05x ", rn, reg[rn]);
+	      System.out.printf("\n");
+	      return;
+	  }
           value &= 0xfff;
       }
 
@@ -2027,7 +2069,8 @@ public class MSP430Core extends Chip implements MSP430Constants {
               tmpAdd = 1;
           case SUBC:
               // Both sub and subc does one complement (not) + 1 (or carry)
-              src = (src ^ 0xffff) & 0xffff;
+	      int mask = word ? 0xffff : (wordx20 ? 0xfffff : 0xff);
+              src = (src ^ mask) & mask;
           case ADDC: // ADDC
               if (op == ADDC || op == SUBC)
                   tmpAdd = ((sr & CARRY) > 0) ? 1 : 0;

@@ -156,6 +156,7 @@ public abstract class GenericNode extends Chip implements Runnable {
     
     setup(config);
 
+    cpu.setRealtime(config.getPropertyAsBoolean("realtime", true));
 
     if (!config.getPropertyAsBoolean("nogui", false)) {
       // Setup control and other UI components
@@ -183,7 +184,9 @@ public abstract class GenericNode extends Chip implements Runnable {
       if (fp.canRead()) {
         CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
         script = script.replace('\\', '/');
-        System.out.println("Autoloading script: " + script);
+	if (!config.getPropertyAsBoolean("quiet", false)) {
+	  System.out.println("Autoloading script: " + script);
+	}
         config.setProperty("autoloadScript", script);
         if (ch != null) {
           ch.lineRead("source \"" + script + '"');
@@ -196,16 +199,19 @@ public abstract class GenericNode extends Chip implements Runnable {
         CommandHandler ch = registry.getComponent(CommandHandler.class, "commandHandler");
         if (ch != null) {
             for (int i = 1; i < args.length; i++) {
-                System.out.println("calling '" + args[i] + "'");
+	        if (!config.getPropertyAsBoolean("quiet", false))
+                  System.out.println("calling '" + args[i] + "'");
                 ch.lineRead(args[i]);
             }
         }
     }
-    System.out.println("-----------------------------------------------");
-    System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
-    System.out.println("-----------------------------------------------");
-    System.out.print(PROMPT);
-    System.out.flush();
+    if (!config.getPropertyAsBoolean("quiet", false)) {
+	System.out.println("-----------------------------------------------");
+	System.out.println("MSPSim " + MSP430Constants.VERSION + " starting firmware: " + firmwareFile);
+	System.out.println("-----------------------------------------------");
+	System.out.print(PROMPT);
+	System.out.flush();
+    }
   }
 
   public void setup(ConfigManager config) {
@@ -231,10 +237,12 @@ public abstract class GenericNode extends Chip implements Runnable {
             WindowUtils.addSaveOnShutdown(key, w);
             w.setVisible(true);
             console.setCommandHandler(ch);
-        } else {
-            ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
+        } else if (config.getPropertyAsBoolean("console", true)) {
+	    ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
+	} else {
+            ch = new CommandHandler(System.out, System.err);
         }
-        registry.registerComponent("commandHandler", ch);
+	registry.registerComponent("commandHandler", ch);
     }
     
     stats = new OperatingModeStatistics(cpu);

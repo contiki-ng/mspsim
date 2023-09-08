@@ -38,6 +38,7 @@
 package se.sics.mspsim.core;
 import java.io.PrintStream;
 
+import se.sics.mspsim.core.EmulationLogger.WarningType;
 import se.sics.mspsim.profiler.SimpleProfiler;
 import se.sics.mspsim.util.ArrayUtils;
 import se.sics.mspsim.util.ComponentRegistry;
@@ -48,11 +49,13 @@ public class MSP430 extends MSP430Core {
   private int[] execCounter;
   private int[] trace;
   private int tracePos;
+  private int prevPc = 0;
   
   private boolean debug = false;
   private boolean running = false;
   private boolean isBreaking = false;
   private double rate = 2.0;
+  private boolean realtime = true;
 
   // Debug time - measure cycles
   private long lastCycles = 0;
@@ -76,6 +79,10 @@ public class MSP430 extends MSP430Core {
     disAsm = new DisAsm();
   }
 
+  public void setRealtime(boolean realtime) {
+    this.realtime = realtime;
+  }
+
   public double getCPUPercent() {
     return lastCPUPercent;
   }
@@ -93,6 +100,9 @@ public class MSP430 extends MSP430Core {
         // ??? - power-up  should be executed?!
         time = System.currentTimeMillis();
         run();
+    } catch (Exception e) {
+	disAsm.disassemble(prevPc, memory, reg);
+	throw(e);
     } finally {
         setRunning(false);
     }
@@ -106,6 +116,7 @@ public class MSP430 extends MSP430Core {
 	nextOut = cycles + 20000007;
       }
 
+      prevPc = reg[PC];
       int pc = emulateOP(-1);
       if (pc >= 0) {
 	if (execCounter != null) {
@@ -129,7 +140,7 @@ public class MSP430 extends MSP430Core {
       }
 
       /* Just a test to see if it gets down to a reasonable speed */
-      if (cycles > nextSleep) {
+      if (realtime && cycles > nextSleep) {
 	try {
 	  Thread.sleep(100);
 	} catch (Exception e) {

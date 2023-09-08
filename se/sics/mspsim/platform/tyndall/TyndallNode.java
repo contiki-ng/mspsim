@@ -153,7 +153,19 @@ public class TyndallNode extends GenericNode implements PortListener, USARTListe
                 SerialMon serial = new SerialMon((USARTSource)usart, "USCI A0 Port Output");
                 registry.registerComponent("serialgui", serial);
             }
-        }
+        } else {
+            // Send serial output to stdout
+            IOUnit usart = cpu.getIOUnit("USCI A0");
+            if (usart instanceof USARTSource) {
+		USARTSource usartSource = (USARTSource) usart;
+		USARTListener listener = new USARTListener() {
+			public void dataReceived(USARTSource source, int data) {
+			    System.out.print((char) data);
+			}
+		    };
+		usartSource.addUSARTListener(listener);
+	    }
+	}
     }
 
     public void setupGUI() {
