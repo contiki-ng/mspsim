@@ -96,7 +96,7 @@ public class MSP430f5437Config extends MSP430Config {
 
         /* configure memory */
         infoMemConfig(0x1800, 128 * 4);
-        mainFlashConfig(0x5c00, 256 * 1024);
+        mainFlashConfig(0x5c00, 768 * 1024);
         ramConfig(0x1c00, 16 * 1024);
         ioMemSize(0x800); /* 2 KB of IO Memory */
         
