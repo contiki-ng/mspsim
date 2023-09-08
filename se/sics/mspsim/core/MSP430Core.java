@@ -456,10 +456,50 @@ public class MSP430Core extends Chip implements MSP430Constants {
            * Yet, this has been observed at least once with msp430-gcc 4.6.3. */
           System.out.println("Warning: tried to write odd PC, not allowed! PC=0x" + Integer.toHexString(value));
           value -= 1;
-      }
+      } 
 
       /* SR can never take values above 0xfff */
       if (r == SR) {
+
+	  /* semihosting by trapping and ignoring writes to SR */
+
+	  /* exit (0xf000) */
+	  if (value == 0xf000) {
+	      int code = reg[15];
+	      System.exit(code);
+	  }
+
+	  /* putchar (0xf001) */
+	  if (value == 0xf001) {
+	      int data = reg[12];
+	      System.out.print((char) data);
+	      return;
+	  }
+
+	  /* message and value (char *, int) (0xf002) */
+	  if (value == 0xf002) {
+	      int message = reg[12];
+	      int data = reg[13];
+	      char c;
+	      System.out.printf("0x%x 0x%x: ", reg[0], message);
+	      try {
+		  int off;
+		  for (off = 0; off < 20 && (c = (char) currentSegment.read(message + off, AccessMode.BYTE, AccessType.READ)) != 0; off++)
+		      System.out.print(c);
+	      } catch(Exception e) {
+		  System.out.printf("Bad message at 0x%x", reg[13]);
+	      }
+	      System.out.printf(" 0x%x %d\n", data, data);
+	      return;
+	  }
+
+	  /* dump registers (0xf003) */
+	  if (value == 0xf003) {
+	      for (int rn = 0; rn < 15; rn++)
+		  System.out.printf("R%02d: 0x%05x ", rn, reg[rn]);
+	      System.out.printf("\n");
+	      return;
+	  }
           value &= 0xfff;
       }
 
