@@ -237,10 +237,12 @@ public abstract class GenericNode extends Chip implements Runnable {
             WindowUtils.addSaveOnShutdown(key, w);
             w.setVisible(true);
             console.setCommandHandler(ch);
-        } else {
-            ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
+        } else if (config.getPropertyAsBoolean("console", true)) {
+	    ch = new StreamCommandHandler(System.in, System.out, System.err, PROMPT);
+	} else {
+            ch = new CommandHandler(System.out, System.err);
         }
-        registry.registerComponent("commandHandler", ch);
+	registry.registerComponent("commandHandler", ch);
     }
     
     stats = new OperatingModeStatistics(cpu);
