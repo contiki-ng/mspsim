@@ -181,7 +181,7 @@ public interface MSP430Constants {
   public static final int CG2 = 3;
 
   public static final int[][] CREG_VALUES = new int[][]{
-    {0, 0, 4, 8}, {0, 1, 2, 0xffff}
+    {0, 0, 4, 8}, {0, 1, 2, 0xfffff}
   };
 
   public static final int CARRY_B = 0;
