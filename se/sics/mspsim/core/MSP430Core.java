@@ -160,6 +160,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         @Override
         public int read(int address, AccessMode mode, AccessType type) throws EmulationException {
             if (address >= MAX_MEM) {
+		logw(WarningType.EXECUTION, "Read out of bounds");
             	throw new EmulationException("Reading outside memory: 0x" + Utils.hex(address, 4));
             }
             return memorySegments[address >> 8].read(address, mode, type);
@@ -167,6 +168,7 @@ public class MSP430Core extends Chip implements MSP430Constants {
         @Override
         public void write(int address, int data, AccessMode mode) throws EmulationException {
             if (address >= MAX_MEM) {
+		logw(WarningType.EXECUTION, "write out of bounds");
                 throw new EmulationException("Writing outside memory: 0x" + Utils.hex(address, 4));
             }
             memorySegments[address >> 8].write(address, data, mode);
